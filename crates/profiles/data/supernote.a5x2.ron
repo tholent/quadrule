@@ -36,7 +36,11 @@
         guide: (width_px: 2, gray: 153),
         structure: (width_px: 3, gray: 102),
         emphasis: (width_px: 4, gray: 51),
+        // ESTIMATE: the Nomad's calibrated values (2026-11-09), until the Manta is calibrated.
+        dot_grid: (width_px: 3, gray: 51),
         text_gray: 51,
+        // ESTIMATE: the Nomad's calibrated value (2026-11-09), until the Manta is calibrated.
+        label_gray: 153,
     ),
     calibration_meta: (
         date: None,

@@ -197,3 +197,14 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   (`--toolbars all|left,right,top,floating`); footers are always checked. A toolbar zone the linter cannot name is
   still checked, and `every_toolbar_zone_is_known` fails on one. Slice: 15 findings with all positions, 10 with
   left and top. `cargo test -p quadrule-lint -- --nocapture` → 7 passed, 7 CHECK lines pass; clippy clean.
+- Names, chris's answers word for word (options chosen): the dot role is "Dot grid"; labels are "Text + new Label
+  (Recommended)". Built: `LineRole::DotGrid` and `LineRole::Label` (`crates/model/src/lib.rs`); profiles gain
+  `dot_grid` and `label_gray`; file format 0.3.0 with an identity step from 0.2.0 (`crates/format/src/migrate.rs`,
+  test `a_0_2_file_opens_through_the_real_chain`). Napkin §8.2 gets a dated amendment note.
+- Nomad profile calibrated (`crates/profiles/data/supernote.a6x2.ron`, `verified: true`, date 2026-11-09): Whisper
+  1 px/119, Guide 1/51, Structure 2/51, Emphasis 3/0, Dot grid 3/51, text 51, label 153. Manta's new fields copy the
+  Nomad's as estimates. The slice's dot grid uses the Dot grid role. Calibration sheet headers say "calibrated" for a
+  verified profile. Test `estimates_are_marked_unverified` replaced by `verified_profiles_have_a_record` (a verified
+  profile needs a date and its calibration record). Layout and render tests now tell shapes apart by form, as roles
+  share grays on the Nomad. Slice goldens re-blessed (Manta 9df03397…, Nomad 26e04bab…).
+  `cargo test --workspace -- --nocapture` → 65 CHECK lines pass, 0 fail; clippy clean.

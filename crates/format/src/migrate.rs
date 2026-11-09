@@ -24,12 +24,21 @@ use semver::Version;
 pub type Step = fn(&mut Value) -> Result<(), FormatError>;
 
 /// (from, to, step), in order.
-pub const CHAIN: &[(&str, &str, Step)] = &[("0.1.0", "0.2.0", v0_1_to_v0_2)];
+pub const CHAIN: &[(&str, &str, Step)] = &[
+    ("0.1.0", "0.2.0", v0_1_to_v0_2),
+    ("0.2.0", "0.3.0", v0_2_to_v0_3),
+];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
 /// scene is already a valid 0.2 scene: nothing to rewrite. A 0.1 build cannot read a 0.2 file
 /// that uses them; it reports an error rather than guessing.
 fn v0_1_to_v0_2(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.3 adds two roles (`DotGrid`, `Label`), new choices only: every 0.2 scene is already a
+/// valid 0.3 scene. Dot patterns in older files keep the role they were saved with.
+fn v0_2_to_v0_3(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

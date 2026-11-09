@@ -46,16 +46,27 @@ fn builtins_parse_and_match_napkin() {
 }
 
 #[test]
-fn estimates_are_marked_unverified() {
-    // Rung 1 record Q6: role and gray values are estimates, marked `verified: false`.
-    let unverified: Vec<bool> = builtin_ids()
-        .map(|id| !builtin(id).unwrap().calibration_meta.verified)
-        .collect();
-    let ok = unverified.iter().all(|u| *u);
+fn verified_profiles_have_a_record() {
+    // Rung 1 record Q6: estimates are marked `verified: false`. A profile marked verified must
+    // say when, and its calibration record must exist; an unverified one has no date.
+    let docs =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/device-measurements");
+    let mut fails = Vec::new();
+    let mut verified = Vec::new();
+    for id in builtin_ids() {
+        let m = builtin(id).unwrap().calibration_meta;
+        let record = docs.join(id).join("calibration.md");
+        match (m.verified, &m.date) {
+            (true, Some(_)) if record.is_file() => verified.push(id),
+            (true, _) => fails.push(format!("{id}:verified_without_date_or_record")),
+            (false, Some(_)) => fails.push(format!("{id}:unverified_with_date")),
+            (false, None) => {}
+        }
+    }
+    let ok = fails.is_empty();
     println!(
-        "CHECK crate=profiles name=estimates_unverified result={} profiles={}",
-        if ok { "pass" } else { "fail" },
-        unverified.len()
+        "CHECK crate=profiles name=verified_have_record result={} verified={verified:?} fails={fails:?}",
+        if ok { "pass" } else { "fail" }
     );
     assert!(ok);
 }

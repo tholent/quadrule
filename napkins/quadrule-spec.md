@@ -407,6 +407,11 @@ Instead of raw values, objects can use a **semantic line role**. Each profile re
 | Emphasis | Headers, strong separators |
 | Text | Labels and headings (gray only) |
 
+> Amended 2026-11-09, chris's rulings after calibrating the Nomad (`docs/device-measurements/supernote.a6x2/calibration.md`):
+> dot grids get a role of their own, **Dot grid** (a dot's size and gray, apart from the line roles: "Yes, own
+> setting"), and quiet labels split from Text into a new **Label** role (gray only: "Text + new Label"). Text is
+> now headings and reading text. Both roles arrive in file format 0.3.
+
 Why this matters: the same "Guide" line can resolve to different pixel widths on a 226 PPI A5 X and a 300 PPI Manta. That keeps multi-device designs visually consistent without manual tuning.
 
 - The Style tab shows the role picker first. "Custom" reveals raw width and gray fields.

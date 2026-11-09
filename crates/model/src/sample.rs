@@ -108,7 +108,7 @@ pub fn slice_document() -> Document {
         Frame::new(margin, 26.0, inner_w, 84.0),
         // Same physical size on every profile, under the pinned header.
         pinned_top,
-        Style::Role(LineRole::Whisper),
+        Style::Role(LineRole::DotGrid),
         ObjectKind::Pattern(PatternRegion {
             pattern: Pattern::Dots,
             extra: Extra::new(),

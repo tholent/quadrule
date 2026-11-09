@@ -45,11 +45,12 @@ fn snapped_lines_are_exact() {
         let (p, dl) = slice_page(id);
         let img = render(&dl, Math::Fastest);
         let guide = p.role(LineRole::Guide);
-        let (x, y_start) = match dl
-            .items
-            .iter()
-            .find(|i| matches!(i, Item::Rect { gray, .. } if *gray == guide.gray))
-        {
+        // The first ruled line: a wide rect of the Guide's gray and width (other roles may share
+        // the gray; dots are square and the title rule is a different width or gray).
+        let (x, y_start) = match dl.items.iter().find(|i| {
+            matches!(i, Item::Rect { gray, x0, x1, y0, y1 }
+                if *gray == guide.gray && y1 - y0 == guide.width_px as f64 && x1 - x0 > 10.0 * (y1 - y0))
+        }) {
             Some(Item::Rect { x0, x1, y0, .. }) => (((x0 + x1) / 2.0) as u32, *y0 as u32 - 5),
             _ => panic!("no ruled line"),
         };

@@ -28,14 +28,14 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Next
 
-- chris: put the slice PNGs and the calibration sheets on a Manta and a Nomad, and report codes as in
-  `docs/calibration.md`. Nomad dots done (square dots ruled); the rest set the role values.
-- Then: enter the calibrated values in `crates/profiles/data/`, re-bless the slice goldens, and plan rung 2.
+- chris: the Manta calibration sheets (`calib/supernote-a5x2/`, how-to in `docs/calibration.md`). The Nomad is
+  calibrated and its values are in `crates/profiles/data/supernote.a6x2.ron`.
+- Then: enter the Manta's values, re-bless the slice goldens, add the calibration lint rules, and plan rung 2.
 
 ## Known debt
 
 Full debt list: `docs/STATUS-debt.md`.
-- Role widths and grays are estimates until calibration (`crates/profiles/data/supernote.a5x2.ron`).
+- The Manta's role widths and grays are estimates until its calibration (`crates/profiles/data/supernote.a5x2.ron`).
 - ADR parts not built yet: font signature, fuzzing, hinting flag, system-font fallback and substitution, canvas
   (`docs/STATUS-debt.md`).
 

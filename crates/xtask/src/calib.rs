@@ -392,8 +392,12 @@ impl<'a> Pager<'a> {
                 (left, top),
                 width_mm,
             )?;
+            let roles = match (&p.calibration_meta.date, p.calibration_meta.verified) {
+                (Some(d), true) => format!("role values calibrated on this device {d}"),
+                _ => "role values on this device are estimates until calibrated".into(),
+            };
             let info = format!(
-                "{} · {} · {} × {} px · {} PPI · quadrule {version} · role values on this device are estimates until calibrated",
+                "{} · {} · {} × {} px · {} PPI · quadrule {version} · {roles}",
                 p.display_name, p.id, p.width_px, p.height_px, p.ppi
             );
             let h2 = header.text(&info, 6.0, 400, LABEL_GRAY, (left, top + h1), width_mm)?;

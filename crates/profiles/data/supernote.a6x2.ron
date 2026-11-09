@@ -30,19 +30,23 @@
     default_margins_mm: (top: 6.0, right: 6.0, bottom: 6.0, left: 6.0),
     // Landscape is unverified (napkin §17.1 item 3).
     orientations: [Portrait],
-    // ESTIMATE: widths in device pixels, grays 0 = black .. 255 = white.
+    // Calibrated 2026-11-09 by chris on the device, from the calibration sheets; codes and
+    // rulings in docs/device-measurements/supernote.a6x2/calibration.md. Widths in device
+    // pixels, grays 0 = black .. 255 = white.
     line_roles: (
-        whisper: (width_px: 2, gray: 187),
-        guide: (width_px: 2, gray: 153),
-        structure: (width_px: 3, gray: 102),
-        emphasis: (width_px: 4, gray: 51),
-        text_gray: 51,
+        whisper: (width_px: 1, gray: 119),    // LA8
+        guide: (width_px: 1, gray: 51),       // LA4, W1: the favourite line
+        structure: (width_px: 2, gray: 51),   // LB4
+        emphasis: (width_px: 3, gray: 0),     // LC1
+        dot_grid: (width_px: 3, gray: 51),    // W15, square: 2 px dots show but are not usable
+        text_gray: 51,                        // TD2, TL2 (9 pt reads comfortably)
+        label_gray: 153,                      // TD4, TL4
     ),
     calibration_meta: (
-        date: None,
+        date: Some("2026-11-09"),
         firmware: None,
-        method: "Estimates for rung 1; not calibrated on hardware.",
-        verified: false,
+        method: "Calibration sheets (cargo xtask calibration-sheet) judged by eye on the device by chris; docs/device-measurements/supernote.a6x2/calibration.md. Gray levels and ink values are not measured yet.",
+        verified: true,
     ),
     // Napkin §11.3.
     export_hints: ["Copy templates to the MyStyle folder; a subfolder appears under Customization."],

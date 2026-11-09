@@ -97,8 +97,12 @@ pub struct LineRoles {
     pub structure: RoleStyle,
     /// Headers and strong separators.
     pub emphasis: RoleStyle,
-    /// The Text role sets gray only.
+    /// A dot grid's dots: `width_px` is the dot's side.
+    pub dot_grid: RoleStyle,
+    /// The Text role (headings, reading text) sets gray only.
     pub text_gray: u8,
+    /// The Label role (quiet labels) sets gray only.
+    pub label_gray: u8,
 }
 
 /// Provenance of the preset values (napkin §3.2, §8.4).
@@ -128,7 +132,8 @@ impl Profile {
         )
     }
 
-    /// A role's width and gray. The Text role has no width of its own; a line using it is 1 px.
+    /// A role's width and gray. The Text and Label roles have no width of its own; a line using
+    /// one is 1 px.
     pub fn role(&self, role: LineRole) -> RoleStyle {
         let r = &self.line_roles;
         match role {
@@ -136,9 +141,14 @@ impl Profile {
             LineRole::Guide => r.guide,
             LineRole::Structure => r.structure,
             LineRole::Emphasis => r.emphasis,
+            LineRole::DotGrid => r.dot_grid,
             LineRole::Text => RoleStyle {
                 width_px: 1,
                 gray: r.text_gray,
+            },
+            LineRole::Label => RoleStyle {
+                width_px: 1,
+                gray: r.label_gray,
             },
         }
     }

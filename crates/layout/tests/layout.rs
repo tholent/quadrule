@@ -212,13 +212,28 @@ fn slice_page_snaps_to_whole_pixels() {
         let whole = rs
             .iter()
             .all(|r| [r.0, r.1, r.2, r.3].iter().all(|v| v.fract() == 0.0));
+        // Roles may share a gray (on the Nomad, Dot grid, Guide and Structure are all 51), so
+        // shapes are told apart by form: dots are squares of the dot size, lines are wide, and
+        // the title rule is the one wide rect of the Structure width.
+        let (dot, guide, structure) = (
+            p.role(LineRole::DotGrid),
+            p.role(LineRole::Guide),
+            p.role(LineRole::Structure),
+        );
+        let d = dot.width_px as f64;
         let dots = rs
             .iter()
-            .filter(|r| r.4 == p.role(LineRole::Whisper).gray)
+            .filter(|r| r.4 == dot.gray && r.2 - r.0 == d && r.3 - r.1 == d)
             .count();
+        let is_rule = |r: &&(f64, f64, f64, f64, u8)| {
+            r.4 == structure.gray
+                && structure.width_px != guide.width_px
+                && r.3 - r.1 == structure.width_px as f64
+        };
         let lines: Vec<_> = rs
             .iter()
-            .filter(|r| r.4 == p.role(LineRole::Guide).gray)
+            .filter(|r| r.4 == guide.gray && r.2 - r.0 > r.3 - r.1)
+            .filter(|r| !is_rule(r))
             .collect();
         let line_w_ok = lines
             .iter()
@@ -247,20 +262,21 @@ fn slice_page_snaps_to_whole_pixels() {
 #[test]
 fn pinned_header_keeps_physical_distance() {
     // The title rule is pinned to the top (VConstraint::Top), so it sits at the same physical
-    // height on both profiles; both are 300 PPI, so the same pixel row.
+    // height on both profiles; both are 300 PPI, so the same place. The rule's width differs by
+    // profile (odd widths centre on a pixel, even on an edge), so centres agree to half a pixel.
     let doc = slice_document();
     let (manta, nomad) = profiles();
-    let structure = manta.role(LineRole::Structure).gray;
     let rule_y = |p: &Profile| {
+        let s = p.role(LineRole::Structure);
         rects(&page(&doc, p))
             .into_iter()
-            .find(|r| r.4 == structure)
-            .map(|r| r.1)
+            .find(|r| r.4 == s.gray && r.3 - r.1 == s.width_px as f64 && r.2 - r.0 > r.3 - r.1)
+            .map(|r| (r.1 + r.3) / 2.0)
     };
     let (m, n) = (rule_y(&manta), rule_y(&nomad));
-    let ok = m.is_some() && m == n;
+    let ok = matches!((m, n), (Some(a), Some(b)) if (a - b).abs() <= 0.5);
     println!(
-        "CHECK crate=layout name=pinned_header result={} rule_y0_manta={m:?} rule_y0_nomad={n:?}",
+        "CHECK crate=layout name=pinned_header result={} rule_centre_manta={m:?} rule_centre_nomad={n:?}",
         pass(ok)
     );
     assert!(ok);
@@ -339,7 +355,7 @@ fn pattern_shapes_are_centred_in_their_region_and_drawn_whole() {
     let mut checked = 0;
     let mut on_edge = 0;
     let mut bad = 0;
-    for (r, role) in [(dots, LineRole::Whisper), (lines, LineRole::Guide)] {
+    for (r, role) in [(dots, LineRole::DotGrid), (lines, LineRole::Guide)] {
         let style = manta.role(role);
         let half = style.width_px as f64 / 2.0;
         for (x0, y0, x1, y1, _) in rects(&dl).into_iter().filter(|q| q.4 == style.gray) {
@@ -409,12 +425,12 @@ fn grid_pattern_draws_both_directions() {
     };
     pr.pattern = Pattern::Grid;
     let (manta, _) = profiles();
-    let whisper = manta.role(LineRole::Whisper);
+    let style = manta.role(LineRole::DotGrid);
     let rs: Vec<_> = rects(&page(&doc, &manta))
         .into_iter()
-        .filter(|r| r.4 == whisper.gray)
+        .filter(|r| r.4 == style.gray)
         .collect();
-    let w = whisper.width_px as f64;
+    let w = style.width_px as f64;
     let horizontal = rs
         .iter()
         .filter(|r| r.3 - r.1 == w && r.2 - r.0 > w)

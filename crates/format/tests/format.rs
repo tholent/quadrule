@@ -414,3 +414,23 @@ fn a_0_1_file_opens_through_the_real_chain() {
     );
     assert!(ok);
 }
+
+#[test]
+fn a_0_2_file_opens_through_the_real_chain() {
+    // A file written at format 0.2.0 (before the DotGrid and Label roles existed) opens in this
+    // build and saves again at the current version.
+    let (mut manifest, files) = split(&slice_file().to_bytes("0.2.0").unwrap());
+    *migrate::map_get_mut(&mut manifest, "format_version").unwrap() = Value::Text("0.2.0".into());
+    let opened = QuadFile::from_bytes(&raw_quad(manifest, &files)).unwrap();
+    let resaved = QuadFile::from_bytes(&opened.to_bytes("t").unwrap()).unwrap();
+    let ok = opened.migrated_from == Some(Version::new(0, 2, 0))
+        && opened.doc == slice_document()
+        && resaved.manifest.format_version == FORMAT_VERSION;
+    println!(
+        "CHECK crate=format name=open_0_2_file result={} migrated_from={:?} now={}",
+        pass(ok),
+        opened.migrated_from.map(|v| v.to_string()),
+        resaved.manifest.format_version
+    );
+    assert!(ok);
+}

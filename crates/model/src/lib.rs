@@ -329,7 +329,7 @@ pub enum VConstraint {
 /// A semantic line role; each profile resolves it to a width and gray (napkin §8.2).
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum LineRole {
-    /// Faint guides that fade under writing (dot grids).
+    /// Faint guides that fade under writing.
     Whisper,
     /// Standard ruling lines.
     Guide,
@@ -337,18 +337,26 @@ pub enum LineRole {
     Structure,
     /// Headers, strong separators.
     Emphasis,
-    /// Labels and headings (gray only).
+    /// Headings and reading text (gray only).
     Text,
+    /// The dots of a dot grid: the dot's size and gray, apart from the line roles. Format 0.3
+    /// (chris, 2026-11-09: "Yes, own setting"; named "Dot grid").
+    DotGrid,
+    /// Quiet labels, lighter than Text (gray only). Format 0.3 (chris, 2026-11-09:
+    /// "Text + new Label").
+    Label,
 }
 
 impl LineRole {
     /// Every role, in order.
-    pub const ALL: [LineRole; 5] = [
+    pub const ALL: [LineRole; 7] = [
         LineRole::Whisper,
         LineRole::Guide,
         LineRole::Structure,
         LineRole::Emphasis,
+        LineRole::DotGrid,
         LineRole::Text,
+        LineRole::Label,
     ];
 }
 
