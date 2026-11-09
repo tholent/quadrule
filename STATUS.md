@@ -6,31 +6,36 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Now
 
-- Project prepared for agents with project-prep: the rules are in `AGENTS.md`, the split files in `docs/`.
-- Design spec is a draft (v0.1) (`napkins/quadrule-spec.md`); plan for the first work in
-  `docs/bbq/2026-11-09-quadrule-spikes.md`.
-- The three technical spikes are done on branch `spikes/2026-11-09` (local only): format, text and rendering, each a
-  throwaway crate with findings and a proposed ADR (`spikes/format/FINDINGS.md`, `spikes/text/FINDINGS.md`,
-  `spikes/render/FINDINGS.md`). Tests: format 10, text 12, render 9 passed.
-- Rust 1.99.1 installed on the Pi with rustup (`spikes/format/FINDINGS.md` header).
+- Rung 1, the headless end-to-end slice, is built on branch `rung-1/headless-slice` and waits in PR #1 for chris
+  to merge (`docs/bbq/2026-11-09-rung-1-headless-slice.md`). Six crates under `crates/` (`Cargo.toml`); the slice
+  test builds a document, saves it as `.quad`, reopens it and exports Manta and Nomad PNGs that match the golden
+  images byte for byte (`crates/render/tests/slice.rs`, `crates/render/tests/golden/SHA256SUMS`).
+- Checks, 2026-11-09: `cargo test --workspace -- --nocapture` → 40 tests, 44 `CHECK` lines, all pass, on the Pi
+  (aarch64 Linux) and in CI on Linux x86_64, macOS aarch64 and Windows x86_64 (`.github/workflows/ci.yml`, run
+  42660403429). The golden PNGs and the `.quad` bytes are identical on all four machines.
+- Rust 1.99.1, pinned for the Pi and CI (`rust-toolchain.toml`). Remote: `tholent/quadrule`, private.
 
 ## Next
 
-- Three ADRs ratified 2026-11-09, none built yet: `.quad` format (ADR-001), text stack (ADR-002), export renderer
-  (ADR-003) (`docs/decisions/INDEX.md`). Next: plan v1.0's first rung — the Cargo workspace (napkin §15.1) and the
-  real `format`, `text` and `render` crates built from these ADRs.
+- chris: review and merge PR #1; rule on its three taste proposals (package names, square dots, estimated role
+  values) (`docs/STATUS-log.md`, 2026-11-09 rung 1 entry).
+- chris: the hardware step — copy `crates/render/tests/golden/*.png` to a Manta and a Nomad (MyStyle folder) and
+  say how they look (`docs/STATUS-debt.md`).
+- Then plan rung 2 with a bbq. What the ADRs still owe is listed in `docs/STATUS-debt.md`.
 
 ## Known debt
 
 Full debt list: `docs/STATUS-debt.md`.
-- The project-setup decision is not on record; the ADR format is chosen (ADR+, `docs/decisions/README.md`).
-- Spike checks owed on other machines: macOS, Windows, x86 Linux, and the canvas window on a display
+- Hardware step for rung 1 (owed to chris); role widths and grays are estimates until calibration
+  (`crates/profiles/data/supernote.a5x2.ron`).
+- ADR parts not built yet: font signature, fuzzing, hinting flag, system-font fallback and substitution, canvas
   (`docs/STATUS-debt.md`).
 
 ## Log
 
 Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-09: prepared with project-prep (`docs/STATUS-log.md`).
+- 2026-11-09: rung 1 built; PR #1 open, CI green on three OSes (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

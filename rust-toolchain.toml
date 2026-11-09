@@ -1,0 +1,6 @@
+# One compiler everywhere: the Pi and all three CI machines build with the same Rust, so golden
+# images and file bytes are compared like for like (ADR-003 item 6).
+[toolchain]
+channel = "1.99.1"
+components = ["clippy", "rustfmt"]
+profile = "minimal"

@@ -1,0 +1,69 @@
+# Build, test, clippy and rustfmt on Linux (x86), macOS (ARM) and Windows (x86) (napkin §15.3).
+# The slice test compares each exported PNG with the golden image blessed on the Pi (ARM), so
+# a pass on all three is the cross-machine check ADR-002 (T14/T15) and ADR-003 (item 6) owe.
+#
+# Cost: the repository is private, so runs use the account's Actions minutes; macOS minutes
+# count 10x and Windows 2x. Runs only on pull requests, pushes to main and by hand.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: never
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      # rust-toolchain.toml pins Rust 1.99.1 with clippy and rustfmt; this installs it.
+      - name: Toolchain
+        run: rustup toolchain install && rustc --version
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: rustfmt
+        if: matrix.os == 'ubuntu-latest'
+        run: cargo fmt --all --check
+
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: test
+        run: cargo test --workspace -- --nocapture 2>&1 | tee test.log
+
+      - name: Structured results
+        if: always()
+        run: |
+          {
+            echo "### ${{ matrix.os }} ($(uname -m))"
+            echo '```'
+            grep '^CHECK' test.log || echo "no CHECK lines"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep '^CHECK' test.log || true
+
+      - name: Upload exported files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slice-${{ matrix.os }}
+          path: target/tmp/slice/
+          if-no-files-found: warn

@@ -1,0 +1,38 @@
+// Supernote Manta (A5 X2). Resolution and PPI: napkin §3.3 (napkins/quadrule-spec.md:99).
+// Everything marked ESTIMATE is a placeholder until maintainer calibration on hardware
+// (napkin §8.4); calibration replaces these values here, with no code change.
+(
+    id: "supernote.a5x2",
+    display_name: "Supernote Manta (A5 X2)",
+    width_px: 1920,
+    height_px: 2560,
+    ppi: 300.0,
+    diagonal_in: 10.7,
+    panel: "to verify",
+    // ESTIMATE: 16 evenly spaced levels, not measured.
+    gray_levels: [0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255],
+    // Unknown until calibration (napkin §17.1 item 1).
+    ink_values: [],
+    // Not yet measured from device screenshots (napkin §3.5).
+    safe_zones: [],
+    // ESTIMATE.
+    default_margins_mm: (top: 8.0, right: 8.0, bottom: 8.0, left: 8.0),
+    // Landscape is unverified (napkin §17.1 item 3).
+    orientations: [Portrait],
+    // ESTIMATE: widths in device pixels, grays 0 = black .. 255 = white.
+    line_roles: (
+        whisper: (width_px: 2, gray: 187),
+        guide: (width_px: 2, gray: 153),
+        structure: (width_px: 3, gray: 102),
+        emphasis: (width_px: 4, gray: 51),
+        text_gray: 51,
+    ),
+    calibration_meta: (
+        date: None,
+        firmware: None,
+        method: "Estimates for rung 1; not calibrated on hardware.",
+        verified: false,
+    ),
+    // Napkin §11.3.
+    export_hints: ["Copy templates to the MyStyle folder; a subfolder appears under Customization."],
+)
