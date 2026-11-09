@@ -180,13 +180,16 @@ pub fn lay_out(
                         tables.len() - 1
                     }
                 };
-                if !tables[table].glyphs.contains_key(&g.glyph_id) {
-                    let (shape, r) =
-                        glyph_shape(&mut reg.fs, g.font_id, g.font_weight, g.glyph_id)?;
-                    rounded += r;
-                    tables[table].glyphs.insert(g.glyph_id, shape);
-                }
-                if tables[table].glyphs[&g.glyph_id].verbs.is_empty() {
+                let shape = match tables[table].glyphs.entry(g.glyph_id) {
+                    std::collections::btree_map::Entry::Occupied(e) => e.into_mut(),
+                    std::collections::btree_map::Entry::Vacant(e) => {
+                        let (shape, r) =
+                            glyph_shape(&mut reg.fs, g.font_id, g.font_weight, g.glyph_id)?;
+                        rounded += r;
+                        e.insert(shape)
+                    }
+                };
+                if shape.verbs.is_empty() {
                     continue; // a space: nothing to draw
                 }
                 let x = g.x + g.font_size * g.x_offset;
