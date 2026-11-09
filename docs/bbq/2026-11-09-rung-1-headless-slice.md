@@ -30,10 +30,16 @@ renderer, all accepted), `spikes/*/FINDINGS.md`, `napkins/quadrule-spec.md` §15
 ## Defaulted
 
 - **Size:** about 2–4 sessions on the Pi. veto: trim the slice.
-- **gh without sudo:** install the `gh` binary from GitHub's release tarball into `~/.local/bin` (checksum
-  verified); undo by deleting it. chris signs in with `! gh auth login`. veto: install it some other way.
-- **Repository:** private repo named `quadrule` under chris's GitHub account; `main` pushed as the default branch.
-  Creating it and pushing are outward-facing: the lead asks before each. veto: another name or owner.
+- **gh without sudo:** `gh` 2.103.3 installed from GitHub's release tarball into `~/.local/bin` (checksum `OK`);
+  undo by deleting it.
+- **Repository — overruled by chris:** the Defaulted "private repo named `quadrule` under chris's account, created
+  by the lead" was replaced. chris, word for word: "I have already created a private remote repository, here:
+  https://github.com/tholent/quadrule. I would prefer to use this with rw deploy keys". Setup, run by chris after the
+  safety check blocked the lead from writing `~/.ssh`: deploy key `~/.ssh/quadrule_deploy` (write access), SSH alias
+  `github-quadrule`, remote `origin` = `git@github-quadrule:tholent/quadrule.git`. Pushing uses the deploy key; `gh`
+  uses a fine-grained token (Pull requests: write; Actions, Commit statuses, Contents, Metadata: read), signed in
+  as `cwlls`, for opening PRs and reading CI. Checked 2026-11-09: `ssh -T` authenticated; `gh repo view` → PRIVATE.
+  The token's expiry date is owed to `docs/STATUS-debt.md` when chris states it.
 - **Landing:** rung 1 works on branch `rung-1/headless-slice` from `main`, opens one PR, and chris merges. Never
   push straight to `main` after the first push that creates it. veto: merge on green.
 - **Workspace:** a root `Cargo.toml` workspace with the six crates under `crates/`; `spikes/` stays outside the
