@@ -75,23 +75,26 @@ pub const TEXT_SIZES_PT: [f64; 8] = [6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 18.0]
 pub const TEXT_WEIGHTS: [u16; 2] = [400, 700];
 /// Text grays, columns 1–3.
 pub const TEXT_GRAYS: [u8; 3] = [0, 51, 102];
-/// Writing strips W1–W12: ruled lines, width × gray.
+/// Writing strips W1–W12: ruled lines, width × gray. Set 2 (2026-11-09, chris: "let's redo the
+/// calibration sheets to include 51"): grays 51 and 102 added around the Nomad favourites (LA4,
+/// PD2), gray 221 dropped (invisible on the Nomad).
 pub const STRIP_LINES: [(u32, u8); 12] = [
-    (1, 119),
+    (1, 51),
+    (1, 102),
     (1, 153),
     (1, 187),
-    (1, 221),
-    (2, 119),
+    (2, 51),
+    (2, 102),
     (2, 153),
     (2, 187),
-    (2, 221),
-    (3, 119),
+    (3, 51),
+    (3, 102),
     (3, 153),
     (3, 187),
-    (3, 221),
 ];
-/// Writing strips W13–W16: square dot rows, size × gray.
-pub const STRIP_DOTS: [(u32, u8); 4] = [(2, 136), (2, 187), (3, 136), (3, 187)];
+/// Writing strips W13–W18: square dot rows, size × gray (set 2: the sizes that showed on the
+/// Nomad, at the two darkest favourites).
+pub const STRIP_DOTS: [(u32, u8); 6] = [(2, 51), (2, 102), (3, 51), (3, 102), (4, 51), (4, 102)];
 
 const LABEL_GRAY: u8 = 0;
 /// Height of one writing strip: label, three lines 7 mm apart, and room before the next.
@@ -601,7 +604,7 @@ fn writing_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<V
     let mut pg = Pager::new(p, reg);
     pg.paragraph(
         "Writing strips. Write across each strip with every pen you use. Note the strips whose lines stay \
-         visible without competing with your writing. W1–W12: ruled lines 7 mm apart; W13–W16: dot rows 5 mm apart.",
+         visible without competing with your writing. W1–W12: ruled lines 7 mm apart; W13–W18: dot rows 5 mm apart. Set 2: replaces any earlier writing pages.",
         8.0,
         400,
     )?;

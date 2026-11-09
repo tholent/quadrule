@@ -157,3 +157,7 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
 - Calibration, Nomad lines sheet recorded word for word (`docs/device-measurements/supernote.a6x2/calibration.md`):
   favourite LA4 (1 px, gray 51); lines show to gray 187 (1 px) and 204 (2–6 px); no speckling on any line; fine
   dashes read as dashes only when dark.
+- chris, word for word: "let's redo the calibration sheets to include 51". Every sheet but writing already had gray
+  51; writing strips are now set 2: ruled lines 1–3 px × grays 51, 102, 153, 187 (W1–W12) and square dots 2–4 px ×
+  grays 51, 102 (W13–W18). Gray 221 dropped (invisible on the Nomad). Sheets regenerated in `calib/`; the old writing
+  pages on the devices should be replaced.
