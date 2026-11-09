@@ -5,8 +5,8 @@ ratified-by: chris
 ratified-on: "2026-11-09"
 owner: chris
 kind: architecture
-built: not started
-proof: queued in STATUS.md (Next) for the real render crate; evidence in spikes/render/FINDINGS.md
+built: landed
+proof: "`crates/render/tests/slice.rs::slice_end_to_end`, `crates/render/tests/render.rs::simd_and_portable_maths_agree`, `crates/render/tests/render.rs::tiny_skia_agrees_on_snapped_shapes`, `.github/workflows/ci.yml`"
 supersedes: nothing
 amends: nothing
 consulted: rendering spike worker (Opus 5.5 subagent)
@@ -68,3 +68,5 @@ Drivers:
   to ratify). Carried over without change of substance. Prior header values: status `proposed`, status-note
   `drafted 2026-11-09 from spikes/render/ADR-PROPOSAL.md; awaiting ratification`.
 - 2026-11-09: ratified by chris ("ratify all three").
+- 2026-11-09: built status updated after the real `render` crate; golden images match byte for byte on Linux x86_64, macOS aarch64, Windows x86_64 and the Pi (CI, rung 1), so item 2 (portable maths) is not needed; tiny-skia added as the test-only second check (item 4). Prior header values: built `not started`, proof
+  `queued in STATUS.md (Next) for the real render crate; evidence in spikes/render/FINDINGS.md`.

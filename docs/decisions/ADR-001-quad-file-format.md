@@ -5,8 +5,9 @@ ratified-by: chris
 ratified-on: "2026-11-09"
 owner: chris
 kind: architecture
-built: not started
-proof: queued in STATUS.md (Next) for the real format crate; evidence in spikes/format/FINDINGS.md
+built: partial
+proof: "`crates/format/tests/format.rs::round_trip`, `crates/format/tests/format.rs::unknown_fields_survive_resave`, `crates/format/tests/format.rs::newer_minor_file_keeps_its_version`, `crates/format/tests/format.rs::outlines_must_match_profiles`, `crates/model/tests/model.rs::unknown_fields_survive_per_record_type`"
+owed: "font signature in the manifest (item 6); reusing outlines for a new profile while a font is missing (item 7); cargo-fuzz on the reader (item 8, a stable-Rust random-damage test stands in); hinted outline tables (item 3, waits on hinting)"
 supersedes: nothing
 amends: nothing
 consulted: format spike worker (Opus 5.5 subagent); talk-through with Claude (docs/proposals/talk-2026-11-09-format-versions-and-hinting.md)
@@ -93,3 +94,5 @@ Drivers:
   ruling; items 2, 3, 5, 6 and 7 of the Decision are those folds. Prior header values: status `proposed`,
   status-note `drafted 2026-11-09 from spikes/format/ADR-PROPOSAL.md and the talk record; awaiting ratification`.
 - 2026-11-09: ratified by chris ("ratify all three").
+- 2026-11-09: built status updated after the real `format` crate and the slice test (rung 1). Prior header values: built `not started`, proof
+  `queued in STATUS.md (Next) for the real format crate; evidence in spikes/format/FINDINGS.md`.

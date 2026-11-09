@@ -118,3 +118,10 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   clean-up; a full purge needs GitHub Support. Old → new names for hashes cited above: `be6fea9` → `e1c8021`,
   `a087163` → `94ce048`, `ff573f7` → `986234f`, `df2beba` → `e893bec`, `0db5abd` → `37c4754`, `0ec4e81` → `5e7b506`,
   `4a1b26a` → `6082dfa`, `b7278ab` → `8c602c1`.
+- Tidy-up: proposals index marks the talk record folded into ADR-001/002. ADR-003 item 4 built: tiny-skia as a
+  test-only second renderer (`crates/render/tests/render.rs::tiny_skia_agrees_on_snapped_shapes`: 0 differing
+  pixels on both profiles). ADR `built` headers updated (old values in each History): ADR-001 partial, ADR-002
+  partial, ADR-003 landed; `adr-index.py` rewrote INDEX.md, `adr-check.py`: 3 ADRs, 0 failures (proofs resolve; it
+  does not run them). Pattern clipping: tried drawing only shapes wholly inside a region; it removed the slice's
+  first dot row and column (38 dots on the margin), so reverted. The rule is now written down and tested instead
+  (`pattern_shapes_centred_in_their_region_and_drawn_whole`); veto-able in the debt list.

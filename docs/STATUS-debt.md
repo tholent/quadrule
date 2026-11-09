@@ -18,16 +18,12 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   Renew it before then, or `gh` stops opening PRs and reading CI (rung 1 record, Defaulted "Repository").
 - The `gh` fine-grained token cannot read check summaries (`gh pr checks` fails: GitHub offers no `checks:read` for
   fine-grained tokens); read CI with `gh run view <id> --log` instead.
-- ADR-001 not built yet: font signature in the manifest (item 6), missing-font reuse for a new profile (item 7),
-  hinted outline tables (item 3, with hinting), `assets/` and `previews/` entries (napkin §12.1).
-- ADR-002 not built yet: hinting flag (item 4), system-font fallback and its save/export warning (item 6),
-  substitution by signature (item 7), re-scan on focus (item 8), paragraph spacing, vertical alignment and the
-  overflow signal (item 3).
-- ADR-003 not built yet: nothing in its Decision is unbuilt for export; the canvas renderer is outside it. The
-  ADRs' `built:` headers still say "not started" — update them through makeadr when chris wants.
-- Layout limits in rung 1: pattern strokes may reach half a stroke past their region (no clipping); a dot grid stops
-  short of the right margin when the width is not a whole number of rhythm units (lint L18's job)
-  (`crates/layout/src/lib.rs`).
+- ADR build status is in each ADR's `built` and `owed` header fields (`docs/decisions/INDEX.md`): ADR-001 and
+  ADR-002 partial, ADR-003 landed.
+- Pattern rule, chosen 2026-11-09 for chris to veto: a pattern draws every line and dot whose centre is in its
+  region, whole, so a dot on the margin straddles the region edge rather than being cut (`crates/layout/src/lib.rs`;
+  napkin §5.2 says patterns "clip to their bounds"). Trying whole-shapes-inside removed the slice's first dot row
+  and column.
 - Safe zones still to capture (screenshots, chris): landscape, a collapsed toolbar, other floating positions
   (`docs/device-measurements/README.md`).
 - The slice page's 8 mm margin (94 px) is narrower than a docked toolbar (Manta 116 px, Nomad 99 px), so a toolbar

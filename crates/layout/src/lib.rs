@@ -312,6 +312,9 @@ pub fn display_list(
                     let (x1, y1) = (px(f.x_mm + f.w_mm).round(), px(f.y_mm + f.h_mm).round());
                     let ys = RhythmPx::positions(rhythm.origin_y, rhythm.unit_y, y0, y1);
                     let half = w as f64 / 2.0;
+                    // A pattern draws every line and dot whose centre lies in its region, whole: a dot
+                    // on the region's edge (where the rhythm meets the margin) straddles it by half a
+                    // stroke rather than being cut in two.
                     match pr.pattern {
                         Pattern::Lines => {
                             for y in ys {

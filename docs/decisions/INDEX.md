@@ -5,6 +5,6 @@ change the ADR and run the script again. An ADR's own header outranks this table
 
 | ADR | Decision | Kind | Status | Built |
 |---|---|---|---|---|
-| [ADR-001](ADR-001-quad-file-format.md) | The `.quad` file is a ZIP of CBOR as the napkin describes, with text outlines stored as a shape table per profile | architecture | accepted | not started |
-| [ADR-002](ADR-002-text-stack.md) | Text uses cosmic-text alone, laid out in millimetres, drawn as plain outlines, with fallback to any installed font | architecture | accepted | not started |
-| [ADR-003](ADR-003-export-renderer.md) | PNG export renders with vello_cpu; the GPU never makes export files; tiny-skia stays as a test check | architecture | accepted | not started |
+| [ADR-001](ADR-001-quad-file-format.md) | The `.quad` file is a ZIP of CBOR as the napkin describes, with text outlines stored as a shape table per profile | architecture | accepted | partial |
+| [ADR-002](ADR-002-text-stack.md) | Text uses cosmic-text alone, laid out in millimetres, drawn as plain outlines, with fallback to any installed font | architecture | accepted | partial |
+| [ADR-003](ADR-003-export-renderer.md) | PNG export renders with vello_cpu; the GPU never makes export files; tiny-skia stays as a test check | architecture | accepted | landed |

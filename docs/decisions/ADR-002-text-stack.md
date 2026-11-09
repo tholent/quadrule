@@ -5,8 +5,9 @@ ratified-by: chris
 ratified-on: "2026-11-09"
 owner: chris
 kind: architecture
-built: not started
-proof: queued in STATUS.md (Next) for the real text crate; evidence in spikes/text/FINDINGS.md
+built: partial
+proof: "`crates/text/tests/text.rs::title_lays_out_with_no_missing_glyphs`, `crates/text/tests/text.rs::bold_draws_bolder_shapes_and_wider_text`, `crates/render/tests/slice.rs::slice_end_to_end`"
+owed: "hinting flag (item 4); fallback to any installed font with its save and export warning (item 6); substitution by font signature (item 7); re-scan on focus (item 8); paragraph spacing, vertical alignment and the overflow signal (item 3)"
 supersedes: nothing
 amends: nothing
 consulted: text spike worker (Opus 5.5 subagent); talk-through with Claude (docs/proposals/talk-2026-11-09-format-versions-and-hinting.md)
@@ -94,3 +95,5 @@ Drivers:
   header values: status `proposed`, status-note `drafted 2026-11-09 from spikes/text/ADR-PROPOSAL.md, chris's
   rulings and the talk record; awaiting ratification`.
 - 2026-11-09: ratified by chris ("ratify all three").
+- 2026-11-09: built status updated after the real `text` crate; the live-vs-saved identity test (item 5) is in the slice test (rung 1). Prior header values: built `not started`, proof
+  `queued in STATUS.md (Next) for the real text crate; evidence in spikes/text/FINDINGS.md`.

@@ -18,6 +18,8 @@ quadrule-format.workspace = true
 quadrule-model.workspace = true
 quadrule-profiles.workspace = true
 quadrule-text.workspace = true
+# ADR-003 item 4: tiny-skia in the test suite only, as an independent second check.
+tiny-skia = "0.12.0"
 
 [lints]
 workspace = true

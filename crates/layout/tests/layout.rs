@@ -317,3 +317,50 @@ fn hidden_objects_and_layers_are_not_drawn() {
     );
     assert!(ok);
 }
+
+#[test]
+fn pattern_shapes_are_centred_in_their_region_and_drawn_whole() {
+    // Every line and dot has its centre inside its region and reaches at most half a stroke past
+    // the edge; the slice's first dot row and column sit exactly on the region's top-left edge.
+    let doc = slice_document();
+    let (manta, _) = profiles();
+    let dl = page(&doc, &manta);
+    let px = |mm: f64| (mm * 300.0 / 25.4).round();
+    let region = |i: usize| {
+        let f = doc.layers[0].objects[i].frame;
+        (
+            px(f.x_mm),
+            px(f.y_mm),
+            px(f.x_mm + f.w_mm),
+            px(f.y_mm + f.h_mm),
+        )
+    };
+    let (dots, lines) = (region(0), region(1));
+    let mut checked = 0;
+    let mut on_edge = 0;
+    let mut bad = 0;
+    for (r, role) in [(dots, LineRole::Whisper), (lines, LineRole::Guide)] {
+        let style = manta.role(role);
+        let half = style.width_px as f64 / 2.0;
+        for (x0, y0, x1, y1, _) in rects(&dl).into_iter().filter(|q| q.4 == style.gray) {
+            let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
+            checked += 1;
+            let centred =
+                cy >= r.1 && cy <= r.3 && (role == LineRole::Guide || (cx >= r.0 && cx <= r.2));
+            let whole = y1 - y0 == style.width_px as f64;
+            let within = y0 >= r.1 - half && y1 <= r.3 + half;
+            if y0 < r.1 || x0 < r.0 {
+                on_edge += 1;
+            }
+            if !(centred && whole && within) {
+                bad += 1;
+            }
+        }
+    }
+    let ok = bad == 0 && on_edge > 0 && checked > 0;
+    println!(
+        "CHECK crate=layout name=pattern_shapes_centred_whole result={} shapes={checked} straddling_edge={on_edge} bad={bad}",
+        pass(ok)
+    );
+    assert!(ok);
+}

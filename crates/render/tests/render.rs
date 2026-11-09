@@ -155,3 +155,69 @@ fn png_is_8_bit_gray_with_optional_note() {
     );
     assert!(ok);
 }
+
+/// The snapped shapes alone (hard-edged rectangles), drawn by tiny-skia: an independent
+/// renderer, so a mistake in vello_cpu's handling cannot hide (ADR-003 item 4).
+fn tiny_skia_rects(dl: &DisplayList) -> Vec<u8> {
+    use tiny_skia::{Color, Paint, Pixmap, Rect, Transform};
+    let mut pm = Pixmap::new(dl.width, dl.height).expect("pixmap");
+    pm.fill(Color::from_rgba8(
+        dl.background,
+        dl.background,
+        dl.background,
+        255,
+    ));
+    for item in &dl.items {
+        if let Item::Rect {
+            x0,
+            y0,
+            x1,
+            y1,
+            gray,
+        } = *item
+        {
+            let mut paint = Paint::default();
+            paint.set_color(Color::from_rgba8(gray, gray, gray, 255));
+            paint.anti_alias = false;
+            let r = Rect::from_ltrb(x0 as f32, y0 as f32, x1 as f32, y1 as f32).expect("rect");
+            pm.fill_rect(r, &paint, Transform::identity(), None);
+        }
+    }
+    pm.data().chunks(4).map(|px| px[0]).collect()
+}
+
+#[test]
+fn tiny_skia_agrees_on_snapped_shapes() {
+    // Every snapped line and dot of the slice, on both profiles: vello_cpu and tiny-skia give
+    // the same pixels, and every pixel is the background or one of the shapes' own grays.
+    let mut parts = Vec::new();
+    let mut ok = true;
+    for id in [MANTA_ID, NOMAD_ID] {
+        let (_, mut dl) = slice_page(id);
+        dl.items.retain(|i| matches!(i, Item::Rect { .. }));
+        let grays: std::collections::BTreeSet<u8> = dl
+            .items
+            .iter()
+            .filter_map(|i| match i {
+                Item::Rect { gray, .. } => Some(*gray),
+                _ => None,
+            })
+            .chain([dl.background])
+            .collect();
+        let vello = render(&dl, Math::Fastest);
+        let tiny = tiny_skia_rects(&dl);
+        let diff = vello.data.iter().zip(&tiny).filter(|(a, b)| a != b).count();
+        let stray = vello.data.iter().filter(|v| !grays.contains(v)).count();
+        ok &= diff == 0 && stray == 0 && !dl.items.is_empty();
+        parts.push(format!(
+            "{id}:rects={}:diff_px={diff}:stray_px={stray}",
+            dl.items.len()
+        ));
+    }
+    println!(
+        "CHECK crate=render name=tiny_skia_agrees result={} {}",
+        pass(ok),
+        parts.join(" ")
+    );
+    assert!(ok);
+}
