@@ -1,2 +1,6 @@
 /target/
 /calib/
+# Editor swap and backup files
+*.swp
+*.swo
+*~
