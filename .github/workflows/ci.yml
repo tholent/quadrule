@@ -2,14 +2,33 @@
 # The slice test compares each exported PNG with the golden image blessed on the Pi (ARM), so
 # a pass on all three is the cross-machine check ADR-002 (T14/T15) and ADR-003 (item 6) owe.
 #
-# Cost: the repository is public, so GitHub's standard runners are free. Runs on pull requests,
-# pushes to main and by hand.
+# Cost: the repository is public, so GitHub's standard runners are free. Runs on pull requests
+# and pushes to main that change what it tests (the paths below), and by hand. A change to docs,
+# napkins or spikes alone does not run it. Fuzzing is its own workflow (fuzz.yml).
 name: CI
 
 on:
   pull_request:
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".cargo/**"
+      # The safe-zone and stock-grid tests read the device screenshots.
+      - "docs/device-measurements/**/*.png"
+      - ".github/workflows/ci.yml"
   push:
     branches: [main]
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".cargo/**"
+      # The safe-zone and stock-grid tests read the device screenshots.
+      - "docs/device-measurements/**/*.png"
+      - ".github/workflows/ci.yml"
   workflow_dispatch:
 
 # A newer push cancels an older run on a branch, but never on main: every commit on main gets
@@ -69,31 +88,3 @@ jobs:
           name: slice-${{ matrix.os }}
           path: target/tmp/slice/
           if-no-files-found: warn
-
-  # ADR-001 item 8: a short fuzz run of the .quad reader on every push (nightly Rust, Linux only).
-  # Longer runs: cd crates/format && cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad
-  fuzz:
-    name: fuzz (.quad reader, 60 s)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v7
-      - name: Nightly and cargo-fuzz
-        run: |
-          rustup toolchain install nightly --profile minimal
-          cargo +nightly install cargo-fuzz --locked
-      - name: Fuzz
-        working-directory: crates/format
-        run: |
-          mkdir -p fuzz/corpus/open_quad
-          cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad -- -max_total_time=60 -print_final_stats=1
-      - name: Upload a crashing input
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: fuzz-artifacts
-          path: crates/format/fuzz/artifacts/
-          if-no-files-found: ignore
-

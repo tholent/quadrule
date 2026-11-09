@@ -1,0 +1,54 @@
+# ADR-001 item 8: a short fuzz run of the .quad reader (nightly Rust, Linux only). Runs when the
+# reader or what it is built from changes, and by hand. Longer runs, locally:
+#   cd crates/format && cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad
+name: Fuzz
+
+on:
+  pull_request:
+    paths:
+      # crates/format holds the reader and the fuzz target; crates/model is the document it reads.
+      - "crates/format/**"
+      - "crates/model/**"
+      # The workspace sets the reader's dependency versions.
+      - "Cargo.toml"
+      - ".github/workflows/fuzz.yml"
+  push:
+    branches: [main]
+    paths:
+      # crates/format holds the reader and the fuzz target; crates/model is the document it reads.
+      - "crates/format/**"
+      - "crates/model/**"
+      # The workspace sets the reader's dependency versions.
+      - "Cargo.toml"
+      - ".github/workflows/fuzz.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  fuzz:
+    name: fuzz (.quad reader, 60 s)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - name: Nightly and cargo-fuzz
+        run: |
+          rustup toolchain install nightly --profile minimal
+          cargo +nightly install cargo-fuzz --locked
+      - name: Fuzz
+        working-directory: crates/format
+        run: |
+          mkdir -p fuzz/corpus/open_quad
+          cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad -- -max_total_time=60 -print_final_stats=1
+      - name: Upload a crashing input
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-artifacts
+          path: crates/format/fuzz/artifacts/
+          if-no-files-found: ignore
