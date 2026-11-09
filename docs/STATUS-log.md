@@ -188,3 +188,7 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
 - chris, word for word: "I do see them, they are just not usable at that size" (W13, W14). Correction to the previous
   entry: 2 px dots are visible but too small to use, not invisible; the explanation offered for the difference from
   the dots sheet is withdrawn (kept, struck through, in the calibration record). 3 px stays the smallest usable dot.
+- Rulings, chris's answers word for word (options chosen): dot grid gets its own profile setting, "Yes, own setting
+  (Recommended)" (Nomad: W15, 3 px square, gray 51); Nomad line roles, "Yes, use these (Recommended)" (Whisper LA8
+  1 px/119, Guide LA4 1 px/51, Structure LB4 2 px/51, Emphasis LC1 3 px/0); toolbar positions used, "Docked left,
+  Docked top" (L06 to warn only for these). Recorded in `docs/device-measurements/supernote.a6x2/calibration.md`.

@@ -159,3 +159,24 @@ Read from this:
 - **For writing, chris prefers a 3 px dot** (W15) over the 4 px dot he liked best on the dots sheet (PD2).
 - **The favourite line holds when writing**: W1 matches LA4 (1 px, gray 51).
 - **Gray 51 is the favourite on every sheet**: lines, dots, reading text and writing.
+
+## Rulings from the Nomad results — 2026-11-09
+
+Asked as three questions; chris's answers, word for word (the option chosen):
+
+1. A dot-grid setting of its own in each profile, apart from the four line roles: "Yes, own setting (Recommended)".
+   On the Nomad: **W15**, square 3 px, gray 51.
+2. The Nomad line roles: "Yes, use these (Recommended)".
+
+   | role | code | width | gray |
+   |---|---|---|---|
+   | Whisper | LA8 | 1 px | 119 |
+   | Guide | LA4 | 1 px | 51 |
+   | Structure | LB4 | 2 px | 51 |
+   | Emphasis | LC1 | 3 px | 0 |
+
+3. Toolbar positions chris uses: "Docked left, Docked top". The safe-zone lint (L06) should warn only about these.
+
+Text, from the text sheet: reading text 9 pt at gray 51 (TD2, TL2); labels 9 pt at gray 153 (TD4, TL4).
+
+None of this is in `crates/profiles/data/supernote.a6x2.ron` yet.
