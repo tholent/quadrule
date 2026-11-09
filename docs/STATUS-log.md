@@ -106,3 +106,15 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   also warned that `actions/checkout@v4` and `actions/upload-artifact@v4` target the deprecated Node 20: moved both
   to `@v7` (latest releases v7.0.1 and v7.0.2, both `node24`). Runs on `main` are no longer cancelled by a newer push;
   the cost note now says public runners are free.
+- looseends (project): 16 of 22 scanned markers still open plus 6 from this session; listed by who acts. chris's
+  answers (question tool): crank work "Tidy-up, Stock-grid match, Fuzzing, Start the linter"; copyright "Chris Wells
+  (current)"; swap file "Rewrite history"; housekeeping "Ignore .claude, delete branches".
+- Housekeeping: deleted merged branches (all ancestors of main): local `spikes/2026-11-09`, `prep/2026-11-09`,
+  three `worktree-agent-*`, `rung-1/headless-slice`, `status/2026-11-09-rung-1-merged`; remote
+  `rung-1/headless-slice`, `status/2026-11-09-rung-1-merged`. `/.claude/` ignored.
+- History rewrite (chris's ruling): `git filter-branch --index-filter` removed `docs/.calibration.md.swp` from
+  `be6fea9^..main`; final tree identical to the old main; force-pushed with lease (`4a1b26a` → `8c602c1`). Local
+  backup branch `backup/pre-swap-rewrite` (never pushed). GitHub still serves the old commits by hash until its own
+  clean-up; a full purge needs GitHub Support. Old → new names for hashes cited above: `be6fea9` → `e1c8021`,
+  `a087163` → `94ce048`, `ff573f7` → `986234f`, `df2beba` → `e893bec`, `0db5abd` → `37c4754`, `0ec4e81` → `5e7b506`,
+  `4a1b26a` → `6082dfa`, `b7278ab` → `8c602c1`.
