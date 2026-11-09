@@ -1,0 +1,26 @@
+# Fuzzing the .quad reader (ADR-001 item 8). Not part of the main workspace: it needs nightly
+# Rust and is built only by cargo-fuzz:
+#   cd crates/format && cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad
+[package]
+name = "quadrule-format-fuzz"
+version = "0.0.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+quadrule-format = { path = ".." }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "open_quad"
+path = "fuzz_targets/open_quad.rs"
+test = false
+doc = false
+bench = false

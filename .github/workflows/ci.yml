@@ -69,3 +69,31 @@ jobs:
           name: slice-${{ matrix.os }}
           path: target/tmp/slice/
           if-no-files-found: warn
+
+  # ADR-001 item 8: a short fuzz run of the .quad reader on every push (nightly Rust, Linux only).
+  # Longer runs: cd crates/format && cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad
+  fuzz:
+    name: fuzz (.quad reader, 60 s)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - name: Nightly and cargo-fuzz
+        run: |
+          rustup toolchain install nightly --profile minimal
+          cargo +nightly install cargo-fuzz --locked
+      - name: Fuzz
+        working-directory: crates/format
+        run: |
+          mkdir -p fuzz/corpus/open_quad
+          cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad -- -max_total_time=60 -print_final_stats=1
+      - name: Upload a crashing input
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-artifacts
+          path: crates/format/fuzz/artifacts/
+          if-no-files-found: ignore
+

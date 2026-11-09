@@ -138,3 +138,9 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   findings; the slice page gives 15 (its 8 mm margin sits under docked toolbars; its title rule is off the rhythm).
   Waiting on calibration: L03, L04, L05, L07, L09, L13, L14. Waiting on features: L08, L11, L12, L15, L17.
 - Checks: `cargo test --workspace -- --nocapture` → 58 passed, 0 failed, 62 CHECK lines pass; clippy and fmt clean.
+- Fuzzing (ADR-001 item 8): nightly Rust 1.102.0 (2026-11-08) and cargo-fuzz 0.13.2 installed on the Pi (undo:
+  `rustup toolchain uninstall nightly`, `cargo uninstall cargo-fuzz`). Target `crates/format/fuzz/fuzz_targets/
+  open_quad.rs`: any bytes as a `.quad` must not panic, and an openable, savable file must save, reopen and save to
+  the same bytes. Seed: the slice `.quad`. 10-minute run: 3,312,293 runs, 5,511 a second, no crash, peak 565 MB.
+  CI gains a 60-second fuzz job. Paid the debt "set up cargo-fuzz". ADR-001 header: proof adds the fuzz target,
+  owed drops item 8 (old values in its History). License-header test now skips `target/` folders.

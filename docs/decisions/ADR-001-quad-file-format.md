@@ -6,8 +6,8 @@ ratified-on: "2026-11-09"
 owner: chris
 kind: architecture
 built: partial
-proof: "`crates/format/tests/format.rs::round_trip`, `crates/format/tests/format.rs::unknown_fields_survive_resave`, `crates/format/tests/format.rs::newer_minor_file_keeps_its_version`, `crates/format/tests/format.rs::outlines_must_match_profiles`, `crates/model/tests/model.rs::unknown_fields_survive_per_record_type`"
-owed: "font signature in the manifest (item 6); reusing outlines for a new profile while a font is missing (item 7); cargo-fuzz on the reader (item 8, a stable-Rust random-damage test stands in); hinted outline tables (item 3, waits on hinting)"
+proof: "`crates/format/tests/format.rs::round_trip`, `crates/format/tests/format.rs::unknown_fields_survive_resave`, `crates/format/tests/format.rs::newer_minor_file_keeps_its_version`, `crates/format/tests/format.rs::outlines_must_match_profiles`, `crates/model/tests/model.rs::unknown_fields_survive_per_record_type`, `crates/format/fuzz/fuzz_targets/open_quad.rs`"
+owed: "font signature in the manifest (item 6); reusing outlines for a new profile while a font is missing (item 7); hinted outline tables (item 3, waits on hinting)"
 supersedes: nothing
 amends: nothing
 consulted: format spike worker (Opus 5.5 subagent); talk-through with Claude (docs/proposals/talk-2026-11-09-format-versions-and-hinting.md)
@@ -96,3 +96,5 @@ Drivers:
 - 2026-11-09: ratified by chris ("ratify all three").
 - 2026-11-09: built status updated after the real `format` crate and the slice test (rung 1). Prior header values: built `not started`, proof
   `queued in STATUS.md (Next) for the real format crate; evidence in spikes/format/FINDINGS.md`.
+- 2026-11-09: item 8 built: cargo-fuzz target `open_quad` (3,312,293 runs in 601 s on the Pi, no crash) and a
+  60-second fuzz job in CI. Prior header values: proof "`crates/format/tests/format.rs::round_trip`, `crates/format/tests/format.rs::unknown_fields_survive_resave`, `crates/format/tests/format.rs::newer_minor_file_keeps_its_version`, `crates/format/tests/format.rs::outlines_must_match_profiles`, `crates/model/tests/model.rs::unknown_fields_survive_per_record_type`"; owed "font signature in the manifest (item 6); reusing outlines for a new profile while a font is missing (item 7); cargo-fuzz on the reader (item 8, a stable-Rust random-damage test stands in); hinted outline tables (item 3, waits on hinting)".

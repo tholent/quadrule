@@ -36,6 +36,10 @@ fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
     for e in std::fs::read_dir(dir).expect("read dir").flatten() {
         let p = e.path();
         if p.is_dir() {
+            // Build folders hold generated files, not ours.
+            if p.file_name().is_some_and(|n| n == "target") {
+                continue;
+            }
             rust_files(&p, out);
         } else if p.extension().is_some_and(|x| x == "rs") {
             out.push(p);
