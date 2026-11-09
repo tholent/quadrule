@@ -26,27 +26,37 @@ fn english_loads_and_formats_every_message() {
     // files themselves, so a new message is checked the day it is added.
     let s = Strings::english();
     let ids = s.ids();
+    let mut arg_names: Vec<&'static str> = quadrule_i18n::english_sources()
+        .iter()
+        .flat_map(|(_, src)| src.split('$').skip(1))
+        .map(|rest| {
+            let end = rest
+                .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_' || c == '-'))
+                .unwrap_or(rest.len());
+            &rest[..end]
+        })
+        .filter(|n| !n.is_empty())
+        .collect();
+    arg_names.sort();
+    arg_names.dedup();
     let failed: Vec<_> = ids
         .iter()
         .filter(|id| {
-            // Arguments a message may need, all given; Fluent ignores the extra ones.
+            // Every argument any message uses ($name in the files), all given; Fluent ignores the
+            // extra ones.
             let mut m = Message::new(Box::leak(id.to_string().into_boxed_str()));
-            for name in [
-                "name", "px", "min_mm", "drawn", "a", "b", "unit", "x", "y", "zone",
-            ] {
+            for name in &arg_names {
                 m = m.num(name, 1.0, 0);
-            }
-            for name in ["zones", "axes", "near", "far"] {
-                m = m.text(name, "z");
             }
             s.try_format(&m).is_err()
         })
         .collect();
     let ok = failed.is_empty() && ids.len() > 20;
     println!(
-        "CHECK crate=i18n name=english_formats result={} messages={} failed={failed:?}",
+        "CHECK crate=i18n name=english_formats result={} messages={} arguments={} failed={failed:?}",
         pass(ok),
-        ids.len()
+        ids.len(),
+        arg_names.len()
     );
     assert!(ok);
 }

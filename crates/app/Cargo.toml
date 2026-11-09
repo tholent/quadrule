@@ -1,0 +1,20 @@
+[package]
+name = "quadrule-app"
+description = "Quadrule, the app (napkin §15.1): eframe setup, the window, preferences."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "quadrule"
+path = "src/main.rs"
+
+[dependencies]
+eframe.workspace = true
+quadrule-ui.workspace = true
+rfd.workspace = true
+
+[lints]
+workspace = true

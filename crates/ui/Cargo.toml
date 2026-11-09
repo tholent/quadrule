@@ -1,0 +1,26 @@
+[package]
+name = "quadrule-ui"
+description = "Quadrule's egui widgets and the viewer's state (napkin §15.1): canvas, lint panel, dialogs."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+egui.workspace = true
+quadrule-format.workspace = true
+quadrule-i18n.workspace = true
+quadrule-layout.workspace = true
+quadrule-lint.workspace = true
+quadrule-model.workspace = true
+quadrule-profiles.workspace = true
+quadrule-render.workspace = true
+quadrule-text.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+egui_kittest.workspace = true
+
+[lints]
+workspace = true

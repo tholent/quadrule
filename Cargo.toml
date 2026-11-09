@@ -1,9 +1,26 @@
-# The quadrule workspace (napkin §15.1). Rung 1 holds only the six crates the headless slice
-# needs (docs/bbq/2026-11-09-rung-1-headless-slice.md, Q5). `spikes/` stays outside it.
+# The quadrule workspace (napkin §15.1). Crates arrive with the rung that uses them (rung 1 bbq,
+# Q5): rung 1 the six for the headless slice, then lint and xtask; rung 2 adds i18n, ui and app
+# (docs/bbq/2026-11-09-rung-2-viewer.md). `spikes/` stays outside it.
 
 [workspace]
 resolver = "3"
 members = [
+    "crates/model",
+    "crates/profiles",
+    "crates/layout",
+    "crates/format",
+    "crates/text",
+    "crates/render",
+    "crates/lint",
+    "crates/i18n",
+    "crates/ui",
+    "crates/app",
+    "crates/xtask",
+]
+# Rung 2 bbq Q9: the window is an opt-in build. Plain `cargo build` / `cargo test` at the root
+# leave out `ui` and `app` (the graphics stack is heavy on the Pi); `-p quadrule-app`,
+# `-p quadrule-ui` or `--workspace` build them, and CI does.
+default-members = [
     "crates/model",
     "crates/profiles",
     "crates/layout",
@@ -32,9 +49,17 @@ quadrule-text = { path = "crates/text" }
 quadrule-render = { path = "crates/render" }
 quadrule-lint = { path = "crates/lint" }
 quadrule-i18n = { path = "crates/i18n" }
+quadrule-ui = { path = "crates/ui" }
 
 ciborium = "0.2.2"
 # ADR-002 item 1: fontdb and skrifa come only through cosmic-text's re-exports; swash is off.
+# The window (rung 2): eframe on wgpu (napkin §15.2; rung 2 bbq, Defaulted "Graphics backend").
+eframe = { version = "0.37.0", default-features = false, features = ["wgpu", "wayland", "x11", "accesskit", "default_fonts", "persistence"] }
+# monochrome_emoji_fonts: egui's own fonts lack ⚠ and ℹ, which the lint panel uses.
+egui = { version = "0.37.0", features = ["monochrome_emoji_fonts"] }
+egui_kittest = "0.37.0"
+# The system file dialog (napkin §15.2); on Linux it asks the desktop's portal.
+rfd = "0.18.0"
 # Napkin §14: every string on screen goes through Fluent (rung 2 bbq Q5).
 fluent-bundle = "0.16.0"
 unic-langid = "0.9.6"

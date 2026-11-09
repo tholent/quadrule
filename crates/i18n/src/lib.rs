@@ -33,6 +33,11 @@ const ENGLISH: &[(&str, &str)] = &[
     ("app.ftl", include_str!("../locales/en-US/app.ftl")),
 ];
 
+/// The English Fluent files built into the program, as `(file name, source)`.
+pub fn english_sources() -> &'static [(&'static str, &'static str)] {
+    ENGLISH
+}
+
 /// One argument to a message.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Arg {
