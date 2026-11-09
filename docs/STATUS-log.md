@@ -101,3 +101,8 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   concluded "failure" with only two jobs, ubuntu and windows, both passing; the macOS job was never created. Nothing
   in the code failed; the cause is in the run's annotations, which the token cannot read, and the token cannot
   re-run jobs either.
+- Both odd runs were GitHub-side: the public run pages show "Internal server error" annotations (correlation ids
+  `f1ab9d35-…` for 42671324951, `59f181e4-…` for 42671778956); githubstatus.com said all operational. The first run
+  also warned that `actions/checkout@v4` and `actions/upload-artifact@v4` target the deprecated Node 20: moved both
+  to `@v7` (latest releases v7.0.1 and v7.0.2, both `node24`). Runs on `main` are no longer cancelled by a newer push;
+  the cost note now says public runners are free.

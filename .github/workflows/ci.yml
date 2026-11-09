@@ -2,8 +2,8 @@
 # The slice test compares each exported PNG with the golden image blessed on the Pi (ARM), so
 # a pass on all three is the cross-machine check ADR-002 (T14/T15) and ADR-003 (item 6) owe.
 #
-# Cost: the repository is private, so runs use the account's Actions minutes; macOS minutes
-# count 10x and Windows 2x. Runs only on pull requests, pushes to main and by hand.
+# Cost: the repository is public, so GitHub's standard runners are free. Runs on pull requests,
+# pushes to main and by hand.
 name: CI
 
 on:
@@ -12,9 +12,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# A newer push cancels an older run on a branch, but never on main: every commit on main gets
+# a result.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   CARGO_TERM_COLOR: never
@@ -31,7 +33,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # rust-toolchain.toml pins Rust 1.99.1 with clippy and rustfmt; this installs it.
       - name: Toolchain
@@ -62,7 +64,7 @@ jobs:
 
       - name: Upload exported files
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: slice-${{ matrix.os }}
           path: target/tmp/slice/
