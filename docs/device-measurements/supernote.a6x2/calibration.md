@@ -73,3 +73,24 @@ Read from this:
   needs its own size rather than borrowing a line role's width.
 - **Fine dash patterns blur into a solid line** as they get lighter: 2/2 reads as dashes only at gray 51 and 2/4 to
   102; 6/6 and longer stay dashed to 187.
+
+## Text sheet — 2026-11-09
+
+chris, word for word: "everything is legible at all sizes and grey levels. Most comfortable regular is TD2. Most
+comfortable bold is TL2. all samples in column three are a bit harder to read. full black seems less legible than 51
+for some reason"
+
+| | code | size | gray |
+|---|---|---|---|
+| most comfortable, regular | TD2 | 9 pt | 51 |
+| most comfortable, bold | TL2 | 9 pt | 51 |
+| smallest legible | TA3, TI3 (every sample legible) | 6 pt | 102 |
+
+Read from this:
+
+- **Every sample is legible**, down to 6 pt at gray 102, so the sheet did not find a floor; the smallest size tested
+  (6 pt) is the lowest known to work.
+- **Gray 51 reads best.** Gray 102 (column 3) is "a bit harder to read" at every size, and black (column 1) reads
+  less well than 51. Why black is worse is not known; that is chris's observation, not a measurement.
+- **9 pt is the comfortable size** for both weights.
+- **Gray 51 is chris's favourite on every sheet so far**: line LA4, dot PD2, text TD2 and TL2.
