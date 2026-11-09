@@ -217,3 +217,9 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   `pattern_shapes_are_centred_in_their_region_and_drawn_whole` sorts shapes by form (Manta roles now share gray 51);
   it now counts 366 shapes (350 dots, 16 lines) where it had counted 734 by gray. `cargo test --workspace --
   --nocapture` → 65 CHECK lines pass; clippy clean. Calibration of role values is done on both devices.
+- Pen shades: chris's Nomad screenshot (added as `docs/device-measurements/pen-shades.png`, moved to
+  `docs/device-measurements/supernote.a6x2/nomad-pen-shades.png`; the safe-zone tool skips it by name). Black 1, dark
+  grey 157, light grey 201, white 254. Both profiles' `ink_values` set to these (the Manta's assumed from the Nomad).
+  New test `crates/xtask/tests/pen_shades.rs` re-measures the screenshot → measured=[1, 157, 201, 254], pass. The
+  stock grid's gray 1 is the black pen's gray (README note). Found: the Label gray (153) is 4 steps from the dark
+  grey pen (157); raised with chris.

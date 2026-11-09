@@ -36,7 +36,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
 ## Known debt
 
 Full debt list: `docs/STATUS-debt.md`.
-- Clean gray levels and pen ink values are not measured on either device (`docs/STATUS-debt.md`).
+- Clean gray levels are not measured on either device; the Manta's pen shades are assumed (`docs/STATUS-debt.md`).
 - ADR parts not built yet: font signature, fuzzing, hinting flag, system-font fallback and substitution, canvas
   (`docs/STATUS-debt.md`).
 

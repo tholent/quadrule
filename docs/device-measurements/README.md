@@ -47,7 +47,8 @@ spacing, line width and placement it finds; the line gray and the page gray were
 - **Shown 1:1.** Every line is exactly 1 px with pure white beside it, so the template reaches the screen with no
   scaling or smoothing, and screenshot pixels map 1:1 to template pixels (napkin §3.5).
 - **Gray 1, not 0.** The lines are 1, one step off black. Why is not known; one guess is that it keeps the template
-  apart from pen ink at 0. Worth checking before `ink_values` is filled in.
+  apart from pen ink at 0. Worth checking before `ink_values` is filled in. *Checked 2026-11-09 (pen shades below): the black pen also writes gray 1, so the guess is wrong; the stock grid
+  is drawn in the black pen's own gray.*
 - **Full bleed.** The grid runs under the toolbar and footer; the stock template ignores safe zones.
 - **Not shown:** how the panel itself renders grays, or how the lines look to the eye. Screenshots are the screen's
   pixel data; calibration still needs the sheets and eyes.
@@ -62,3 +63,21 @@ outside the footer and that screenshot's toolbar:
 - **Nomad:** identical once shifted 1 px up and left. On each axis the stock grid cannot sit exactly in the middle
   (an odd pixel is left over), and the two stock templates break that tie in opposite directions: no single rule
   matches both. quadrule's centred rhythm gives the odd pixel to the right and bottom, which matches the Manta.
+
+## Pen shades (2026-11-09)
+
+chris wrote one stroke with each pen color on the Nomad and took a screenshot:
+`supernote.a6x2/nomad-pen-shades.png`. Each stroke is one flat gray with soft edges:
+
+| pen color | gray |
+|---|---|
+| black | 1 |
+| dark grey | 157 |
+| light grey | 201 |
+| white | 254 |
+
+These are the profiles' `ink_values` (napkin §3.2), which the "competes with ink" lint rules use. The Manta's are
+assumed the same (pen colors come from the firmware) until a Manta screenshot confirms them.
+`crates/xtask/tests/pen_shades.rs` re-measures the screenshot on every run and fails if a profile disagrees.
+
+Like the safe zones, this is the screen's pixel data, not how the panel shows it.

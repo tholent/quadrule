@@ -11,8 +11,10 @@
     panel: "to verify",
     // ESTIMATE: 16 evenly spaced levels, not measured.
     gray_levels: [0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255],
-    // Unknown until calibration (napkin §17.1 item 1).
-    ink_values: [],
+    // Measured 2026-11-09 from docs/device-measurements/supernote.a6x2/nomad-pen-shades.png (chris):
+    // the gray each pen color writes, black, dark grey, light grey, white. Checked by
+    // crates/xtask/tests/pen_shades.rs.
+    ink_values: [1, 157, 201, 254],
     // Measured 2026-11-09 by `cargo xtask safe-zones` from the portrait screenshots in
     // docs/device-measurements/supernote.a6x2/ (toolbar docked left, right, top, and floating at its
     // default place). Footer zones are covered in every screenshot: page navigation (left) and
