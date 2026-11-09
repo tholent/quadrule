@@ -27,3 +27,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - The slice page's 8 mm margin (94 px) is narrower than a docked toolbar (Manta 116 px, Nomad 99 px), so a toolbar
   docked left or right covers the edge of its title and rules; lint L06 flags it (`cargo xtask lint`). The slice
   itself is left as is (`crates/model/src/sample.rs`).
+- Open (chris, 2026-11-09: "let's leave the 153/157 question as open"): the Label gray (153) sits 4 steps from the
+  dark grey pen (157), and chris is "not sure that it's all that bad to have template lines that match the pen ink".
+  Bears on L04's severity (napkin §8.3); not built until this is settled (`docs/STATUS-log.md`).

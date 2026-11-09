@@ -226,3 +226,5 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
 - chris, word for word, on the Label gray (153) sitting 4 steps from the dark grey pen (157): "I'm not sure that
   it's all that bad to have template lines that match the pen ink". Label stays 153. This bears on L04 ("Gray or
   weight close to pen ink (will compete with handwriting)", Warn, napkin §8.3); its severity asked of chris.
+- chris, word for word: "let's leave the 153/157 question as open". Recorded as an open item in
+  `docs/STATUS-debt.md`; L04 waits on it.
