@@ -228,3 +228,9 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   weight close to pen ink (will compete with handwriting)", Warn, napkin §8.3); its severity asked of chris.
 - chris, word for word: "let's leave the 153/157 question as open". Recorded as an open item in
   `docs/STATUS-debt.md`; L04 waits on it.
+- Rung 2 proposed: the first app window, a viewer (open a `.quad` or the slice, show it as the device will, switch
+  Manta and Nomad, zoom to pixels, show lint findings, export PNGs; no editing), about 1–2 sessions. chris, word for
+  word, answering (1) which machine runs the window, (2) should the canvas fall back to vello_cpu on weak graphics
+  chips, (3) is a viewer the right scope: "2. yes. 3. scope is good. 1. working on the display. I need to reboot
+  before starting rung 2". Next session: plan rung 2 in a bbq, then build; R15 (the window on a display) can run
+  once the Pi has its display.

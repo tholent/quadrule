@@ -7,8 +7,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Text spike T14/T15, what is left: system-font discovery on macOS and Windows. Layout and outlines with the bundled
   font now match byte for byte there (CI run 42660403429); system fonts are not loaded yet (`crates/text/src/lib.rs`).
 - Render spike R15: run the eframe canvas window on a display (`spikes/render/FINDINGS.md`).
-- Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; canvas fallback to vello_cpu on weak GPUs;
-  the build-folder instruction the render worker reports (`spikes/render/FINDINGS.md`).
+- Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; the build-folder instruction the render worker
+  reports (`spikes/render/FINDINGS.md`). (Canvas fallback to vello_cpu on weak GPUs: ruled yes, 2026-11-09.)
 - Calibration, still to measure: the clean gray levels on both devices (the profiles keep 16 evenly spaced
   estimates), which the gray lint rules need; and the Manta's pen shades, assumed equal to the Nomad's
   (`crates/profiles/data/`, `docs/device-measurements/README.md`).

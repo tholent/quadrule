@@ -30,8 +30,12 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Next
 
-- Add the lint rules that need calibrated values (L03, L04, L05, L07, L09, L13, L14; `crates/lint/src/lib.rs`), and
-  plan rung 2.
+- Rung 2, the first app window: a viewer (open a `.quad` or the slice, show it as the device will, switch Manta and
+  Nomad, zoom to pixels, show lint findings, export PNGs; no editing). Scope agreed by chris 2026-11-09; the canvas
+  falls back to vello_cpu on weak graphics chips. Next session: chris has a display attached to the Pi; plan rung 2
+  in a bbq (record in `docs/bbq/`), then build (`docs/STATUS-log.md`).
+- Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on an open question;
+  `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
 ## Known debt
 
