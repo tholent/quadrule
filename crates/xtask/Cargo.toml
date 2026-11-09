@@ -14,7 +14,9 @@ path = "src/main.rs"
 [dependencies]
 kurbo.workspace = true
 png.workspace = true
+quadrule-format.workspace = true
 quadrule-layout.workspace = true
+quadrule-lint.workspace = true
 quadrule-model.workspace = true
 quadrule-profiles.workspace = true
 quadrule-render.workspace = true

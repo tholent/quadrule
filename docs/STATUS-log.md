@@ -131,3 +131,10 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   axes): the Manta and Nomad templates break the odd-pixel tie in opposite directions. Result
   (`crates/xtask/tests/stock_grid.rs`): quadrule's export of the stock grid matches the Manta screenshots exactly
   (0 px outside the toolbar and footer) and the Nomad's exactly once shifted 1 px up-left.
+- Linter started: new crate `quadrule-lint` (napkin §8.3) with the rules that need no calibration values — L01
+  stroke under 1 px, L02 stroke not pixel-aligned, L06 content in a safe zone (fixed zones Warn, floating toolbar
+  Info, one finding per object), L10 off the page, L16 position off the rhythm (positions only; sizes owed), L18
+  rhythm fits the margins unevenly, L19 uneven physical-locked spacing. `cargo xtask lint [<file.quad>]` prints the
+  findings; the slice page gives 15 (its 8 mm margin sits under docked toolbars; its title rule is off the rhythm).
+  Waiting on calibration: L03, L04, L05, L07, L09, L13, L14. Waiting on features: L08, L11, L12, L15, L17.
+- Checks: `cargo test --workspace -- --nocapture` → 58 passed, 0 failed, 62 CHECK lines pass; clippy and fmt clean.

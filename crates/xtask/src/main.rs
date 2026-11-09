@@ -17,6 +17,7 @@
 //! ```text
 //! cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]
 //! cargo xtask safe-zones [--profile <id>|all]
+//! cargo xtask lint [<file.quad>]
 //! ```
 
 use quadrule_render::{Math, PngMeta, encode_png, render, sha256_hex};
@@ -25,12 +26,19 @@ use quadrule_xtask::calib;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]";
+const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]\n       cargo xtask lint [<file.quad>]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("calibration-sheet") => match calibration_sheet(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("error: {e}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("lint") => match lint(&args[1..]) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("error: {e}");
@@ -154,5 +162,34 @@ fn safe_zones(args: &[String]) -> Result<(), String> {
             println!("// differs from crates/profiles/data/{id}.ron");
         }
     }
+    Ok(())
+}
+
+/// Lints a `.quad` file (or the rung 1 slice document) on each of its profiles and prints one
+/// line per finding: profile, rule, severity, message.
+fn lint(args: &[String]) -> Result<(), String> {
+    let doc = match args {
+        [] => quadrule_model::sample::slice_document(),
+        [path] => {
+            let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+            quadrule_format::QuadFile::from_bytes(&bytes)
+                .map_err(|e| format!("{path}: {e}"))?
+                .doc
+        }
+        _ => return Err(USAGE.into()),
+    };
+    let primary = quadrule_profiles::builtin(&doc.primary_profile_id).map_err(|e| e.to_string())?;
+    let mut reg = FontRegistry::bundled_only();
+    let mut count = 0;
+    for id in doc.profile_ids() {
+        let target = quadrule_profiles::builtin(id).map_err(|e| e.to_string())?;
+        let laid = quadrule_layout::lay_out_text(&doc, &primary, &target, &mut reg)
+            .map_err(|e| e.to_string())?;
+        for f in quadrule_lint::lint(&doc, &primary, &target, &laid.outlines) {
+            count += 1;
+            println!("{}  {}  {:?}  {}", f.profile, f.rule, f.severity, f.message);
+        }
+    }
+    println!("{count} finding(s) on {} profile(s)", doc.profiles.len());
     Ok(())
 }

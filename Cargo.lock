@@ -604,6 +604,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "quadrule-lint"
+version = "0.1.0"
+dependencies = [
+ "quadrule-layout",
+ "quadrule-model",
+ "quadrule-profiles",
+ "quadrule-text",
+]
+
+[[package]]
 name = "quadrule-model"
 version = "0.1.0"
 dependencies = [
@@ -652,7 +662,9 @@ version = "0.1.0"
 dependencies = [
  "kurbo",
  "png",
+ "quadrule-format",
  "quadrule-layout",
+ "quadrule-lint",
  "quadrule-model",
  "quadrule-profiles",
  "quadrule-render",

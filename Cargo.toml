@@ -10,6 +10,7 @@ members = [
     "crates/format",
     "crates/text",
     "crates/render",
+    "crates/lint",
     "crates/xtask",
 ]
 
@@ -28,6 +29,7 @@ quadrule-layout = { path = "crates/layout" }
 quadrule-format = { path = "crates/format" }
 quadrule-text = { path = "crates/text" }
 quadrule-render = { path = "crates/render" }
+quadrule-lint = { path = "crates/lint" }
 
 ciborium = "0.2.2"
 # ADR-002 item 1: fontdb and skrifa come only through cosmic-text's re-exports; swash is off.
