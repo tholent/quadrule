@@ -97,3 +97,7 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   leftover split evenly (centred origin), 1 px lines at gray 1 with hard edges, white page, full bleed
   (`docs/device-measurements/README.md`).
 - Checks: 47 passed, 0 failed, 51 CHECK lines pass; clippy and fmt clean.
+- `cargo xtask safe-zones` now prints the template grid it finds (`0db5abd`). CI run 42671324951 on `0db5abd`
+  concluded "failure" with only two jobs, ubuntu and windows, both passing; the macOS job was never created. Nothing
+  in the code failed; the cause is in the run's annotations, which the token cannot read, and the token cannot
+  re-run jobs either.
