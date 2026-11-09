@@ -1,0 +1,17 @@
+[package]
+name = "spike-text"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Throwaway text spike for quadrule (napkin §7, §16 spike 2). Not product code."
+license = "Apache-2.0"
+
+# Standalone: not part of any workspace.
+[workspace]
+
+[dependencies]
+# fontdb and skrifa are taken from cosmic-text's own re-exports (cosmic_text::fontdb,
+# cosmic_text::skrifa) so only one copy of each is built. swash (a rasterizer) is
+# switched off: quadrule renders outlines itself.
+cosmic-text = { version = "0.19.0", default-features = false, features = ["std", "fontconfig"] }
+kurbo = "0.13.1"
