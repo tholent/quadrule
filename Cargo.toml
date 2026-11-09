@@ -1,0 +1,53 @@
+# The quadrule workspace (napkin §15.1). Rung 1 holds only the six crates the headless slice
+# needs (docs/bbq/2026-11-09-rung-1-headless-slice.md, Q5). `spikes/` stays outside it.
+
+[workspace]
+resolver = "3"
+members = [
+    "crates/model",
+    "crates/profiles",
+    "crates/layout",
+    "crates/format",
+    "crates/text",
+    "crates/render",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+# The Rust on the Pi (STATUS.md); rust-toolchain.toml pins CI to the same compiler.
+rust-version = "1.99.1"
+license = "Apache-2.0"
+publish = false
+
+[workspace.dependencies]
+quadrule-model = { path = "crates/model" }
+quadrule-profiles = { path = "crates/profiles" }
+quadrule-layout = { path = "crates/layout" }
+quadrule-format = { path = "crates/format" }
+quadrule-text = { path = "crates/text" }
+quadrule-render = { path = "crates/render" }
+
+ciborium = "0.2.2"
+# ADR-002 item 1: fontdb and skrifa come only through cosmic-text's re-exports; swash is off.
+cosmic-text = { version = "0.19.0", default-features = false, features = ["std", "fontconfig"] }
+# The same kurbo vello_cpu 0.3 uses, so paths pass between layout and render unchanged.
+kurbo = "0.13.1"
+png = "0.18.1"
+semver = "1.0.28"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+uuid = { version = "1.29.2", features = ["serde"] }
+# ADR-003: export renders with vello_cpu. No multithreading (one thread, one order of work),
+# no png/text extras (quadrule encodes PNGs and draws text itself).
+vello_cpu = { version = "0.3.0", default-features = false, features = ["std", "u8_pipeline"] }
+zip = { version = "9.5.0", default-features = false, features = ["deflate"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+# Exact float comparisons are deliberate in the pixel and determinism checks.
+float_cmp = "allow"

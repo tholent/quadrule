@@ -1,0 +1,6 @@
+# Same bytes on every checkout: text files keep LF on Windows too, and binary files are never
+# touched (golden images and bundled fonts are compared by sha256).
+* text=auto eol=lf
+*.png binary
+*.ttf binary
+*.quad binary

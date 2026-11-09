@@ -1,0 +1,19 @@
+[package]
+name = "quadrule-model"
+description = "Quadrule's document model (napkin §5): geometry in millimetres, no GPU or UI."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+ciborium.workspace = true
+serde.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+[package]
+name = "quadrule-profiles"
+description = "Quadrule's device profiles (napkin §3): schema and built-in RON data."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+quadrule-model.workspace = true
+ron = "0.12.3"
+serde.workspace = true
+
+[lints]
+workspace = true
