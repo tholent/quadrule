@@ -85,6 +85,11 @@ for some reason"
 | most comfortable, regular | TD2 | 9 pt | 51 |
 | most comfortable, bold | TL2 | 9 pt | 51 |
 | smallest legible | TA3, TI3 (every sample legible) | 6 pt | 102 |
+| best for a label, regular | TE3 | 10 pt | 102 |
+| best for a label, bold | TM3 | 10 pt | 102 |
+
+Follow-up, chris, word for word: "if I had to choose a label, TE3 and TM3 would be the best". So comfortable
+reading (9 pt, gray 51) and a label (10 pt, gray 102: one size up, one step lighter) are different choices.
 
 Read from this:
 
@@ -93,4 +98,6 @@ Read from this:
 - **Gray 51 reads best.** Gray 102 (column 3) is "a bit harder to read" at every size, and black (column 1) reads
   less well than 51. Why black is worse is not known; that is chris's observation, not a measurement.
 - **9 pt is the comfortable size** for both weights.
-- **Gray 51 is chris's favourite on every sheet so far**: line LA4, dot PD2, text TD2 and TL2.
+- **Gray 51 is chris's favourite on every sheet so far**: line LA4, dot PD2, text TD2 and TL2. For labels, though,
+  chris picks the lighter gray 102 at 10 pt (TE3, TM3): a label should stay out of the way, and the slightly larger
+  size makes up for the lighter gray.
