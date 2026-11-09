@@ -30,3 +30,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Open (chris, 2026-11-09: "let's leave the 153/157 question as open"): the Label gray (153) sits 4 steps from the
   dark grey pen (157), and chris is "not sure that it's all that bad to have template lines that match the pen ink".
   Bears on L04's severity (napkin §8.3); not built until this is settled (`docs/STATUS-log.md`).
+- Fluent's Unicode direction marks around arguments are switched off (`crates/i18n/src/lib.rs`, `Strings::load`):
+  right for English in a terminal, wrong for right-to-left languages. Switch them on per language with the first
+  right-to-left translation.

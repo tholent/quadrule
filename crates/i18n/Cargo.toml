@@ -1,0 +1,15 @@
+[package]
+name = "quadrule-i18n"
+description = "Quadrule's words on screen (napkin §14): Project Fluent strings, English first."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+fluent-bundle.workspace = true
+unic-langid.workspace = true
+
+[lints]
+workspace = true

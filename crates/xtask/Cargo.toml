@@ -16,6 +16,7 @@ kurbo.workspace = true
 png.workspace = true
 quadrule-format.workspace = true
 quadrule-layout.workspace = true
+quadrule-i18n.workspace = true
 quadrule-lint.workspace = true
 quadrule-model.workspace = true
 quadrule-profiles.workspace = true

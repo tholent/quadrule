@@ -208,6 +208,7 @@ fn lint(args: &[String]) -> Result<(), String> {
     println!("toolbar positions checked: {toolbars}");
     let primary = quadrule_profiles::builtin(&doc.primary_profile_id).map_err(|e| e.to_string())?;
     let mut reg = FontRegistry::bundled_only();
+    let strings = quadrule_i18n::Strings::english();
     let mut count = 0;
     for id in doc.profile_ids() {
         let target = quadrule_profiles::builtin(id).map_err(|e| e.to_string())?;
@@ -215,7 +216,8 @@ fn lint(args: &[String]) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         for f in quadrule_lint::lint_with(&doc, &primary, &target, &laid.outlines, &opts) {
             count += 1;
-            println!("{}  {}  {:?}  {}", f.profile, f.rule, f.severity, f.message);
+            let message = strings.format(&f.message);
+            println!("{}  {}  {:?}  {message}", f.profile, f.rule, f.severity);
         }
     }
     println!("{count} finding(s) on {} profile(s)", doc.profiles.len());

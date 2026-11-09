@@ -11,6 +11,7 @@ members = [
     "crates/text",
     "crates/render",
     "crates/lint",
+    "crates/i18n",
     "crates/xtask",
 ]
 
@@ -30,9 +31,13 @@ quadrule-format = { path = "crates/format" }
 quadrule-text = { path = "crates/text" }
 quadrule-render = { path = "crates/render" }
 quadrule-lint = { path = "crates/lint" }
+quadrule-i18n = { path = "crates/i18n" }
 
 ciborium = "0.2.2"
 # ADR-002 item 1: fontdb and skrifa come only through cosmic-text's re-exports; swash is off.
+# Napkin §14: every string on screen goes through Fluent (rung 2 bbq Q5).
+fluent-bundle = "0.16.0"
+unic-langid = "0.9.6"
 cosmic-text = { version = "0.19.0", default-features = false, features = ["std", "fontconfig"] }
 # The same kurbo vello_cpu 0.3 uses, so paths pass between layout and render unchanged.
 kurbo = "0.13.1"
