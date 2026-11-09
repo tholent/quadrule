@@ -144,3 +144,8 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   the same bytes. Seed: the slice `.quad`. 10-minute run: 3,312,293 runs, 5,511 a second, no crash, peak 565 MB.
   CI gains a 60-second fuzz job. Paid the debt "set up cargo-fuzz". ADR-001 header: proof adds the fuzz target,
   owed drops item 8 (old values in its History). License-header test now skips `target/` folders.
+- CI path filters (chris: "let's ensure that or CI workflows are only firing on changes that should be tested. a
+  change to docs probably doesn't need a fuzzer run, etc..."): `ci.yml` runs on code, workspace, toolchain and cargo
+  config changes, the device screenshots, and itself; fuzzing moved to `fuzz.yml`, which runs on `crates/format`,
+  `crates/model`, the workspace manifest and itself. Both keep "run by hand". Checked by pushing this docs-only
+  entry and seeing no run start.
