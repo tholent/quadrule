@@ -1,0 +1,17 @@
+[package]
+name = "quadrule-xtask"
+description = "Quadrule's maintainer tools, run as `cargo xtask` (napkin §8.4)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "xtask"
+path = "src/main.rs"
+
+[dependencies]
+
+[lints]
+workspace = true

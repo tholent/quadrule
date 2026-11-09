@@ -1,0 +1,4 @@
+# `cargo xtask <task>` runs the maintainer tools (napkin §8.4), e.g.
+# `cargo xtask calibration-sheet --profile supernote.a5x2 --out calib/`.
+[alias]
+xtask = "run --quiet --package quadrule-xtask --"
