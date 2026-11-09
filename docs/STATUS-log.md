@@ -50,3 +50,21 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   pre-alpha software at this point." Recorded as a dated amendment under the branch rule in `AGENTS.md`. PR #2's
   commit went to `main` by fast-forward.
 - chris: the `gh` token's expiry is 90 days; written into `docs/STATUS-debt.md`.
+- chris, word for word: "let's make this repo public. copy the license from here:
+  https://www.apache.org/licenses/LICENSE-2.0.txt and include apache required headers in our coding files.
+  1. keep quadrule-* 2. and 3. let's get the calibration sheet generation working and then we can do some actual
+  testing". Ruled: package names stay `quadrule-*`. Dot shape and role values wait on the device test.
+- History checked before going public (26 commits, all branches): no tokens, keys or passwords; only expected files.
+  Every commit carries chris's name and email, which become public. `gh repo edit --visibility public` → HTTP 403
+  (the token has no Administration permission), so chris flips it in GitHub settings.
+- `LICENSE` copied from apache.org (sha256 `cfc7749b…`); the appendix notice heads every `.rs` under `crates/`
+  (copyright holder defaulted to "Chris Wells"; `spikes/` untouched). New crate `quadrule-xtask` (napkin §8.4's
+  `cargo xtask`) with a test that fails on a missing header (proved by a probe file). Comment-only change, but line
+  numbers moved, so binaries are not byte-identical; the slice goldens and `.quad` bytes are unchanged.
+- Calibration sheets: `cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]` writes lines (6 widths ×
+  15 grays, dashes), dots (square 1–4 px, round 2–6 px × 8 grays), text (6–18 pt, regular and bold × 3 grays) and
+  writing strips (W1–W16), 243 coded samples per profile; Manta 6 pages, Nomad 9. Round dots and dashes exist only
+  on the sheets, not in the document model. Tests: codes unique and identical on both profiles; 204 line samples
+  print exactly their claimed width and gray; sheets repeatable. Viewed by eye; fixed a wrapping 18 pt sample and
+  cramped strips. How-to: `docs/calibration.md`.
+- Checks: `cargo test --workspace -- --nocapture` → 44 passed, 0 failed, 48 CHECK lines pass; clippy and fmt clean.

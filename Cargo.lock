@@ -642,6 +642,14 @@ dependencies = [
 [[package]]
 name = "quadrule-xtask"
 version = "0.1.0"
+dependencies = [
+ "kurbo",
+ "quadrule-layout",
+ "quadrule-model",
+ "quadrule-profiles",
+ "quadrule-render",
+ "quadrule-text",
+]
 
 [[package]]
 name = "quote"

@@ -401,8 +401,9 @@ fn line_item(x0: f64, y0: f64, x1: f64, y1: f64, w: u32, gray: u8) -> Item {
 }
 
 /// One text box's letters as a single path in device pixels. `origin` is the box's top-left
-/// corner in pixels; `px_per_mm` the profile's scale.
-fn text_path(
+/// corner in pixels; `px_per_mm` the profile's scale. Used for document text and by the
+/// maintainer tools, so both draw text the same way.
+pub fn text_path(
     outlines: &ProfileOutlines,
     text: &quadrule_model::outlines::TextOutlines,
     origin: Point,

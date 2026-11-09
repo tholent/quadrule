@@ -12,6 +12,12 @@ name = "xtask"
 path = "src/main.rs"
 
 [dependencies]
+kurbo.workspace = true
+quadrule-layout.workspace = true
+quadrule-model.workspace = true
+quadrule-profiles.workspace = true
+quadrule-render.workspace = true
+quadrule-text.workspace = true
 
 [lints]
 workspace = true

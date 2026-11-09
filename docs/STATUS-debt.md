@@ -11,10 +11,10 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   test stands in (`crates/format/tests/format.rs`).
 - Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; canvas fallback to vello_cpu on weak GPUs;
   the build-folder instruction the render worker reports (`spikes/render/FINDINGS.md`).
-- Rung 1 hardware step, owed to chris: copy `crates/render/tests/golden/*.png` to a Manta and a Nomad (MyStyle
-  folder) and say how they look. Does not block PR #1.
-- Rung 1 taste proposals waiting on chris: package names `quadrule-*`; square dots one role width wide; the
-  estimated role widths and grays (dots look faint at 2 px, gray 187) (`crates/profiles/data/`).
+- Device test, owed to chris: put the slice PNGs (`crates/render/tests/golden/`) and the calibration sheets
+  (`cargo xtask calibration-sheet`) on a Manta and a Nomad; report codes (`docs/calibration.md`). Settles the role
+  values and square vs round dots.
+- Make the repository public: chris, in GitHub settings (the token lacks the Administration permission).
 - The `gh` token expires 90 days after it was made (chris, 2026-11-09); if made 2026-11-09, that is about 2027-02-07.
   Renew it before then, or `gh` stops opening PRs and reading CI (rung 1 record, Defaulted "Repository").
 - The `gh` fine-grained token cannot read check summaries (`gh pr checks` fails: GitHub offers no `checks:read` for

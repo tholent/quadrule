@@ -13,8 +13,85 @@
 // limitations under the License.
 
 //! `cargo xtask`: maintainer tools (napkin §8.4).
+//!
+//! ```text
+//! cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]
+//! ```
 
-fn main() {
-    eprintln!("usage: cargo xtask <task>");
-    std::process::exit(2);
+use quadrule_render::{Math, PngMeta, encode_png, render, sha256_hex};
+use quadrule_text::FontRegistry;
+use quadrule_xtask::calib;
+use std::path::PathBuf;
+use std::process::ExitCode;
+
+const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]";
+
+fn main() -> ExitCode {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    match args.first().map(String::as_str) {
+        Some("calibration-sheet") => match calibration_sheet(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("error: {e}");
+                ExitCode::FAILURE
+            }
+        },
+        _ => {
+            eprintln!("{USAGE}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// Writes every calibration page for the chosen profiles, plus a `codes.txt` key per profile.
+fn calibration_sheet(args: &[String]) -> Result<(), String> {
+    let mut profile = "all".to_string();
+    let mut out = PathBuf::from("calib");
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--profile" => profile = it.next().ok_or(USAGE)?.clone(),
+            "--out" => out = PathBuf::from(it.next().ok_or(USAGE)?),
+            _ => return Err(format!("unknown argument {a:?}\n{USAGE}")),
+        }
+    }
+    let ids: Vec<String> = if profile == "all" {
+        quadrule_profiles::builtin_ids().map(String::from).collect()
+    } else {
+        vec![profile]
+    };
+    let version = env!("CARGO_PKG_VERSION");
+    let mut reg = FontRegistry::bundled_only();
+    for id in ids {
+        let p = quadrule_profiles::builtin(&id).map_err(|e| e.to_string())?;
+        let dir = out.join(calib::slug(&p.id));
+        std::fs::create_dir_all(&dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+        let pages = calib::sheets(&p, &mut reg, version)?;
+        let mut key = format!(
+            "Calibration codes for {} ({}), quadrule {version}\n\n",
+            p.display_name, p.id
+        );
+        for page in &pages {
+            let software = format!("Quadrule {version}");
+            let title = format!("Calibration {} {} of {}", page.sheet, page.number, page.of);
+            let png = encode_png(
+                &render(&page.dl, Math::Fastest),
+                Some(PngMeta {
+                    software: &software,
+                    title: &title,
+                }),
+            );
+            let path = dir.join(page.file_name(&p));
+            std::fs::write(&path, &png).map_err(|e| format!("{}: {e}", path.display()))?;
+            println!("wrote {} sha256={}", path.display(), sha256_hex(&png));
+            for s in &page.samples {
+                key.push_str(&format!(
+                    "{}\t{}\t{} page {}\n",
+                    s.code, s.what, page.sheet, page.number
+                ));
+            }
+        }
+        std::fs::write(dir.join("codes.txt"), key).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }
