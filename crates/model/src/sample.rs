@@ -92,7 +92,8 @@ pub fn slice_document() -> Document {
         ids::DOTS,
         "Dot grid",
         Frame::new(margin, 26.0, inner_w, 84.0),
-        Constraints::default(),
+        // Same physical size on every profile, under the pinned header.
+        pinned_top,
         Style::Role(LineRole::Whisper),
         ObjectKind::Pattern(PatternRegion {
             pattern: Pattern::Dots,
@@ -103,6 +104,7 @@ pub fn slice_document() -> Document {
         ids::LINES,
         "Ruled lines",
         Frame::new(margin, 116.0, inner_w, MANTA_H_MM - margin - 116.0),
+        // Fills what is left down to the bottom margin: a smaller page gets fewer lines.
         Constraints {
             h: HConstraint::LeftRight,
             v: VConstraint::TopBottom,

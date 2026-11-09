@@ -1,7 +1,17 @@
 [package]
 name = "quadrule-layout"
+description = "Quadrule's layout (napkin §10): constraints, rhythm, pixel snapping, display list."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
+
+[dependencies]
+kurbo.workspace = true
+quadrule-model.workspace = true
+quadrule-profiles.workspace = true
+quadrule-text.workspace = true
+
+[lints]
+workspace = true
