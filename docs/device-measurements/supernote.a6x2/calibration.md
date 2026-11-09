@@ -37,3 +37,39 @@ Read from this:
 - **Grays 170 and lighter speckle** on square dots; 0, 51, 102 and 136 stay clean. (The lines sheet tests more grays.)
 - **The slice page's dot grid is invisible on the Nomad**: it uses the estimated Whisper role, 2 px at gray 187, and
   2 px squares fade out after gray 102 (PB3).
+
+## Lines sheet — 2026-11-09
+
+chris, word for word: "nomad lines: favorite overall is LA4. last visible of each row: LA12, LB13, LC13, LD13, LE13,
+LF13, DA4, DB4, DC4, DD4, DE4. last column where a dashed line was distinguishable: DA1, DB2, DC4, DD4, DE4. I don't
+notice speckling across any of the samples."
+
+| row | line | last visible (gray) |
+|---|---|---|
+| LA | 1 px | LA12 (187) |
+| LB | 2 px | LB13 (204) |
+| LC | 3 px | LC13 (204) |
+| LD | 4 px | LD13 (204) |
+| LE | 5 px | LE13 (204) |
+| LF | 6 px | LF13 (204) |
+
+| row | dashes, 2 px wide (dash/gap px) | last visible (gray) | last still reading as dashes (gray) |
+|---|---|---|---|
+| DA | 2/2 | DA4 (187) | DA1 (51) |
+| DB | 2/4 | DB4 (187) | DB2 (102) |
+| DC | 6/6 | DC4 (187) | DC4 (187) |
+| DD | 12/6 | DD4 (187) | DD4 (187) |
+| DE | 24/12 | DE4 (187) | DE4 (187) |
+
+Favourite overall: **LA4**, a 1 px line at gray 51. No speckling on any line or dash sample.
+
+Read from this:
+
+- **Lines do not speckle at any gray**, while dots of gray 170 and lighter do: the speckle comes with very small
+  shapes, not with the grays themselves.
+- **A 1 px line shows** (to gray 187) though a 1 px dot does not; lines 2 px and wider show to gray 204. Grays 221
+  and 238 vanish at every width.
+- **The favourite line (1 px) and the favourite dot (4 px, PD2) differ in size**, both at gray 51, so a dot grid
+  needs its own size rather than borrowing a line role's width.
+- **Fine dash patterns blur into a solid line** as they get lighter: 2/2 reads as dashes only at gray 51 and 2/4 to
+  102; 6/6 and longer stay dashed to 187.
