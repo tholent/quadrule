@@ -258,3 +258,4 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   `gsettings` on Linux, Segoe UI on Windows, macOS unverified). `cargo test --workspace --no-fail-fast --
   --nocapture` → 87 CHECK lines, all pass; 74 in the default build; clippy clean.
 
+- CI run 42720462671 on `52c7ee9` (rulings: short names, system UI font) passed on Linux, macOS and Windows.
