@@ -11,6 +11,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/render/tests/slice.rs`, `crates/render/tests/golden/SHA256SUMS`).
 - Calibration sheets (napkin §8.4): `cargo xtask calibration-sheet` writes lines, dots, text and writing pages per
   profile, each sample coded, with a `codes.txt` key (`crates/xtask/src/calib.rs`, how-to in `docs/calibration.md`).
+- Both devices calibrated by chris (2026-11-09): role values, the new Dot grid and Label roles, in their profiles
+  (`crates/profiles/data/`, records in `docs/device-measurements/*/calibration.md`); file format 0.3.
 - Safe zones measured for both devices from screenshots (portrait: toolbar left, right, top, floating; plus the
   footer), by `cargo xtask safe-zones`, and written into the profiles (`crates/profiles/data/`,
   `docs/device-measurements/README.md`). A test keeps the profiles and screenshots in step.
@@ -21,21 +23,20 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/format/fuzz/fuzz_targets/open_quad.rs`).
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
-- Checks, 2026-11-09 on the Pi: `cargo test --workspace -- --nocapture` → 58 tests, 62 `CHECK` lines, all pass;
+- Checks, 2026-11-09 on the Pi: `cargo test --workspace -- --nocapture` → 65 `CHECK` lines, all pass;
   clippy `-D warnings` and fmt clean. CI on Linux, macOS and Windows (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).
 
 ## Next
 
-- chris: the Manta calibration sheets (`calib/supernote-a5x2/`, how-to in `docs/calibration.md`). The Nomad is
-  calibrated and its values are in `crates/profiles/data/supernote.a6x2.ron`.
-- Then: enter the Manta's values, re-bless the slice goldens, add the calibration lint rules, and plan rung 2.
+- Add the lint rules that need calibrated values (L03, L04, L05, L07, L09, L13, L14; `crates/lint/src/lib.rs`), and
+  plan rung 2.
 
 ## Known debt
 
 Full debt list: `docs/STATUS-debt.md`.
-- The Manta's role widths and grays are estimates until its calibration (`crates/profiles/data/supernote.a5x2.ron`).
+- Clean gray levels and pen ink values are not measured on either device (`docs/STATUS-debt.md`).
 - ADR parts not built yet: font signature, fuzzing, hinting flag, system-font fallback and substitution, canvas
   (`docs/STATUS-debt.md`).
 

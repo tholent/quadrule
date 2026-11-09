@@ -355,10 +355,22 @@ fn pattern_shapes_are_centred_in_their_region_and_drawn_whole() {
     let mut checked = 0;
     let mut on_edge = 0;
     let mut bad = 0;
+    // Roles may share a gray (Dot grid, Guide and Structure are all 51), so shapes are sorted by
+    // form: dots are small, lines are long, and the title rule is the long rect of the Structure
+    // width (when that differs from the Guide's).
+    let structure = manta.role(LineRole::Structure);
     for (r, role) in [(dots, LineRole::DotGrid), (lines, LineRole::Guide)] {
         let style = manta.role(role);
         let half = style.width_px as f64 / 2.0;
-        for (x0, y0, x1, y1, _) in rects(&dl).into_iter().filter(|q| q.4 == style.gray) {
+        let long = |q: &(f64, f64, f64, f64, u8)| q.2 - q.0 > 10.0 * (q.3 - q.1);
+        let is_rule = |q: &(f64, f64, f64, f64, u8)| {
+            q.4 == structure.gray
+                && structure.width_px != style.width_px
+                && q.3 - q.1 == structure.width_px as f64
+        };
+        for (x0, y0, x1, y1, _) in rects(&dl).into_iter().filter(|q| {
+            q.4 == style.gray && (long(q) == (role == LineRole::Guide)) && !(long(q) && is_rule(q))
+        }) {
             let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
             checked += 1;
             let centred =

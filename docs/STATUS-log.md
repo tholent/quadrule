@@ -208,3 +208,12 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   profile needs a date and its calibration record). Layout and render tests now tell shapes apart by form, as roles
   share grays on the Nomad. Slice goldens re-blessed (Manta 9df03397…, Nomad 26e04bab…).
   `cargo test --workspace -- --nocapture` → 65 CHECK lines pass, 0 fail; clippy clean.
+- chris, word for word: "the golden sample looks good." PR #3 merged by fast-forwarding `main` to it (`f06f3a2`;
+  the `gh` token cannot merge PRs); branch deleted. CI on #3 passed on Linux, macOS and Windows (run 42697273820).
+- chris, word for word: "I also can report that the same preferences and findings on the nomad hold true for the
+  manta. I think there displays are very similar." Manta profile takes the Nomad's values, `verified: true`, date
+  2026-11-09 (`crates/profiles/data/supernote.a5x2.ron`); record in
+  `docs/device-measurements/supernote.a5x2/calibration.md`. Manta golden re-blessed (b6f321e9…). Layout test
+  `pattern_shapes_are_centred_in_their_region_and_drawn_whole` sorts shapes by form (Manta roles now share gray 51);
+  it now counts 366 shapes (350 dots, 16 lines) where it had counted 734 by gray. `cargo test --workspace --
+  --nocapture` → 65 CHECK lines pass; clippy clean. Calibration of role values is done on both devices.
