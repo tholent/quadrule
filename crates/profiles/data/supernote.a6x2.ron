@@ -13,8 +13,18 @@
     gray_levels: [0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255],
     // Unknown until calibration (napkin §17.1 item 1).
     ink_values: [],
-    // Not yet measured from device screenshots (napkin §3.5).
-    safe_zones: [],
+    // Measured 2026-11-09 by `cargo xtask safe-zones` from the portrait screenshots in
+    // docs/device-measurements/supernote.a6x2/ (toolbar docked left, right, top, and floating at its
+    // default place). Footer zones are covered in every screenshot: page navigation (left) and
+    // note name (right). Not yet measured: landscape, and a collapsed toolbar.
+    safe_zones: [
+        (name: "footer_left", orientation: Portrait, rect: (110, 1772, 325, 100), advisory: false),
+        (name: "footer_right", orientation: Portrait, rect: (948, 1772, 346, 100), advisory: false),
+        (name: "toolbar_floating_default", orientation: Portrait, rect: (534, 119, 100, 1245), advisory: true),
+        (name: "toolbar_left", orientation: Portrait, rect: (0, 0, 99, 1763), advisory: false),
+        (name: "toolbar_right", orientation: Portrait, rect: (1305, 0, 99, 1763), advisory: false),
+        (name: "toolbar_top", orientation: Portrait, rect: (0, 0, 1404, 99), advisory: false),
+    ],
     // ESTIMATE.
     default_margins_mm: (top: 6.0, right: 6.0, bottom: 6.0, left: 6.0),
     // Landscape is unverified (napkin §17.1 item 3).

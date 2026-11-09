@@ -166,3 +166,65 @@ fn sheets_are_repeatable() {
     );
     assert!(ok);
 }
+
+#[test]
+fn sheets_keep_clear_of_docked_toolbars_and_footer() {
+    // Nothing drawn and no sample may reach into a fixed safe zone, whichever way the toolbar
+    // is docked (napkin §3.5). The floating toolbar moves, so it is not avoided.
+    let mut parts = Vec::new();
+    let mut ok = true;
+    for id in builtin_ids() {
+        let p = builtin(id).unwrap();
+        let zones: Vec<_> = p.safe_zones.iter().filter(|z| !z.advisory).collect();
+        let hits = |x0: f64, y0: f64, x1: f64, y1: f64| {
+            zones.iter().any(|z| {
+                let (zx, zy, zw, zh) = (
+                    z.rect.0 as f64,
+                    z.rect.1 as f64,
+                    z.rect.2 as f64,
+                    z.rect.3 as f64,
+                );
+                x0 < zx + zw && x1 > zx && y0 < zy + zh && y1 > zy
+            })
+        };
+        let mut overlaps = 0;
+        for page in pages(&p) {
+            for item in &page.dl.items {
+                let (x0, y0, x1, y1) = match item {
+                    Item::Rect { x0, y0, x1, y1, .. } => (*x0, *y0, *x1, *y1),
+                    Item::Fill { path, .. } => {
+                        let b = kurbo::Shape::bounding_box(path);
+                        (b.x0, b.y0, b.x1, b.y1)
+                    }
+                    Item::Stroke {
+                        x0,
+                        y0,
+                        x1,
+                        y1,
+                        width,
+                        ..
+                    } => (
+                        x0.min(*x1) - width,
+                        y0.min(*y1) - width,
+                        x0.max(*x1) + width,
+                        y0.max(*y1) + width,
+                    ),
+                };
+                if hits(x0, y0, x1, y1) {
+                    overlaps += 1;
+                }
+            }
+        }
+        ok &= overlaps == 0 && !zones.is_empty();
+        parts.push(format!(
+            "{id}:fixed_zones={}:overlaps={overlaps}",
+            zones.len()
+        ));
+    }
+    println!(
+        "CHECK crate=xtask name=calib_clear_of_safe_zones result={} {}",
+        pass(ok),
+        parts.join(" ")
+    );
+    assert!(ok);
+}

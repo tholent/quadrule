@@ -17,3 +17,4 @@
 #![forbid(unsafe_code)]
 
 pub mod calib;
+pub mod safezones;

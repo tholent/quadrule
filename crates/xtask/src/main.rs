@@ -16,6 +16,7 @@
 //!
 //! ```text
 //! cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]
+//! cargo xtask safe-zones [--profile <id>|all]
 //! ```
 
 use quadrule_render::{Math, PngMeta, encode_png, render, sha256_hex};
@@ -24,12 +25,19 @@ use quadrule_xtask::calib;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]";
+const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("calibration-sheet") => match calibration_sheet(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("error: {e}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("safe-zones") => match safe_zones(&args[1..]) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("error: {e}");
@@ -92,6 +100,41 @@ fn calibration_sheet(args: &[String]) -> Result<(), String> {
             }
         }
         std::fs::write(dir.join("codes.txt"), key).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Measures safe zones from `docs/device-measurements/<profile>/` and prints them as RON for
+/// the profile file, with a note when they differ from what the profile holds.
+fn safe_zones(args: &[String]) -> Result<(), String> {
+    let profile = match args {
+        [] => "all".to_string(),
+        [flag, id] if flag == "--profile" => id.clone(),
+        _ => return Err(USAGE.into()),
+    };
+    let ids: Vec<String> = if profile == "all" {
+        quadrule_profiles::builtin_ids().map(String::from).collect()
+    } else {
+        vec![profile]
+    };
+    let root =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/device-measurements");
+    for id in ids {
+        let p = quadrule_profiles::builtin(&id).map_err(|e| e.to_string())?;
+        let shots = quadrule_xtask::safezones::load_dir(&root.join(&id))?;
+        let zones = quadrule_xtask::safezones::measure(&shots)?;
+        println!("// {id}: measured from {} screenshots", shots.len());
+        println!("safe_zones: [");
+        for z in &zones {
+            println!(
+                "    (name: {:?}, orientation: {:?}, rect: ({}, {}, {}, {}), advisory: {}),",
+                z.name, z.orientation, z.rect.0, z.rect.1, z.rect.2, z.rect.3, z.advisory
+            );
+        }
+        println!("],");
+        if zones != p.safe_zones {
+            println!("// differs from crates/profiles/data/{id}.ron");
+        }
     }
     Ok(())
 }

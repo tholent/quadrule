@@ -68,3 +68,19 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   print exactly their claimed width and gray; sheets repeatable. Viewed by eye; fixed a wrapping 18 pt sample and
   cramped strips. How-to: `docs/calibration.md`.
 - Checks: `cargo test --workspace -- --nocapture` → 44 passed, 0 failed, 48 CHECK lines pass; clippy and fmt clean.
+- chris made the repository public (`gh repo view` → PUBLIC) and uploaded portrait screenshots, toolbar left, right,
+  top and floating, for the Manta and the Nomad into `docs/device-measurements/<profile_id>/` (no landscape or
+  collapsed toolbar yet). Viewed before committing: a grid template, the toolbar, page number and a date-stamp note
+  name; nothing personal.
+- Safe zones: prototyped in Python (scratchpad), then built as `cargo xtask safe-zones`
+  (`crates/xtask/src/safezones.rs`): rebuild the bare grid template (1 px lines every 59 px on both devices), mark
+  every differing pixel as covered; covered in all screenshots = footer, the rest = each screenshot's toolbar. Rust and
+  Python gave the same 12 boxes; overlays checked by eye. Manta: docked toolbars 116 px, footer boxes 116 px tall.
+  Nomad: 99 px, footer 100 px, and its side toolbars stop at y 1763 above the footer. Written into both profile RON
+  files; the floating zone is advisory. Tests: a synthetic grid with known boxes is measured exactly; profiles must
+  match their screenshots.
+- Calibration sheets now keep clear of every docked toolbar and the footer at once (new test: 0 overlaps on both
+  profiles); column headings shortened and wrapped within their column (the Nomad's "gray 238" ran into the right
+  toolbar); a section's legend stays with its first row. Manta 6 pages, Nomad 10.
+- Checks: `cargo test --workspace -- --nocapture` → 47 passed, 0 failed, 51 CHECK lines pass; clippy and fmt clean;
+  slice goldens unchanged.

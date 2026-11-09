@@ -644,6 +644,7 @@ name = "quadrule-xtask"
 version = "0.1.0"
 dependencies = [
  "kurbo",
+ "png",
  "quadrule-layout",
  "quadrule-model",
  "quadrule-profiles",

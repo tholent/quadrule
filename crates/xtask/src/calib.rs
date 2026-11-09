@@ -175,16 +175,26 @@ impl<'a> Pager<'a> {
     fn new(p: &'a Profile, reg: &'a mut FontRegistry) -> Self {
         let m = p.default_margins_mm;
         let px = |mm: f64| p.mm_to_px(mm).round();
-        let top = px(m.top);
+        // Keep clear of every docked toolbar and the footer at once, plus 2 mm, so the sheet
+        // reads the same wherever the toolbar is docked.
+        let [l, r, t, b] = edge_insets(p);
+        let clear = |inset: f64, margin_mm: f64| {
+            if inset > 0.0 {
+                (inset + px(2.0)).max(px(margin_mm))
+            } else {
+                px(margin_mm)
+            }
+        };
+        let top = clear(t, m.top);
         let content_top = top + px(16.0);
         Pager {
             p,
             reg,
-            left: px(m.left),
-            right: p.width_px as f64 - px(m.right),
+            left: clear(l, m.left),
+            right: p.width_px as f64 - clear(r, m.right),
             top,
             content_top,
-            bottom: p.height_px as f64 - px(m.bottom),
+            bottom: p.height_px as f64 - clear(b, m.bottom),
             y: content_top,
             drafts: vec![Draft::default()],
         }
@@ -212,6 +222,15 @@ impl<'a> Pager<'a> {
         let y0 = self.y;
         self.y += h;
         y0
+    }
+
+    /// Starts a new page unless `mm` more fits on this one; keeps a section's legend and column
+    /// heading with its first row of samples.
+    fn keep(&mut self, mm: f64) {
+        if self.y + self.mm(mm) > self.bottom {
+            self.drafts.push(Draft::default());
+            self.y = self.content_top;
+        }
     }
 
     fn gap(&mut self, mm: f64) {
@@ -295,15 +314,17 @@ impl<'a> Pager<'a> {
     fn column_header(&mut self, grays: &[u8]) -> Result<()> {
         let cw = (self.width() / grays.len() as f64).floor();
         let y = self.row(self.mm(6.0));
+        // Each heading wraps inside its own column, so it can never spill into the next one.
+        let col_mm = (cw - 2.0 * self.mm(1.0)) * MM_PER_IN / self.p.ppi;
         for (i, g) in grays.iter().enumerate() {
             let x = self.left + i as f64 * cw + self.mm(1.0);
             self.text(
-                &format!("{}\ngray {g}", i + 1),
+                &format!("{}\n{g}", i + 1),
                 6.0,
                 400,
                 LABEL_GRAY,
                 (x, y),
-                30.0,
+                col_mm,
             )?;
         }
         Ok(())
@@ -397,6 +418,28 @@ impl<'a> Pager<'a> {
     }
 }
 
+/// How far the profile's fixed (non-advisory) safe zones reach in from each edge, in pixels:
+/// [left, right, top, bottom]. A zone hugs the edge along its long side.
+pub fn edge_insets(p: &Profile) -> [f64; 4] {
+    let (w, h) = (p.width_px, p.height_px);
+    let mut ins = [0u32; 4];
+    for z in p.safe_zones.iter().filter(|z| !z.advisory) {
+        let (x, y, zw, zh) = z.rect;
+        if zw < zh {
+            if x == 0 {
+                ins[0] = ins[0].max(zw);
+            } else if x + zw == w {
+                ins[1] = ins[1].max(zw);
+            }
+        } else if y == 0 {
+            ins[2] = ins[2].max(zh);
+        } else if y + zh == h {
+            ins[3] = ins[3].max(zh);
+        }
+    }
+    ins.map(f64::from)
+}
+
 fn row_letter(i: usize) -> char {
     ROWS.as_bytes()[i] as char
 }
@@ -414,7 +457,7 @@ fn lines_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<Vec
     let mut pg = Pager::new(p, reg);
     pg.paragraph(
         "Line widths × grays. Row = width: A 1 px, B 2 px, C 3 px, D 4 px, E 5 px, F 6 px. Column = gray \
-         (0 black … 255 white), shown above each column. Each cell holds three lines. Code = L + row + column, \
+         (0 black … 255 white): above each column, its number and then its gray. Each cell holds three lines. Code = L + row + column, \
          e.g. LB7 is 2 px at gray 102. For each line role, note the code that looks best.",
         8.0,
         400,
@@ -440,9 +483,11 @@ fn lines_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<Vec
         }
     }
     pg.gap(4.0);
+    // Legend (up to 3 lines), column heading and the first row of dashes stay together.
+    pg.keep(18.0 + 6.0 + 10.0);
     pg.paragraph(
         "Dashed and dotted lines, 2 px wide. Row = dash and gap in pixels: A 2/2, B 2/4, C 6/6, D 12/6, \
-         E 24/12. Column = gray. Code = D + row + column.",
+         E 24/12. Column = gray (number, then gray, above it). Code = D + row + column.",
         8.0,
         400,
     )?;
@@ -478,7 +523,7 @@ fn dots_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<Vec<
     let mut pg = Pager::new(p, reg);
     pg.paragraph(
         "Dots, 4 mm apart. Rows A–D: square dots 1, 2, 3, 4 px. Rows E–H: round dots 2, 3, 4, 6 px across. \
-         Column = gray. Code = P + row + column, e.g. PB6 is a 2 px square dot at gray 187.",
+         Column = gray (number, then gray, above it). Code = P + row + column, e.g. PB6 is a 2 px square dot at gray 187.",
         8.0,
         400,
     )?;
@@ -516,7 +561,7 @@ fn text_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<Vec<
     let mut pg = Pager::new(p, reg);
     pg.paragraph(
         "Text in Atkinson Hyperlegible Next. Rows A–H: regular at 6, 7, 8, 9, 10, 12, 14, 18 pt; rows I–P: \
-         bold at the same sizes. Column = gray. Code = T + row + column. Note the smallest size you can read \
+         bold at the same sizes. Column = gray (number, then gray, above it). Code = T + row + column. Note the smallest size you can read \
          comfortably, and the gray you prefer for labels.",
         8.0,
         400,

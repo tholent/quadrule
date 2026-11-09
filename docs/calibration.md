@@ -13,7 +13,9 @@ Each profile gets a folder (`calib/supernote-a5x2/`, `calib/supernote-a6x2/`) wi
 listing every sample code and what it is. `calib/` is not committed; run the command again any time.
 
 The sheets are drawn by the same renderer as real exports (`crates/xtask/src/calib.rs`), at the device's native
-resolution, so what the device shows is what a template would show.
+resolution, so what the device shows is what a template would show. They keep clear of every docked toolbar position
+and the footer at once (the profile's measured safe zones, `docs/device-measurements/README.md`), so they read the
+same wherever the toolbar is docked; only the floating toolbar can cover them.
 
 | sheet | what it holds | codes |
 |---|---|---|
@@ -45,5 +47,5 @@ W1 competes with the fine pen." Photos or device screenshots go in `docs/device-
 
 ## Not on the sheets yet
 
-Safe zones (toolbar positions, napkin §3.5) and ink-competition thresholds per pen color are not measured by these
-sheets. The device's real clean gray levels are unknown, so the sheets use evenly spaced steps of 17.
+Ink-competition thresholds per pen color are not measured by these sheets; safe zones come from screenshots instead
+(`docs/device-measurements/README.md`). The device's real clean gray levels are unknown, so the sheets use evenly spaced steps of 17.
