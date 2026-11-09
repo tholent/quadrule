@@ -15,7 +15,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   folder) and say how they look. Does not block PR #1.
 - Rung 1 taste proposals waiting on chris: package names `quadrule-*`; square dots one role width wide; the
   estimated role widths and grays (dots look faint at 2 px, gray 187) (`crates/profiles/data/`).
-- The `gh` token's expiry date, once chris states it (rung 1 record, Defaulted "Repository").
+- The `gh` token expires 90 days after it was made (chris, 2026-11-09); if made 2026-11-09, that is about 2027-02-07.
+  Renew it before then, or `gh` stops opening PRs and reading CI (rung 1 record, Defaulted "Repository").
 - The `gh` fine-grained token cannot read check summaries (`gh pr checks` fails: GitHub offers no `checks:read` for
   fine-grained tokens); read CI with `gh run view <id> --log` instead.
 - ADR-001 not built yet: font signature in the manifest (item 6), missing-font reuse for a new profile (item 7),

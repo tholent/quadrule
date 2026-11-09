@@ -23,6 +23,9 @@ None yet. The owner sets one; agents do not invent it.
 - Decisions: never edit a ruled decision's text. Add a dated amendment, or supersede it with a new one. Follow the
   active decision; superseded ones are history only.
 - Work on a branch. Never push straight to the main branch without chris's approval.
+  - Amended 2026-11-09 by chris, word for word: "until specifically necessary, let's just work on the main branch
+    directly. This is pre-alpha software at this point." So agents commit and push to `main` directly until chris
+    says otherwise, or a job specifically needs a branch (say so when one does).
 - Keep `docs/` tidy: no loose dated files at its top level.
 
 <!-- pitmaster rules: plan, run, check, plain, craft · catalogue 2026-10-23 · project-prep rewrites everything down to the end line -->
