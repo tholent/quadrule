@@ -68,6 +68,31 @@ Settled by the napkin; no question asked. Cited as `napkins/quadrule-spec.md:<li
 - **Session-start check:** AGENTS.md asks to prove the build on disk matches HEAD; with no build yet, the first
   session records "no build yet" and the check starts once `spikes/` has crates. veto: none expected.
 
+## On goforit (2026-11-09)
+
+- **Size check.** Estimated 10–15 points (a guess, no meter read), no PR, 2–4 sessions. chris, word for word: "go
+  for all three, but I think we could parallelize this work across agents". This replaces the Defaulted spike order:
+  the three spikes run at once.
+- **Defaulted — how they run in parallel:** three worker agents on Opus 5.5 (forks of the lead), each in its own git
+  worktree and branch, each writing only its own `spikes/<name>/`. All three share one build folder
+  (`~/.cache/quadrule-spike-target`) with `CARGO_BUILD_JOBS=2`, so cargo's lock makes the compiles take turns and
+  4 GB of memory is not exceeded. The lead merges the branches into `spikes/2026-11-09` and updates STATUS.
+  veto: run them one after another instead.
+- **Measured:** rustup installed Rust 1.99.1 (`cargo --version` → cargo 1.99.1, 2026-11-09). This shell has no
+  display, and sudo needs a password, so no system packages can be installed by agents.
+
+## Rulings on parked questions
+
+- **2026-11-09, text spike parked item 1 (font fallback).** chris, word for word: "any installed fonts. pre-flight
+  for saving should warn when system fonts are being used". So a character missing from the chosen font may come
+  from any installed font (option b), and a preflight check warns when system fonts are used. Open: the napkin's
+  preflight runs at export (`napkins/quadrule-spec.md:420`); the ruling says "saving" — asked back to chris.
+  Answer, word for word: "both, saving and export". So the system-font warning runs when the `.quad` is saved and
+  in export preflight.
+- **2026-11-09, text spike parked item 2 (font signature).** chris, word for word: "this sounds likea good idea".
+  So each saved document stores a small measured record per font it uses (average letter width, x-height,
+  monospace test), for substitution when the font is missing. It adds one record type to the file format (§12).
+
 ## Kickoff
 
 Run on **Opus 5.5 at high effort**; on any other model or effort, stop and say so before doing anything. Read
