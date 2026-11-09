@@ -115,3 +115,27 @@ fn unknown_profile_is_an_error() {
     );
     assert!(ok);
 }
+
+#[test]
+fn short_names_are_file_safe_and_unique() {
+    // The `{profile}` token in export file names (napkin §11.2, §11.3): ASCII lowercase letters,
+    // digits and hyphens, and no two devices alike, or one export would overwrite another.
+    let names: Vec<String> = quadrule_profiles::builtin_ids()
+        .map(|id| quadrule_profiles::builtin(id).unwrap().short_name)
+        .collect();
+    let safe = names.iter().all(|n| {
+        !n.is_empty()
+            && n.chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+    });
+    let mut sorted = names.clone();
+    sorted.sort();
+    sorted.dedup();
+    let unique = sorted.len() == names.len();
+    let ok = safe && unique;
+    println!(
+        "CHECK crate=profiles name=short_names result={} names={names:?} safe={safe} unique={unique}",
+        if ok { "pass" } else { "fail" }
+    );
+    assert!(ok);
+}

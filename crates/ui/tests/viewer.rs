@@ -150,8 +150,8 @@ fn export_writes_the_golden_bytes() {
         .zip(["supernote.a5x2", "supernote.a6x2"])
         .all(|(p, id)| std::fs::read(p).unwrap() == golden(id));
     let want = [
-        "rung-1-slice_supernote-manta_1920x2560.png",
-        "rung-1-slice_supernote-nomad_1404x1872.png",
+        "rung-1-slice_manta_1920x2560.png",
+        "rung-1-slice_nomad_1404x1872.png",
     ];
     let notice = v
         .notice
@@ -198,7 +198,7 @@ fn file_names_are_safe() {
         .iter()
         .map(|id| profile_token(&builtin(id).unwrap()))
         .collect();
-    let ok = wrong.is_empty() && tokens == ["supernote-manta", "supernote-nomad"];
+    let ok = wrong.is_empty() && tokens == ["manta", "nomad"];
     println!(
         "CHECK crate=ui name=safe_file_names result={} cases={} wrong={wrong:?} tokens={tokens:?}",
         pass(ok),

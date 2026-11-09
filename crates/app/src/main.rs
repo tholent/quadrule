@@ -39,7 +39,7 @@ struct App {
 
 impl App {
     fn new(cc: &eframe::CreationContext<'_>, path: Option<PathBuf>) -> Self {
-        quadrule_ui::install_fonts(&cc.egui_ctx);
+        quadrule_ui::install_fonts(&cc.egui_ctx, desktop_ui_font());
         let mut ui = ViewerUi::new(Viewer::default());
         if let Some(storage) = cc.storage {
             if let Some(theme) = eframe::get_value::<String>(storage, KEY_THEME) {
@@ -117,6 +117,67 @@ impl eframe::App for App {
     }
 }
 
+/// The desktop's interface font, for the controls (chris, 2026-11-09: "I would like the system
+/// default font for the controls"). `None` (egui's own font) when it cannot be found.
+fn desktop_ui_font() -> Option<quadrule_ui::UiFont> {
+    let (family, weight) = desktop_font_name()?;
+    let face = quadrule_text::system_face(&family, weight)?;
+    Some(quadrule_ui::UiFont {
+        data: face.data,
+        index: face.index,
+        weight,
+    })
+}
+
+/// The desktop interface font's family and weight. Linux and the BSDs: GTK's setting, which the
+/// Raspberry Pi desktop and GNOME set (`gsettings get org.gnome.desktop.interface font-name`, e.g.
+/// `'Nunito Sans Light 12'`). Windows: Segoe UI. macOS: the system font.
+fn desktop_font_name() -> Option<(String, u16)> {
+    if cfg!(target_os = "windows") {
+        return Some(("Segoe UI".into(), 400));
+    }
+    if cfg!(target_os = "macos") {
+        return Some((".AppleSystemUIFont".into(), 400));
+    }
+    let out = std::process::Command::new("gsettings")
+        .args(["get", "org.gnome.desktop.interface", "font-name"])
+        .output()
+        .ok()?;
+    parse_gtk_font(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// Parses a GTK font name, `'Family Style… Size'`, into family and weight. The size is left to
+/// egui's own text sizes.
+fn parse_gtk_font(s: &str) -> Option<(String, u16)> {
+    let s = s.trim().trim_matches('\'').trim();
+    let mut words: Vec<&str> = s.split_whitespace().collect();
+    if words.last().is_some_and(|w| w.parse::<f32>().is_ok()) {
+        words.pop();
+    }
+    let mut weight = 400;
+    while let Some(w) = words.last() {
+        let found = match w.to_ascii_lowercase().as_str() {
+            "thin" | "hairline" => Some(100),
+            "extralight" | "ultralight" => Some(200),
+            "light" => Some(300),
+            "regular" | "normal" | "book" | "italic" | "oblique" => Some(0),
+            "medium" => Some(500),
+            "semibold" | "demibold" => Some(600),
+            "bold" => Some(700),
+            "extrabold" | "ultrabold" => Some(800),
+            "black" | "heavy" => Some(900),
+            _ => None,
+        };
+        match found {
+            Some(0) => {}
+            Some(v) => weight = v,
+            None => break,
+        }
+        words.pop();
+    }
+    (!words.is_empty()).then(|| (words.join(" "), weight))
+}
+
 /// The graphics-chip connection. eframe asks for wgpu's default limits, which the Raspberry Pi 5's
 /// V3D refuses (`max_inter_stage_shader_variables` 16 asked, 15 allowed; on OpenGL,
 /// `max_texture_dimension_2d` 8192 asked, 4096 allowed — spike R15, 2026-11-09). The viewer draws
@@ -150,4 +211,34 @@ fn main() -> eframe::Result {
         options,
         Box::new(|cc| Ok(Box::new(App::new(cc, path)))),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_gtk_font;
+
+    #[test]
+    fn gtk_font_names() {
+        // The Raspberry Pi desktop's setting (2026-11-09) and the shapes GNOME uses.
+        let cases = [
+            ("'Nunito Sans Light 12'\n", Some(("Nunito Sans", 300))),
+            ("'Cantarell 11'", Some(("Cantarell", 400))),
+            ("'Ubuntu Bold Italic 10.5'", Some(("Ubuntu", 700))),
+            ("'Noto Sans'", Some(("Noto Sans", 400))),
+            ("''", None),
+            ("", None),
+        ];
+        let wrong: Vec<_> = cases
+            .iter()
+            .filter(|(i, o)| parse_gtk_font(i) != o.map(|(f, w): (&str, u16)| (f.to_string(), w)))
+            .map(|(i, _)| format!("{i:?}->{:?}", parse_gtk_font(i)))
+            .collect();
+        let ok = wrong.is_empty();
+        println!(
+            "CHECK crate=app name=gtk_font_names result={} cases={} wrong={wrong:?}",
+            if ok { "pass" } else { "fail" },
+            cases.len()
+        );
+        assert!(ok);
+    }
 }

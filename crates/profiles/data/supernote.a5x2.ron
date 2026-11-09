@@ -4,6 +4,7 @@
 (
     id: "supernote.a5x2",
     display_name: "Supernote Manta (A5 X2)",
+    short_name: "manta",
     width_px: 1920,
     height_px: 2560,
     ppi: 300.0,

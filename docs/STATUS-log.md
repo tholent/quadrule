@@ -243,3 +243,18 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
 - Rung 2 planned in a bbq, 12 questions, record `docs/bbq/2026-11-09-rung-2-viewer.md`. Canvas shows export pixels
   only (vello_cpu); napkin window skeleton; Fluent from day one; lint list with highlights; start empty (overruled
   the slice); export menu; opt-in build; zoom with real size; theme follows system. Size grew to about 2–3 sessions.
+- Rung 2 step 1 (`faa36a6`): `i18n` crate (Fluent, English); lint findings carry a message id with arguments and an
+  area. `cargo xtask lint` output byte-identical before and after (all toolbars and default); a first try printed
+  "0." for whole numbers (Fluent pads zero decimals) and was fixed. 73 CHECK lines pass.
+- Rung 2 step 2 (`76ea019`): `ui` and `app` crates, the viewer window. Spike R15 paid: eframe now asks the adapter
+  for its own limits, and the window opens on the Pi's V3D. Found on the display and fixed: ⚠ and ℹ missing from
+  egui's fonts (egui's monochrome emoji fonts on); zoomed out, picking every n-th pixel dropped most ruled lines
+  (now averaged, test `shrinking_keeps_thin_lines`). Found by the window tests and fixed: two unnamed controls for
+  screen readers; a Manta page too big for a 2048 px texture limit (now 1024 px tiles). CI run 42713527280 passed on
+  Linux, macOS and Windows.
+- chris tried the window. Answers word for word: look "Approved as is"; file names "Just 'manta' / 'nomad'"; font "I
+  would like the system default font for the controls" (overrules the Atkinson proposal). Built: profile
+  `short_name`; controls use the desktop's interface font (`quadrule_text::system_face`, GTK's setting via
+  `gsettings` on Linux, Segoe UI on Windows, macOS unverified). `cargo test --workspace --no-fail-fast --
+  --nocapture` → 87 CHECK lines, all pass; 74 in the default build; clippy clean.
+

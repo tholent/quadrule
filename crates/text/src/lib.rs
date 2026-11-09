@@ -152,6 +152,38 @@ pub struct Laid {
     pub rounded_coords: usize,
 }
 
+/// A font face found on this computer, for the app's own controls (not the page: page text
+/// stays on bundled fonts until ADR-002's system-font flow is built).
+#[derive(Clone, Debug, PartialEq)]
+pub struct SystemFace {
+    /// The family the system reports.
+    pub family: String,
+    /// The font file's bytes.
+    pub data: Vec<u8>,
+    /// The face's index in the file (font collections hold several).
+    pub index: u32,
+}
+
+/// Finds an installed face of `family` closest to `weight` (400 regular, 300 light, 700 bold)
+/// and reads its bytes. `None` when the family is not installed.
+pub fn system_face(family: &str, weight: u16) -> Option<SystemFace> {
+    let mut db = fontdb::Database::new();
+    db.load_system_fonts();
+    let id = db.query(&fontdb::Query {
+        families: &[fontdb::Family::Name(family)],
+        weight: fontdb::Weight(weight),
+        ..Default::default()
+    })?;
+    let face = db.face(id)?;
+    // fontdb matches a family case-insensitively and never falls back to another family here.
+    let name = face.families.first().map(|(n, _)| n.clone())?;
+    db.with_face_data(id, |data, index| SystemFace {
+        family: name,
+        data: data.to_vec(),
+        index,
+    })
+}
+
 /// Lays out every request for one profile and collects their outlines.
 pub fn lay_out(
     reg: &mut FontRegistry,

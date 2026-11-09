@@ -653,17 +653,32 @@ fn backdrop(v: &egui::Visuals) -> Color32 {
     }
 }
 
-/// Puts the bundled Atkinson Hyperlegible Next first for the controls, keeping egui's own fonts
-/// behind it for symbols such as ⚠ (rung 2 bbq, Defaulted "UI font", a proposal for chris).
-pub fn install_fonts(ctx: &egui::Context) {
+/// The font for the controls: the system's interface font (chris, 2026-11-09: "I would like the
+/// system default font for the controls"), found by the app. `weight` sets a variable font's
+/// weight axis; a fixed font ignores it.
+#[derive(Clone, Debug)]
+pub struct UiFont {
+    /// The font file's bytes.
+    pub data: Vec<u8>,
+    /// The face's index in the file.
+    pub index: u32,
+    /// 100 to 900; 400 is regular.
+    pub weight: u16,
+}
+
+/// Puts `font` first for the controls, keeping egui's own fonts behind it for symbols such as ⚠
+/// and for anything it lacks. With no font, egui's own fonts alone.
+pub fn install_fonts(ctx: &egui::Context, font: Option<UiFont>) {
     let mut fonts = egui::FontDefinitions::default();
-    if let Some(f) = quadrule_text::BundledFont::for_family("Atkinson Hyperlegible Next") {
-        fonts.font_data.insert(
-            "atkinson".into(),
-            std::sync::Arc::new(egui::FontData::from_static(f.data)),
-        );
+    if let Some(f) = font {
+        let mut data = egui::FontData::from_owned(f.data);
+        data.index = f.index;
+        data.tweak.coords = egui::epaint::text::VariationCoords::new([("wght", f.weight as f32)]);
+        fonts
+            .font_data
+            .insert("system-ui".into(), std::sync::Arc::new(data));
         if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
-            family.insert(0, "atkinson".into());
+            family.insert(0, "system-ui".into());
         }
     }
     ctx.set_fonts(fonts);

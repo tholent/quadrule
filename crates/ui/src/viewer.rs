@@ -405,11 +405,9 @@ fn make_page(
     })
 }
 
-/// A device's name in file names: its display name without the bracketed model, slugified
-/// (`Supernote Nomad (A6 X2)` → `supernote-nomad`).
+/// A device's name in file names: its profile's short name, made safe (`manta`, `nomad`).
 pub fn profile_token(p: &Profile) -> String {
-    let name = p.display_name.split('(').next().unwrap_or(&p.display_name);
-    slug(name)
+    slug(&p.short_name)
 }
 
 /// ASCII letters, digits, hyphens and underscores only (napkin §11.3): letters lowercased, any

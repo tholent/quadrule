@@ -23,5 +23,5 @@
 pub mod view;
 pub mod viewer;
 
-pub use view::{Request, ViewerUi, install_fonts};
+pub use view::{Request, UiFont, ViewerUi, install_fonts};
 pub use viewer::{ExportWhich, Viewer, Zoom};

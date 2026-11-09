@@ -18,22 +18,29 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `docs/device-measurements/README.md`). A test keeps the profiles and screenshots in step.
 - quadrule reproduces Supernote's stock 5 mm grid: pixel-identical to the Manta's screenshots, and to the Nomad's
   but for a 1 px tie-break (`crates/xtask/tests/stock_grid.rs`, `docs/device-measurements/README.md`).
+- Rung 2, the viewer window, is on `main`, look approved by chris 2026-11-09: `cargo run -p quadrule-app --
+  [file.quad]` opens a `.quad` (or the sample page), shows the exact export pixels for Manta or Nomad, zooms from
+  Fit to 16× with a pixel grid or to real size (after a ruler check), lists lint findings and outlines them, overlays
+  safe zones, and exports PNGs named `{title}_{manta|nomad}_{w}x{h}.png` (`crates/ui/`, `crates/app/`; record
+  `docs/bbq/2026-11-09-rung-2-viewer.md`). It is an opt-in build: plain `cargo build`/`cargo test` leave it out
+  (`Cargo.toml` `default-members`); CI builds and tests it on three OSes.
+- Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
+  messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with the seven rules that need no calibration (`crates/lint/src/lib.rs`); `cargo xtask lint`.
 - The `.quad` reader is fuzzed with cargo-fuzz: 3.3 million runs on the Pi, 60 s on every CI push, no crash
   (`crates/format/fuzz/fuzz_targets/open_quad.rs`).
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
-- Checks, 2026-11-09 on the Pi: `cargo test --workspace -- --nocapture` → 65 `CHECK` lines, all pass;
-  clippy `-D warnings` and fmt clean. CI on Linux, macOS and Windows (`.github/workflows/ci.yml`).
+- Checks, 2026-11-09 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture` → 87 `CHECK` lines, all
+  pass (74 with the default members); clippy `-D warnings` and fmt clean. CI on Linux, macOS and Windows
+  (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).
 
 ## Next
 
-- Rung 2, the first app window: a viewer (open a `.quad` or the slice, show it as the device will, switch Manta and
-  Nomad, zoom to pixels, show lint findings, export PNGs; no editing). Scope agreed by chris 2026-11-09; the canvas
-  falls back to vello_cpu on weak graphics chips. Next session: chris has a display attached to the Pi; plan rung 2
-  in a bbq (record in `docs/bbq/`), then build (`docs/STATUS-log.md`).
+- Rung 3 is chris's to choose (`docs/STATUS-log.md`). The graphics-chip canvas and its vello_cpu fallback come with
+  the editing rung (rung 2 bbq Q3, `docs/bbq/2026-11-09-rung-2-viewer.md`).
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on an open question;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -51,6 +58,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-09: rung 1 built and merged (PR #1), CI green on three OSes (`docs/STATUS-log.md`).
 - 2026-11-09: LICENSE and headers; calibration sheets; repo public; safe zones measured; stock grid matched;
   linter started; fuzzing (`docs/STATUS-log.md`).
+- 2026-11-09: rung 2 planned (bbq, 12 questions) and built: the viewer window; spike R15 paid (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

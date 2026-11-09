@@ -27,6 +27,9 @@ pub struct Profile {
     pub id: String,
     /// Name shown to the user.
     pub display_name: String,
+    /// Short name for file names, the `{profile}` token of napkin §11.2 (`manta`, `nomad`; chris,
+    /// 2026-11-09: "Just 'manta' / 'nomad'"). ASCII lowercase letters, digits and hyphens.
+    pub short_name: String,
     /// Native portrait width in pixels.
     pub width_px: u32,
     /// Native portrait height in pixels.

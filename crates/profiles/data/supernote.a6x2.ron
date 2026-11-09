@@ -4,6 +4,7 @@
 (
     id: "supernote.a6x2",
     display_name: "Supernote Nomad (A6 X2)",
+    short_name: "nomad",
     width_px: 1404,
     height_px: 1872,
     ppi: 300.0,

@@ -107,3 +107,14 @@ Run on **Opus 5.5 at high effort**; on any other model or effort, stop and say s
 window on the Pi's display (R15), real size, file dialog and drag-and-drop, export menu. Keep `cargo test` at the
 root free of the app; add the app to CI on three OSes. Show chris the window before calling the look done. Update
 `STATUS.md`, `docs/STATUS-log.md` and `docs/STATUS-debt.md` at the end.
+
+## After the build (2026-11-09)
+
+Added after the rounds; the rules above are unchanged. chris's answers, word for word:
+- The look: "Approved as is".
+- Export file names, `{profile}` token: "Just 'manta' / 'nomad'". Built as a `short_name` per profile
+  (`crates/profiles/data/*.ron`). Replaces the Defaulted name `supernote-manta`.
+- Controls' font, Defaulted "UI font" (Atkinson proposed) — overruled: "I would like the system default font for the
+  controls". Built as the desktop's interface font (on this Pi, GTK's `Nunito Sans Light 12`), egui's own font where
+  none is found.
+

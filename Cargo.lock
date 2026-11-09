@@ -2664,6 +2664,7 @@ name = "quadrule-app"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "quadrule-text",
  "quadrule-ui",
  "rfd",
 ]

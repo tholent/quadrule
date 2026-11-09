@@ -6,7 +6,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - A lint/preflight rule for system-font use, at save and at export, is owed to the napkin's lint list (ADR-002).
 - Text spike T14/T15, what is left: system-font discovery on macOS and Windows. Layout and outlines with the bundled
   font now match byte for byte there (CI run 42660403429); system fonts are not loaded yet (`crates/text/src/lib.rs`).
-- Render spike R15: run the eframe canvas window on a display (`spikes/render/FINDINGS.md`).
 - Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; the build-folder instruction the render worker
   reports (`spikes/render/FINDINGS.md`). (Canvas fallback to vello_cpu on weak GPUs: ruled yes, 2026-11-09.)
 - Calibration, still to measure: the clean gray levels on both devices (the profiles keep 16 evenly spaced
@@ -33,3 +32,10 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Fluent's Unicode direction marks around arguments are switched off (`crates/i18n/src/lib.rs`, `Strings::load`):
   right for English in a terminal, wrong for right-to-left languages. Switch them on per language with the first
   right-to-left translation.
+- Rung 2 viewer, owed (`crates/ui/src/view.rs`, `crates/app/src/main.rs`): the controls' font on macOS is looked up as
+  `.AppleSystemUIFont`, unverified (no Mac here); if fontdb cannot find it, egui's own font shows. Ctrl + scroll
+  zooms by a step but does not keep the point under the pointer still. The export writes no PNG text note (napkin
+  §11.1 has it on by default), so its bytes match rung 1's goldens; the note belongs with the export settings.
+- The graphics-chip (vello on wgpu) canvas and its vello_cpu fallback on weak chips (ruled yes, 2026-11-09) are
+  deferred to the editing rung, to be measured on a desktop graphics card (rung 2 bbq Q3).
+
