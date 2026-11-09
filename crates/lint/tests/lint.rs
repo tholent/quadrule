@@ -207,3 +207,61 @@ fn floating_toolbar_is_info_only() {
     );
     assert!(ok);
 }
+
+#[test]
+fn every_toolbar_zone_is_known() {
+    // A toolbar zone the linter cannot name would be checked whatever the user chose; adding one
+    // to a profile must come with a `Toolbar` position.
+    let mut unknown = Vec::new();
+    for id in quadrule_profiles::builtin_ids() {
+        for z in builtin(id).unwrap().safe_zones {
+            if Toolbar::of_zone(&z.name).is_err() {
+                unknown.push(format!("{id}/{}", z.name));
+            }
+        }
+    }
+    let ok = unknown.is_empty();
+    println!(
+        "CHECK crate=lint name=toolbar_zones_known result={} unknown={unknown:?}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn only_chosen_toolbars() {
+    // chris docks left and top (2026-11-09): the slice header is then flagged for those two and
+    // the footers only; the right and floating toolbars are not mentioned.
+    let doc = slice_document();
+    let manta = builtin(MANTA_ID).unwrap();
+    let primary = builtin(&doc.primary_profile_id).unwrap();
+    let laid = lay_out_text(&doc, &primary, &manta, &mut FontRegistry::bundled_only()).unwrap();
+    let opts = Options {
+        toolbars: vec![Toolbar::Left, Toolbar::Top],
+    };
+    let chosen = lint_with(&doc, &primary, &manta, &laid.outlines, &opts);
+    let msgs: Vec<&str> = chosen
+        .iter()
+        .filter(|x| x.rule == "L06")
+        .map(|x| x.message.as_str())
+        .collect();
+    let all = run(&doc, &manta);
+    let mentions = |m: &[&str], s: &str| m.iter().any(|x| x.contains(s));
+    let all_msgs: Vec<&str> = all
+        .iter()
+        .filter(|x| x.rule == "L06")
+        .map(|x| x.message.as_str())
+        .collect();
+    let ok = mentions(&msgs, "docked left")
+        && mentions(&msgs, "docked top")
+        && !mentions(&msgs, "docked right")
+        && !mentions(&msgs, "floating")
+        && mentions(&all_msgs, "docked right");
+    println!(
+        "CHECK crate=lint name=only_chosen_toolbars result={} l06_chosen={} l06_all={}",
+        pass(ok),
+        msgs.len(),
+        all_msgs.len()
+    );
+    assert!(ok);
+}

@@ -56,13 +56,88 @@ pub struct Finding {
 /// An object's box in device pixels: (x0, y0, x1, y1).
 type Bounds = (f64, f64, f64, f64);
 
-/// Lints the document on `target`. `outlines` is the text laid out for `target` (live or
-/// saved); it gives text boxes their height.
+/// Where the user puts the device's toolbar. L06 checks only the positions in use; the footers
+/// are checked always.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Toolbar {
+    /// Docked along the left edge (`toolbar_left`).
+    Left,
+    /// Docked along the right edge (`toolbar_right`).
+    Right,
+    /// Docked along the top edge (`toolbar_top`).
+    Top,
+    /// Floating, where it first appears (`toolbar_floating_default`).
+    Floating,
+}
+
+impl Toolbar {
+    /// Every position.
+    pub const ALL: [Toolbar; 4] = [
+        Toolbar::Left,
+        Toolbar::Right,
+        Toolbar::Top,
+        Toolbar::Floating,
+    ];
+
+    /// The position a profile's safe zone belongs to: `None` for a zone that is not a toolbar
+    /// (the footers), `Err` for a toolbar zone this list does not know.
+    pub fn of_zone(name: &str) -> Result<Option<Toolbar>, String> {
+        match name.strip_prefix("toolbar_") {
+            None => Ok(None),
+            Some("left") => Ok(Some(Toolbar::Left)),
+            Some("right") => Ok(Some(Toolbar::Right)),
+            Some("top") => Ok(Some(Toolbar::Top)),
+            Some("floating_default") => Ok(Some(Toolbar::Floating)),
+            Some(_) => Err(format!("unknown toolbar zone `{name}`")),
+        }
+    }
+
+    /// Parses `left`, `right`, `top` or `floating`.
+    pub fn parse(s: &str) -> Option<Toolbar> {
+        match s {
+            "left" => Some(Toolbar::Left),
+            "right" => Some(Toolbar::Right),
+            "top" => Some(Toolbar::Top),
+            "floating" => Some(Toolbar::Floating),
+            _ => None,
+        }
+    }
+}
+
+/// Choices that change what the linter checks.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Options {
+    /// Toolbar positions the user uses; L06 ignores the others. Default: all of them.
+    pub toolbars: Vec<Toolbar>,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            toolbars: Toolbar::ALL.to_vec(),
+        }
+    }
+}
+
+/// Lints the document on `target` with the default options (every toolbar position).
+/// `outlines` is the text laid out for `target` (live or saved); it gives text boxes their
+/// height.
 pub fn lint(
     doc: &Document,
     primary: &Profile,
     target: &Profile,
     outlines: &ProfileOutlines,
+) -> Vec<Finding> {
+    lint_with(doc, primary, target, outlines, &Options::default())
+}
+
+/// Lints the document on `target` with `opts`.
+pub fn lint_with(
+    doc: &Document,
+    primary: &Profile,
+    target: &Profile,
+    outlines: &ProfileOutlines,
+    opts: &Options,
 ) -> Vec<Finding> {
     let mut out = Vec::new();
     let mut push = |rule, severity, object, message: String| {
@@ -203,6 +278,13 @@ pub fn lint(
         let mut fixed = Vec::new();
         let mut movable = Vec::new();
         for z in &target.safe_zones {
+            // A toolbar position the user does not use is skipped; a toolbar zone the linter
+            // does not know is checked, so a new profile zone is never silently ignored.
+            if let Ok(Some(t)) = Toolbar::of_zone(&z.name)
+                && !opts.toolbars.contains(&t)
+            {
+                continue;
+            }
             let (zx, zy, zw, zh) = (
                 z.rect.0 as f64,
                 z.rect.1 as f64,

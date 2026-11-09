@@ -192,3 +192,8 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   (Recommended)" (Nomad: W15, 3 px square, gray 51); Nomad line roles, "Yes, use these (Recommended)" (Whisper LA8
   1 px/119, Guide LA4 1 px/51, Structure LB4 2 px/51, Emphasis LC1 3 px/0); toolbar positions used, "Docked left,
   Docked top" (L06 to warn only for these). Recorded in `docs/device-measurements/supernote.a6x2/calibration.md`.
+- L06 checks only the toolbar positions in use (chris: "Docked left, Docked top"). `quadrule_lint::lint_with` takes
+  `Options { toolbars }`; `lint` keeps every position. `cargo xtask lint` defaults to `left,top`
+  (`--toolbars all|left,right,top,floating`); footers are always checked. A toolbar zone the linter cannot name is
+  still checked, and `every_toolbar_zone_is_known` fails on one. Slice: 15 findings with all positions, 10 with
+  left and top. `cargo test -p quadrule-lint -- --nocapture` → 7 passed, 7 CHECK lines pass; clippy clean.
