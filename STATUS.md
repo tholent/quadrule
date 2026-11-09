@@ -16,14 +16,14 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Next
 
-- chris to ratify the three proposed ADRs (`spikes/*/ADR-PROPOSAL.md`); the first ratification also picks the
-  decision format (`docs/decisions/README.md`). Fold talk decisions D1–D7 into the format ADR first
-  (`docs/proposals/talk-2026-11-09-format-versions-and-hinting.md`).
+- Three ADRs ratified 2026-11-09, none built yet: `.quad` format (ADR-001), text stack (ADR-002), export renderer
+  (ADR-003) (`docs/decisions/INDEX.md`). Next: plan v1.0's first rung — the Cargo workspace (napkin §15.1) and the
+  real `format`, `text` and `render` crates built from these ADRs.
 
 ## Known debt
 
 Full debt list: `docs/STATUS-debt.md`.
-- The first decision is not on record yet (`docs/STATUS-debt.md`).
+- The project-setup decision is not on record; the ADR format is chosen (ADR+, `docs/decisions/README.md`).
 - Spike checks owed on other machines: macOS, Windows, x86 Linux, and the canvas window on a display
   (`docs/STATUS-debt.md`).
 

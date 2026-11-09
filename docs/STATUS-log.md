@@ -14,3 +14,7 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   font signature stored per font), recorded word for word in the bbq record.
 - Talk-through on file version label and text hinting: 7 decisions agreed in talk
   (`docs/proposals/talk-2026-11-09-format-versions-and-hinting.md`). Nothing pushed.
+- chris: "ratify all three and commit the napkin". Napkin committed (`c8f5717`); paid the "napkins/ untracked" debt.
+  ADR format chosen: ADR+. ADR-001 (format, with talk D1–D3, D7 and the font signature folded in), ADR-002 (text,
+  with the fallback ruling and talk D4–D6), ADR-003 (export renderer) written and ratified; adr-check: 3 ADRs,
+  0 failures.
