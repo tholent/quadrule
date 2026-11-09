@@ -234,3 +234,12 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   chips, (3) is a viewer the right scope: "2. yes. 3. scope is good. 1. working on the display. I need to reboot
   before starting rung 2". Next session: plan rung 2 in a bbq, then build; R15 (the window on a display) can run
   once the Pi has its display.
+- Session start, 2026-11-09 (rung 2): build on disk matches HEAD `8126b87` (clean tree, nothing to rebuild);
+  `cargo test --workspace -- --nocapture | grep -c '^CHECK'` → 66, none failing (STATUS said 65; `pen_shades` added
+  one). Asked again: the 153/157 Label gray question; chris: "Leave it open". L04 still waits.
+- Spike R15 run on the Pi's display for the first time: the eframe window fails to start. V3D refuses wgpu's default
+  limits (`max_inter_stage_shader_variables` 16 asked, 15 allowed); on OpenGL, `max_texture_dimension_2d` 8192 asked,
+  4096 allowed. Fix belongs in the app: request the adapter's own limits.
+- Rung 2 planned in a bbq, 12 questions, record `docs/bbq/2026-11-09-rung-2-viewer.md`. Canvas shows export pixels
+  only (vello_cpu); napkin window skeleton; Fluent from day one; lint list with highlights; start empty (overruled
+  the slice); export menu; opt-in build; zoom with real size; theme follows system. Size grew to about 2–3 sessions.
