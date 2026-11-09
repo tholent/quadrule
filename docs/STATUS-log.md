@@ -44,3 +44,5 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   was rounded (`CHECK crate=text name=bold_differs … rounded_700=0`).
 - Cost note: the repo is private, so CI uses Actions minutes (macOS ×10, Windows ×2); this run took about 1, 2 and 4
   minutes. CI runs only on pull requests, pushes to main and by hand.
+- chris merged PR #1 (merge commit `00ad0e2`, 2026-11-09 17:09 UTC). CI on `main` after the merge (run 42661800637):
+  green on all three OSes. Local `main` fast-forwarded to `00ad0e2`.

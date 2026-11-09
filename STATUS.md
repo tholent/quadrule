@@ -6,8 +6,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Now
 
-- Rung 1, the headless end-to-end slice, is built on branch `rung-1/headless-slice` and waits in PR #1 for chris
-  to merge (`docs/bbq/2026-11-09-rung-1-headless-slice.md`). Six crates under `crates/` (`Cargo.toml`); the slice
+- Rung 1, the headless end-to-end slice, is on `main`: PR #1 merged by chris 2026-11-09 as `00ad0e2`
+  (`docs/bbq/2026-11-09-rung-1-headless-slice.md`). Six crates under `crates/` (`Cargo.toml`); the slice
   test builds a document, saves it as `.quad`, reopens it and exports Manta and Nomad PNGs that match the golden
   images byte for byte (`crates/render/tests/slice.rs`, `crates/render/tests/golden/SHA256SUMS`).
 - Checks, 2026-11-09: `cargo test --workspace -- --nocapture` → 40 tests, 44 `CHECK` lines, all pass, on the Pi
@@ -17,8 +17,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Next
 
-- chris: review and merge PR #1; rule on its three taste proposals (package names, square dots, estimated role
-  values) (`docs/STATUS-log.md`, 2026-11-09 rung 1 entry).
+- chris: rule on rung 1's three taste proposals (package names, square dots, estimated role values)
+  (`docs/STATUS-debt.md`).
 - chris: the hardware step — copy `crates/render/tests/golden/*.png` to a Manta and a Nomad (MyStyle folder) and
   say how they look (`docs/STATUS-debt.md`).
 - Then plan rung 2 with a bbq. What the ADRs still owe is listed in `docs/STATUS-debt.md`.
@@ -35,7 +35,7 @@ Full debt list: `docs/STATUS-debt.md`.
 
 Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-09: prepared with project-prep (`docs/STATUS-log.md`).
-- 2026-11-09: rung 1 built; PR #1 open, CI green on three OSes (`docs/STATUS-log.md`).
+- 2026-11-09: rung 1 built and merged (PR #1), CI green on three OSes (`docs/STATUS-log.md`).
 
 ## How this file is kept
 
