@@ -223,3 +223,6 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   New test `crates/xtask/tests/pen_shades.rs` re-measures the screenshot → measured=[1, 157, 201, 254], pass. The
   stock grid's gray 1 is the black pen's gray (README note). Found: the Label gray (153) is 4 steps from the dark
   grey pen (157); raised with chris.
+- chris, word for word, on the Label gray (153) sitting 4 steps from the dark grey pen (157): "I'm not sure that
+  it's all that bad to have template lines that match the pen ink". Label stays 153. This bears on L04 ("Gray or
+  weight close to pen ink (will compete with handwriting)", Warn, napkin §8.3); its severity asked of chris.
