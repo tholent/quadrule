@@ -124,6 +124,24 @@ fn safe_zones(args: &[String]) -> Result<(), String> {
         let shots = quadrule_xtask::safezones::load_dir(&root.join(&id))?;
         let zones = quadrule_xtask::safezones::measure(&shots)?;
         println!("// {id}: measured from {} screenshots", shots.len());
+        if !shots.is_empty() {
+            let g = quadrule_xtask::safezones::find_grid(&shots)?;
+            let (w, h) = (shots[0].width, shots[0].height);
+            let last = |(o, p, _): (usize, usize, usize), n: usize| o + (n - 1 - o) / p * p;
+            let (lx, ly) = (last(g.x, w), last(g.y, h));
+            println!(
+                "// template grid: spacing {} x {} px, line {} px; first line x {} y {}; space left/right {}/{}, top/bottom {}/{}",
+                g.x.1,
+                g.y.1,
+                g.x.2,
+                g.x.0,
+                g.y.0,
+                g.x.0,
+                w - 1 - lx,
+                g.y.0,
+                h - 1 - ly
+            );
+        }
         println!("safe_zones: [");
         for z in &zones {
             println!(

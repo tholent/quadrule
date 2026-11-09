@@ -27,8 +27,8 @@ place, for `supernote.a5x2` and `supernote.a6x2`.
 
 ## What Supernote's stock 5 mm grid shows (2026-11-09)
 
-Read from the screenshots above, which use the stock 5 mm grid template (chris); script-free check:
-`cargo xtask safe-zones` reports the same grid it rebuilds.
+Read from the screenshots above, which use the stock 5 mm grid template (chris). `cargo xtask safe-zones` prints the
+spacing, line width and placement it finds; the line gray and the page gray were read with a one-off check.
 
 | | Manta (1920 × 2560) | Nomad (1404 × 1872) |
 |---|---|---|
