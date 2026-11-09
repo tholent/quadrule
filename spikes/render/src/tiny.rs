@@ -54,7 +54,7 @@ pub fn render(dl: &DisplayList) -> Gray {
         }
     }
     // Opaque gray in -> R == G == B; take R. Alpha is 255 everywhere (background flattened).
-    let data = pm.data().chunks_exact(4).map(|px| px[0]).collect();
+    let data = pm.data().as_chunks::<4>().0.iter().map(|px| px[0]).collect();
     Gray { width: dl.width, height: dl.height, data }
 }
 

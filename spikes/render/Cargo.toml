@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+eframe = { version = "0.37", default-features = false, features = ["wgpu", "wayland", "x11", "default_fonts"], optional = true }
 png = "0.18"
 pollster = { version = "1", optional = true }
 sha2 = "0.11"
@@ -15,6 +16,18 @@ vello_cpu = { version = "0.3", optional = true }
 # Heavy parts are opt-in so the tiny-skia checks build fast on the Pi.
 vello-cpu = ["dep:vello_cpu"]
 gpu = ["dep:vello", "dep:pollster"]
+canvas = ["gpu", "dep:eframe"]
+
+[[example]]
+name = "gpu"
+required-features = ["gpu"]
+
+[[example]]
+name = "canvas"
+required-features = ["canvas"]
+
+[[example]]
+name = "bench"
 
 # Standalone: not part of any workspace.
 [workspace]
