@@ -84,3 +84,7 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   toolbar); a section's legend stays with its first row. Manta 6 pages, Nomad 10.
 - Checks: `cargo test --workspace -- --nocapture` → 47 passed, 0 failed, 51 CHECK lines pass; clippy and fmt clean;
   slice goldens unchanged.
+- Slip: `git add -A docs` swept a vim swap file (`docs/.calibration.md.swp`, from an open vim session) into
+  `be6fea9`, pushed to the public repo. It holds the local user name, host name and file path. Untracked in
+  `a087163` and `*.swp` / `*.swo` / `*~` now ignored; it stays in history unless chris asks for a rewrite. Lesson: stage
+  named paths, not whole folders.
