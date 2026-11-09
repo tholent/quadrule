@@ -18,7 +18,7 @@
 //! Four sheets, each one or more pages:
 //! - **lines**: line widths 1–6 px × 15 grays, then dashed and dotted lines × 5 grays;
 //! - **dots**: square dots 1–4 px and round dots 2–6 px × 8 grays;
-//! - **text**: the bundled font at 6–18 pt, regular and bold, × 3 grays;
+//! - **text**: the bundled font at 6–18 pt, regular and bold, × 4 grays;
 //! - **writing**: wide strips of ruled lines and dot rows to write across with each pen.
 //!
 //! Every sample has a code (e.g. `LB7`); the code and what it means are on the sheet and in
@@ -73,8 +73,9 @@ pub const DOT_GRAYS: [u8; 8] = [0, 51, 102, 136, 170, 187, 204, 221];
 pub const TEXT_SIZES_PT: [f64; 8] = [6.0, 7.0, 8.0, 9.0, 10.0, 12.0, 14.0, 18.0];
 /// Text weights.
 pub const TEXT_WEIGHTS: [u16; 2] = [400, 700];
-/// Text grays, columns 1–3.
-pub const TEXT_GRAYS: [u8; 3] = [0, 51, 102];
+/// Text grays, columns 1–4. Column 4 (gray 153) added 2026-11-09 for labels (chris: "I'd like to consider a
+/// lighter shade of gray for labels, maybe 153?"); columns 1–3 keep their codes.
+pub const TEXT_GRAYS: [u8; 4] = [0, 51, 102, 153];
 /// Writing strips W1–W12: ruled lines, width × gray. Set 2 (2026-11-09, chris: "let's redo the
 /// calibration sheets to include 51"): grays 51 and 102 added around the Nomad favourites (LA4,
 /// PD2), gray 221 dropped (invisible on the Nomad).

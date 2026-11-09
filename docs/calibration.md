@@ -21,7 +21,7 @@ same wherever the toolbar is docked; only the floating toolbar can cover them.
 |---|---|---|
 | lines | line widths 1–6 px × 15 grays; dashed and dotted lines × 5 grays | `L…`, `D…` |
 | dots | square dots 1–4 px and round dots 2–6 px × 8 grays | `P…` |
-| text | Atkinson Hyperlegible Next 6–18 pt, regular and bold × 3 grays | `T…` |
+| text | Atkinson Hyperlegible Next 6–18 pt, regular and bold × 4 grays (0, 51, 102, 153) | `T…` |
 | writing | wide ruled-line and dot-row strips to write across (set 2: grays 51–187) | `W1`–`W18` |
 
 ## 2. Put them on the device

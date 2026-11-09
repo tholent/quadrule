@@ -174,3 +174,7 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   which labels, chris chose TD3 and TL3. Ruling: reading text TD2/TL2 (9 pt, gray 51); labels TD3/TL3 (9 pt, gray
   102). The previous entry's reading (labels at gray 51) was a misread and is reversed; the withdrawn proposal to give
   labels their own gray stands again.
+- chris, word for word: "I'd like to consider a lighter shade of gray for labels, maybe 153?". The text sheet gains
+  column 4, gray 153 (`TEXT_GRAYS` in `crates/xtask/src/calib.rs`); columns 1–3 keep their codes. With four columns,
+  14 and 18 pt samples wrap onto two lines. `cargo test -p quadrule-xtask` → calib_codes expected=261 pass, all
+  xtask CHECK lines pass; clippy clean. Sheets regenerated in `calib/`.
