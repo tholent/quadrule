@@ -105,6 +105,17 @@ lighter (gray 102). This is the ruling; it replaces both earlier label choices.
 | reading text | TD2 | TL2 | 9 pt | 51 |
 | labels | TD3 | TL3 | 9 pt | 102 |
 
+*The labels row is replaced by the fourth follow-up.*
+
+Fourth follow-up. chris, word for word: "I'd like to consider a lighter shade of gray for labels, maybe 153?" The text
+sheet gained column 4 (gray 153). chris, word for word, after judging it: "td4 and tl4 work for lables". **Labels are
+TD4 and TL4**: the same size as reading text (9 pt), at gray 153. This is the current ruling.
+
+| | regular | bold | size | gray |
+|---|---|---|---|---|
+| reading text | TD2 | TL2 | 9 pt | 51 |
+| labels | TD4 | TL4 | 9 pt | 153 |
+
 Read from this:
 
 - **Every sample is legible**, down to 6 pt at gray 102, so the sheet did not find a floor; the smallest size tested
@@ -116,4 +127,6 @@ Read from this:
   chris picks the lighter gray 102 at 10 pt (TE3, TM3): a label should stay out of the way, and the slightly larger
   size makes up for the lighter gray. *Replaced by the second follow-up: labels are gray 51 too (TE2, TM2), to keep
   text and labels the same gray.* *Reversed by the third follow-up: labels are 9 pt at gray 102 (TD3, TL3), the same
-  size as reading text and one shade lighter.*
+  size as reading text and one shade lighter.* *Then lightened by the fourth follow-up: labels are 9 pt at gray 153
+  (TD4, TL4).*
+- **Text at gray 153 works on the Nomad**, though square dots speckle from gray 170: only one step separates them.
