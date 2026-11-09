@@ -29,7 +29,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
 ## Next
 
 - chris: put the slice PNGs and the calibration sheets on a Manta and a Nomad, and report codes as in
-  `docs/calibration.md`. The answers set the role values and settle square vs round dots.
+  `docs/calibration.md`. Nomad dots done (square dots ruled); the rest set the role values.
 - Then: enter the calibrated values in `crates/profiles/data/`, re-bless the slice goldens, and plan rung 2.
 
 ## Known debt

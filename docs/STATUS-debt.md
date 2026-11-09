@@ -9,9 +9,9 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Render spike R15: run the eframe canvas window on a display (`spikes/render/FINDINGS.md`).
 - Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; canvas fallback to vello_cpu on weak GPUs;
   the build-folder instruction the render worker reports (`spikes/render/FINDINGS.md`).
-- Device test, owed to chris: put the slice PNGs (`crates/render/tests/golden/`) and the calibration sheets
-  (`cargo xtask calibration-sheet`) on a Manta and a Nomad; report codes (`docs/calibration.md`). Settles the role
-  values and square vs round dots.
+- Calibration, in progress (chris): Nomad dots sheet done (`docs/device-measurements/supernote.a6x2/calibration.md`;
+  square dots ruled); still to come: Nomad lines, text and writing; all four Manta sheets. Sets the role values
+  and clean grays (`docs/calibration.md`).
 - The `gh` token expires 90 days after it was made (chris, 2026-11-09); if made 2026-11-09, that is about 2027-02-07.
   Renew it before then, or `gh` stops opening PRs and reading CI (rung 1 record, Defaulted "Repository").
 - The `gh` fine-grained token cannot read check summaries (`gh pr checks` fails: GitHub offers no `checks:read` for
@@ -25,5 +25,5 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Safe zones still to capture (screenshots, chris): landscape, a collapsed toolbar, other floating positions
   (`docs/device-measurements/README.md`).
 - The slice page's 8 mm margin (94 px) is narrower than a docked toolbar (Manta 116 px, Nomad 99 px), so a toolbar
-  docked left or right covers the edge of its title and rules. Lint L06 (content in a safe zone) will flag this once
-  the linter exists; the slice itself is left as is (`crates/model/src/sample.rs`).
+  docked left or right covers the edge of its title and rules; lint L06 flags it (`cargo xtask lint`). The slice
+  itself is left as is (`crates/model/src/sample.rs`).
