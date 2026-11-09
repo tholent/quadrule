@@ -13,8 +13,8 @@
 // limitations under the License.
 
 //! The migration chain (napkin §12.2): each step rewrites the untyped CBOR tree of the scene
-//! from one format version to the next, before it is read into the typed model. The chain is
-//! empty at 0.1.0, the first version; add one line per format change, with a test.
+//! from one format version to the next, before it is read into the typed model. Add one line per
+//! format change, with a test.
 
 use crate::FormatError;
 use ciborium::Value;
@@ -24,7 +24,14 @@ use semver::Version;
 pub type Step = fn(&mut Value) -> Result<(), FormatError>;
 
 /// (from, to, step), in order.
-pub const CHAIN: &[(&str, &str, Step)] = &[];
+pub const CHAIN: &[(&str, &str, Step)] = &[("0.1.0", "0.2.0", v0_1_to_v0_2)];
+
+/// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
+/// scene is already a valid 0.2 scene: nothing to rewrite. A 0.1 build cannot read a 0.2 file
+/// that uses them; it reports an error rather than guessing.
+fn v0_1_to_v0_2(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
 
 /// Upgrades `scene` from `from` to `to` by walking `chain` one step at a time.
 pub fn upgrade(

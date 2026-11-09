@@ -364,3 +364,70 @@ fn pattern_shapes_are_centred_in_their_region_and_drawn_whole() {
     );
     assert!(ok);
 }
+
+#[test]
+fn centred_rhythm_balances_the_margin_box() {
+    // 5 mm at 300 PPI = 59 px. With no margins, floor(L / 59) positions span (n - 1) units and the
+    // leftover splits evenly, an odd pixel to the end: Manta 32 across from x 45, 43 down from y 41.
+    let mut doc = slice_document();
+    doc.page.margins_mm = Margins::all(0.0);
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    doc.rhythm.origin = RhythmOrigin::Centered;
+    let (manta, nomad) = profiles();
+    let mut parts = Vec::new();
+    let mut ok = true;
+    for (p, want) in [
+        (&manta, (45.0, 41.0, 32, 43)),
+        (&nomad, (53.0, 51.0, 23, 31)),
+    ] {
+        let r = RhythmPx::new(&doc, p);
+        let xs = RhythmPx::positions(r.origin_x, r.unit_x, 0.0, p.width_px as f64 - 1.0);
+        let ys = RhythmPx::positions(r.origin_y, r.unit_y, 0.0, p.height_px as f64 - 1.0);
+        let got = (xs[0], ys[0], xs.len(), ys.len());
+        let left = xs[0];
+        let right = p.width_px as f64 - xs[xs.len() - 1];
+        ok &= got == want && (left - right).abs() <= 1.0;
+        parts.push(format!(
+            "{}:first=({},{}):count=({},{})",
+            p.id, got.0, got.1, got.2, got.3
+        ));
+    }
+    println!(
+        "CHECK crate=layout name=centred_rhythm result={} {}",
+        pass(ok),
+        parts.join(" ")
+    );
+    assert!(ok);
+}
+
+#[test]
+fn grid_pattern_draws_both_directions() {
+    let mut doc = slice_document();
+    let ObjectKind::Pattern(pr) = &mut doc.layers[0].objects[0].kind else {
+        panic!("dots")
+    };
+    pr.pattern = Pattern::Grid;
+    let (manta, _) = profiles();
+    let whisper = manta.role(LineRole::Whisper);
+    let rs: Vec<_> = rects(&page(&doc, &manta))
+        .into_iter()
+        .filter(|r| r.4 == whisper.gray)
+        .collect();
+    let w = whisper.width_px as f64;
+    let horizontal = rs
+        .iter()
+        .filter(|r| r.3 - r.1 == w && r.2 - r.0 > w)
+        .count();
+    let vertical = rs
+        .iter()
+        .filter(|r| r.2 - r.0 == w && r.3 - r.1 > w)
+        .count();
+    // The dot grid had 25 columns and 14 rows of dots on the Manta: the same rhythm crossings.
+    let ok = horizontal == 14 && vertical == 25;
+    println!(
+        "CHECK crate=layout name=grid_pattern result={} horizontal={horizontal} vertical={vertical}",
+        pass(ok)
+    );
+    assert!(ok);
+}

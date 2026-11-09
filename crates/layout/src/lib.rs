@@ -211,19 +211,33 @@ impl RhythmPx {
     /// Resolves the document's rhythm on a profile.
     pub fn new(doc: &Document, p: &Profile) -> Self {
         let r = &doc.rhythm;
-        let (ox, oy) = match r.origin {
-            RhythmOrigin::MarginCorner => (doc.page.margins_mm.left, doc.page.margins_mm.top),
-            RhythmOrigin::PageCorner => (0.0, 0.0),
-        };
+        let m = &doc.page.margins_mm;
+        let px = |mm: f64| p.mm_to_px(mm).round();
         let unit = |mm: f64| match r.resolution {
             RhythmResolution::PixelLocked => p.mm_to_px(mm).round().max(1.0),
             RhythmResolution::PhysicalLocked => p.mm_to_px(mm),
         };
+        let (unit_x, unit_y) = (unit(r.h_unit_mm), unit(r.v_unit_mm));
+        // Centred: n = floor(A / u) positions span (n - 1) units, leaving at least half a unit at
+        // each side of the margin box; the leftover is split evenly, an odd pixel to the end.
+        let centred = |start: f64, end: f64, u: f64| {
+            let a = end - start;
+            let n = (a / u).floor().max(1.0);
+            start + ((a - (n - 1.0) * u) / 2.0).floor()
+        };
+        let (origin_x, origin_y) = match r.origin {
+            RhythmOrigin::MarginCorner => (px(m.left), px(m.top)),
+            RhythmOrigin::PageCorner => (0.0, 0.0),
+            RhythmOrigin::Centered => (
+                centred(px(m.left), p.width_px as f64 - px(m.right), unit_x),
+                centred(px(m.top), p.height_px as f64 - px(m.bottom), unit_y),
+            ),
+        };
         RhythmPx {
-            origin_x: p.mm_to_px(ox).round(),
-            origin_y: p.mm_to_px(oy).round(),
-            unit_x: unit(r.h_unit_mm),
-            unit_y: unit(r.v_unit_mm),
+            origin_x,
+            origin_y,
+            unit_x,
+            unit_y,
             resolution: r.resolution,
         }
     }
@@ -342,6 +356,29 @@ pub fn display_list(
                                         gray,
                                     });
                                 }
+                            }
+                        }
+                        Pattern::Grid => {
+                            // Horizontal lines across the region, then vertical lines down it.
+                            for &y in &ys {
+                                let c = snap_center(y, w);
+                                items.push(Item::Rect {
+                                    x0,
+                                    y0: c - half,
+                                    x1,
+                                    y1: c + half,
+                                    gray,
+                                });
+                            }
+                            for x in RhythmPx::positions(rhythm.origin_x, rhythm.unit_x, x0, x1) {
+                                let c = snap_center(x, w);
+                                items.push(Item::Rect {
+                                    x0: c - half,
+                                    y0,
+                                    x1: c + half,
+                                    y1,
+                                    gray,
+                                });
                             }
                         }
                     }

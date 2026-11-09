@@ -355,7 +355,7 @@ fn random_damage_never_panics() {
 
 #[test]
 fn migration_chain_walks_steps() {
-    // The real chain is empty at 0.1.0; this checks the machinery with a stand-in chain where
+    // This checks the machinery with a stand-in chain where
     // 0.0.9 had one `unit_mm` and 0.1.0 has `h_unit_mm` and `v_unit_mm`.
     fn split_unit(scene: &mut Value) -> Result<(), FormatError> {
         let r =
@@ -391,6 +391,26 @@ fn migration_chain_walks_steps() {
     println!(
         "CHECK crate=format name=migration_chain result={} steps=1 missing_link_error={no_route}",
         pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_0_1_file_opens_through_the_real_chain() {
+    // A file written at format 0.1.0 (before the Centered origin and Grid pattern existed) opens in
+    // this build through migrate::CHAIN, and saves again at the current version.
+    let (mut manifest, files) = split(&slice_file().to_bytes("0.1.0").unwrap());
+    *migrate::map_get_mut(&mut manifest, "format_version").unwrap() = Value::Text("0.1.0".into());
+    let opened = QuadFile::from_bytes(&raw_quad(manifest, &files)).unwrap();
+    let resaved = QuadFile::from_bytes(&opened.to_bytes("t").unwrap()).unwrap();
+    let ok = opened.migrated_from == Some(Version::new(0, 1, 0))
+        && opened.doc == slice_document()
+        && resaved.manifest.format_version == FORMAT_VERSION;
+    println!(
+        "CHECK crate=format name=open_0_1_file result={} migrated_from={:?} now={}",
+        pass(ok),
+        opened.migrated_from.map(|v| v.to_string()),
+        resaved.manifest.format_version
     );
     assert!(ok);
 }

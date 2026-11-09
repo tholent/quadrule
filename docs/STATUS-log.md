@@ -125,3 +125,9 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   does not run them). Pattern clipping: tried drawing only shapes wholly inside a region; it removed the slice's
   first dot row and column (38 dots on the margin), so reverted. The rule is now written down and tested instead
   (`pattern_shapes_centred_in_their_region_and_drawn_whole`); veto-able in the debt list.
+- Stock-grid match: model gains `RhythmOrigin::Centered` (floor(L/u) positions, leftover split evenly, odd pixel to
+  the right/bottom) and `Pattern::Grid`; format 0.2.0 with the first real migration step (0.1.0 → 0.2.0, nothing to
+  rewrite; tested by opening a 0.1.0 file). No single centring rule matches both stock templates (best 3 of 4
+  axes): the Manta and Nomad templates break the odd-pixel tie in opposite directions. Result
+  (`crates/xtask/tests/stock_grid.rs`): quadrule's export of the stock grid matches the Manta screenshots exactly
+  (0 px outside the toolbar and footer) and the Nomad's exactly once shifted 1 px up-left.

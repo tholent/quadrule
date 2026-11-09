@@ -197,6 +197,10 @@ pub enum RhythmOrigin {
     MarginCorner,
     /// The top-left page corner.
     PageCorner,
+    /// Balanced in the margin box (the page, when margins are 0): as many units as leave at least
+    /// half a unit at each side, the leftover split evenly, an odd pixel to the right and bottom
+    /// (format 0.2). Supernote's stock grid on the Manta is placed this way.
+    Centered,
 }
 
 /// How a profile resolves the rhythm unit to device pixels (napkin §6.3).
@@ -434,4 +438,6 @@ pub enum Pattern {
     Lines,
     /// A dot at every rhythm crossing.
     Dots,
+    /// A square grid: horizontal and vertical lines on the rhythm (format 0.2).
+    Grid,
 }

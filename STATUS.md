@@ -14,9 +14,11 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Safe zones measured for both devices from screenshots (portrait: toolbar left, right, top, floating; plus the
   footer), by `cargo xtask safe-zones`, and written into the profiles (`crates/profiles/data/`,
   `docs/device-measurements/README.md`). A test keeps the profiles and screenshots in step.
+- quadrule reproduces Supernote's stock 5 mm grid: pixel-identical to the Manta's screenshots, and to the Nomad's
+  but for a 1 px tie-break (`crates/xtask/tests/stock_grid.rs`, `docs/device-measurements/README.md`).
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
-- Checks, 2026-11-09 on the Pi: `cargo test --workspace -- --nocapture` → 47 tests, 51 `CHECK` lines, all pass;
+- Checks, 2026-11-09 on the Pi: `cargo test --workspace -- --nocapture` → 53 tests, 57 `CHECK` lines, all pass;
   clippy `-D warnings` and fmt clean. CI on Linux, macOS and Windows (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).

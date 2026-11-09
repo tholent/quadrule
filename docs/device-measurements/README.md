@@ -51,3 +51,14 @@ spacing, line width and placement it finds; the line gray and the page gray were
 - **Full bleed.** The grid runs under the toolbar and footer; the stock template ignores safe zones.
 - **Not shown:** how the panel itself renders grays, or how the lines look to the eye. Screenshots are the screen's
   pixel data; calibration still needs the sheets and eyes.
+
+## quadrule draws the stock grid (2026-11-09)
+
+`crates/xtask/tests/stock_grid.rs` builds the stock template as a quadrule document (one full-page square grid,
+5 mm, centred, pixel-locked, 1 px at gray 1), exports it, and compares it pixel by pixel with every screenshot
+outside the footer and that screenshot's toolbar:
+
+- **Manta:** identical, 0 differing pixels in all four screenshots.
+- **Nomad:** identical once shifted 1 px up and left. On each axis the stock grid cannot sit exactly in the middle
+  (an odd pixel is left over), and the two stock templates break that tie in opposite directions: no single rule
+  matches both. quadrule's centred rhythm gives the odd pixel to the right and bottom, which matches the Manta.
