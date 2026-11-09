@@ -166,3 +166,7 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   gray 51); gray 102 a bit harder to read; black less legible than 51. Gray 51 is the favourite on every sheet so far.
 - chris, word for word: "if I had to choose a label, TE3 and TM3 would be the best" (10 pt regular and bold, gray
   102). Recorded with the text sheet results.
+- chris, word for word: "for labels, we can bump them up to row 2. They aren't bad, and I'd like to keep the two the
+  same". Read as column 2: labels are TE2 and TM2 (10 pt, gray 51), the same gray as reading text; replaces TE3/TM3.
+  Withdrawn: the proposal to split the profile's text gray into a reading gray (51) and a label gray (102), because
+  chris wants the two the same.
