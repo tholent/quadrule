@@ -1,0 +1,20 @@
+[package]
+name = "spike-render"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+png = "0.18"
+pollster = { version = "1", optional = true }
+sha2 = "0.11"
+tiny-skia = "0.12"
+vello = { version = "0.11", optional = true }
+vello_cpu = { version = "0.3", optional = true }
+
+[features]
+# Heavy parts are opt-in so the tiny-skia checks build fast on the Pi.
+vello-cpu = ["dep:vello_cpu"]
+gpu = ["dep:vello", "dep:pollster"]
+
+# Standalone: not part of any workspace.
+[workspace]
