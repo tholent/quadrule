@@ -7,16 +7,25 @@ The project's live state. Update it when work lands. Every claim cites at least 
 ## Now
 
 - Project prepared for agents with project-prep: the rules are in `AGENTS.md`, the split files in `docs/`.
-- Design spec is a draft (v0.1); no code yet (`napkins/quadrule-spec.md`).
+- Design spec is a draft (v0.1) (`napkins/quadrule-spec.md`); plan for the first work in
+  `docs/bbq/2026-11-09-quadrule-spikes.md`.
+- The three technical spikes are done on branch `spikes/2026-11-09` (local only): format, text and rendering, each a
+  throwaway crate with findings and a proposed ADR (`spikes/format/FINDINGS.md`, `spikes/text/FINDINGS.md`,
+  `spikes/render/FINDINGS.md`). Tests: format 10, text 12, render 9 passed.
+- Rust 1.99.1 installed on the Pi with rustup (`spikes/format/FINDINGS.md` header).
 
 ## Next
 
-- Put the first decision on record: how this project is set up, and its decision format (`docs/decisions/README.md`).
+- chris to ratify the three proposed ADRs (`spikes/*/ADR-PROPOSAL.md`); the first ratification also picks the
+  decision format (`docs/decisions/README.md`). Fold talk decisions D1–D7 into the format ADR first
+  (`docs/proposals/talk-2026-11-09-format-versions-and-hinting.md`).
 
 ## Known debt
 
 Full debt list: `docs/STATUS-debt.md`.
 - The first decision is not on record yet (`docs/STATUS-debt.md`).
+- Spike checks owed on other machines: macOS, Windows, x86 Linux, and the canvas window on a display
+  (`docs/STATUS-debt.md`).
 
 ## Log
 
