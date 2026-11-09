@@ -54,6 +54,8 @@ fn shot(position: &str, boxes: &[(usize, usize, usize, usize)]) -> Shot {
 
 #[test]
 fn finds_known_boxes_on_a_synthetic_grid() {
+    // The side toolbars are drawn shorter than the page, as a trimmed toolbar is; their zones must
+    // still run the full height.
     let footer = [(50, 760, 100, 40), (400, 760, 120, 40)];
     let with = |b: (usize, usize, usize, usize)| [footer[0], footer[1], b];
     let shots = [
@@ -75,8 +77,8 @@ fn finds_known_boxes_on_a_synthetic_grid() {
             (250, 100, 40, 300),
             true,
         ),
-        ("toolbar_left".to_string(), (0, 0, 40, 750), false),
-        ("toolbar_right".to_string(), (560, 0, 40, 750), false),
+        ("toolbar_left".to_string(), (0, 0, 40, 800), false),
+        ("toolbar_right".to_string(), (560, 0, 40, 800), false),
         ("toolbar_top".to_string(), (0, 0, 600, 40), false),
     ];
     let ok = got == want;

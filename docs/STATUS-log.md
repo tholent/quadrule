@@ -88,3 +88,12 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   `be6fea9`, pushed to the public repo. It holds the local user name, host name and file path. Untracked in
   `a087163` and `*.swp` / `*.swo` / `*~` now ignored; it stays in history unless chris asks for a rewrite. Lesson: stage
   named paths, not whole folders.
+- chris, word for word: "for the nomad, the toolbar does normally extend to the bottom when docked on left and right.
+  I simply had edited the icons that appeared and it shrunk up. In looking at the screenshots, can anything be
+  divined from the grid? That is the stock 5mm template from super note". Docked toolbar zones now span their whole
+  edge (thickness measured, length = page); Nomad side zones 1763 → 1872 px tall. Synthetic test updated to draw
+  trimmed toolbars.
+- The stock 5 mm grid, read from the screenshots: 59 px spacing on both devices (pixel-locked 5 mm at 300 PPI),
+  leftover split evenly (centred origin), 1 px lines at gray 1 with hard edges, white page, full bleed
+  (`docs/device-measurements/README.md`).
+- Checks: 47 passed, 0 failed, 51 CHECK lines pass; clippy and fmt clean.

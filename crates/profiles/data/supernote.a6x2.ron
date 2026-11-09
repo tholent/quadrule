@@ -16,13 +16,14 @@
     // Measured 2026-11-09 by `cargo xtask safe-zones` from the portrait screenshots in
     // docs/device-measurements/supernote.a6x2/ (toolbar docked left, right, top, and floating at its
     // default place). Footer zones are covered in every screenshot: page navigation (left) and
-    // note name (right). Not yet measured: landscape, and a collapsed toolbar.
+    // note name (right). Docked toolbars span their whole edge (their length depends on the
+    // icons chosen); only thickness is measured. Not yet measured: landscape, collapsed toolbar.
     safe_zones: [
         (name: "footer_left", orientation: Portrait, rect: (110, 1772, 325, 100), advisory: false),
         (name: "footer_right", orientation: Portrait, rect: (948, 1772, 346, 100), advisory: false),
         (name: "toolbar_floating_default", orientation: Portrait, rect: (534, 119, 100, 1245), advisory: true),
-        (name: "toolbar_left", orientation: Portrait, rect: (0, 0, 99, 1763), advisory: false),
-        (name: "toolbar_right", orientation: Portrait, rect: (1305, 0, 99, 1763), advisory: false),
+        (name: "toolbar_left", orientation: Portrait, rect: (0, 0, 99, 1872), advisory: false),
+        (name: "toolbar_right", orientation: Portrait, rect: (1305, 0, 99, 1872), advisory: false),
         (name: "toolbar_top", orientation: Portrait, rect: (0, 0, 1404, 99), advisory: false),
     ],
     // ESTIMATE.

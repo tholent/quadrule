@@ -22,7 +22,9 @@
 //! screenshot is covered at any point, and the bare template is rebuilt from them. Every pixel
 //! that differs from the bare template is covered. What is covered in **every** screenshot is
 //! the footer (page navigation, note name); the rest of each screenshot is its toolbar. Cover
-//! boxes hide the grid lines under them, so their edges show where the lines stop.
+//! boxes hide the grid lines under them, so their edges show where the lines stop. A docked
+//! toolbar's zone runs the full length of its edge whatever icons it shows; only its thickness
+//! is measured.
 
 use quadrule_profiles::{Orientation, SafeZone};
 use std::path::Path;
@@ -295,6 +297,17 @@ pub fn measure(shots: &[Shot]) -> Result<Vec<SafeZone>> {
                 x1.max(b.0 + b.2),
                 y1.max(b.1 + b.3),
             );
+        }
+        // A docked toolbar's length depends on which icons the user has chosen, so its zone is
+        // the whole edge strip; only its thickness comes from the screenshot. chris, 2026-11-09:
+        // "for the nomad, the toolbar does normally extend to the bottom when docked on left and
+        // right. I simply had edited the icons that appeared and it shrunk up."
+        let (wu, hu) = (w as u32, h as u32);
+        match s.position.as_str() {
+            "left" => (x0, y0, x1, y1) = (0, 0, x1, hu),
+            "right" => (x0, y0, x1, y1) = (x0, 0, wu, hu),
+            "top" => (x0, y0, x1, y1) = (0, 0, wu, y1),
+            _ => {}
         }
         let floating = s.position == "float";
         zones.push(SafeZone {
