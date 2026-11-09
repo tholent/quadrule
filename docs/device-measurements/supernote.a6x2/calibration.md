@@ -94,6 +94,16 @@ reading (9 pt, gray 51) and a label (10 pt, gray 102: one size up, one step ligh
 Second follow-up, chris, word for word: "for labels, we can bump them up to row 2. They aren't bad, and I'd like to
 keep the two the same". Read as column 2 (gray 51; the sheet's rows are sizes, its columns grays): **labels are TE2
 and TM2, 10 pt at gray 51**, the same gray as reading text. This replaces the TE3/TM3 choice above.
+*Misread; reversed by the third follow-up.*
+
+Third follow-up, chris, word for word: "reverse that. the labels should be matched for size, but differ in shade of
+gray". Asked which labels, chris chose **TD3 and TL3**: labels are the same size as reading text (9 pt), one shade
+lighter (gray 102). This is the ruling; it replaces both earlier label choices.
+
+| | regular | bold | size | gray |
+|---|---|---|---|---|
+| reading text | TD2 | TL2 | 9 pt | 51 |
+| labels | TD3 | TL3 | 9 pt | 102 |
 
 Read from this:
 
@@ -105,4 +115,5 @@ Read from this:
 - **Gray 51 is chris's favourite on every sheet so far**: line LA4, dot PD2, text TD2 and TL2. For labels, though,
   chris picks the lighter gray 102 at 10 pt (TE3, TM3): a label should stay out of the way, and the slightly larger
   size makes up for the lighter gray. *Replaced by the second follow-up: labels are gray 51 too (TE2, TM2), to keep
-  text and labels the same gray.*
+  text and labels the same gray.* *Reversed by the third follow-up: labels are 9 pt at gray 102 (TD3, TL3), the same
+  size as reading text and one shade lighter.*

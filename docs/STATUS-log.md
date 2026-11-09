@@ -170,3 +170,7 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   same". Read as column 2: labels are TE2 and TM2 (10 pt, gray 51), the same gray as reading text; replaces TE3/TM3.
   Withdrawn: the proposal to split the profile's text gray into a reading gray (51) and a label gray (102), because
   chris wants the two the same.
+- chris, word for word: "reverse that. the labels should be matched for size, but differ in shade of gray". Asked
+  which labels, chris chose TD3 and TL3. Ruling: reading text TD2/TL2 (9 pt, gray 51); labels TD3/TL3 (9 pt, gray
+  102). The previous entry's reading (labels at gray 51) was a misread and is reversed; the withdrawn proposal to give
+  labels their own gray stands again.
