@@ -1,6 +1,6 @@
 # STATUS — quadrule
 
-_Last updated: 
+_Last updated: 2026-11-09_
 
 The project's live state. Update it when work lands. Every claim cites at least one file that exists.
 
