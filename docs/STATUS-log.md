@@ -149,3 +149,8 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   config changes, the device screenshots, and itself; fuzzing moved to `fuzz.yml`, which runs on `crates/format`,
   `crates/model`, the workspace manifest and itself. Both keep "run by hand". Checked by pushing this docs-only
   entry and seeing no run start.
+- Calibration, Nomad dots sheet: chris's results and follow-up recorded word for word in
+  `docs/device-measurements/supernote.a6x2/calibration.md`. Rulings: **square dots** ("yes, square dots are the
+  ruling"); favourite dot **PD2** (square 4 px, gray 51). Found: 1 px dots invisible even in black; square dots
+  speckle from gray 170; the slice's estimated dot grid (2 px, gray 187) is invisible on the Nomad. No profile
+  values changed yet.
