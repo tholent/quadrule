@@ -139,18 +139,23 @@ line. W15 is my favorite dot"
 | strips | what | result |
 |---|---|---|
 | W1–W12 | ruled lines 1, 2, 3 px × grays 51, 102, 153, 187 | all visible |
-| W13, W14 | square dots 2 px, grays 51 and 102 | not visible |
+| W13, W14 | square dots 2 px, grays 51 and 102 | visible, but not usable (see the follow-up) |
 | W15–W18 | square dots 3 and 4 px, grays 51 and 102 | visible |
+
+Follow-up, chris, word for word: "I do see them, they are just not usable at that size". So W13 and W14 show; 2 px
+dots are too small to work with, not invisible. This agrees with the dots sheet (PB2, PB3 visible).
 
 Favourite line: **W1** (1 px, gray 51), the same as LA4 on the lines sheet. Favourite dot: **W15** (square 3 px,
 gray 51), one size smaller than PD2 (4 px) on the dots sheet.
 
 Read from this:
 
-- **2 px dots are not visible on a page of dots 5 mm apart**, although PB2 and PB3 (the same size and grays) showed on
-  the dots sheet. Checked: the writing page draws W13 and W14 as 60 dots each, every one exactly 2 × 2 px at gray 51
-  and 102. The difference is in the looking: on the dots sheet each sample is a small 3 × 3 cluster, 4 mm apart, right
-  under its code, so the eye knows where to look. **For a working dot grid, 3 px is the smallest size.**
+- ~~**2 px dots are not visible on a page of dots 5 mm apart**, although PB2 and PB3 (the same size and grays) showed
+  on the dots sheet. The difference is in the looking: on the dots sheet each sample is a small 3 × 3 cluster, 4 mm
+  apart, right under its code, so the eye knows where to look.~~ *Withdrawn after chris's follow-up: the 2 px dots
+  are visible, just too small to use; there is no difference between the sheets to explain.* Checked: the writing
+  page draws W13 and W14 as 60 dots each, every one exactly 2 × 2 px at gray 51 and 102.
+- **For a working dot grid, 3 px is the smallest usable size**: 2 px dots show but are "not usable at that size".
 - **For writing, chris prefers a 3 px dot** (W15) over the 4 px dot he liked best on the dots sheet (PD2).
 - **The favourite line holds when writing**: W1 matches LA4 (1 px, gray 51).
 - **Gray 51 is the favourite on every sheet**: lines, dots, reading text and writing.

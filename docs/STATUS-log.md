@@ -185,3 +185,6 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   LA4); favourite dot W15 (square 3 px, gray 51). 2 px dots (W13, W14) invisible; checked the page: 60 dots each,
   exactly 2 × 2 px at the stated gray, so the dots sheet's PB2/PB3 showing is down to the samples being small,
   labelled clusters. The four Nomad sheets are done; Manta next.
+- chris, word for word: "I do see them, they are just not usable at that size" (W13, W14). Correction to the previous
+  entry: 2 px dots are visible but too small to use, not invisible; the explanation offered for the difference from
+  the dots sheet is withdrawn (kept, struck through, in the calibration record). 3 px stays the smallest usable dot.
