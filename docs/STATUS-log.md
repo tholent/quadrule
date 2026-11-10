@@ -310,3 +310,19 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   that device; a comma works as the decimal point when there is no full stop; the rhythm fields do not read `u`.
 - CI run 42816727214 on `3075188` passed on Linux, macOS and Windows (goldens matched on all three); fuzz run
   42816727323 passed.
+- chris, word for word, after trying the window: "the window looks really good so far. One thing I would like is
+  to move the layers pane to the bottom of the info pane on the right. I would like the left hand side to be used
+  for a toolbar in the future." Built: the right panel holds the inspector, with the layers in a resizable part at
+  its bottom; nothing on the left (`crates/ui/src/view.rs`, check `layers_under_inspector`). The toolbar's lint
+  count now only opens the Lint tab: hiding the right panel would hide the layers too.
+- Found on the Pi: starting the new window offered to recover `try.quad`, whose recovery file was written at
+  08:05:19 while the earlier window was open, and the window had closed by 08:11 without saving. Whether it was
+  closed with Don't save or ended otherwise is not known. Reproduced one way it happens: "Don't save" deletes the
+  recovery file, then the window loses focus while closing and autosave on focus loss writes it again (new check
+  `dont_save_close_no_recovery`, failed before the fix with 1 file left, passes after). Fixed: no autosave once the
+  window is closing. The leftover file was left in place (`~/.local/share/quadrule/recovery/`) for chris to
+  Restore or Discard.
+- Counting checks: `grep -c '^CHECK'` undercounts, because with `--nocapture` a test's line can land on the end of
+  the test runner's own `test … ` line (seen here: `gtk_font_names` passed but was not at a line start). Counted
+  instead with `grep -o 'CHECK crate=[^ ]* name=[^ ]*' | wc -l` → 112; `grep 'CHECK crate=' | grep -c
+  result=fail` → 0.

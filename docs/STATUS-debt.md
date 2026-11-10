@@ -45,4 +45,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   cancelling the Open dialog leaves the document unsaved with its recovery file deleted (the next autosave writes
   it again). Only one recovery file is restored per start. Lint keeps its own copy of the object-bounds maths
   that `quadrule_layout::placed_objects` now has (`crates/lint/src/lib.rs`).
-
+- `CHECK` lines can share a line with the test runner's output under `--nocapture`, so `grep '^CHECK'` (used in
+  `.github/workflows/ci.yml`'s Structured results step and in past log entries) can miss one. Turn it into
+  something a test enforces: print each line starting with a newline, or count with `grep -o` (`docs/STATUS-log.md`,
+  2026-11-10).

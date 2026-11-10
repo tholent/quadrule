@@ -381,3 +381,61 @@ fn chip_canvas_switch_and_fallback() {
     );
     assert!(ok);
 }
+
+#[test]
+fn layers_sit_under_the_inspector_on_the_right() {
+    // chris, 2026-11-10: the layers pane goes at the bottom of the right-hand panel; the left
+    // side is kept for a future tools bar.
+    let mut h = harness();
+    h.get_by_label("Open sample page").click();
+    h.run();
+    let layers = h.get_by_label("Layers").rect();
+    let page_tab = h.get_by_label("Page").rect();
+    let canvas_mid = 1280.0 / 2.0;
+    let right = layers.min.x > canvas_mid && page_tab.min.x > canvas_mid;
+    let below = layers.min.y > page_tab.max.y;
+    // Nothing on the left of the page: the leftmost control below the toolbar is past the canvas.
+    let left_free = h.get_by_label("Title rule").rect().min.x > canvas_mid;
+    let ok = right && below && left_free;
+    println!(
+        "CHECK crate=ui name=layers_under_inspector result={} right_panel={right} below_tabs={below} left_side_free={left_free} layers_y={} tabs_y={}",
+        pass(ok),
+        layers.min.y,
+        page_tab.max.y
+    );
+    assert!(ok);
+}
+
+#[test]
+fn dont_save_then_close_leaves_no_recovery_file() {
+    // Found 2026-11-10 on the Pi: a recovery file was left after the window closed. "Don't save"
+    // deletes it, but the window loses focus as it closes, and autosave on focus loss wrote it
+    // again.
+    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("window_close_recovery");
+    let _ = std::fs::remove_dir_all(&dir);
+    let rec = Recovery::new(&dir);
+    let mut h = harness();
+    h.state_mut().ui.recovery = Some(rec.clone());
+    h.get_by_label("Open sample page").click();
+    h.run();
+    h.state_mut().ui.viewer.selection = vec![ids::RULE];
+    h.state_mut().ui.viewer.nudge(1.0, 0.0, false).unwrap();
+    h.run();
+    let asks = !h.state_mut().ui.may_close();
+    h.run();
+    h.get_by_label("Don’t save").click();
+    h.run();
+    let close = h.state().requests.contains(&Request::Close);
+    // The window loses focus while it closes.
+    let id = egui::ViewportId::ROOT;
+    h.input_mut().viewports.entry(id).or_default().focused = Some(false);
+    h.input_mut().focused = false;
+    h.run();
+    let left = rec.list().len();
+    let ok = asks && close && left == 0;
+    println!(
+        "CHECK crate=ui name=dont_save_close_no_recovery result={} prompt={asks} close_requested={close} recovery_files_left={left}",
+        pass(ok)
+    );
+    assert!(ok);
+}

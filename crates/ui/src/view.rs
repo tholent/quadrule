@@ -147,6 +147,9 @@ pub struct ViewerUi {
     offers: Vec<Recovered>,
     autosave: Autosave,
     was_focused: bool,
+    /// Set once the window has been told to close: no more autosaves, or the focus lost while
+    /// closing would write back the recovery file "Don't save" just deleted.
+    closing: bool,
 }
 
 impl ViewerUi {
@@ -177,6 +180,7 @@ impl ViewerUi {
             offers: Vec::new(),
             autosave: Autosave::default(),
             was_focused: true,
+            closing: false,
         }
     }
 
@@ -198,15 +202,20 @@ impl ViewerUi {
         self.tick_autosave(&ctx);
         egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut requests));
         egui::Panel::bottom("status").show(ui, |ui| self.status_bar(ui));
-        if self.viewer.open.is_some() {
-            egui::Panel::left("layers")
-                .default_size(220.0)
-                .show(ui, |ui| self.layers_panel(ui));
-        }
+        // One panel on the right: the inspector, with the layers below it. The left side is
+        // kept free for a future tools bar (chris, 2026-11-10).
         if self.show_lint && self.viewer.open.is_some() {
             egui::Panel::right("inspector")
                 .default_size(320.0)
-                .show(ui, |ui| self.inspector(ui));
+                .show(ui, |ui| {
+                    egui::Panel::bottom("layers")
+                        .resizable(true)
+                        .default_size(260.0)
+                        .show(ui, |ui| self.layers_panel(ui));
+                    egui::CentralPanel::default()
+                        .frame(egui::Frame::NONE)
+                        .show(ui, |ui| self.inspector(ui));
+                });
         }
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(backdrop(ui.visuals())))
@@ -366,7 +375,10 @@ impl ViewerUi {
                 }
                 Vec::new()
             }
-            After::Close => vec![Request::Close],
+            After::Close => {
+                self.closing = true;
+                vec![Request::Close]
+            }
         }
     }
 
@@ -503,6 +515,9 @@ impl ViewerUi {
         let (now, focused) = ctx.input(|i| (i.time, i.viewport().focused.unwrap_or(true)));
         let lost_focus = self.was_focused && !focused;
         self.was_focused = focused;
+        if self.closing {
+            return;
+        }
         let Some(rec) = self.recovery.clone() else {
             return;
         };
@@ -654,13 +669,9 @@ impl ViewerUi {
                 .add_enabled(open, egui::Button::selectable(on, label))
                 .clicked()
             {
-                // Shows the Lint tab, or hides the right panel when it is already showing.
-                if on {
-                    self.show_lint = false;
-                } else {
-                    self.show_lint = true;
-                    self.tab = Tab::Lint;
-                }
+                // Shows the Lint tab. It never hides the right panel, which holds the layers too.
+                self.show_lint = true;
+                self.tab = Tab::Lint;
             }
             ui.separator();
 

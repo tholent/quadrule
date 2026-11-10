@@ -24,9 +24,10 @@ The project's live state. Update it when work lands. Every claim cites at least 
   safe zones, and exports PNGs named `{title}_{manta|nomad}_{w}x{h}.png` (`crates/ui/`, `crates/app/`; record
   `docs/bbq/2026-11-09-rung-2-viewer.md`). It is an opt-in build: plain `cargo build`/`cargo test` leave it out
   (`Cargo.toml` `default-members`); CI builds and tests it on three OSes.
-- Rung 3, the first editor, is built on `main`, look not yet approved (record
-  `docs/bbq/2026-11-10-rung-3-first-editor.md`): click and Shift-click to select, a layers panel (eye, lock,
-  rename, Move up/down), the inspector's tabs (Page; Arrange, Style, Text, Constraints; Lint) with one length
+- Rung 3, the first editor, is built on `main`; chris: "the window looks really good so far", full approval still
+  to come (record `docs/bbq/2026-11-10-rung-3-first-editor.md`): click and Shift-click to select, a layers panel
+  under the inspector on the right (eye, lock, rename, Move up/down; the left side is kept for a future tools bar),
+  the inspector's tabs (Page; Arrange, Style, Text, Constraints; Lint) with one length
   field reading mm, pt, px, in, %, u; arrows nudge 1 device pixel, Shift+arrows one rhythm unit; Delete, Ctrl+D;
   unlimited undo/redo; Save, Save As and the unsaved-changes prompt; autosave every 30 s and on focus loss, with
   Restore offered after a crash (`crates/model/src/edit.rs`, `crates/layout/src/units.rs`, `crates/ui/src/editor.rs`,
@@ -41,8 +42,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/format/fuzz/fuzz_targets/open_quad.rs`).
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
-- Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture` → 110 `CHECK` lines, all
-  pass (83 with the default members); clippy `-D warnings` and fmt clean. CI on Linux, macOS and Windows
+- Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]*
+  name=[^ ]*' | wc -l` → 112 `CHECK` lines, none with `result=fail` (83 with the default members); clippy `-D warnings` and fmt clean. CI on Linux, macOS and Windows
   (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).

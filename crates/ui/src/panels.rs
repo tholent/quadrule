@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The editor's side panels (rung 3): the layers panel on the left (bbq Q9, Defaulted "Layers
-//! panel") and the inspector's tabs on the right (bbq Q8, Defaulted "Inspector fields"): Page
-//! when nothing is selected; Arrange, Style, Text and Constraints for an object; Lint always.
+//! The editor's right-hand panel (rung 3): the inspector's tabs on top (bbq Q8, Defaulted
+//! "Inspector fields": Page when nothing is selected; Arrange, Style, Text and Constraints for an
+//! object; Lint always), and the layers panel below them (bbq Q9, Defaulted "Layers panel"). chris
+//! moved the layers there from the left on 2026-11-10, keeping the left side for a future tools
+//! bar.
 
 use crate::editor::Toward;
 use crate::view::ViewerUi;
@@ -86,71 +88,75 @@ impl ViewerUi {
             return;
         };
         let add = ui.input(|i| i.modifiers.shift);
-        ScrollArea::vertical().show(ui, |ui| {
-            // Top of the stack first, as it is drawn last.
-            for (li, layer) in doc.layers.iter().enumerate().rev() {
-                ui.horizontal(|ui| {
-                    if let Some(v) = self.eye_and_lock(ui, &layer.name, layer.visible, layer.locked)
-                    {
-                        let _ = self.viewer.set_layer(li, |p| {
-                            p.visible = v.0;
-                            p.locked = v.1;
-                        });
-                    }
-                    let selected =
-                        self.selected_layer == Some(li) && self.viewer.selection.is_empty();
-                    if let Some(name) = self.name_cell(
-                        ui,
-                        Renaming::Layer(li, String::new()),
-                        &layer.name,
-                        selected,
-                        true,
-                    ) {
-                        match name {
-                            NameEvent::Click => {
-                                self.selected_layer = Some(li);
-                                self.viewer.selection.clear();
-                            }
-                            NameEvent::Renamed(n) => {
-                                let _ = self.viewer.set_layer(li, |p| p.name.clone_from(&n));
-                            }
-                        }
-                    }
-                });
-                for o in layer.objects.iter().rev() {
+        ScrollArea::vertical()
+            .id_salt("layers-scroll")
+            .auto_shrink([false; 2])
+            .show(ui, |ui| {
+                // Top of the stack first, as it is drawn last.
+                for (li, layer) in doc.layers.iter().enumerate().rev() {
                     ui.horizontal(|ui| {
-                        ui.add_space(18.0);
-                        if let Some(v) = self.eye_and_lock(ui, &o.name, o.visible, o.locked) {
-                            let _ = self.viewer.set_object_panel(o.id, |obj| {
-                                obj.visible = v.0;
-                                obj.locked = v.1;
+                        if let Some(v) =
+                            self.eye_and_lock(ui, &layer.name, layer.visible, layer.locked)
+                        {
+                            let _ = self.viewer.set_layer(li, |p| {
+                                p.visible = v.0;
+                                p.locked = v.1;
                             });
                         }
-                        let selected = self.viewer.selection.contains(&o.id);
-                        if let Some(ev) = self.name_cell(
+                        let selected =
+                            self.selected_layer == Some(li) && self.viewer.selection.is_empty();
+                        if let Some(name) = self.name_cell(
                             ui,
-                            Renaming::Object(o.id, String::new()),
-                            &o.name,
+                            Renaming::Layer(li, String::new()),
+                            &layer.name,
                             selected,
-                            false,
+                            true,
                         ) {
-                            match ev {
-                                NameEvent::Click if add => self.viewer.toggle(o.id),
+                            match name {
                                 NameEvent::Click => {
-                                    self.viewer.selection = vec![o.id];
                                     self.selected_layer = Some(li);
+                                    self.viewer.selection.clear();
                                 }
                                 NameEvent::Renamed(n) => {
-                                    let _ = self
-                                        .viewer
-                                        .set_object_panel(o.id, |obj| obj.name.clone_from(&n));
+                                    let _ = self.viewer.set_layer(li, |p| p.name.clone_from(&n));
                                 }
                             }
                         }
                     });
+                    for o in layer.objects.iter().rev() {
+                        ui.horizontal(|ui| {
+                            ui.add_space(18.0);
+                            if let Some(v) = self.eye_and_lock(ui, &o.name, o.visible, o.locked) {
+                                let _ = self.viewer.set_object_panel(o.id, |obj| {
+                                    obj.visible = v.0;
+                                    obj.locked = v.1;
+                                });
+                            }
+                            let selected = self.viewer.selection.contains(&o.id);
+                            if let Some(ev) = self.name_cell(
+                                ui,
+                                Renaming::Object(o.id, String::new()),
+                                &o.name,
+                                selected,
+                                false,
+                            ) {
+                                match ev {
+                                    NameEvent::Click if add => self.viewer.toggle(o.id),
+                                    NameEvent::Click => {
+                                        self.viewer.selection = vec![o.id];
+                                        self.selected_layer = Some(li);
+                                    }
+                                    NameEvent::Renamed(n) => {
+                                        let _ = self
+                                            .viewer
+                                            .set_object_panel(o.id, |obj| obj.name.clone_from(&n));
+                                    }
+                                }
+                            }
+                        });
+                    }
                 }
-            }
-        });
+            });
     }
 
     /// Move up / Move down: the selected objects, or else the selected layer.
@@ -313,14 +319,16 @@ impl ViewerUi {
             }
             ui.add_space(4.0);
         }
-        ScrollArea::vertical().show(ui, |ui| match self.tab {
-            Tab::Page => self.page_tab(ui),
-            Tab::Arrange => self.arrange_tab(ui),
-            Tab::Style => self.style_tab(ui),
-            Tab::Text => self.text_tab(ui),
-            Tab::Constraints => self.constraints_tab(ui),
-            Tab::Lint => self.lint_tab(ui),
-        });
+        ScrollArea::vertical()
+            .id_salt("inspector-scroll")
+            .show(ui, |ui| match self.tab {
+                Tab::Page => self.page_tab(ui),
+                Tab::Arrange => self.arrange_tab(ui),
+                Tab::Style => self.style_tab(ui),
+                Tab::Text => self.text_tab(ui),
+                Tab::Constraints => self.constraints_tab(ui),
+                Tab::Lint => self.lint_tab(ui),
+            });
     }
 
     fn primary_id(&self) -> String {
