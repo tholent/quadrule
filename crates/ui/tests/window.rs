@@ -322,3 +322,62 @@ fn recovery_offered_on_start() {
     );
     assert!(ok);
 }
+
+/// A stand-in chip renderer that takes `ms` a frame.
+struct FakeChip {
+    ms: f64,
+    frames: std::rc::Rc<std::cell::Cell<u32>>,
+}
+
+impl quadrule_ui::ChipRenderer for FakeChip {
+    fn render(
+        &mut self,
+        _dl: &quadrule_layout::DisplayList,
+    ) -> Result<(egui::TextureId, f64), String> {
+        self.frames.set(self.frames.get() + 1);
+        Ok((egui::TextureId::User(1), self.ms))
+    }
+}
+
+#[test]
+fn chip_canvas_switch_and_fallback() {
+    // Rung 3 bbq Q7: View → Canvas switches to the graphics chip; a slow chip (over 100 ms a
+    // frame after the first) falls back to vello_cpu and the status bar says so.
+    let frames = std::rc::Rc::new(std::cell::Cell::new(0));
+    let mut h = harness();
+    h.state_mut().ui.chip = Ok(Box::new(FakeChip {
+        ms: 150.0,
+        frames: frames.clone(),
+    }));
+    h.get_by_label("Open sample page").click();
+    h.run();
+    let export_default = h.state().ui.canvas_mode == quadrule_ui::CanvasMode::ExportPixels;
+    h.get_by_label("View").click();
+    h.run();
+    h.get_by_label("Graphics chip").click();
+    h.run();
+    // The warm-up frame is followed at once by a judged one, which is too slow.
+    let first = frames.get() == 2;
+    let fell_back = h.state().ui.chip_state.fallback == Some(quadrule_ui::Fallback::Slow(150.0))
+        && h.query_by_label_contains("too slow").is_some();
+    let after = frames.get();
+    h.get_by_label("+").click();
+    h.run();
+    let stays_on_cpu = frames.get() == after && h.state().ui.chip_state.cpu_ms.is_some();
+
+    // No renderer at all: says it could not start.
+    let mut h2 = harness();
+    h2.state_mut().ui.chip = Err("no adapter".into());
+    h2.state_mut().ui.canvas_mode = quadrule_ui::CanvasMode::Chip;
+    h2.get_by_label("Open sample page").click();
+    h2.run();
+    let cannot = h2
+        .query_by_label_contains("could not start (no adapter)")
+        .is_some();
+    let ok = export_default && first && fell_back && stays_on_cpu && cannot;
+    println!(
+        "CHECK crate=ui name=window_chip_canvas result={} export_pixels_default={export_default} warm_up_then_judged={first} slow_falls_back={fell_back} stays_on_cpu={stays_on_cpu} cannot_start_said={cannot}",
+        pass(ok)
+    );
+    assert!(ok);
+}

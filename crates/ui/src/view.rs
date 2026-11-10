@@ -19,6 +19,7 @@
 //! The widgets never open a system dialog themselves: they return a [`Request`], and the app
 //! answers it (the file dialog lives in `quadrule-app`), so this crate runs headless in tests.
 
+use crate::canvas::{CanvasMode, ChipRenderer, ChipState, Fallback, ScreenView, screen_list};
 use crate::editor::{PICK_SLACK_POINTS, Toward};
 use crate::panels::{Renaming, Tab};
 use crate::recovery::{Autosave, Recovered, Recovery};
@@ -75,6 +76,14 @@ struct TextureKey {
     size: (u32, u32),
 }
 
+/// The graphics-chip canvas's last image.
+enum VectorTexture {
+    /// Drawn on the chip into a texture the app owns.
+    Chip(egui::TextureId),
+    /// Drawn by vello_cpu.
+    Cpu(TextureHandle),
+}
+
 /// The ruler check's references.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Reference {
@@ -114,6 +123,13 @@ pub struct ViewerUi {
     /// Where unsaved changes are written while the window is open (the app sets it; `None` in
     /// tests that do not need it).
     pub recovery: Option<Recovery>,
+    /// Which canvas shows the page (rung 3 bbq Q4, Q7): export pixels by default.
+    pub canvas_mode: CanvasMode,
+    /// The graphics-chip renderer, or why there is none (the app sets it).
+    pub chip: Result<Box<dyn ChipRenderer>, String>,
+    /// What the chip canvas has done this session, and whether it has fallen back.
+    pub chip_state: ChipState,
+    vector: Option<(String, VectorTexture)>,
     texture: Option<(TextureKey, Vec<(Tile, TextureHandle)>)>,
     ruler: Option<Ruler>,
     pub(crate) scroll_to_selected: bool,
@@ -143,6 +159,10 @@ impl ViewerUi {
             show_lint: true,
             tab: Tab::Page,
             recovery: None,
+            canvas_mode: CanvasMode::ExportPixels,
+            chip: Err("no graphics-chip renderer".into()),
+            chip_state: ChipState::default(),
+            vector: None,
             texture: None,
             ruler: None,
             scroll_to_selected: false,
@@ -672,6 +692,17 @@ impl ViewerUi {
                 ui.separator();
                 let label = self.t("app-safe-zones");
                 ui.checkbox(&mut self.viewer.show_safe_zones, label);
+                ui.separator();
+                ui.label(self.t("app-canvas"));
+                for (mode, id) in [
+                    (CanvasMode::ExportPixels, "app-canvas-export"),
+                    (CanvasMode::Chip, "app-canvas-chip"),
+                ] {
+                    if ui.radio(self.canvas_mode == mode, self.t(id)).clicked() {
+                        self.canvas_mode = mode;
+                        self.vector = None;
+                    }
+                }
                 if ui.button(self.t("app-ruler-open")).clicked() {
                     self.open_ruler(ui.ctx());
                 }
@@ -727,6 +758,10 @@ impl ViewerUi {
                 let count = self.lint_count();
                 let msg = Message::new("app-lint-count").num("count", count as f64, 0);
                 ui.label(self.strings.format(&msg));
+            }
+            if let Some(line) = self.canvas_status() {
+                ui.separator();
+                ui.label(line);
             }
             if let Some(n) = &self.viewer.notice {
                 ui.separator();
@@ -793,7 +828,8 @@ impl ViewerUi {
             profile: page.profile.id.clone(),
             size: (tw, th),
         };
-        if self.texture.as_ref().is_none_or(|(k, _)| *k != key) {
+        let export_canvas = self.canvas_mode == CanvasMode::ExportPixels;
+        if export_canvas && self.texture.as_ref().is_none_or(|(k, _)| *k != key) {
             let image = if (tw, th) == (w, h) {
                 page.image.clone()
             } else {
@@ -818,10 +854,12 @@ impl ViewerUi {
                 .collect();
             self.texture = Some((key, tiles));
         }
-        let Some((_, tiles)) = &self.texture else {
-            return;
+        let tiles: Vec<_> = match &self.texture {
+            Some((_, tiles)) if export_canvas => {
+                tiles.iter().map(|(t, tex)| (*t, tex.id())).collect()
+            }
+            _ => Vec::new(),
         };
-        let tiles: Vec<_> = tiles.iter().map(|(t, tex)| (*t, tex.id())).collect();
         let zones: Vec<_> = page.profile.safe_zones.clone();
         let area = selected
             .and_then(|i| page.findings.get(i))
@@ -862,6 +900,9 @@ impl ViewerUi {
                 Stroke::new(1.0, ui.visuals().widgets.noninteractive.bg_stroke.color),
                 StrokeKind::Outside,
             );
+            if !export_canvas {
+                self.paint_screen_canvas(&ctx, &painter, page_rect, (w, h), ppp);
+            }
             for ((x, y, tw_, th_), id) in &tiles {
                 let at = |px: u32, py: u32| {
                     min + vec2(
@@ -991,6 +1032,117 @@ impl ViewerUi {
                 }
             }
         });
+    }
+
+    /// The graphics-chip canvas: the visible part of the page at screen resolution, by vello on
+    /// the chip, or by vello_cpu when the chip cannot start or is too slow (rung 3 bbq, Defaulted
+    /// "The chip canvas on the Pi will be slow").
+    fn paint_screen_canvas(
+        &mut self,
+        ctx: &egui::Context,
+        painter: &egui::Painter,
+        page_rect: Rect,
+        (w, h): (u32, u32),
+        ppp: f32,
+    ) {
+        let visible = painter.clip_rect().intersect(page_rect);
+        if visible.width() < 1.0 || visible.height() < 1.0 {
+            return;
+        }
+        // On whole screen pixels, so the image is drawn 1:1.
+        let snap = |v: f32| (v * ppp).round() / ppp;
+        let vis = Rect::from_min_max(
+            pos2(snap(visible.min.x), snap(visible.min.y)),
+            pos2(snap(visible.max.x), snap(visible.max.y)),
+        );
+        let (sx, sy) = (page_rect.width() / w as f32, page_rect.height() / h as f32);
+        let view = ScreenView {
+            scale: (sx * ppp) as f64,
+            x: ((vis.min.x - page_rect.min.x) / sx) as f64,
+            y: ((vis.min.y - page_rect.min.y) / sy) as f64,
+            width: (vis.width() * ppp).round().max(1.0) as u32,
+            height: (vis.height() * ppp).round().max(1.0) as u32,
+        };
+        let key = format!(
+            "{} {} {} {:?}",
+            self.viewer.generation, self.viewer.revision, self.viewer.profile_id, view
+        );
+        if self.vector.as_ref().is_none_or(|(k, _)| *k != key) {
+            let Some(dl) = self.viewer.page().map(|p| p.display_list.clone()) else {
+                return;
+            };
+            let list = screen_list(&dl, &view);
+            let mut drawn = None;
+            let mut warm_up_done = false;
+            if self.chip_state.fallback.is_none() {
+                match &mut self.chip {
+                    Ok(chip) => match chip.render(&list) {
+                        Ok((id, ms)) => {
+                            self.chip_state.record_chip(ms);
+                            drawn = Some(VectorTexture::Chip(id));
+                            if self.chip_state.frames == 1 {
+                                // The first frame builds shaders and is not judged; draw a
+                                // second one now, so the 100 ms rule is decided at once.
+                                warm_up_done = true;
+                            }
+                        }
+                        Err(e) => self.chip_state.fallback = Some(Fallback::CannotStart(e)),
+                    },
+                    Err(e) => self.chip_state.fallback = Some(Fallback::CannotStart(e.clone())),
+                }
+            }
+            let tex = match drawn {
+                Some(t) => t,
+                None => {
+                    let start = std::time::Instant::now();
+                    let img = quadrule_render::render(&list, quadrule_render::Math::Fastest);
+                    self.chip_state.cpu_ms = Some(start.elapsed().as_secs_f64() * 1000.0);
+                    let image =
+                        ColorImage::from_gray([img.width as usize, img.height as usize], &img.data);
+                    VectorTexture::Cpu(ctx.load_texture(
+                        "page-screen",
+                        image,
+                        TextureOptions::NEAREST,
+                    ))
+                }
+            };
+            // After the warm-up frame the key is left stale, so the next frame draws again.
+            self.vector = Some((if warm_up_done { String::new() } else { key }, tex));
+            if warm_up_done {
+                ctx.request_repaint();
+            }
+        }
+        if let Some((_, tex)) = &self.vector {
+            let id = match tex {
+                VectorTexture::Chip(id) => *id,
+                VectorTexture::Cpu(t) => t.id(),
+            };
+            painter.image(
+                id,
+                vis,
+                Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
+                Color32::WHITE,
+            );
+        }
+    }
+
+    /// The canvas line for the status bar, in graphics-chip mode.
+    fn canvas_status(&self) -> Option<String> {
+        if self.canvas_mode != CanvasMode::Chip {
+            return None;
+        }
+        let ms = |v: Option<f64>| v.map_or(0.0, |v| v.round());
+        let cpu = ms(self.chip_state.cpu_ms);
+        let msg = match &self.chip_state.fallback {
+            None => Message::new("app-chip-ms").num("ms", ms(self.chip_state.last_ms), 0),
+            Some(Fallback::Slow(v)) => Message::new("app-chip-slow")
+                .num("ms", v.round(), 0)
+                .num("cpu", cpu, 0),
+            Some(Fallback::CannotStart(e)) => Message::new("app-chip-none")
+                .text("error", e.clone())
+                .num("cpu", cpu, 0),
+        };
+        Some(self.strings.format(&msg))
     }
 
     fn ruler_window(&mut self, ctx: &egui::Context) {

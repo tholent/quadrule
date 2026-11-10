@@ -23,12 +23,14 @@
 
 #![forbid(unsafe_code)]
 
+pub mod canvas;
 pub mod editor;
 pub mod panels;
 pub mod recovery;
 pub mod view;
 pub mod viewer;
 
+pub use canvas::{CanvasMode, ChipRenderer, ChipState, Fallback};
 pub use editor::Toward;
 pub use panels::Tab;
 pub use recovery::{Autosave, Recovered, Recovery};

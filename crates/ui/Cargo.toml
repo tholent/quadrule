@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 egui.workspace = true
+kurbo.workspace = true
 quadrule-format.workspace = true
 quadrule-i18n.workspace = true
 quadrule-layout.workspace = true

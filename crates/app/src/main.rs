@@ -14,13 +14,16 @@
 
 //! `quadrule`, the app (napkin §15.1). Rung 2 made the viewer window
 //! (docs/bbq/2026-11-09-rung-2-viewer.md); rung 3 the first editor
-//! (docs/bbq/2026-11-10-rung-3-first-editor.md). Usage: `quadrule [file.quad]`, or
-//! `cargo run -p quadrule-app -- [file.quad]`.
+//! (docs/bbq/2026-11-10-rung-3-first-editor.md). Usage: `quadrule [--canvas chip|export]
+//! [file.quad]`, or `cargo run -p quadrule-app -- [file.quad]`. `--canvas chip` starts on the
+//! graphics-chip canvas (View → Canvas), for measuring it.
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
 
 #![forbid(unsafe_code)]
+
+mod chip;
 
 use eframe::egui;
 use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
@@ -44,7 +47,8 @@ struct App {
 }
 
 impl App {
-    fn new(cc: &eframe::CreationContext<'_>, path: Option<PathBuf>) -> Self {
+    fn new(cc: &eframe::CreationContext<'_>, args: Args) -> Self {
+        let path = args.path;
         quadrule_ui::install_fonts(&cc.egui_ctx, desktop_ui_font());
         let mut ui = ViewerUi::new(Viewer::default());
         if let Some(storage) = cc.storage {
@@ -63,6 +67,15 @@ impl App {
         ui.recovery = directories::ProjectDirs::from("org", "quadrule", "quadrule")
             .map(|d| Recovery::new(d.data_dir().join("recovery")));
         ui.offer_recovery();
+        // The graphics-chip canvas (rung 3 bbq Q4), on egui's own device; when it cannot start,
+        // the canvas falls back to vello_cpu and says why.
+        ui.chip = match &cc.wgpu_render_state {
+            Some(rs) => Ok(Box::new(chip::Chip::new(rs)) as Box<dyn quadrule_ui::ChipRenderer>),
+            None => Err("no wgpu device".into()),
+        };
+        if args.chip_canvas {
+            ui.canvas_mode = quadrule_ui::CanvasMode::Chip;
+        }
         if let Some(p) = path {
             ui.open_file(&p);
         }
@@ -231,8 +244,37 @@ fn wgpu_options() -> WgpuConfiguration {
     }
 }
 
+/// What the command line asked for.
+#[derive(Debug, Default, PartialEq)]
+struct Args {
+    path: Option<PathBuf>,
+    chip_canvas: bool,
+}
+
+fn parse_args(mut args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, String> {
+    let mut out = Args::default();
+    while let Some(a) = args.next() {
+        if a == "--canvas" {
+            match args.next().as_ref().and_then(|v| v.to_str()) {
+                Some("chip") => out.chip_canvas = true,
+                Some("export") => out.chip_canvas = false,
+                other => return Err(format!("--canvas takes chip or export, not {other:?}")),
+            }
+        } else {
+            out.path = Some(PathBuf::from(a));
+        }
+    }
+    Ok(out)
+}
+
 fn main() -> eframe::Result {
-    let path = std::env::args_os().nth(1).map(PathBuf::from);
+    let args = match parse_args(std::env::args_os().skip(1)) {
+        Ok(a) => a,
+        Err(e) => {
+            eprintln!("quadrule: {e}");
+            std::process::exit(2);
+        }
+    };
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
         wgpu_options: wgpu_options(),
@@ -245,13 +287,44 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "quadrule",
         options,
-        Box::new(|cc| Ok(Box::new(App::new(cc, path)))),
+        Box::new(|cc| Ok(Box::new(App::new(cc, args)))),
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::parse_gtk_font;
+    use super::{Args, parse_args, parse_gtk_font};
+
+    #[test]
+    fn command_line() {
+        let p = |v: &[&str]| parse_args(v.iter().map(std::ffi::OsString::from));
+        let cases = [
+            (p(&[]), Ok(Args::default())),
+            (
+                p(&["a.quad"]),
+                Ok(Args {
+                    path: Some("a.quad".into()),
+                    chip_canvas: false,
+                }),
+            ),
+            (
+                p(&["--canvas", "chip", "a.quad"]),
+                Ok(Args {
+                    path: Some("a.quad".into()),
+                    chip_canvas: true,
+                }),
+            ),
+        ];
+        let good = cases.iter().all(|(got, want)| got == want);
+        let bad = p(&["--canvas", "gpu"]).is_err() && p(&["--canvas"]).is_err();
+        let ok = good && bad;
+        println!(
+            "CHECK crate=app name=command_line result={} cases={} bad_refused={bad}",
+            if ok { "pass" } else { "fail" },
+            cases.len()
+        );
+        assert!(ok);
+    }
 
     #[test]
     fn gtk_font_names() {

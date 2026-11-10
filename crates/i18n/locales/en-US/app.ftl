@@ -31,6 +31,12 @@ app-theme-light = Light
 app-theme-dark = Dark
 app-safe-zones = Show safe zones
 app-ruler-open = Real size check…
+app-canvas = Canvas
+app-canvas-export = Export pixels
+app-canvas-chip = Graphics chip
+app-chip-ms = Graphics chip: { $ms } ms a frame
+app-chip-slow = Graphics chip too slow ({ $ms } ms a frame): drawing with vello_cpu ({ $cpu } ms)
+app-chip-none = Graphics chip canvas could not start ({ $error }): drawing with vello_cpu ({ $cpu } ms)
 
 # Empty start screen (rung 2 bbq, Q7).
 app-empty-title = Nothing open

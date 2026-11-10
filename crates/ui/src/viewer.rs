@@ -18,7 +18,7 @@
 
 use quadrule_format::{Manifest, QuadFile, ReadOnly};
 use quadrule_i18n::Message;
-use quadrule_layout::{Placed, display_list, lay_out_text, placed_objects};
+use quadrule_layout::{DisplayList, Placed, display_list, lay_out_text, placed_objects};
 use quadrule_lint::{Finding, Options, Toolbar, lint_with};
 use quadrule_model::edit::History;
 use quadrule_model::outlines::ProfileOutlines;
@@ -56,6 +56,8 @@ pub struct Page {
     pub saved_outlines: bool,
     /// Each object's shape on this device, bottom first, for picking (rung 3).
     pub placed: Vec<Placed>,
+    /// What was drawn, for the graphics-chip canvas (rung 3 bbq Q4).
+    pub display_list: DisplayList,
 }
 
 /// The open document.
@@ -429,6 +431,7 @@ fn make_page(
         findings,
         saved_outlines,
         placed,
+        display_list: dl,
     })
 }
 
