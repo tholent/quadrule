@@ -307,3 +307,102 @@ fn duplicate_and_delete() {
     );
     assert!(ok);
 }
+
+#[test]
+fn a_drag_is_one_step_and_locks_refuse_it() {
+    let mut doc = slice_document();
+    let before = doc.clone();
+    let mut h = History::new();
+    let (title, rule) = (ids::TITLE, ids::RULE);
+    let f = |doc: &Document, id: Uuid, dx: f64| {
+        let mut fr = doc.object(id).unwrap().frame;
+        fr.x_mm += dx;
+        (id, fr)
+    };
+    // Two objects moved by one drag: one command, one undo step.
+    let frames = [f(&doc, title, 5.0), f(&doc, rule, 5.0)];
+    let cmd = set_frames(&doc, &frames);
+    h.apply(&mut doc, cmd, None).unwrap();
+    let moved = doc.object(title).unwrap().frame.x_mm
+        == before.object(title).unwrap().frame.x_mm + 5.0
+        && doc.object(rule).unwrap().frame.x_mm == before.object(rule).unwrap().frame.x_mm + 5.0;
+    let one_step = h.undo_len() == 1;
+    h.undo(&mut doc);
+    let undone = doc == before;
+    h.redo(&mut doc);
+    let redone =
+        doc.object(title).unwrap().frame.x_mm == before.object(title).unwrap().frame.x_mm + 5.0;
+    h.undo(&mut doc);
+
+    // A frame that did not change is left out, so a drag that went nowhere makes no step.
+    let same = [(title, doc.object(title).unwrap().frame)];
+    let nothing = is_empty(&set_frames(&doc, &same));
+
+    // A locked object, or an object in a locked layer, refuses the drag, and the other object in
+    // the batch is not moved either.
+    doc.apply(Command::SetLayer {
+        index: 1,
+        props: LayerProps {
+            name: "Header".into(),
+            visible: true,
+            locked: true,
+        },
+    })
+    .unwrap();
+    let snapshot = doc.clone();
+    let cmd = set_frames(&doc, &[f(&doc, title, 5.0)]);
+    let refused = h.apply(&mut doc, cmd, None).is_err();
+    let untouched = doc == snapshot;
+    let ok = moved && one_step && undone && redone && nothing && refused && untouched;
+    println!(
+        "\nCHECK crate=model name=drag_one_step result={} moved={moved} one_step={one_step} undone={undone} redone={redone} unchanged_is_empty={nothing} locked_refused={refused} untouched={untouched}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn alt_drag_duplicates_in_one_step_and_reorder_is_one_move() {
+    let mut doc = slice_document();
+    let before = doc.clone();
+    let mut h = History::new();
+    let mut fr = doc.object(ids::RULE).unwrap().frame;
+    fr.y_mm += 30.0;
+    // Alt-drag: the copies are made, then given the frames the pointer left them at, as one step.
+    let mut n = 1000u128;
+    let (dup, copies) = duplicate(&doc, &[ids::RULE], || {
+        n += 1;
+        Uuid::from_u128(n)
+    });
+    let mut with_copies = doc.clone();
+    with_copies.apply(dup.clone()).unwrap();
+    let cmd = Command::Batch(vec![dup, set_frames(&with_copies, &[(copies[0], fr)])]);
+    h.apply(&mut doc, cmd, None).unwrap();
+    let copy = doc.object(copies[0]).unwrap();
+    let placed = copy.frame == fr
+        && !copy.locked
+        && doc.object(ids::RULE).unwrap().frame == before.object(ids::RULE).unwrap().frame;
+    // The copy sits just above its original, in the same layer.
+    let (lo, oo) = doc.find(ids::RULE).unwrap();
+    let (lc, oc) = doc.find(copies[0]).unwrap();
+    let above = lo == lc && oc == oo + 1;
+    let one_step = h.undo_len() == 1;
+    h.undo(&mut doc);
+    let undone = doc == before;
+
+    // Reordering by dragging in the layers panel: into another layer at a place; a move to the
+    // place it is in is empty.
+    let (l, o) = doc.find(ids::TITLE).unwrap();
+    let stay = is_empty(&reorder_to(&doc, ids::TITLE, l, o));
+    let cmd = reorder_to(&doc, ids::TITLE, 0, 0);
+    h.apply(&mut doc, cmd, None).unwrap();
+    let moved = doc.find(ids::TITLE) == Some((0, 0));
+    h.undo(&mut doc);
+    let back = doc == before;
+    let ok = placed && above && one_step && undone && stay && moved && back;
+    println!(
+        "\nCHECK crate=model name=alt_drag_and_reorder result={} placed={placed} above_original={above} one_step={one_step} undone={undone} same_place_is_empty={stay} reordered={moved} reorder_undone={back}",
+        pass(ok)
+    );
+    assert!(ok);
+}

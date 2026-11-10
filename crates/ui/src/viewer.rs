@@ -18,6 +18,7 @@
 
 use quadrule_format::{Manifest, QuadFile, ReadOnly};
 use quadrule_i18n::Message;
+use quadrule_layout::snap::SnapToggles;
 use quadrule_layout::{DisplayList, Placed, display_list, lay_out_text, placed_objects};
 use quadrule_lint::{Finding, Options, Toolbar, lint_with};
 use quadrule_model::edit::History;
@@ -77,6 +78,13 @@ pub struct Open {
     pub(crate) manifest: Option<Manifest>,
     /// Set when the file needs features this build lacks; it cannot be saved (napkin §12.2).
     pub read_only: Option<ReadOnly>,
+    /// While an object is being dragged: the document as the drag would leave it. The page shows
+    /// this instead of `doc` until the mouse is let go (rung 4 bbq, Defaulted "One drag, one undo
+    /// step"); `doc` and its history are untouched.
+    pub(crate) preview: Option<Document>,
+    /// The lint findings of the last page made from `doc` itself, by profile id. A page made
+    /// from the preview shows these rather than running the linter on every frame of a drag.
+    pub(crate) findings: BTreeMap<String, Vec<Finding>>,
 }
 
 /// The two choices under Export (rung 2 bbq, Q8).
@@ -132,6 +140,13 @@ pub struct Viewer {
     pub notice: Option<Notice>,
     /// The folder the last export went to, this session (rung 2 bbq, Defaulted "Export").
     pub export_dir: Option<PathBuf>,
+    /// Which snap helpers are on (rung 4 bbq, Defaulted "Toggles"): app settings, not saved in
+    /// the `.quad` file.
+    pub snap: SnapToggles,
+    /// Whether the rhythm is drawn faintly over the page (rung 4 bbq Q9); never exported.
+    pub show_rhythm: bool,
+    /// The drag in progress, if any (rung 4).
+    pub drag: Option<crate::drag::Drag>,
     pub(crate) fonts: FontRegistry,
 }
 
@@ -169,6 +184,9 @@ impl Default for Viewer {
             screen_px_per_mm: None,
             notice: None,
             export_dir: None,
+            snap: SnapToggles::default(),
+            show_rhythm: false,
+            drag: None,
             fonts: FontRegistry::bundled_only(),
         }
     }
@@ -232,7 +250,10 @@ impl Viewer {
             history: History::new(),
             manifest,
             read_only: None,
+            preview: None,
+            findings: BTreeMap::new(),
         });
+        self.drag = None;
         self.generation += 1;
         self.revision += 1;
         self.selection.clear();
@@ -253,6 +274,7 @@ impl Viewer {
     /// Shows another device.
     pub fn set_profile(&mut self, id: &str) {
         if self.profile_id != id {
+            self.drag_cancel();
             self.profile_id = id.to_string();
             self.selected = None;
         }
@@ -269,7 +291,18 @@ impl Viewer {
         let Viewer { open, fonts, .. } = self;
         let open = open.as_mut().ok_or("nothing is open")?;
         if !open.pages.contains_key(id) {
-            let page = make_page(&open.doc, &open.saved, id, fonts)?;
+            let page = match &open.preview {
+                // A frame of a drag: the linter is not run; the last findings stand.
+                Some(doc) => {
+                    let known = open.findings.get(id).cloned();
+                    make_page(doc, &open.saved, id, fonts, Some(known.unwrap_or_default()))?
+                }
+                None => {
+                    let page = make_page(&open.doc, &open.saved, id, fonts, None)?;
+                    open.findings.insert(id.to_string(), page.findings.clone());
+                    page
+                }
+            };
             open.pages.insert(id.to_string(), page);
         }
         Ok(&open.pages[id])
@@ -408,6 +441,7 @@ fn make_page(
     saved: &BTreeMap<String, ProfileOutlines>,
     id: &str,
     fonts: &mut FontRegistry,
+    known_findings: Option<Vec<Finding>>,
 ) -> Result<Page, String> {
     let primary = builtin(&doc.primary_profile_id).map_err(|e| e.to_string())?;
     let target = builtin(id).map_err(|e| e.to_string())?;
@@ -423,7 +457,10 @@ fn make_page(
     let opts = Options {
         toolbars: TOOLBARS_IN_USE.to_vec(),
     };
-    let findings = lint_with(doc, &primary, &target, &outlines, &opts);
+    let findings = match known_findings {
+        Some(f) => f,
+        None => lint_with(doc, &primary, &target, &outlines, &opts),
+    };
     let placed = placed_objects(doc, &primary, &target, &outlines);
     Ok(Page {
         profile: target,
@@ -433,6 +470,27 @@ fn make_page(
         placed,
         display_list: dl,
     })
+}
+
+/// The safe zones that count on `p`, as pixel rectangles: those of the toolbars in use, the same
+/// ones the overlay draws (rung 2 bbq, Q6).
+pub(crate) fn active_zone_rects(p: &Profile) -> Vec<quadrule_layout::snap::PxRect> {
+    p.safe_zones
+        .iter()
+        .filter(|z| match quadrule_lint::Toolbar::of_zone(&z.name) {
+            Ok(Some(t)) => TOOLBARS_IN_USE.contains(&t),
+            _ => true,
+        })
+        .map(|z| {
+            let (x, y, w, h) = z.rect;
+            quadrule_layout::snap::PxRect {
+                x0: x as f64,
+                y0: y as f64,
+                x1: (x + w) as f64,
+                y1: (y + h) as f64,
+            }
+        })
+        .collect()
 }
 
 /// A device's name in file names: its profile's short name, made safe (`manta`, `nomad`).

@@ -20,7 +20,7 @@
 //! layers panel's own controls (name, eye, lock) still work on it, so it can be unlocked. Undo
 //! and redo skip the lock check: they only return the document to a state it was already in.
 
-use crate::{Document, Layer, Metadata, Object, PageSettings, Rhythm, Unit, Uuid};
+use crate::{Document, Frame, Layer, Metadata, Object, PageSettings, Rhythm, Unit, Uuid};
 
 /// One change to a document.
 #[derive(Clone, Debug, PartialEq)]
@@ -477,6 +477,40 @@ pub fn duplicate(
     }
     copies.retain(|c| !c.is_nil());
     (Command::Batch(cmds), copies)
+}
+
+/// The command that gives objects new frames: a move or a resize, made when the mouse is let go
+/// (rung 4 bbq, Defaulted "One drag, one undo step"). Objects that are gone, or that already
+/// have the frame, are left out; the rest are one step. It is refused, with nothing changed, if
+/// any object it touches is locked.
+pub fn set_frames(doc: &Document, frames: &[(Uuid, Frame)]) -> Command {
+    Command::Batch(
+        frames
+            .iter()
+            .filter_map(|&(id, frame)| {
+                let o = doc.object(id)?;
+                (o.frame != frame).then(|| {
+                    let mut o = o.clone();
+                    o.frame = frame;
+                    Command::SetObject(o)
+                })
+            })
+            .collect(),
+    )
+}
+
+/// Whether a command does nothing (an empty batch).
+pub fn is_empty(cmd: &Command) -> bool {
+    matches!(cmd, Command::Batch(c) if c.iter().all(is_empty))
+}
+
+/// Where a dragged object in the layers panel goes: into `layer` at `index` (counted after it is
+/// taken out of its place), as one step. A move to the place it is already in is empty.
+pub fn reorder_to(doc: &Document, id: Uuid, layer: usize, index: usize) -> Command {
+    match doc.find(id) {
+        Some((l, o)) if l == layer && o == index => Command::Batch(Vec::new()),
+        _ => Command::MoveObject { id, layer, index },
+    }
 }
 
 /// The command that removes objects (the Delete key).
