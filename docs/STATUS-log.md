@@ -632,7 +632,8 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   `--bench-draw`. Export bytes unchanged: rung 1's golden test and the stock-grid test pass untouched, and
   `draw_export_bytes_unchanged` shows draw then undo restores both devices' pixels byte for byte.
 - **CI:** push `e751c58`: CI 42885131520 success (three systems), Coverage 42885131427, Fuzz 42885131467 success; push
-  `2fcb4d3`: CI 42887050036 and Coverage 42887049623 success. The Fuzz run is the first warm one: "Cache hit",
+  `2fcb4d3`: CI 42887050036 and Coverage 42887049623 success; push `ed8d0e3` (docs and the focus-flag line): CI
+  42888456905 and Coverage 42888457063 success. The Fuzz run is the first warm one: "Cache hit",
   `full match: true` (2 m 31 s against 2 m 59 s cold); the debt noted in the 297ab31 entry is settled.
 - **Seen on screen** (a screenshot of `target/release/quadrule` on a saved drawn page, this session): the bar, a ruled
   region, a line and a text box show as drawn; the layers panel lists them by name. I could not click in the window from
