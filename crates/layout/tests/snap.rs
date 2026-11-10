@@ -1023,3 +1023,49 @@ fn rhythm_wins_within_half_a_pixel() {
     );
     assert!(ok);
 }
+
+#[test]
+fn union_fill_covers_each_place_once() {
+    let r = |x0, y0, x1, y1| PxRect { x0, y0, x1, y1 };
+    let area = |v: &[PxRect]| v.iter().map(|r| r.w() * r.h()).sum::<f64>();
+    let overlap = |v: &[PxRect]| {
+        v.iter().enumerate().any(|(i, a)| {
+            v.iter()
+                .skip(i + 1)
+                .any(|b| a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1)
+        })
+    };
+    // One: itself.
+    let one = union_fill(&[r(0.0, 0.0, 10.0, 10.0)]);
+    // Two overlapping by 5 x 5: 100 + 100 - 25, and no two pieces overlap.
+    let two = union_fill(&[r(0.0, 0.0, 10.0, 10.0), r(5.0, 5.0, 15.0, 15.0)]);
+    // A cross: a bar down and a bar across, 20 x 4 and 4 x 20 sharing 4 x 4.
+    let cross = union_fill(&[r(8.0, 0.0, 12.0, 20.0), r(0.0, 8.0, 20.0, 12.0)]);
+    // Nested: the small one adds nothing. Touching: both kept, joined into one band.
+    let nested = union_fill(&[r(0.0, 0.0, 10.0, 10.0), r(2.0, 2.0, 4.0, 4.0)]);
+    let touching = union_fill(&[r(0.0, 0.0, 10.0, 10.0), r(10.0, 0.0, 20.0, 10.0)]);
+    // A page-high strip beside a page-wide one, as the toolbars are: the corner is counted once.
+    let l = union_fill(&[r(0.0, 0.0, 10.0, 100.0), r(0.0, 0.0, 100.0, 10.0)]);
+    let ok = one == vec![r(0.0, 0.0, 10.0, 10.0)]
+        && close(area(&two), 175.0)
+        && !overlap(&two)
+        && close(area(&cross), 80.0 + 80.0 - 16.0)
+        && !overlap(&cross)
+        && close(area(&nested), 100.0)
+        && touching == vec![r(0.0, 0.0, 20.0, 10.0)]
+        && close(area(&l), 1000.0 + 1000.0 - 100.0)
+        && !overlap(&l)
+        && union_fill(&[]).is_empty()
+        && union_fill(&[r(0.0, 0.0, 0.0, 10.0)]).is_empty();
+    println!(
+        "\nCHECK crate=layout name=union_fill result={} one={} two={} cross={} nested={} touching={} corner={}",
+        pass(ok),
+        one.len(),
+        two.len(),
+        cross.len(),
+        nested.len(),
+        touching.len(),
+        l.len()
+    );
+    assert!(ok);
+}

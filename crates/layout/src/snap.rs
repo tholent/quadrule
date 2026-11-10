@@ -336,6 +336,56 @@ pub fn union_outline(rects: &[PxRect]) -> Vec<(usize, Segment)> {
     out
 }
 
+/// A stretch of the page between two y values, and the x ranges covered along it.
+type Band = (f64, f64, Vec<(f64, f64)>);
+
+/// The combined area of `rects` as rectangles that do not overlap, so filling each once gives
+/// the same shade everywhere, however many of `rects` cover a place (chris, 2026-11-10: "the
+/// overlapping portions should not increase their darkness"). Rectangles with no area are skipped.
+pub fn union_fill(rects: &[PxRect]) -> Vec<PxRect> {
+    let rects: Vec<&PxRect> = rects
+        .iter()
+        .filter(|r| r.w() > 0.0 && r.h() > 0.0)
+        .collect();
+    let mut ys: Vec<f64> = rects.iter().flat_map(|r| [r.y0, r.y1]).collect();
+    ys.sort_by(f64::total_cmp);
+    ys.dedup();
+    // Each band between two neighbouring y values: the x ranges covered in it, merged.
+    let mut bands: Vec<Band> = Vec::new();
+    for w in ys.windows(2) {
+        let mid = (w[0] + w[1]) / 2.0;
+        let mut spans: Vec<(f64, f64)> = rects
+            .iter()
+            .filter(|r| r.y0 < mid && mid < r.y1)
+            .map(|r| (r.x0, r.x1))
+            .collect();
+        spans.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let mut merged: Vec<(f64, f64)> = Vec::new();
+        for (a, b) in spans {
+            match merged.last_mut() {
+                Some(last) if a <= last.1 => last.1 = last.1.max(b),
+                _ => merged.push((a, b)),
+            }
+        }
+        if merged.is_empty() {
+            continue;
+        }
+        // The same ranges as the band above, touching it: one taller band.
+        match bands.last_mut() {
+            Some(prev) if prev.1 == w[0] && prev.2 == merged => prev.1 = w[1],
+            _ => bands.push((w[0], w[1], merged)),
+        }
+    }
+    bands
+        .into_iter()
+        .flat_map(|(y0, y1, spans)| {
+            spans
+                .into_iter()
+                .map(move |(x0, x1)| PxRect { x0, y0, x1, y1 })
+        })
+        .collect()
+}
+
 /// One of the eight handles of a selection's box.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Handle {

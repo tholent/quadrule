@@ -27,7 +27,7 @@ use crate::editor::{PICK_SLACK_POINTS, Toward};
 use crate::panels::{Renaming, Tab};
 use crate::recovery::{Autosave, Recovered, Recovery};
 use crate::viewer::{
-    CARD_WIDTH_MM, ExportWhich, PIXEL_GRID_FROM, Source, TOOLBARS_IN_USE, Tile, Viewer, Zoom,
+    CARD_WIDTH_MM, ExportWhich, PIXEL_GRID_FROM, Source, TOOLBARS_SHOWN, Tile, Viewer, Zoom,
     ruler_px_per_mm, shrink, tiles,
 };
 use egui::{
@@ -36,7 +36,7 @@ use egui::{
     pos2, vec2,
 };
 use quadrule_i18n::{Message, Strings};
-use quadrule_layout::snap::{Handle, Mark, PxRect, SnapKind, union_outline};
+use quadrule_layout::snap::{Handle, Mark, PxRect, SnapKind, union_fill, union_outline};
 use quadrule_layout::units::Axis;
 use quadrule_lint::Toolbar;
 use std::collections::HashMap;
@@ -1218,13 +1218,15 @@ impl ViewerUi {
 
             let accent = ui.visuals().selection.stroke.color;
 
-            // The rhythm, faintly: units stronger than subdivisions (rung 4 bbq Q9).
+            // The rhythm, as a light blue guide that stays out of the way of the objects: units a little
+            // stronger than subdivisions (rung 4 bbq Q9; chris, 2026-11-10: "much lighter and perhaps
+            // light blue").
             if let Some((xs, ys)) = &rhythm {
                 let clip = painter.clip_rect().intersect(page_rect);
                 let line = |major: bool| {
                     Stroke::new(
                         1.0 / ppp,
-                        Color32::from_rgba_unmultiplied(40, 110, 220, if major { 90 } else { 38 }),
+                        Color32::from_rgba_unmultiplied(120, 180, 240, if major { 60 } else { 26 }),
                     )
                 };
                 for &(x, major) in xs {
@@ -1252,7 +1254,7 @@ impl ViewerUi {
                 let shown: Vec<_> = zones
                     .iter()
                     .filter(|z| match Toolbar::of_zone(&z.name) {
-                        Ok(Some(t)) => TOOLBARS_IN_USE.contains(&t),
+                        Ok(Some(t)) => TOOLBARS_SHOWN.contains(&t),
                         _ => true,
                     })
                     .collect();
@@ -1275,9 +1277,24 @@ impl ViewerUi {
                         Color32::from_rgb(220, 40, 40)
                     }
                 };
-                for (i, r) in rects.iter().enumerate() {
-                    let r = Rect::from_min_max(to_screen(r.x0, r.y0), to_screen(r.x1, r.y1));
-                    painter.rect_filled(r, CornerRadius::ZERO, color_of(i).gamma_multiply(0.18));
+                // Each kind of zone is filled once over its combined area, so where zones overlap the
+                // shade is not darker (chris, 2026-11-10).
+                for advisory in [false, true] {
+                    let of_kind: Vec<PxRect> = rects
+                        .iter()
+                        .zip(&shown)
+                        .filter(|(_, z)| z.advisory == advisory)
+                        .map(|(r, _)| *r)
+                        .collect();
+                    let color = if advisory {
+                        Color32::from_rgb(230, 150, 0)
+                    } else {
+                        Color32::from_rgb(220, 40, 40)
+                    };
+                    for r in union_fill(&of_kind) {
+                        let r = Rect::from_min_max(to_screen(r.x0, r.y0), to_screen(r.x1, r.y1));
+                        painter.rect_filled(r, CornerRadius::ZERO, color.gamma_multiply(0.18));
+                    }
                 }
                 // Borders only round the combined area: where zones overlap or meet, the edges
                 // inside it are not drawn (chris, 2026-11-10).

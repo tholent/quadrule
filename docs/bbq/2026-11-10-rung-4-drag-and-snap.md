@@ -157,3 +157,10 @@ chris's next answer, word for word: "let rhythm win within half a pixel". Built:
 that kind is more than half a device pixel nearer. This refines Defaulted "Snap distance" ("the nearest wins, and on a
 tie ..."): the tie band for rhythm is half a pixel, not a millionth.
 
+chris's next answer, word for word, after trying 4b: "ok, a couple of fixes. the safe zone overlay should not include the
+floating menu and the overlapping portions should not increase their darkness. Next, the rhythm overlay should be much
+lighter and perhaps light blue. Something that indicates a guide, and doesn't interfere with the display of actual
+elements." Built: the overlay and the safe-zone snap leave out the floating toolbar (the linter still checks it);
+overlapping zones are filled once; the rhythm overlay is light blue and fainter. This replaces "all four positions" for the
+overlay and snap in the 2026-11-10 answer above.
+

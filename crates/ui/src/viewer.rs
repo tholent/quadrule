@@ -36,6 +36,11 @@ use std::path::{Path, PathBuf};
 /// list, so what is drawn is what is checked.
 pub const TOOLBARS_IN_USE: [Toolbar; 4] = Toolbar::ALL;
 
+/// Toolbar positions whose safe zones are drawn and snapped to: left, right and top, not the
+/// floating toolbar (chris, 2026-11-10: "the safe zone overlay should not include the floating
+/// menu"). The linter still checks every position ([`TOOLBARS_IN_USE`]).
+pub const TOOLBARS_SHOWN: [Toolbar; 3] = [Toolbar::Left, Toolbar::Right, Toolbar::Top];
+
 /// Where the open document came from.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Source {
@@ -478,13 +483,13 @@ fn make_page(
     })
 }
 
-/// The safe zones that count on `p`, as pixel rectangles: those of the toolbars in use, the same
-/// ones the overlay draws (rung 2 bbq, Q6).
+/// The safe zones that count for snapping on `p`, as pixel rectangles: those of the toolbars
+/// shown, the same ones the overlay draws (rung 2 bbq, Q6).
 pub(crate) fn active_zone_rects(p: &Profile) -> Vec<quadrule_layout::snap::PxRect> {
     p.safe_zones
         .iter()
         .filter(|z| match quadrule_lint::Toolbar::of_zone(&z.name) {
-            Ok(Some(t)) => TOOLBARS_IN_USE.contains(&t),
+            Ok(Some(t)) => TOOLBARS_SHOWN.contains(&t),
             _ => true,
         })
         .map(|z| {

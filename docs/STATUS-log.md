@@ -475,4 +475,16 @@ session. Built in this order, on `main`:
   `snap_rhythm_half_pixel`). I read "rhythm" as including subdivisions and sizes, and the half pixel as device pixels;
   both are mine, for chris to veto. Checks now: 160 `CHECK` lines, 0 `result=fail`, 155 tests passed; clippy and fmt
   clean. CI for 4b's first commit `97350a7` passed on Linux, macOS and Windows.
+- chris, word for word, after trying 4b: "ok, a couple of fixes. the safe zone overlay should not include the floating menu
+  and the overlapping portions should not increase their darkness. Next, the rhythm overlay should be much lighter and
+  perhaps light blue. Something that indicates a guide, and doesn't interfere with the display of actual elements."
+  Built:
+  - The overlay and the zones dragged objects snap to leave out the floating toolbar (`TOOLBARS_SHOWN`: left, right,
+    top; `crates/ui/src/viewer.rs`). The linter still checks all four positions (`TOOLBARS_IN_USE`), as chris ruled
+    earlier; I read "the safe zone overlay" as the display only. Check `floating_zone_not_shown`.
+  - Overlapping zones are filled once over their combined area (`union_fill`, `crates/layout/src/snap.rs`; check
+    `union_fill`), so the overlap is no darker.
+  - The rhythm overlay lines are light blue (120, 180, 240) at alpha 60 for units and 26 for subdivisions (was a deeper
+    blue at 90 and 38). The shade is my guess; say if it should go lighter or darker.
+  - Checks: 162 `CHECK` lines, 0 `result=fail`, 157 tests passed; clippy and fmt clean.
 

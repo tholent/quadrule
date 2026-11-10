@@ -42,15 +42,16 @@ The project's live state. Update it when work lands. Every claim cites at least 
   the rhythm and its subdivisions (2–10 a unit, file format 0.4, `Rhythm.subdivisions`), a resize's size in whole
   steps, the margins and safe-zone edges, and the pixel grid (`crates/layout/src/snap.rs`,
   `crates/model/src/edit.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/view.rs`, `crates/ui/src/panels.rs`). The
-  rhythm overlay and the three snap switches are in the status bar and the Page tab and are kept between runs
+  rhythm overlay (light blue, faint) and the snap switches are in the status bar and the Page tab and are kept between runs
   (`crates/app/src/main.rs`). No flag, as chris ruled; export bytes unchanged (`crates/ui/tests/editor.rs`,
   `crates/render/tests/golden/SHA256SUMS`).
 - Drag speed, judged by the 95th percentile of the frames (chris's ruling, 2026-11-10; the 95 is chosen for him to
   veto): measured on the Pi in a release build with `quadrule --bench-drag` (the sample page's dot grid, Fit zoom):
   export-pixels canvas 95th percentile 25.8–27.1 ms in 6 runs, graphics-chip canvas 31.2–31.5 ms in 3 runs, against the
   50 ms line (`crates/ui/src/canvas.rs`, `docs/STATUS-log.md`, 2026-11-10 rung 4a).
-- The safe-zone overlay has no labels, shows every toolbar position (left, right, top, floating) and the footers, draws
-  borders only round the combined area where zones overlap, and the linter checks every position too; dragged objects
+- The safe-zone overlay has no labels, shows the left, right and top toolbar zones and the footers (not the floating
+  toolbar), fills overlapping zones once so they are no darker, draws borders only round the combined area, and the
+  linter checks every position including the floating one; dragged objects
   snap to the same zones (`crates/ui/src/view.rs`, `crates/ui/src/viewer.rs`, `crates/layout/src/snap.rs`).
 - Rung 4b, the rest of snapping and copy and paste, is built; chris's look is still to come (record
   `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`): a dragged box's corners, midpoints and centre land on another
@@ -74,7 +75,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
 - Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]*
-  name=[^ ]*' | wc -l` → 160 `CHECK` lines, 0 with `result=fail`, 155 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
+  name=[^ ]*' | wc -l` → 162 `CHECK` lines, 0 with `result=fail`, 157 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
   CI for 4b: see `docs/STATUS-log.md` (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).

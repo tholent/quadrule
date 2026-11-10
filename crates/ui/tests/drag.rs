@@ -736,3 +736,38 @@ fn an_alt_drag_copy_lines_up_with_its_original() {
     );
     assert!(ok);
 }
+
+#[test]
+fn the_floating_toolbar_zone_is_not_shown_or_caught() {
+    // chris, 2026-11-10: "the safe zone overlay should not include the floating menu". Its edge
+    // catches nothing, though the linter still checks it.
+    let manta = quadrule_profiles::builtin(MANTA_ID).unwrap();
+    let floating = manta
+        .safe_zones
+        .iter()
+        .find(|z| z.name == "toolbar_floating_default")
+        .unwrap();
+    let edge = f64::from(floating.rect.0);
+    let mut v = sample();
+    v.snap = SnapToggles {
+        margins_safe: true,
+        ..SnapToggles::OFF
+    };
+    let Shape::Segment { x1, y0, .. } = shape(&mut v, ids::RULE) else {
+        panic!("a line is a segment")
+    };
+    let start = px(50.0);
+    grab(&mut v, start, y0, NONE);
+    v.drag_update(start + (edge - 3.0 - x1), y0, NONE, REACH);
+    let caught = v.drag_guides().iter().any(|g| g.at == edge);
+    v.drag_cancel();
+    let shown = quadrule_ui::viewer::TOOLBARS_SHOWN;
+    let list = !shown.contains(&quadrule_lint::Toolbar::Floating) && shown.len() == 3;
+    let linted = quadrule_ui::viewer::TOOLBARS_IN_USE.contains(&quadrule_lint::Toolbar::Floating);
+    let ok = !caught && list && linted;
+    println!(
+        "\nCHECK crate=ui name=floating_zone_not_shown result={} zone_edge_x={edge} caught={caught} not_in_shown={list} still_linted={linted}",
+        pass(ok)
+    );
+    assert!(ok);
+}
