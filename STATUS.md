@@ -1,6 +1,6 @@
 # STATUS — quadrule
 
-_Last updated: 2026-11-09_
+_Last updated: 2026-11-10_
 
 The project's live state. Update it when work lands. Every claim cites at least one file that exists.
 
@@ -39,8 +39,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Next
 
-- Rung 3 is chris's to choose (`docs/STATUS-log.md`). The graphics-chip canvas and its vello_cpu fallback come with
-  the editing rung (rung 2 bbq Q3, `docs/bbq/2026-11-09-rung-2-viewer.md`).
+- Rung 3, the first editor, is planned (record `docs/bbq/2026-11-10-rung-3-first-editor.md`, about 3–5 sessions):
+  select, layers panel, inspector, nudge, undo/redo, Save, autosave; both canvases switchable. Rung 4: dragging
+  and snapping.
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on an open question;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -59,6 +60,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-09: LICENSE and headers; calibration sheets; repo public; safe zones measured; stock grid matched;
   linter started; fuzzing (`docs/STATUS-log.md`).
 - 2026-11-09: rung 2 planned (bbq, 12 questions) and built: the viewer window; spike R15 paid (`docs/STATUS-log.md`).
+- 2026-11-10: rung 3 planned (bbq, 12 questions): the first editor (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

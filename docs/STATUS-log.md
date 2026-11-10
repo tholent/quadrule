@@ -259,3 +259,12 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   --nocapture` → 87 CHECK lines, all pass; 74 in the default build; clippy clean.
 
 - CI run 42720462671 on `52c7ee9` (rulings: short names, system UI font) passed on Linux, macOS and Windows.
+
+## 2026-11-10 — rung 3 planned
+
+- Session start: clean tree at HEAD `dc3bc9f`; `CARGO_BUILD_JOBS=2 cargo build --workspace` → `Finished`. Asked
+  again: the 153/157 Label gray question; chris: "Leave it open". L04 still waits.
+- Rung 3 planned in a bbq, 12 questions, record `docs/bbq/2026-11-10-rung-3-first-editor.md`: the first editor
+  (select, layers panel, inspector tabs, nudge, undo/redo, Save, autosave and recovery), with both canvases
+  switchable (overruled the export-pixels-only recommendation) and no feature flag (overruled; waives the AGENTS.md
+  flag rule for rung 3 only). Dragging and snapping move to rung 4. Export goldens stay fixed. About 3–5 sessions.
