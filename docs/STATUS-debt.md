@@ -74,3 +74,9 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   object's name is its Fluent text at the time ("Line", "Text", "Pattern") stored as the file's own data. A drag-drawn
   object has Scale constraints (the napkin default); only a clicked pattern region is pinned to every edge. The text
   box is 12 pt regular Atkinson Hyperlegible Next with no choice in the dialog.
+- Packaging, owed (`packaging/`, `.github/workflows/release.yml`): the icon is a placeholder drawn by an agent (a
+  ruled square), chris's to replace. Linux has no MIME definition for `application/x-quadrule`, so `.quad` files are
+  not yet recognised by the file manager. The `.deb` puts the @2x icons in `64x64@2` and `1024x1024@2` folders (the
+  standard names are `32x32@2`, `512x512@2`); harmless, the plain sizes cover it. The `.dmg` and `.msi` are unsigned
+  (macOS Gatekeeper and Windows SmartScreen will warn) and nobody has opened them yet; the rc testers (arc Q14) are
+  their first check. A pre-release version (`1.0.0-rc.1`) builds an NSIS `.exe` instead of an `.msi`, untried.

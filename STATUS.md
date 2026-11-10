@@ -94,6 +94,10 @@ The project's live state. Update it when work lands. Every claim cites at least 
   target/test.log | wc -l` → 188, 0 with `result=fail`: parallel output split one); fmt and clippy `-D warnings` clean
   (`Makefile`). CI for rung 5: see `docs/STATUS-log.md`
   (`.github/workflows/ci.yml`).
+- Release packages: `.github/workflows/release.yml` builds an AppImage and a `.deb` (Linux x86-64 and ARM64), a
+  universal unsigned `.dmg` and an `.msi` from a release tag with cargo-packager (`packaging/`); hand-run, dry run by
+  default. Dry run 42902842053 for v0.5.0 passed on all four; the ARM64 AppImage ran on the Pi. Publishing and the
+  automatic trigger wait for chris's approval (`docs/STATUS-log.md`, `DEVELOPMENT.md`).
 - A `Makefile` wraps the usual commands: `make` lists them; `make test` prints one `TESTS` line, `make check-all` is what CI
   runs, `make review` adds the build-matches-HEAD proof and the diff against `origin/main` (`Makefile`,
   `docs/bbq/2026-11-10-makefile.md`).
@@ -152,6 +156,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-10: rung 5 approved by chris; L06 stops checking the floating toolbar (ADR-012 amended) (`docs/STATUS-log.md`).
 - 2026-11-10: arc v1 planned (Arc bbq, 20 questions): rungs 6–18 to v1.0 (`docs/arcs/v1/README.md`, `docs/STATUS-log.md`).
 - 2026-11-10: rungs 1–5 tagged at their approvals, `v0.1.0` to `v0.5.0` (4b is `v0.4.1`) (`docs/STATUS-log.md`).
+- 2026-11-10: v0.5.0 released on GitHub; release packages workflow built, dry run green on four systems (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

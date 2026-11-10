@@ -694,3 +694,24 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
 - Then: chris, "try using the token again". `gh release create v0.5.0 --verify-tag --prerelease …` succeeded;
   `gh release view v0.5.0` → pre-release, not a draft, https://github.com/tholent/quadrule/releases/tag/v0.5.0.
   The token debt line is paid (removed from `docs/STATUS-debt.md`).
+
+## 2026-11-10 — release packages workflow (Opus 5.5)
+
+- chris, word for word: "let's create a workflow for creating packages and publishing them. Don't worry about
+  anything before v0.5.0". Built `.github/workflows/release.yml` and `packaging/` (cargo-packager 0.11.8:
+  `packager.json`, placeholder icons, `prepare.py` that takes the version from the tag). Hand-run only, dry run by
+  default; `publish=true` attaches the packages and `SHA256SUMS.txt` to the tag's release. The `release: published`
+  trigger is written but commented out until chris approves the first packages (AGENTS.md: work outside the app
+  window lands switched off). A tag older than `packaging/` (v0.5.0) is built with main's copy laid over it.
+- On the Pi: `prepare.py v0.5.0` → `PREPARE tag=v0.5.0 version=0.5.0 cargo_was=0.1.0 cargo_now=0.5.0 msi=yes
+  status=ok` (only the version line of `Cargo.toml` changes; the binary says "quadrule 0.5.0"). `cargo packager -f
+  deb,appimage` built both; the `.deb` holds the binary, desktop entry, icons and both licences.
+- `gh workflow run` first got HTTP 403; chris added Actions: read and write to the token. Dry run 42900685178
+  (`e9aba64`): Linux x86-64, Linux ARM64 and Windows passed; macOS stopped at "No matching IconType" (`.icns` holds 64
+  and 1024 px only as 32@2x and 512@2x). Icons renamed (`b001044`); dry run 42902842053: all four passed, six
+  packages (`PACKAGE` lines in the run's summary): AppImage and `.deb` for x86-64 and ARM64, universal `.dmg`
+  (`lipo -info`: x86_64 arm64), `.msi`.
+- The CI-built ARM64 AppImage, downloaded to the Pi, matches the run's sha256 and runs:
+  `CHECK crate=ui name=draw_bench result=pass build=release canvas=export frames=40 … p90_ms=28.7 … budget_ms=50`.
+  Not run by anyone yet: the `.dmg`, the `.msi`, the x86-64 packages (no Mac, Windows or x86 machine here).
+- Waits on chris: approve the packages; then publish v0.5.0's (`-f publish=true`) and switch on the release trigger.
