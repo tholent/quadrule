@@ -405,6 +405,8 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
 - Grown past what was asked, said out loud: the middle button pans the page (a plain drag now moves objects, so it no
   longer scrolls; the scroll bars and the wheel still do); `quadrule --bench-drag [steps]` (needed to measure the
   rule); the drag clock in the status bar; a screen-point accessor for tests.
+- CI run 42835008247 on `3c4558d` passed on Linux, macOS and Windows (the goldens matched on all three); fuzz run
+  42835008539 passed.
 - Not checked: Alt-drag in the real window. Raspberry Pi OS's window manager may take Alt+drag to move the window; if it
   does, Ctrl+D still duplicates. The layers panel's drag-and-drop through egui is checked only by its index maths, not
   by a pointer. Stopped here for chris's look at 4a before 4b (point snap, smart guides, equal spacing, copy and paste).

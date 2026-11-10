@@ -57,7 +57,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/xtask/tests/license_headers.rs`).
 - Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]*
   name=[^ ]*' | wc -l` → 143 `CHECK` lines, 0 with `result=fail`, 138 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
-  CI on Linux, macOS and Windows (`.github/workflows/ci.yml`; not yet run on the rung 4a commits).
+  CI run 42835008247 on `3c4558d` passed on Linux, macOS and Windows (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).
 
