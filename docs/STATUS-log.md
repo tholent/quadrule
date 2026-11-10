@@ -682,3 +682,8 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   rung; existing export bytes frozen.
 - Spec notes dated 2026-11-10 added for L04 (§8.3), channels (§15.4), the arc (§16) and pen shades (§17.1).
 - No code changed. Next: rung 6 (shapes), from the kickoff in the record.
+- Later the same session: chris, word for word: "let's go back and tag the commits where approvals happened for each
+  rung. rungs with more than one (4a,4b) can just bump minor versions." Annotated tags at each approval commit:
+  `v0.1.0` `00ad0e2` (chris merged PR #1), `v0.2.0` `52c7ee9`, `v0.3.0` `50bd8db`, `v0.4.0` `c176a2f` (4a), `v0.4.1`
+  `6ced5c2` (4b), `v0.5.0` `9bb8122`; pushed (`git ls-remote --tags origin`). The workspace version stays 0.1.0 in
+  those commits. The arc's tag rule now bumps the last number per split part (`docs/arcs/v1/README.md`).

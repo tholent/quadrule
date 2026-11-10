@@ -151,6 +151,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
   (`docs/STATUS-log.md`).
 - 2026-11-10: rung 5 approved by chris; L06 stops checking the floating toolbar (ADR-012 amended) (`docs/STATUS-log.md`).
 - 2026-11-10: arc v1 planned (Arc bbq, 20 questions): rungs 6–18 to v1.0 (`docs/arcs/v1/README.md`, `docs/STATUS-log.md`).
+- 2026-11-10: rungs 1–5 tagged at their approvals, `v0.1.0` to `v0.5.0` (4b is `v0.4.1`) (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

@@ -11,8 +11,9 @@ re-plan below (Q15: the board is re-planned after **every** rung).
 
 Model-shaping rungs come first, so features built later need no rework (Q5). Each rung gets a short bbq of about 8
 questions before building (Q6), its own budget from `budget-select` at kickoff (Q9), and chris's look before it is
-done (ADR-007). A rung bigger than one session splits into 6a, 6b… with a look each (Q10). When chris approves a whole
-rung, it becomes version `0.N.0` with a pushed git tag `v0.N.0` (Q19).
+done (ADR-007). A rung bigger than one session splits into 6a, 6b… with a look each (Q10). When chris approves a rung,
+it becomes version `0.N.0` with a pushed git tag `v0.N.0` (Q19); each later part of a split rung bumps the last
+number (6a `v0.6.0`, 6b `v0.6.1`), as rungs 1 to 5 were tagged (chris, 2026-11-10).
 
 | Rung | What it holds | Size | State |
 |---|---|---|---|
@@ -77,3 +78,6 @@ After each rung's look, the lead writes one dated line here: what the rung taugh
 above (which chris approves before it counts).
 
 - 2026-11-10: arc planned (this board).
+- 2026-11-10: rungs 1 to 5 tagged at their approval commits: `v0.1.0` (`00ad0e2`), `v0.2.0` (`52c7ee9`), `v0.3.0`
+  (`50bd8db`), `v0.4.0` 4a (`c176a2f`), `v0.4.1` 4b (`6ced5c2`), `v0.5.0` (`9bb8122`). The workspace `Cargo.toml`
+  still says 0.1.0 at all of them; from rung 6 the bump goes in the approval commit.
