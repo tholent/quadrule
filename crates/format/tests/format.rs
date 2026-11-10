@@ -434,3 +434,36 @@ fn a_0_2_file_opens_through_the_real_chain() {
     );
     assert!(ok);
 }
+
+#[test]
+fn a_0_3_file_opens_and_subdivisions_round_trip() {
+    // A file written at format 0.3.0 (before `rhythm.subdivisions` existed) has no such field; it
+    // opens as "off" through migrate::CHAIN, and saves again at the current version without
+    // inventing one. A document that sets subdivisions keeps them through a save.
+    let (mut manifest, files) = split(&slice_file().to_bytes("0.3.0").unwrap());
+    *migrate::map_get_mut(&mut manifest, "format_version").unwrap() = Value::Text("0.3.0".into());
+    let opened = QuadFile::from_bytes(&raw_quad(manifest, &files)).unwrap();
+    let resaved = QuadFile::from_bytes(&opened.to_bytes("t").unwrap()).unwrap();
+    let mut with = slice_file();
+    with.doc.rhythm.subdivisions = Some(4);
+    let back = QuadFile::from_bytes(&with.to_bytes("t").unwrap()).unwrap();
+    let mut wild = slice_file();
+    wild.doc.rhythm.subdivisions = Some(40);
+    let wild = QuadFile::from_bytes(&wild.to_bytes("t").unwrap()).unwrap();
+    let ok = opened.migrated_from == Some(Version::new(0, 3, 0))
+        && opened.doc == slice_document()
+        && opened.doc.rhythm.subdivisions.is_none()
+        && resaved.manifest.format_version == FORMAT_VERSION
+        && back.doc.rhythm.subdivisions == Some(4)
+        && back.doc.rhythm.subdivisions_on() == Some(4)
+        && wild.doc.rhythm.subdivisions_on().is_none();
+    println!(
+        "\nCHECK crate=format name=open_0_3_file result={} migrated_from={:?} now={} subdivisions_kept={:?} out_of_range_reads_off={}",
+        pass(ok),
+        opened.migrated_from.map(|v| v.to_string()),
+        resaved.manifest.format_version,
+        back.doc.rhythm.subdivisions,
+        wild.doc.rhythm.subdivisions_on().is_none()
+    );
+    assert!(ok);
+}

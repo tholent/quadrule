@@ -165,6 +165,7 @@ pub fn slice_document() -> Document {
             v_unit_mm: 6.0,
             origin: RhythmOrigin::MarginCorner,
             resolution: RhythmResolution::PixelLocked,
+            subdivisions: None,
             extra: Extra::new(),
         },
         layers: vec![

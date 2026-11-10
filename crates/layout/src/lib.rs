@@ -22,6 +22,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod snap;
 pub mod units;
 
 use kurbo::{BezPath, Point};
@@ -141,6 +142,40 @@ pub fn resolve_frame(f: Frame, c: Constraints, from: (f64, f64), to: (f64, f64))
         VConstraint::TopBottom => axis_stretch(f.y_mm, f.h_mm, from.1, to.1),
         VConstraint::Center => axis_center(f.y_mm, f.h_mm, from.1, to.1),
         VConstraint::Scale => axis_scale(f.y_mm, f.h_mm, from.1, to.1),
+    };
+    Frame {
+        x_mm,
+        y_mm,
+        w_mm,
+        h_mm,
+    }
+}
+
+/// The inverse of [`resolve_frame`]: the frame on the primary page that lands on `resolved` on
+/// the target page. Dragging on a secondary device works in that device's frame; this turns the
+/// result back into the stored one. Exact for every constraint: `resolve_frame(unresolve_frame(f))`
+/// gives `f` back, except an axis whose page is the same size on both (any rule) and the width of
+/// `Scale` on a zero-size page.
+pub fn unresolve_frame(resolved: Frame, c: Constraints, from: (f64, f64), to: (f64, f64)) -> Frame {
+    let (x_mm, w_mm) = match c.h {
+        HConstraint::Left => (resolved.x_mm, resolved.w_mm),
+        HConstraint::Right => (resolved.x_mm - (to.0 - from.0), resolved.w_mm),
+        HConstraint::LeftRight => (resolved.x_mm, resolved.w_mm - (to.0 - from.0)),
+        HConstraint::Center => (resolved.x_mm - (to.0 - from.0) / 2.0, resolved.w_mm),
+        HConstraint::Scale => {
+            let k = from.0 / to.0;
+            (resolved.x_mm * k, resolved.w_mm * k)
+        }
+    };
+    let (y_mm, h_mm) = match c.v {
+        VConstraint::Top => (resolved.y_mm, resolved.h_mm),
+        VConstraint::Bottom => (resolved.y_mm - (to.1 - from.1), resolved.h_mm),
+        VConstraint::TopBottom => (resolved.y_mm, resolved.h_mm - (to.1 - from.1)),
+        VConstraint::Center => (resolved.y_mm - (to.1 - from.1) / 2.0, resolved.h_mm),
+        VConstraint::Scale => {
+            let k = from.1 / to.1;
+            (resolved.y_mm * k, resolved.h_mm * k)
+        }
     };
     Frame {
         x_mm,

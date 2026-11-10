@@ -27,6 +27,7 @@ pub type Step = fn(&mut Value) -> Result<(), FormatError>;
 pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.1.0", "0.2.0", v0_1_to_v0_2),
     ("0.2.0", "0.3.0", v0_2_to_v0_3),
+    ("0.3.0", "0.4.0", v0_3_to_v0_4),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -39,6 +40,12 @@ fn v0_1_to_v0_2(_scene: &mut Value) -> Result<(), FormatError> {
 /// 0.3 adds two roles (`DotGrid`, `Label`), new choices only: every 0.2 scene is already a
 /// valid 0.3 scene. Dot patterns in older files keep the role they were saved with.
 fn v0_2_to_v0_3(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.4 adds `rhythm.subdivisions`, an optional field (rung 4 bbq, Defaulted "Subdivisions in the
+/// file"): a 0.3 scene without it reads as subdivisions off, so there is nothing to rewrite.
+fn v0_3_to_v0_4(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

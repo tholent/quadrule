@@ -186,9 +186,27 @@ pub struct Rhythm {
     pub origin: RhythmOrigin,
     /// How each profile turns the unit into pixels.
     pub resolution: RhythmResolution,
+    /// Optional finer steps for snapping and Shift+arrow: this many per unit, 2 to 10 (napkin
+    /// §6.3). `None` means off. Format 0.4; a file without it reads as off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subdivisions: Option<u8>,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+/// The fewest subdivisions per rhythm unit (napkin §6.3).
+pub const SUBDIVISIONS_MIN: u8 = 2;
+/// The most subdivisions per rhythm unit (napkin §6.3).
+pub const SUBDIVISIONS_MAX: u8 = 10;
+
+impl Rhythm {
+    /// The subdivisions per unit that count: `Some(n)` for 2 to 10, otherwise `None`. A file
+    /// holding another number is read as if subdivisions were off, not rejected.
+    pub fn subdivisions_on(&self) -> Option<u8> {
+        self.subdivisions
+            .filter(|n| (SUBDIVISIONS_MIN..=SUBDIVISIONS_MAX).contains(n))
+    }
 }
 
 /// Where the rhythm starts (napkin §6.3).
