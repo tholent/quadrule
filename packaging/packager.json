@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/crabnebula-dev/cargo-packager/main/crates/packager/schema.json",
+  "name": "quadrule",
+  "productName": "Quadrule",
+  "version": "0.0.0",
+  "identifier": "io.github.tholent.quadrule",
+  "publisher": "The quadrule authors",
+  "description": "Page templates for Supernote e-ink tablets",
+  "longDescription": "A free, open-source vector design tool for making page templates and wallpapers for Supernote e-ink tablets, exported at the device's exact pixels.",
+  "homepage": "https://github.com/tholent/quadrule",
+  "authors": ["The quadrule authors"],
+  "copyright": "Copyright the quadrule authors. Licensed Apache-2.0.",
+  "category": "GraphicsAndDesign",
+  "licenseFile": "../LICENSE",
+  "binariesDir": "../target/release",
+  "outDir": "../dist",
+  "binaries": [{ "path": "quadrule", "main": true }],
+  "icons": ["icons/32x32.png", "icons/64x64.png", "icons/128x128.png", "icons/256x256.png", "icons/512x512.png", "icons/1024x1024.png"],
+  "resources": [
+    { "src": "../crates/text/fonts/OFL-Atkinson.txt", "target": "licenses/OFL-Atkinson.txt" },
+    { "src": "../LICENSE", "target": "licenses/LICENSE" }
+  ],
+  "fileAssociations": [
+    {
+      "extensions": ["quad"],
+      "mimeType": "application/x-quadrule",
+      "description": "Quadrule design",
+      "name": "Quadrule design",
+      "role": "editor"
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+# Release packages (napkin §15.4; arc v1 Q12): builds quadrule's installers for a release tag on
+# GitHub's machines and, when asked, attaches them to that tag's GitHub release.
+#
+#   Linux x86-64 and ARM64: .AppImage and .deb   macOS: universal .dmg (unsigned)
+#   Windows x86-64: .msi (an NSIS .exe for pre-release versions, which an .msi cannot hold)
+#
+# The packaging config lives in packaging/ (packager.json, icons, prepare.py). A tag made before
+# that folder existed (v0.5.0) is built with main's copy laid over it; a later tag uses its own.
+#
+# Switched on by hand only, until chris approves the first packages (AGENTS.md: work that
+# acts outside the app window lands switched off). Run it from the Actions tab or with
+#   gh workflow run release.yml -f tag=v0.5.0                 # dry run: packages as run artifacts
+#   gh workflow run release.yml -f tag=v0.5.0 -f publish=true # also attach them to the release
+# Once approved, the `release: published` trigger below is switched on, so each rung's release
+# gets its packages without a hand step.
+#
+# Cost: the repository is public, so GitHub's standard runners are free.
+name: Release packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to package, e.g. v0.5.0"
+        required: true
+        type: string
+      publish:
+        description: "Attach the packages to the tag's GitHub release (it must already exist)"
+        required: false
+        type: boolean
+        default: false
+  # Switched on after chris's approval of the first packages:
+  # release:
+  #   types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: never
+  TAG: ${{ inputs.tag || github.event.release.tag_name }}
+  # cargo-packager's version, pinned; its AppImage and MSI steps fetch linuxdeploy and WiX 3.11.
+  PACKAGER_VERSION: "0.11.8"
+  # linuxdeploy is itself an AppImage; this runs it without FUSE, which the runners lack.
+  APPIMAGE_EXTRACT_AND_RUN: "1"
+
+jobs:
+  package:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 22.04, not latest: an AppImage runs on systems at least as new as the one it was built
+          # on, so the older base reaches more desktops.
+          - { name: linux-x86_64, os: ubuntu-22.04, formats: "deb,appimage" }
+          - { name: linux-aarch64, os: ubuntu-22.04-arm, formats: "deb,appimage" }
+          - { name: macos-universal, os: macos-latest, formats: "dmg" }
+          - { name: windows-x86_64, os: windows-latest, formats: "wix" }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Packaging config (this workflow's commit)
+        uses: actions/checkout@v7
+        with:
+          path: tools
+          sparse-checkout: packaging
+
+      - name: Source (the tag)
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          path: src
+
+      - name: Lay the packaging config over the tag if it has none
+        run: |
+          if [ -d src/packaging ]; then
+            echo "CONFIG source=tag"
+          else
+            cp -R tools/packaging src/packaging
+            echo "CONFIG source=workflow"
+          fi
+
+      # rust-toolchain.toml in the tag pins the compiler; this installs it.
+      - name: Toolchain
+        working-directory: src
+        run: |
+          rustup toolchain install
+          if [ "${{ runner.os }}" = macOS ]; then
+            rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          fi
+          rustc --version
+
+      - name: Version from the tag
+        id: prepare
+        working-directory: src
+        run: |
+          PY=$(command -v python3 || command -v python)
+          line=$("$PY" packaging/prepare.py "$TAG" .)
+          echo "$line"
+          echo "$line" >> "$GITHUB_STEP_SUMMARY"
+          msi=$(echo "$line" | sed -n 's/.* msi=\([a-z]*\) .*/\1/p')
+          version=$(echo "$line" | sed -n 's/.* version=\([^ ]*\) .*/\1/p')
+          echo "msi=$msi" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src
+          key: release-${{ matrix.name }}
+
+      - name: Build
+        working-directory: src
+        run: |
+          if [ "${{ runner.os }}" = macOS ]; then
+            cargo build --release -p quadrule-app --target aarch64-apple-darwin
+            cargo build --release -p quadrule-app --target x86_64-apple-darwin
+            mkdir -p target/release
+            lipo -create -output target/release/quadrule \
+              target/aarch64-apple-darwin/release/quadrule \
+              target/x86_64-apple-darwin/release/quadrule
+            lipo -info target/release/quadrule
+          else
+            cargo build --release -p quadrule-app
+          fi
+
+      - name: Install cargo-packager
+        run: cargo install cargo-packager --version "$PACKAGER_VERSION" --locked
+
+      - name: Package
+        working-directory: src
+        run: |
+          formats="${{ matrix.formats }}"
+          if [ "$formats" = wix ] && [ "${{ steps.prepare.outputs.msi }}" = no ]; then
+            formats=nsis
+          fi
+          cargo packager -c packaging/packager.json -f "$formats" --release
+
+      - name: Name and check the packages
+        working-directory: src
+        run: |
+          v="${{ steps.prepare.outputs.version }}"
+          mkdir -p ../out
+          shopt -s nullglob
+          for f in dist/*.deb dist/*.AppImage dist/*.dmg dist/*.msi dist/*-setup.exe; do
+            ext="${f##*.}"
+            case "${{ matrix.name }}" in
+              linux-x86_64) arch=x86_64 ;; linux-aarch64) arch=aarch64 ;;
+              macos-universal) arch=universal ;; windows-x86_64) arch=x86_64 ;;
+            esac
+            case "$ext" in exe) name="quadrule-$v-windows-$arch-setup.exe" ;;
+              msi) name="quadrule-$v-windows-$arch.msi" ;; dmg) name="quadrule-$v-macos-$arch.dmg" ;;
+              *) name="quadrule-$v-linux-$arch.$ext" ;; esac
+            cp "$f" "../out/$name"
+          done
+          cd ../out
+          n=0
+          for f in *; do
+            n=$((n + 1))
+            sum=$( (sha256sum "$f" 2>/dev/null || shasum -a 256 "$f") | cut -d' ' -f1)
+            line="PACKAGE file=$f bytes=$(wc -c < "$f" | tr -d ' ') sha256=$sum"
+            echo "$line"; echo "$line" >> "$GITHUB_STEP_SUMMARY"
+          done
+          [ "$n" -gt 0 ] || { echo "PACKAGE status=fail reason=no-packages"; exit 1; }
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages-${{ matrix.name }}
+          path: out/*
+          if-no-files-found: error
+
+  publish:
+    name: Attach to the release
+    needs: package
+    if: ${{ inputs.publish || github.event_name == 'release' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: packages-*
+          merge-multiple: true
+          path: out
+
+      - name: Checksums
+        working-directory: out
+        run: |
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null \
+            || { echo "PUBLISH tag=$TAG status=fail reason=no-release"; exit 1; }
+          gh release upload "$TAG" out/* --clobber --repo "$GITHUB_REPOSITORY"
+          echo "PUBLISH tag=$TAG files=$(ls out | wc -l) status=ok" | tee -a "$GITHUB_STEP_SUMMARY"

@@ -6,3 +6,4 @@
 *~
 # Local Claude Code settings, skills and agent worktrees (chris, 2026-11-09)
 /.claude/
+/dist/

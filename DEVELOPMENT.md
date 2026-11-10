@@ -89,6 +89,25 @@ Where things live beyond the code:
   is owed.
 - `AGENTS.md`: the working rules the project's maintainer and AI coding agents follow.
 
+## Releases and packages
+
+Each rung chris approves gets a version (`0.N.0`, or `0.N.1` for a second part such as 4b), an annotated git tag
+and a GitHub pre-release, with notes in `docs/arcs/v1/release-notes/` (`docs/arcs/v1/README.md`).
+
+The installers are built by `.github/workflows/release.yml` on GitHub's machines: an AppImage and a `.deb` for Linux
+(x86-64 and ARM64), an unsigned universal `.dmg` for macOS and an `.msi` for Windows, plus `SHA256SUMS.txt`. The
+config is in `packaging/`: `packager.json` (read by [cargo-packager](https://crates.io/crates/cargo-packager) 0.11.8),
+the icons, and `prepare.py`, which takes the version from the tag. To run it by hand:
+
+```
+gh workflow run release.yml -f tag=v0.5.0                  # dry run: the packages are the run's artifacts
+gh workflow run release.yml -f tag=v0.5.0 -f publish=true  # also attach them to the release
+```
+
+To try packaging on Linux without GitHub: `cargo install cargo-packager --version 0.11.8 --locked`, build the app
+in release mode, then `cargo packager -c packaging/packager.json -f deb,appimage --release` (packages land in
+`dist/`). `prepare.py` edits `packaging/packager.json` and `Cargo.toml`, so run it only in a throwaway copy.
+
 ## Contributing
 
 Quadrule is pre-alpha, and its direction, naming and look are settled by the maintainer, so the process is small.
