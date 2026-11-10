@@ -529,3 +529,17 @@ session. Built in this order, on `main`:
 - Not tried: the workflow itself (`cargo install cargo-llvm-cov`, the tests under instrumentation, the push of the
   `badges` branch with the built-in token) can only be tried on GitHub. Until it has run once the coverage badge shows an
   error. The pitmaster badge links to `AGENTS.md`; chris gave only the image URL, so the link is my choice.
+
+## 2026-11-10 — rung 5 planned: New and Insert (Opus 5.5)
+
+- chris typed "bbq next steps"; bbq of 12 questions, record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`.
+- Session-start proof: `make build-proof` → `BUILD head=302d9ef dirty=no rebuilt=0`. `gh run list --limit 4`: CI run
+  42864690998 (`934852f`) success; the coverage workflow's first run, 42868546083, success, so the coverage badge has a
+  value now.
+- chris approved rung 4b's look (Q4: "Approved, rung 4 done"). Rung 4 is done.
+- Rung 5 ruled: File → New with a small dialog (device, rhythm preset), then a blank page; a left tools bar (Select,
+  Line, Text, Pattern) that draws by drag, or drops a default-size object on a click, then goes back to Select; no flag;
+  commits to `main`; lead Sonnet 5.5 at high effort; export goldens fixed; the bar laid out to take more tools later.
+  "Stay smooth on the Pi" was offered but not picked, so drawing speed is measured and logged, not a stop line.
+- Asked again, still open: the GitHub description and topics (chris), and "Scale vs pixel-locked rhythm on A5 X"
+  (`docs/STATUS-debt.md`).

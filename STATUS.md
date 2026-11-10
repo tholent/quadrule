@@ -53,7 +53,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   toolbar), fills overlapping zones once so they are no darker, draws borders only round the combined area, and the
   linter checks every position including the floating one; dragged objects
   snap to the same zones (`crates/ui/src/view.rs`, `crates/ui/src/viewer.rs`, `crates/layout/src/snap.rs`).
-- Rung 4b, the rest of snapping and copy and paste, is built; chris's look is still to come (record
+- Rung 4b, the rest of snapping and copy and paste, is built; look approved by chris 2026-11-10, so rung 4 is done
+  (record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`, Q4; rung 4 record
   `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`): a dragged box's corners, midpoints and centre land on another
   object's (a line's ends and middle), with a ring where they meet (point snap); its edges and centre line up with
   other objects', with an orange guide joining them (smart guides); and it goes where the gaps to its neighbours in
@@ -90,11 +91,14 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 - README badges: AI framework pitmaster, CI (fmt, clippy, tests), Fuzz, and coverage. Coverage is new: `.github/workflows/coverage.yml`
   runs `cargo llvm-cov` on the workspace and `.github/scripts/publish-badge.sh` writes the percentage to a
-  `badges` branch for shields.io to read. It has not run on GitHub yet (`docs/STATUS-log.md`).
+  `badges` branch for shields.io to read. Its first run on GitHub, 42868546083 on 2026-11-10, passed (`docs/STATUS-log.md`).
 
 ## Next
 
-- chris's look at rung 4b (record `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`, Q11); rung 4 is done when he approves it.
+- Rung 5, New and Insert, is planned (bbq, 12 questions; record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`):
+  File → New with a device and rhythm dialog, and a left tools bar to draw a line, text box or pattern region. To be
+  built by a fresh Sonnet 5.5 session at high effort from the record's kickoff.
+- Owed to chris: the GitHub description and topics (`docs/STATUS-log.md`, README entry).
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -123,6 +127,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
   Pi; waits for chris's look (`docs/STATUS-log.md`).
 - 2026-11-10: Makefile for testing and review (bbq, 4 questions), built (`docs/STATUS-log.md`).
 - 2026-11-10: README.md and DEVELOPMENT.md written (bbq, 12 questions); GitHub description blocked by a 403 (`docs/STATUS-log.md`).
+- 2026-11-10: rung 4b approved, rung 4 done; rung 5 planned (bbq, 12 questions): New and Insert (`docs/STATUS-log.md`).
 
 ## How this file is kept
 
