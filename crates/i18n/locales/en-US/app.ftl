@@ -1,11 +1,19 @@
 # Copyright 2026 Chris Wells. Licensed under the Apache License, Version 2.0.
 #
-# The viewer window (rung 2, docs/bbq/2026-11-09-rung-2-viewer.md).
+# The window: the viewer (rung 2, docs/bbq/2026-11-09-rung-2-viewer.md) and the first editor
+# (rung 3, docs/bbq/2026-11-10-rung-3-first-editor.md).
 
 app-title = quadrule
+app-window-title = { $name } — quadrule
+app-window-title-dirty = ● { $name } — quadrule
+app-sample-name = Sample page
 
 # Toolbar.
 app-open = Open…
+app-save = Save
+app-save-as = Save As…
+app-undo = Undo
+app-redo = Redo
 app-device = Device
 app-zoom-fit = Fit
 app-zoom-actual = 1:1
@@ -54,3 +62,112 @@ notice-exported = { $count ->
    *[other] Exported { $count } files
 } to { $folder }. Copy them to the device's MyStyle folder.
 notice-export-failed = Could not export: { $error }
+notice-saved = Saved { $path }.
+notice-save-failed = Could not save: { $error }
+notice-locked = The selection is locked.
+notice-object-locked = "{ $name }" is locked.
+notice-layer-locked = The layer "{ $name }" is locked.
+notice-edit-failed = Could not change that: { $error }
+notice-recovery-failed = Could not write the recovery file: { $error }
+
+# Layers panel (rung 3 bbq Q9).
+app-layers = Layers
+app-move-up = Move up
+app-move-down = Move down
+app-show-item = Show { $name }
+app-lock-item = Lock { $name }
+app-rename = Name
+
+# Inspector (rung 3 bbq Q8).
+app-tab-page = Page
+app-tab-arrange = Arrange
+app-tab-style = Style
+app-tab-text = Text
+app-tab-constraints = Constraints
+app-every-device = Edits change the design for every device; { $device } shows how it adapts.
+app-selected-count = { $count ->
+    [one] 1 object selected
+   *[other] { $count } objects selected
+}
+app-selection-locked = Locked. Unlock it in the layers panel to edit it.
+app-field-invalid = Not a length. Use mm, pt, px, in, % or u, such as 5mm or 2u.
+
+app-page-title = Title
+app-page-units = Units
+app-page-background = Background gray
+app-page-margins = Margins
+app-margin-top = Top
+app-margin-right = Right
+app-margin-bottom = Bottom
+app-margin-left = Left
+app-link-margins = Same on all sides
+app-rhythm = Rhythm
+app-rhythm-across = Across
+app-rhythm-down = Down
+app-link-rhythm = Same across and down
+app-rhythm-origin = Origin
+app-origin-margin = Margin corner
+app-origin-page = Page corner
+app-origin-centered = Centered
+app-rhythm-resolution = Resolution
+app-res-pixel = Pixel-locked
+app-res-physical = Physical-locked
+app-rhythm-on-device = { $px } px on { $device }
+
+app-x = X
+app-y = Y
+app-width = Width
+app-height = Height
+
+app-style-kind = Look
+app-style-role = Role
+app-style-custom = Custom
+app-role-whisper = Whisper
+app-role-guide = Guide
+app-role-structure = Structure
+app-role-emphasis = Emphasis
+app-role-dotgrid = Dot grid
+app-role-text = Text
+app-role-label = Label
+app-stroke-width = Width
+app-stroke-gray = Gray
+app-pattern = Pattern
+app-pattern-lines = Lines
+app-pattern-dots = Dots
+app-pattern-grid = Grid
+
+app-text-content = Text
+app-font = Font
+app-weight = Weight
+app-size = Size
+app-line-height = Line height
+app-letter-spacing = Letter spacing (em)
+app-align = Align
+app-align-left = Left
+app-align-center = Center
+app-align-right = Right
+app-align-justify = Justify
+
+app-constraint-h = Horizontal
+app-constraint-v = Vertical
+app-c-left = Left
+app-c-right = Right
+app-c-left-right = Left and right
+app-c-top = Top
+app-c-bottom = Bottom
+app-c-top-bottom = Top and bottom
+app-c-center = Center
+app-c-scale = Scale
+
+# Unsaved changes (rung 3 bbq, Defaulted "Save").
+app-unsaved-title = Save changes?
+app-unsaved-body = “{ $name }” has changes that are not saved.
+app-unsaved-save = Save
+app-unsaved-discard = Don’t save
+app-cancel = Cancel
+
+# Recovery (napkin §5.6; rung 3 bbq, Defaulted "Autosave").
+app-recover-title = Recover unsaved work?
+app-recover-body = quadrule closed before “{ $name }” was saved. Restore the changes it had?
+app-recover-restore = Restore
+app-recover-discard = Discard

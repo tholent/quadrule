@@ -12,6 +12,7 @@ name = "quadrule"
 path = "src/main.rs"
 
 [dependencies]
+directories.workspace = true
 eframe.workspace = true
 quadrule-text.workspace = true
 quadrule-ui.workspace = true

@@ -52,6 +52,8 @@ quadrule-i18n = { path = "crates/i18n" }
 quadrule-ui = { path = "crates/ui" }
 
 ciborium = "0.2.2"
+# The user's data folder, for recovery files (napkin §15.2; rung 3 bbq, Defaulted "Autosave").
+directories = "6.0.0"
 # ADR-002 item 1: fontdb and skrifa come only through cosmic-text's re-exports; swash is off.
 # The window (rung 2): eframe on wgpu (napkin §15.2; rung 2 bbq, Defaulted "Graphics backend").
 eframe = { version = "0.37.0", default-features = false, features = ["wgpu", "wayland", "x11", "accesskit", "default_fonts", "persistence"] }

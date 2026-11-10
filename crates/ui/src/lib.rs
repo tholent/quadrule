@@ -12,16 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Quadrule's window parts (napkin §15.1). Rung 2 is a viewer (docs/bbq/2026-11-09-rung-2-viewer.md):
+//! Quadrule's window parts (napkin §15.1). Rung 2 made a viewer (docs/bbq/2026-11-09-rung-2-viewer.md):
 //! open a `.quad` or the sample page, show it exactly as it exports, switch devices, zoom to
-//! pixels, show lint findings, export PNGs. No editing.
+//! pixels, show lint findings, export PNGs. Rung 3 makes it the first editor
+//! (docs/bbq/2026-11-10-rung-3-first-editor.md): select, layers, inspector, nudge, undo/redo,
+//! Save, autosave.
 //!
-//! [`viewer`] holds the state and runs headless; [`view`] draws it with egui.
+//! [`viewer`], [`editor`] and [`recovery`] hold the state and run headless; [`view`] draws it
+//! with egui.
 
 #![forbid(unsafe_code)]
 
+pub mod editor;
+pub mod panels;
+pub mod recovery;
 pub mod view;
 pub mod viewer;
 
-pub use view::{Request, UiFont, ViewerUi, install_fonts};
-pub use viewer::{ExportWhich, Viewer, Zoom};
+pub use editor::Toward;
+pub use panels::Tab;
+pub use recovery::{Autosave, Recovered, Recovery};
+pub use view::{After, Request, UiFont, ViewerUi, install_fonts};
+pub use viewer::{ExportWhich, Source, Viewer, Zoom};

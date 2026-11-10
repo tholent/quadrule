@@ -14,14 +14,15 @@
 
 //! The viewer's state, with no UI in it: what is open, which device shows, the rendered page, the
 //! lint findings, zoom maths and export. The egui widgets in [`crate::view`] only read and change
-//! this, so everything here is tested headless.
+//! this, so everything here is tested headless. Editing (rung 3) adds to it in [`crate::editor`].
 
-use quadrule_format::QuadFile;
+use quadrule_format::{Manifest, QuadFile, ReadOnly};
 use quadrule_i18n::Message;
-use quadrule_layout::{display_list, lay_out_text};
+use quadrule_layout::{Placed, display_list, lay_out_text, placed_objects};
 use quadrule_lint::{Finding, Options, Toolbar, lint_with};
-use quadrule_model::Document;
+use quadrule_model::edit::History;
 use quadrule_model::outlines::ProfileOutlines;
+use quadrule_model::{Document, Uuid};
 use quadrule_profiles::{Profile, builtin};
 use quadrule_render::{Gray, Math, encode_png, render};
 use quadrule_text::FontRegistry;
@@ -53,6 +54,8 @@ pub struct Page {
     /// True when the page used the outlines saved in the file because a font is missing here
     /// (ADR-001 item 2).
     pub saved_outlines: bool,
+    /// Each object's shape on this device, bottom first, for picking (rung 3).
+    pub placed: Vec<Placed>,
 }
 
 /// The open document.
@@ -63,9 +66,15 @@ pub struct Open {
     /// The document.
     pub doc: Document,
     /// Text outlines saved in the file, by profile id (empty for the sample).
-    saved: BTreeMap<String, ProfileOutlines>,
-    /// Pages already rendered, by profile id.
-    pages: BTreeMap<String, Page>,
+    pub(crate) saved: BTreeMap<String, ProfileOutlines>,
+    /// Pages already rendered, by profile id. Emptied by every edit.
+    pub(crate) pages: BTreeMap<String, Page>,
+    /// Undo and redo, and whether there are unsaved changes (rung 3).
+    pub history: History,
+    /// The file's manifest as read, so a save keeps its extras (ADR-001 item 4).
+    pub(crate) manifest: Option<Manifest>,
+    /// Set when the file needs features this build lacks; it cannot be saved (napkin §12.2).
+    pub read_only: Option<ReadOnly>,
 }
 
 /// The two choices under Export (rung 2 bbq, Q8).
@@ -103,6 +112,10 @@ pub struct Viewer {
     pub open: Option<Open>,
     /// Counts the documents opened, so the window knows when to redraw its page texture.
     pub generation: u64,
+    /// Counts changes to the open document (edits, undo, redo), for the same purpose.
+    pub revision: u64,
+    /// The selected objects, in the order they were picked (rung 3 bbq Q9).
+    pub selection: Vec<Uuid>,
     /// The device on screen.
     pub profile_id: String,
     /// How big the page shows.
@@ -117,7 +130,7 @@ pub struct Viewer {
     pub notice: Option<Notice>,
     /// The folder the last export went to, this session (rung 2 bbq, Defaulted "Export").
     pub export_dir: Option<PathBuf>,
-    fonts: FontRegistry,
+    pub(crate) fonts: FontRegistry,
 }
 
 /// A message for the user, and whether it is an error.
@@ -145,6 +158,8 @@ impl Default for Viewer {
         Viewer {
             open: None,
             generation: 0,
+            revision: 0,
+            selection: Vec::new(),
             profile_id: quadrule_model::sample::MANTA_ID.to_string(),
             zoom: Zoom::Fit,
             selected: None,
@@ -161,7 +176,7 @@ impl Viewer {
     /// Opens the rung 1 sample page.
     pub fn open_sample(&mut self) {
         let doc = quadrule_model::sample::slice_document();
-        self.set_open(Source::Sample, doc, BTreeMap::new());
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
     /// Opens a `.quad` file from disk. On failure the open document stays as it was and the
@@ -189,15 +204,20 @@ impl Viewer {
             builtin(id).map_err(|e| e.to_string())?;
         }
         builtin(&file.doc.primary_profile_id).map_err(|e| e.to_string())?;
-        self.set_open(source, file.doc, file.outlines);
+        let read_only = file.read_only.clone();
+        self.set_open(source, file.doc, file.outlines, Some(file.manifest));
+        if let Some(o) = &mut self.open {
+            o.read_only = read_only;
+        }
         Ok(())
     }
 
-    fn set_open(
+    pub(crate) fn set_open(
         &mut self,
         source: Source,
         doc: Document,
         saved: BTreeMap<String, ProfileOutlines>,
+        manifest: Option<Manifest>,
     ) {
         if !doc.profile_ids().contains(&self.profile_id.as_str()) {
             self.profile_id = doc.primary_profile_id.clone();
@@ -207,8 +227,13 @@ impl Viewer {
             doc,
             saved,
             pages: BTreeMap::new(),
+            history: History::new(),
+            manifest,
+            read_only: None,
         });
         self.generation += 1;
+        self.revision += 1;
+        self.selection.clear();
         self.selected = None;
         self.notice = None;
         self.zoom = Zoom::Fit;
@@ -397,11 +422,13 @@ fn make_page(
         toolbars: TOOLBARS_IN_USE.to_vec(),
     };
     let findings = lint_with(doc, &primary, &target, &outlines, &opts);
+    let placed = placed_objects(doc, &primary, &target, &outlines);
     Ok(Page {
         profile: target,
         image,
         findings,
         saved_outlines,
+        placed,
     })
 }
 

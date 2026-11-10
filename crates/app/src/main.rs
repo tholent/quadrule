@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! `quadrule`, the app (napkin §15.1). Rung 2: the viewer window
-//! (docs/bbq/2026-11-09-rung-2-viewer.md). Usage: `quadrule [file.quad]`, or
+//! `quadrule`, the app (napkin §15.1). Rung 2 made the viewer window
+//! (docs/bbq/2026-11-09-rung-2-viewer.md); rung 3 the first editor
+//! (docs/bbq/2026-11-10-rung-3-first-editor.md). Usage: `quadrule [file.quad]`, or
 //! `cargo run -p quadrule-app -- [file.quad]`.
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
@@ -24,7 +25,7 @@
 use eframe::egui;
 use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
 use eframe::wgpu;
-use quadrule_ui::{Request, Viewer, ViewerUi};
+use quadrule_ui::{Recovery, Request, Viewer, ViewerUi};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -34,7 +35,12 @@ const KEY_RULER: &str = "screen_px_per_mm";
 
 struct App {
     ui: ViewerUi,
-    title_for: u64,
+    /// The title last sent to the window.
+    title: String,
+    /// Set once the user has answered the unsaved-changes prompt with Save or Don't save.
+    closing: bool,
+    /// Close the window at the end of this frame.
+    ctx_close: bool,
 }
 
 impl App {
@@ -52,12 +58,19 @@ impl App {
             ui.viewer.screen_px_per_mm = eframe::get_value(storage, KEY_RULER);
         }
         cc.egui_ctx.set_theme(ui.theme);
+        // Recovery files live in the user's data folder (rung 3 bbq, Defaulted "Autosave"),
+        // e.g. ~/.local/share/quadrule/recovery on Linux.
+        ui.recovery = directories::ProjectDirs::from("org", "quadrule", "quadrule")
+            .map(|d| Recovery::new(d.data_dir().join("recovery")));
+        ui.offer_recovery();
         if let Some(p) = path {
-            let _ = ui.viewer.open_path(&p);
+            ui.open_file(&p);
         }
         App {
             ui,
-            title_for: u64::MAX,
+            title: String::new(),
+            closing: false,
+            ctx_close: false,
         }
     }
 
@@ -68,8 +81,31 @@ impl App {
                     .add_filter("quadrule", &["quad"])
                     .pick_file();
                 if let Some(path) = picked {
-                    let _ = self.ui.viewer.open_path(&path);
+                    self.ui.open_file(&path);
                 }
+            }
+            Request::SaveAsDialog(then) => {
+                let mut dialog = rfd::FileDialog::new()
+                    .add_filter("quadrule", &["quad"])
+                    .set_file_name(format!(
+                        "{}.quad",
+                        quadrule_ui::viewer::slug(self.ui.viewer.title().unwrap_or("untitled"))
+                    ));
+                if let Some(dir) = self.ui.viewer.file_path().and_then(|p| p.parent()) {
+                    dialog = dialog.set_directory(dir);
+                }
+                if let Some(mut path) = dialog.save_file() {
+                    if path.extension().is_none_or(|e| e != "quad") {
+                        path.set_extension("quad");
+                    }
+                    for next in self.ui.save_as(&path, then) {
+                        self.answer(next);
+                    }
+                }
+            }
+            Request::Close => {
+                self.closing = true;
+                self.ctx_close = true;
             }
             Request::ExportDialog(which) => {
                 let mut dialog = rfd::FileDialog::new();
@@ -87,22 +123,22 @@ impl App {
 
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        let ctx = ui.ctx().clone();
+        // Closing with unsaved changes asks first (rung 3 bbq, Defaulted "Save").
+        if ctx.input(|i| i.viewport().close_requested()) && !self.closing && !self.ui.may_close() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        }
         for req in self.ui.show(ui) {
             self.answer(req);
         }
-        // The window title names what is open.
-        if self.title_for != self.ui.viewer.generation {
-            self.title_for = self.ui.viewer.generation;
-            let app = self.ui.strings.get("app-title");
-            let title = match self.ui.viewer.title() {
-                Some(t) => format!("{t} — {app}"),
-                None if self.ui.viewer.open.is_some() => {
-                    format!("{} — {app}", self.ui.strings.get("app-open-sample"))
-                }
-                None => app,
-            };
-            ui.ctx()
-                .send_viewport_cmd(egui::ViewportCommand::Title(title));
+        if std::mem::take(&mut self.ctx_close) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+        // The window title names the file, with a dot for unsaved changes.
+        let title = self.ui.window_title();
+        if title != self.title {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
+            self.title = title;
         }
     }
 
