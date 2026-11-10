@@ -559,3 +559,9 @@ session. Built in this order, on `main`:
 - `adr-index.py --root .` → 14 ADRs; `adr-check.py --root . --triggers-from 1` → first 4 failures (option headings,
   a missing Drivers list), fixed, then 0. The check resolves proofs; it does not run tests.
 - Paid the debt item "The project-setup decision is not on record yet" (ADR-004).
+- chris, word for word: "ratify 007. let's amend 014 to align with the currently exported pixtures". ADR-007 ratified
+  and built: a dated amendment under the flag rule in `AGENTS.md`. ADR-014 was still proposed, so its draft was changed
+  (not amended) to keep the rule the exports follow, checked against
+  `crates/layout/tests/layout.rs::pattern_shapes_are_centred_in_their_region_and_drawn_whole`; asked "Ratify ADR-014 as
+  written?", chris: "Ratify". Napkin §5.2 got a dated note; the debt item "Pattern rule" is paid. No code or export
+  bytes changed.

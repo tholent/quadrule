@@ -1,10 +1,12 @@
 ---
-status: proposed
-status-note: "proposed 2026-11-10 by an agent from a pattern in chris's rulings; never ruled; awaiting chris's word"
+status: accepted
+status-note: "ratified by chris 2026-11-10 (ratify 007)"
+ratified-by: chris
+ratified-on: "2026-11-10"
 owner: chris
 kind: process
-built: not started
-proof: "on ratification: a dated amendment under the flag rule in `AGENTS.md`"
+built: n/a
+proof: "`AGENTS.md` (amendment of 2026-11-10 under the flag rule)"
 supersedes: nothing
 amends: "`AGENTS.md` §Engineering craft (\"Land a new feature switched off behind a flag\")"
 consulted: Claude (Opus 5.5), who drafted it from the rung records
@@ -61,3 +63,8 @@ Drivers:
 ## History
 
 - 2026-11-10: proposed by an agent in chris's backlog sweep, from the three rung records cited above.
+- 2026-11-10: ratified by chris, word for word: "ratify 007". Prior header values: status `proposed`, status-note
+  `proposed 2026-11-10 by an agent from a pattern in chris's rulings; never ruled; awaiting chris's word`. The text
+  above is unchanged by the ratification, including "Proposed, not ruled" in the Decision and the Asks left open.
+- 2026-11-10: built as Consequences says: a dated amendment under the flag rule in `AGENTS.md`. Prior header values:
+  built `not started`, proof `on ratification: a dated amendment under the flag rule in `AGENTS.md``.

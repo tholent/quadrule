@@ -217,6 +217,8 @@ All objects share: `id` (UUID), `name`, `transform`, `constraints`, `visible`, `
 
 **Pattern regions** are the backbone of grid-style templates. An isometric sheet is one object with a spacing value, not hundreds of lines. They clip to their bounds and support "every Nth line uses a different role" (e.g. a stronger line every 5th grid line). By default a pattern region's spacing is **bound to the document rhythm** (§6.3), so changing the rhythm updates every grid at once. Unbinding lets a region use its own spacing.
 
+> Amended 2026-11-10, chris ratified ADR-014 (`docs/decisions/ADR-014-pattern-edges.md`): pattern regions do not clip. Each line or dot whose centre is inside the region is drawn whole, reaching at most half its stroke past the edge.
+
 ### 5.3 Units and coordinates
 
 - Internal geometry is stored in **physical units (mm, f64)**. This keeps designs meaningful across PPI differences such as A5 X (226) vs Manta (300).

@@ -65,6 +65,10 @@ None yet. The owner sets one; agents do not invent it.
 - When only comments change, check the built files are byte-identical.
 - Turn a future danger into a build error wherever you can.
 - Land a new feature switched off behind a flag, tested, until the owner approves how it looks.
+  - Amended 2026-11-10 by chris, ratifying ADR-007 ("ratify 007"): editor features land switched on in the app
+    build, and chris's look check holds the rung open until he approves. The flag still applies to anything that
+    changes export bytes, the file format, or behaviour outside the app window, and to any job chris asks to flag.
+    See `docs/decisions/ADR-007-look-check-gates-editor-rungs.md`.
 - Name milestones as numbered rungs; reach each in the emulator before real hardware.
 - Take hardware values and protocol rules from the datasheet or spec section, never from memory.
 <!-- pitmaster rules: end -->

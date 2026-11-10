@@ -16,10 +16,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   fine-grained tokens); read CI with `gh run view <id> --log` instead.
 - ADR build status is in each ADR's `built` and `owed` header fields (`docs/decisions/INDEX.md`): ADR-001 and
   ADR-002 partial, ADR-003 landed; of the proposed ADR-004 to ADR-014, ADR-009, ADR-011 and ADR-012 are partial.
-- Pattern rule, chosen 2026-11-09 for chris to veto: a pattern draws every line and dot whose centre is in its
-  region, whole, so a dot on the margin straddles the region edge rather than being cut (`crates/layout/src/lib.rs`;
-  napkin §5.2 says patterns "clip to their bounds"). Trying whole-shapes-inside removed the slice's first dot row
-  and column.
 - Safe zones still to capture (screenshots, chris): landscape, a collapsed toolbar, other floating positions
   (`docs/device-measurements/README.md`).
 - The slice page's 8 mm margin (94 px) is narrower than a docked toolbar (Manta 116 px, Nomad 99 px), so a toolbar

@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: "chosen 2026-11-09 by a build agent for chris to veto; never ruled; written up 2026-11-10 in the backlog sweep"
+status: accepted
+status-note: "ratified by chris 2026-11-10 (Ratify, asked: Ratify ADR-014 as written?)"
+ratified-by: chris
+ratified-on: "2026-11-10"
 owner: chris
 kind: design
 built: landed
@@ -13,9 +15,11 @@ consulted: the rung 1 build agent (Opus 5.5), who chose it
 
 ## Decision
 
-**Chosen by an agent, not yet ruled.** A pattern region (ruled lines, dots, grid) draws each line or dot whose
-centre is inside the region, and draws it whole. A dot on the region's edge straddles the edge rather than being cut
-in half.
+A pattern region (ruled lines, dots, grid) draws each line or dot whose centre is inside the region, and draws it
+whole, so it reaches at most half its stroke past the region's edge. A dot on the region's edge straddles the edge
+rather than being cut in half. This is the rule today's exported pictures follow (rung 1's goldens,
+`crates/render/tests/golden/SHA256SUMS`), and chris chose to keep it (2026-11-10: "let's amend 014 to align with
+the currently exported pixtures").
 
 ## Context
 
@@ -30,7 +34,7 @@ Drivers:
 
 ## Alternatives
 
-### Centre inside, drawn whole (chosen: no half-dots and no lost rows; an agent's choice, for veto)
+### Centre inside, drawn whole (chosen: no half-dots and no lost rows, and it is what the exports already do)
 - Good: every shape on the page is whole; the rows the design places are all there.
 - Bad: shapes may poke up to half their size past the region's edge.
 
@@ -44,14 +48,23 @@ Drivers:
 
 ## Consequences
 
-- Ruling for clipping or wholly-inside would change export bytes and the goldens, so it is its own small job.
+- No export bytes change; the goldens stand.
+- A designer who needs an exact edge sets the region half a stroke inside it.
 - On ratification, napkin §5.2 gets a dated amendment note.
 
 ## Asks left open
 
-1. Keep centre-inside-drawn-whole, or choose clipping or wholly-inside?
+1. Ratify as written.
 
 ## History
 
 - 2026-11-09: chosen by the rung 1 build agent for chris to veto (`docs/STATUS-debt.md`).
 - 2026-11-10: written up as an ADR in chris's backlog sweep.
+- 2026-11-10: chris, word for word: "let's amend 014 to align with the currently exported pixtures". Still proposed,
+  so the draft was changed rather than amended: the Decision now states chris's choice and the half-stroke reach the
+  test checks; the old ask ("Keep centre-inside-drawn-whole, or choose clipping or wholly-inside?") is answered.
+  Prior header values: status-note `chosen 2026-11-09 by a build agent for chris to veto; never ruled; written up
+  2026-11-10 in the backlog sweep`.
+- 2026-11-10: ratified by chris (his answer "Ratify" to "Ratify ADR-014 as written?"). Prior header values: status
+  `proposed`, status-note `chris chose 2026-11-10 to keep the rule the exports already follow; draft updated to say so;
+  awaiting ratification`. Napkin §5.2 given its dated note, as Consequences says.
