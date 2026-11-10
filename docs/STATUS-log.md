@@ -326,3 +326,4 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   the test runner's own `test … ` line (seen here: `gtk_font_names` passed but was not at a line start). Counted
   instead with `grep -o 'CHECK crate=[^ ]* name=[^ ]*' | wc -l` → 112; `grep 'CHECK crate=' | grep -c
   result=fail` → 0.
+- CI run 42822926671 on `e9e11ec` (layers under the inspector; closing fix) passed on Linux, macOS and Windows.
