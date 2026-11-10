@@ -501,3 +501,18 @@ session. Built in this order, on `main`:
   (dirty because the Makefile was not committed yet).
 - Not run: `make check-all`, `make test-all`, `make clippy-all`, `make review` end to end, `make run`, `make bench-drag`,
   `make fuzz`, `make calibration-sheet`, on macOS at all.
+
+## 2026-11-10 — README, DEVELOPMENT.md and the GitHub description (Sonnet 5.5)
+
+- chris asked for "a README.md file and updating the project description on github"; bbq of 12 questions, record
+  `docs/bbq/2026-11-10-readme-and-description.md`. chris widened it to a user-first `README.md` plus a developer-first
+  `DEVELOPMENT.md`. Wrote both, and a pointer in `AGENTS.md`.
+- Caught while writing: the editor has no New and no Insert (`docs/bbq/2026-11-10-rung-3-first-editor.md`), so the README
+  says plainly that a page cannot yet be designed from scratch.
+- Session-start proof: `make build-proof` → `BUILD head=9dc81dd dirty=no rebuilt=0`.
+- Not done: `gh repo edit --description "Design pixel-perfect e-ink page templates for Supernote tablets" --add-topic
+  supernote --add-topic e-ink --add-topic vector-graphics --add-topic design-tool --add-topic templates --add-topic
+  wallpaper` → `HTTP 403: Resource not accessible by personal access token`. The token (a fine-grained one) lacks
+  repository administration write. Owed to chris: run that command with a token that can, or set it on the repo's page.
+- Not run: the `cargo run` and `make` commands the new files name were not re-run this session (docs only); they are
+  copied from `Makefile`, `Cargo.toml` and `docs/calibration.md`.

@@ -15,6 +15,7 @@ None yet. The owner sets one; agents do not invent it.
 - `docs/STATUS-archive.md` — finished entries moved out of `STATUS.md`, word for word.
 - `docs/decisions/` — decision records (ADRs). Its `README.md` names the format once one is chosen.
 - `docs/rules/task-homes.md` — each scheduled task and its one home account.
+- `README.md` — what quadrule is, for users. `DEVELOPMENT.md` — setup, code layout and how to contribute. Keep both true when the project changes.
 - `Makefile` — shortcuts for building, testing and review; `make` lists them, `make check-all` is what CI runs.
 - `napkins/` — rough design specs (the spec is `napkins/quadrule-spec.md`).
 

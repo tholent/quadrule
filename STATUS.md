@@ -83,6 +83,11 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).
 
+- A `README.md` for users (pre-alpha banner, what works today, e-ink features, how to run it) and a `DEVELOPMENT.md`
+  for developers (setup, commands, crate map, contributing, calibration) are on `main` (`README.md`, `DEVELOPMENT.md`,
+  record `docs/bbq/2026-11-10-readme-and-description.md`). The GitHub description and topics are NOT set yet: the
+  `gh` token got HTTP 403 on `gh repo edit` (`docs/STATUS-log.md`).
+
 ## Next
 
 - chris's look at rung 4b (record `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`, Q11); rung 4 is done when he approves it.
@@ -113,6 +118,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-10: rung 4b built (Sonnet 5.5, high): point snap, smart guides, equal spacing, copy and paste; measured on the
   Pi; waits for chris's look (`docs/STATUS-log.md`).
 - 2026-11-10: Makefile for testing and review (bbq, 4 questions), built (`docs/STATUS-log.md`).
+- 2026-11-10: README.md and DEVELOPMENT.md written (bbq, 12 questions); GitHub description blocked by a 403 (`docs/STATUS-log.md`).
 
 ## How this file is kept
 
