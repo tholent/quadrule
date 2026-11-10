@@ -7,8 +7,11 @@ app-title = quadrule
 app-window-title = { $name } — quadrule
 app-window-title-dirty = ● { $name } — quadrule
 app-sample-name = Sample page
+app-untitled-name = Untitled
 
 # Toolbar.
+app-new = New…
+app-new-tip = New page (Ctrl+N)
 app-open = Open…
 app-save = Save
 app-save-as = Save As…
@@ -193,3 +196,16 @@ app-recover-title = Recover unsaved work?
 app-recover-body = quadrule closed before “{ $name }” was saved. Restore the changes it had?
 app-recover-restore = Restore
 app-recover-discard = Discard
+
+# New dialog (rung 5 bbq, Defaulted "New dialog fields").
+new-heading = New page
+new-title = Title
+new-default-title = Untitled
+new-rhythm = Rhythm
+new-create = Create
+new-rhythm-handwriting = Handwriting, 6 mm
+new-rhythm-narrow = Narrow ruled, 1/4 in (6.35 mm)
+new-rhythm-college = College ruled, 9/32 in (7.14 mm)
+new-rhythm-wide = Wide ruled, 11/32 in (8.73 mm)
+new-rhythm-grid-5mm = 5 mm grid
+new-rhythm-grid-quarter-inch = 1/4 in grid (6.35 mm)

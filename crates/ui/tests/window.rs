@@ -696,3 +696,44 @@ fn copy_cut_and_paste_keys() {
     );
     assert!(ok);
 }
+
+#[test]
+fn new_dialog_makes_a_blank_page_and_asks_before_replacing_changes() {
+    // Rung 5 bbq, Defaulted "New: where and what it replaces": New… (or Ctrl+N) shows a dialog;
+    // Create opens a blank page; with unsaved changes the unsaved prompt comes first.
+    let mut h = harness();
+    h.get_all_by_label("New…").next().unwrap().click();
+    h.run();
+    let dialog = h.query_by_label("New page").is_some() && h.state().ui.new_dialog_open();
+    h.get_by_label("Create").click();
+    h.run();
+    let opened = h.state().ui.viewer.open.as_ref().is_some_and(|o| {
+        o.source == quadrule_ui::Source::Untitled && o.doc.layers[0].objects.is_empty()
+    }) && !h.state().ui.new_dialog_open();
+    let title = h.state().ui.window_title() == "Untitled — quadrule";
+    // Make a change, then Ctrl+N and Create: the unsaved prompt shows and nothing is replaced yet.
+    h.state_mut()
+        .ui
+        .viewer
+        .edit(
+            quadrule_model::edit::Command::SetUnits(quadrule_model::Unit::In),
+            None,
+        )
+        .unwrap();
+    h.run();
+    h.key_combination_modifiers(Modifiers::COMMAND, &[Key::N]);
+    h.run();
+    let again = h.state().ui.new_dialog_open();
+    h.get_by_label("Create").click();
+    h.run();
+    let prompt = h.state().ui.prompt_open() && h.query_by_label("Save changes?").is_some();
+    h.get_by_label("Don’t save").click();
+    h.run();
+    let replaced = h.state().ui.viewer.doc().unwrap().units == quadrule_model::Unit::Mm;
+    let ok = dialog && opened && title && again && prompt && replaced;
+    println!(
+        "CHECK crate=ui name=window_new_dialog result={} dialog_shows={dialog} create_opens_untitled={opened} title_bar={title} ctrl_n_shows_dialog={again} unsaved_prompt_first={prompt} replaced_after_discard={replaced}",
+        pass(ok)
+    );
+    assert!(ok);
+}

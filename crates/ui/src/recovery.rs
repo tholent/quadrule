@@ -38,8 +38,12 @@ pub struct Recovery {
 /// The note beside a recovery file.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct Note {
-    /// The file the document belongs to; `None` for the sample page (never saved).
+    /// The file the document belongs to; `None` for the sample page and a new document (never
+    /// saved).
     source: Option<PathBuf>,
+    /// A new document from File → New, as against the sample page (rung 5).
+    #[serde(default)]
+    untitled: bool,
 }
 
 /// A recovery file found on start.
@@ -67,6 +71,7 @@ impl Recovery {
     pub fn key(source: &Source) -> String {
         match source {
             Source::Sample => "sample".into(),
+            Source::Untitled => "untitled".into(),
             Source::File(p) => {
                 let hash = quadrule_format::sha256_hex(p.to_string_lossy().as_bytes());
                 format!("file-{}", &hash[..16])
@@ -96,8 +101,9 @@ impl Recovery {
         let note = Note {
             source: match &source {
                 Source::File(p) => Some(p.clone()),
-                Source::Sample => None,
+                Source::Sample | Source::Untitled => None,
             },
+            untitled: matches!(source, Source::Untitled),
         };
         let note = serde_json::to_vec_pretty(&note).map_err(|e| e.to_string())?;
         crate::editor::write_replacing(&json, &note).map_err(|e| e.to_string())?;
@@ -125,7 +131,14 @@ impl Recovery {
                 let note: Note = serde_json::from_slice(&std::fs::read(&json).ok()?).ok()?;
                 let quad = json.with_extension("quad");
                 quad.exists().then(|| Recovered {
-                    source: note.source.map_or(Source::Sample, Source::File),
+                    source: note.source.map_or(
+                        if note.untitled {
+                            Source::Untitled
+                        } else {
+                            Source::Sample
+                        },
+                        Source::File,
+                    ),
                     quad,
                 })
             })

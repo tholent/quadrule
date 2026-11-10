@@ -22,6 +22,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod newpage;
 pub mod snap;
 pub mod units;
 

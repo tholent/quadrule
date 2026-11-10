@@ -46,6 +46,8 @@ pub const TOOLBARS_SHOWN: [Toolbar; 3] = [Toolbar::Left, Toolbar::Right, Toolbar
 pub enum Source {
     /// The rung 1 sample page, built in memory.
     Sample,
+    /// A new document from File → New, not saved yet (rung 5).
+    Untitled,
     /// A `.quad` file.
     File(PathBuf),
 }
@@ -210,6 +212,17 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens a new blank document from the New dialog's choices (rung 5): the chosen device is
+    /// the one shown. It has no file until Save, and no unsaved changes until it is edited.
+    pub fn open_new(&mut self, spec: &quadrule_layout::newpage::NewPage) -> Result<(), String> {
+        let doc =
+            quadrule_layout::newpage::new_document(spec, &quadrule_model::blank::now_rfc3339())
+                .map_err(|e| e.to_string())?;
+        self.set_open(Source::Untitled, doc, BTreeMap::new(), None);
+        self.profile_id = spec.device_id.clone();
+        Ok(())
+    }
+
     /// Opens a `.quad` file from disk. On failure the open document stays as it was and the
     /// notice says why.
     pub fn open_path(&mut self, path: &Path) -> Result<(), String> {
@@ -328,7 +341,7 @@ impl Viewer {
         }
         match &o.source {
             Source::File(p) => p.file_stem().and_then(|s| s.to_str()),
-            Source::Sample => None,
+            Source::Sample | Source::Untitled => None,
         }
     }
 

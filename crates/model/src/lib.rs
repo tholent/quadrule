@@ -22,6 +22,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod blank;
 pub mod clipboard;
 pub mod edit;
 pub mod outlines;

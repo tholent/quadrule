@@ -36,9 +36,11 @@ use egui::{
     pos2, vec2,
 };
 use quadrule_i18n::{Message, Strings};
+use quadrule_layout::newpage::NewPage;
 use quadrule_layout::snap::{Handle, Mark, PxRect, SnapKind, union_fill, union_outline};
 use quadrule_layout::units::Axis;
 use quadrule_lint::Toolbar;
+use quadrule_model::blank::RhythmPreset;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -65,6 +67,8 @@ pub enum After {
     OpenSample,
     /// Open this file (dropped on the window).
     OpenPath(PathBuf),
+    /// Make a new blank document from the New dialog's choices (rung 5).
+    NewPage(NewPage),
     /// Close the window.
     Close,
 }
@@ -166,6 +170,10 @@ pub struct ViewerUi {
     pub(crate) link_rhythm: bool,
     /// Waiting on the unsaved-changes prompt.
     pending: Option<After>,
+    /// The New dialog, while it shows (rung 5).
+    new_dialog: Option<NewPage>,
+    /// The device the New dialog starts on: the last one picked (the app keeps it between runs).
+    new_device: String,
     /// Recovery files found on start, offered one at a time.
     offers: Vec<Recovered>,
     autosave: Autosave,
@@ -206,6 +214,8 @@ impl ViewerUi {
             link_margins: true,
             link_rhythm: true,
             pending: None,
+            new_dialog: None,
+            new_device: quadrule_model::sample::MANTA_ID.to_string(),
             offers: Vec::new(),
             autosave: Autosave::default(),
             was_focused: true,
@@ -257,6 +267,7 @@ impl ViewerUi {
                 }
             });
         self.ruler_window(&ctx);
+        self.new_dialog(&ctx, &mut requests);
         self.unsaved_prompt(&ctx, &mut requests);
         self.recovery_prompt(&ctx);
         requests
@@ -279,7 +290,7 @@ impl ViewerUi {
     /// is Cmd on macOS. While a text field has focus, only Save and Save As are taken; the field
     /// keeps its own undo, arrows and Delete.
     fn shortcuts(&mut self, ctx: &egui::Context, requests: &mut Vec<Request>) {
-        if self.viewer.open.is_none() || self.pending.is_some() {
+        if self.pending.is_some() || self.new_dialog.is_some() {
             return;
         }
         let cmd = Modifiers::COMMAND;
@@ -287,6 +298,15 @@ impl ViewerUi {
         let key = |m: Modifiers, k: Key| {
             ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(m, k)))
         };
+        // New works on the empty start screen too (rung 5 bbq, Defaulted "New: where and what it
+        // replaces"), but not in the middle of a drag.
+        if !self.viewer.dragging() && key(cmd, Key::N) {
+            self.open_new_dialog();
+            return;
+        }
+        if self.viewer.open.is_none() {
+            return;
+        }
         // While an object is being dragged, only Escape counts: it drops the drag (rung 4 bbq,
         // Defaulted "One drag, one undo step").
         if self.viewer.dragging() {
@@ -437,6 +457,12 @@ impl ViewerUi {
                 self.after_open();
                 Vec::new()
             }
+            After::NewPage(spec) => {
+                if self.viewer.open_new(&spec).is_ok() {
+                    self.after_open();
+                }
+                Vec::new()
+            }
             After::OpenPath(p) => {
                 if self.viewer.open_path(&p).is_ok() {
                     self.after_open();
@@ -509,6 +535,106 @@ impl ViewerUi {
         }
     }
 
+    /// Shows the New dialog, on the device picked last time and the handwriting rhythm.
+    pub fn open_new_dialog(&mut self) {
+        self.new_dialog = Some(NewPage {
+            title: self.t("new-default-title"),
+            device_id: self.new_device.clone(),
+            rhythm: RhythmPreset::Handwriting,
+        });
+    }
+
+    /// The device the New dialog starts on.
+    pub fn new_device(&self) -> &str {
+        &self.new_device
+    }
+
+    /// Sets the device the New dialog starts on (the app's remembered choice). A device this
+    /// build does not know is ignored.
+    pub fn set_new_device(&mut self, id: &str) {
+        if quadrule_profiles::builtin(id).is_ok() {
+            self.new_device = id.to_string();
+        }
+    }
+
+    /// Whether the New dialog is showing.
+    pub fn new_dialog_open(&self) -> bool {
+        self.new_dialog.is_some()
+    }
+
+    /// The New dialog (rung 5 bbq, Defaulted "New dialog fields"): device, rhythm and title.
+    /// Create asks to leave unsaved changes first, then opens the blank page.
+    fn new_dialog(&mut self, ctx: &egui::Context, requests: &mut Vec<Request>) {
+        let Some(mut spec) = self.new_dialog.take() else {
+            return;
+        };
+        if self.pending.is_some() {
+            self.new_dialog = Some(spec);
+            return;
+        }
+        let mut create = false;
+        let modal = egui::Modal::new(egui::Id::unique("new-page")).show(ctx, |ui| {
+            ui.set_width(320.0);
+            ui.heading(self.t("new-heading"));
+            ui.add_space(8.0);
+            egui::Grid::new("new-fields").num_columns(2).show(ui, |ui| {
+                // Each control is named for screen readers by the label beside it.
+                let label = ui.label(self.t("app-device"));
+                egui::ComboBox::from_id_salt("new-device")
+                    .selected_text(device_name(&spec.device_id))
+                    .show_ui(ui, |ui| {
+                        for id in quadrule_profiles::builtin_ids() {
+                            ui.selectable_value(
+                                &mut spec.device_id,
+                                id.to_string(),
+                                device_name(id),
+                            );
+                        }
+                    })
+                    .response
+                    .labelled_by(label.id);
+                ui.end_row();
+                let label = ui.label(self.t("new-rhythm"));
+                egui::ComboBox::from_id_salt("new-rhythm")
+                    .selected_text(self.t(spec.rhythm.message_id()))
+                    .show_ui(ui, |ui| {
+                        for preset in RhythmPreset::ALL {
+                            ui.selectable_value(
+                                &mut spec.rhythm,
+                                preset,
+                                self.t(preset.message_id()),
+                            );
+                        }
+                    })
+                    .response
+                    .labelled_by(label.id);
+                ui.end_row();
+                let label = ui.label(self.t("new-title"));
+                ui.add(egui::TextEdit::singleline(&mut spec.title))
+                    .labelled_by(label.id);
+                ui.end_row();
+            });
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                if ui.button(self.t("new-create")).clicked() {
+                    create = true;
+                }
+                if ui.button(self.t("app-cancel")).clicked() {
+                    ui.close();
+                }
+            });
+        });
+        if create {
+            if spec.title.trim().is_empty() {
+                spec.title = self.t("new-default-title");
+            }
+            self.new_device = spec.device_id.clone();
+            requests.extend(self.guard(After::NewPage(spec)));
+        } else if !modal.should_close() {
+            self.new_dialog = Some(spec);
+        }
+    }
+
     /// Looks for recovery files left by a crash and offers each back (napkin §5.6).
     pub fn offer_recovery(&mut self) {
         if let Some(rec) = &self.recovery {
@@ -534,6 +660,7 @@ impl ViewerUi {
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_default(),
             Source::Sample => self.t("app-sample-name"),
+            Source::Untitled => self.t("app-untitled-name"),
         };
         let mut choice = None;
         egui::Modal::new(egui::Id::unique("recover")).show(ctx, |ui| {
@@ -611,6 +738,7 @@ impl ViewerUi {
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_default(),
             Some(Source::Sample) => self.t("app-sample-name"),
+            Some(Source::Untitled) => self.t("app-untitled-name"),
             None => String::new(),
         }
     }
@@ -631,6 +759,13 @@ impl ViewerUi {
 
     fn toolbar(&mut self, ui: &mut egui::Ui, requests: &mut Vec<Request>) {
         ui.horizontal_wrapped(|ui| {
+            if ui
+                .button(self.t("app-new"))
+                .on_hover_text(self.t("app-new-tip"))
+                .clicked()
+            {
+                self.open_new_dialog();
+            }
             if ui.button(self.t("app-open")).clicked() {
                 requests.extend(self.guard(After::OpenDialog));
             }
@@ -905,6 +1040,9 @@ impl ViewerUi {
             ui.add_space(ui.available_height() * 0.3);
             ui.heading(self.t("app-empty-title"));
             ui.add_space(12.0);
+            if ui.button(self.t("app-new")).clicked() {
+                self.open_new_dialog();
+            }
             if ui.button(self.t("app-open")).clicked() {
                 requests.extend(self.guard(After::OpenDialog));
             }
@@ -1706,6 +1844,13 @@ impl ViewerUi {
 
 /// The backdrop round the page (napkin §14: it follows the theme; the page never does).
 /// The mouse cursor over a handle.
+/// A built-in device's name for the pickers; its id when it is not one.
+fn device_name(id: &str) -> String {
+    quadrule_profiles::builtin(id)
+        .map(|p| p.display_name)
+        .unwrap_or_else(|_| id.to_string())
+}
+
 fn handle_cursor(h: HandleHit) -> CursorIcon {
     match h {
         HandleHit::Box(Handle::NW | Handle::SE) => CursorIcon::ResizeNwSe,

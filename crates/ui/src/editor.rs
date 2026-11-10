@@ -514,7 +514,7 @@ impl Viewer {
     pub fn file_path(&self) -> Option<&Path> {
         match &self.open.as_ref()?.source {
             Source::File(p) => Some(p),
-            Source::Sample => None,
+            Source::Sample | Source::Untitled => None,
         }
     }
 }

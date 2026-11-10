@@ -47,6 +47,8 @@ const KEY_SNAP_POINTS: &str = "snap_points";
 const KEY_SNAP_SMART: &str = "snap_smart_guides";
 const KEY_SNAP_EQUAL: &str = "snap_equal_spacing";
 const KEY_RHYTHM_OVERLAY: &str = "show_rhythm_overlay";
+/// The device the New dialog starts on: the last one picked (rung 5).
+const KEY_NEW_DEVICE: &str = "new_device";
 
 struct App {
     ui: ViewerUi,
@@ -84,6 +86,9 @@ impl App {
                 eframe::get_value(storage, KEY_SNAP_EQUAL).unwrap_or(snap.equal_spacing);
             ui.viewer.show_rhythm =
                 eframe::get_value(storage, KEY_RHYTHM_OVERLAY).unwrap_or(ui.viewer.show_rhythm);
+            if let Some(id) = eframe::get_value::<String>(storage, KEY_NEW_DEVICE) {
+                ui.set_new_device(&id);
+            }
         }
         cc.egui_ctx.set_theme(ui.theme);
         // Recovery files live in the user's data folder (rung 3 bbq, Defaulted "Autosave"),
@@ -203,6 +208,7 @@ impl eframe::App for App {
         eframe::set_value(storage, KEY_SNAP_SMART, &v.snap.smart_guides);
         eframe::set_value(storage, KEY_SNAP_EQUAL, &v.snap.equal_spacing);
         eframe::set_value(storage, KEY_RHYTHM_OVERLAY, &v.show_rhythm);
+        eframe::set_value(storage, KEY_NEW_DEVICE, &self.ui.new_device().to_string());
     }
 }
 
