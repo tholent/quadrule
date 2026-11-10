@@ -516,3 +516,16 @@ session. Built in this order, on `main`:
   repository administration write. Owed to chris: run that command with a token that can, or set it on the repo's page.
 - Not run: the `cargo run` and `make` commands the new files name were not re-run this session (docs only); they are
   copied from `Makefile`, `Cargo.toml` and `docs/calibration.md`.
+
+## 2026-11-10 — README badges and a coverage workflow (Sonnet 5.5)
+
+- chris asked for badges: pitmaster (his URL), testing, linting, fuzzing, total coverage. Rulings: one CI badge for
+  fmt, clippy and tests together (not a CI split, which would build twice); coverage self-hosted, no outside service
+  (a badge file on a `badges` branch); badges in a row under the title.
+- Added `.github/workflows/coverage.yml` and `.github/scripts/publish-badge.sh`; badges in `README.md`; a CI paragraph in
+  `DEVELOPMENT.md`.
+- Tried: `publish-badge.sh` against a local bare repository (first publish creates the branch, an unchanged badge makes no
+  commit, a new percentage commits, a summary without coverage exits 1); the workflow file parses as YAML.
+- Not tried: the workflow itself (`cargo install cargo-llvm-cov`, the tests under instrumentation, the push of the
+  `badges` branch with the built-in token) can only be tried on GitHub. Until it has run once the coverage badge shows an
+  error. The pitmaster badge links to `AGENTS.md`; chris gave only the image URL, so the link is my choice.

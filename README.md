@@ -1,5 +1,10 @@
 # Quadrule
 
+[![AI framework: pitmaster](https://img.shields.io/badge/AI_framework-pitmaster-yellow)](https://github.com/tholent/quadrule/blob/main/AGENTS.md)
+[![CI: fmt, clippy, tests](https://github.com/tholent/quadrule/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tholent/quadrule/actions/workflows/ci.yml)
+[![Fuzz](https://github.com/tholent/quadrule/actions/workflows/fuzz.yml/badge.svg?branch=main)](https://github.com/tholent/quadrule/actions/workflows/fuzz.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Ftholent%2Fquadrule%2Fbadges%2Fcoverage.json)](https://github.com/tholent/quadrule/actions/workflows/coverage.yml)
+
 Design pixel-perfect e-ink page templates for Supernote tablets.
 
 Quadrule is a free, open-source vector design tool. You draw lines, grids, boxes and text on a page, and it exports

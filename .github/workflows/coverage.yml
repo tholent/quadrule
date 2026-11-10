@@ -1,0 +1,65 @@
+# Total code coverage for the README badge. Runs the whole workspace's tests under cargo-llvm-cov on Linux,
+# then publishes the line-coverage percentage as a shields.io endpoint file (coverage.json) on the `badges`
+# branch (.github/scripts/publish-badge.sh). No outside service and no secrets: it uses the built-in token.
+# Runs on pushes to main that change what CI tests (same paths as ci.yml), and by hand.
+name: Coverage
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".cargo/**"
+      - "docs/device-measurements/**/*.png"
+      - ".github/workflows/coverage.yml"
+      - ".github/scripts/publish-badge.sh"
+  workflow_dispatch:
+
+# One at a time, so two runs never push the badge branch together; a newer run waits rather than cancelling.
+concurrency:
+  group: coverage
+  cancel-in-progress: false
+
+# Writing the badges branch needs this; everything else stays read-only.
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: never
+
+jobs:
+  coverage:
+    name: coverage (whole workspace)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      # rust-toolchain.toml pins Rust 1.99.1; llvm-tools-preview is what cargo-llvm-cov reads counters with.
+      - name: Toolchain
+        run: |
+          rustup toolchain install
+          rustup component add llvm-tools-preview
+          rustc --version
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo-llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+
+      - name: Measure
+        run: cargo llvm-cov --workspace --json --summary-only --output-path coverage-summary.json
+
+      - name: Show the totals
+        run: |
+          python3 -c 'import json; t = json.load(open("coverage-summary.json"))["data"][0]["totals"]; print({k: round(t[k]["percent"], 1) for k in ("lines", "functions", "regions")})'
+
+      - name: Publish the badge
+        run: .github/scripts/publish-badge.sh coverage-summary.json "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

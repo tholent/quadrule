@@ -88,6 +88,10 @@ The project's live state. Update it when work lands. Every claim cites at least 
   record `docs/bbq/2026-11-10-readme-and-description.md`). The GitHub description and topics are NOT set yet: the
   `gh` token got HTTP 403 on `gh repo edit` (`docs/STATUS-log.md`).
 
+- README badges: AI framework pitmaster, CI (fmt, clippy, tests), Fuzz, and coverage. Coverage is new: `.github/workflows/coverage.yml`
+  runs `cargo llvm-cov` on the workspace and `.github/scripts/publish-badge.sh` writes the percentage to a
+  `badges` branch for shields.io to read. It has not run on GitHub yet (`docs/STATUS-log.md`).
+
 ## Next
 
 - chris's look at rung 4b (record `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`, Q11); rung 4 is done when he approves it.

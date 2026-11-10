@@ -50,6 +50,11 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
+CI is `.github/workflows/ci.yml` (rustfmt, clippy and tests, on all three), `fuzz.yml` (a 60-second fuzz of the
+`.quad` reader) and `coverage.yml` (line coverage of the whole workspace with `cargo-llvm-cov`, published as the
+README's coverage badge through a `badges` branch by `.github/scripts/publish-badge.sh`). The badges show the latest
+run on `main` of each; the workflows run only when files they test change.
+
 Tests print one `CHECK` line per check, so a result reads as a line, not prose. CI runs on Linux, macOS and
 Windows, and a change passes only when all three agree.
 
