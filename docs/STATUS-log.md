@@ -646,3 +646,7 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   mid-draw; double-click a tool to keep it; the Text tab taking the cursor after a text box; undo after a draw. Open
   questions still open from before, not part of this rung: the GitHub description and topics (`gh repo edit`, HTTP
   403), and "Scale vs pixel-locked rhythm on A5 X" (`docs/STATUS-debt.md`).
+- Correction, same day: the rung 5 entry above lists the GitHub description and topics as still open. They are not:
+  chris set them by hand (the entry at "Later the same session"), and said again: "the description and topics are both
+  set and should be considered closed". Closed; do not ask again. The only question still open from before is "Scale
+  vs pixel-locked rhythm on A5 X" (`docs/STATUS-debt.md`).
