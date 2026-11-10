@@ -331,3 +331,15 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   understand it. leave the label gray issue open until v1.1". Rung 3 is done: look approved; `u` and Shift+arrow
   stay on the rhythm unit as the device on screen resolves it; the 153/157 Label gray question is open until v1.1,
   so it is not asked again at session starts before then, and L04 waits with it (`docs/STATUS-debt.md`).
+
+## 2026-11-10 — rung 4 planned
+
+- Session start (Opus 5.5, high): clean tree at HEAD `6d43de6`; `CARGO_BUILD_JOBS=2 cargo build --workspace`
+  rebuilt `quadrule-xtask` and `quadrule-app`, then `Finished`, so the build on disk was behind HEAD and now matches
+  it. The Label gray question was not asked: open until v1.1 (chris, 2026-11-10).
+- Rung 4 planned in a bbq, 12 questions, record `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`: all six snapping
+  helpers of napkin §6.2 (recommended five), drag to move and resize, marquee, layer drag, Alt-drag duplicate, copy
+  and paste as marked JSON text on the system clipboard, rhythm subdivisions (file format 0.4) and the rhythm
+  overlay; snapping in the device on screen. No flag (overruled; waives the AGENTS.md flag rule for rung 4 only).
+  Split 4a / 4b with chris's look check after each; dragging must stay under 50 ms a frame on the Pi (release
+  build). Lead for the build: Sonnet 5.5 at high effort (tier-select). About 4–6 sessions.
