@@ -24,8 +24,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   safe zones, and exports PNGs named `{title}_{manta|nomad}_{w}x{h}.png` (`crates/ui/`, `crates/app/`; record
   `docs/bbq/2026-11-09-rung-2-viewer.md`). It is an opt-in build: plain `cargo build`/`cargo test` leave it out
   (`Cargo.toml` `default-members`); CI builds and tests it on three OSes.
-- Rung 3, the first editor, is built on `main`; chris: "the window looks really good so far", full approval still
-  to come (record `docs/bbq/2026-11-10-rung-3-first-editor.md`): click and Shift-click to select, a layers panel
+- Rung 3, the first editor, is on `main`, look approved by chris 2026-11-10 ("I approve of the look") (record `docs/bbq/2026-11-10-rung-3-first-editor.md`): click and Shift-click to select, a layers panel
   under the inspector on the right (eye, lock, rename, Move up/down; the left side is kept for a future tools bar),
   the inspector's tabs (Page; Arrange, Style, Text, Constraints; Lint) with one length
   field reading mm, pt, px, in, %, u; arrows nudge 1 device pixel, Shift+arrows one rhythm unit; Delete, Ctrl+D;
@@ -50,10 +49,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Next
 
-- Rung 3 waits on chris's look check of the window (`docs/bbq/2026-11-10-rung-3-first-editor.md`, Kickoff): try
-  `cargo run --release -p quadrule-app -- [file.quad]` (add `--canvas chip` for the chip canvas). Taste calls
-  made for it are listed in `docs/STATUS-log.md` (2026-11-10, rung 3 built). Then rung 4: dragging and snapping.
-- Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on an open question;
+- Rung 4, dragging and snapping, is chris's to plan (rung 3 bbq Q5): drag to move and resize with snapping, with
+  marquee select and drag-to-reorder in the layers panel (`docs/bbq/2026-11-10-rung-3-first-editor.md`).
+- Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
 ## Known debt
@@ -72,7 +70,8 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
   linter started; fuzzing (`docs/STATUS-log.md`).
 - 2026-11-09: rung 2 planned (bbq, 12 questions) and built: the viewer window; spike R15 paid (`docs/STATUS-log.md`).
 - 2026-11-10: rung 3 planned (bbq, 12 questions): the first editor (`docs/STATUS-log.md`).
-- 2026-11-10: rung 3 built (steps 1–9), chip canvas measured on the Pi; look waits on chris (`docs/STATUS-log.md`).
+- 2026-11-10: rung 3 built (steps 1–9), chip canvas measured on the Pi; layers moved right; look approved
+  (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

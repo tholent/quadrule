@@ -110,3 +110,16 @@ Constraints, Lint); nudge, Delete, Duplicate; Save, Save As and the unsaved-chan
 then the graphics-chip canvas toggle with its fallback, measured on the Pi's display. Keep the export goldens
 unchanged. Show chris the window before calling the look done. Update `STATUS.md`, `docs/STATUS-log.md` and
 `docs/STATUS-debt.md` at the end of each session.
+
+## After the build (2026-11-10)
+
+Added after the build; the rules above are unchanged. chris's answers, word for word:
+- The look, first try: "the window looks really good so far. One thing I would like is to move the layers pane to
+  the bottom of the info pane on the right. I would like the left hand side to be used for a toolbar in the
+  future." Built: the layers sit in a resizable part at the bottom of the right panel; the left side is empty.
+  Replaces Defaulted "Layers panel" ("the left sidebar of napkin §6.1 arrives now") on where the panel goes.
+- The look, after the move: "the right pane looks good now, I approve of the look."
+- `u` in fields and Shift+arrow use the rhythm unit as the device on screen resolves it (a choice made inside
+  Q10): "I approve the u choice, as far as I understand it."
+- The Label gray 153 vs dark grey pen 157 (asked again at session start): "leave the label gray issue open until
+  v1.1".

@@ -327,3 +327,7 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   instead with `grep -o 'CHECK crate=[^ ]* name=[^ ]*' | wc -l` → 112; `grep 'CHECK crate=' | grep -c
   result=fail` → 0.
 - CI run 42822926671 on `e9e11ec` (layers under the inspector; closing fix) passed on Linux, macOS and Windows.
+- chris, word for word: "the right pane looks good now, I approve of the look. I approve the u choice, as far as I
+  understand it. leave the label gray issue open until v1.1". Rung 3 is done: look approved; `u` and Shift+arrow
+  stay on the rhythm unit as the device on screen resolves it; the 153/157 Label gray question is open until v1.1,
+  so it is not asked again at session starts before then, and L04 waits with it (`docs/STATUS-debt.md`).
