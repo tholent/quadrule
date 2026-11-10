@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: "drafted 2026-11-10 from the project's records (backlog sweep, no rounds, chris's choice); awaiting ratification"
+status: accepted
+status-note: "ratified by chris 2026-11-10 (Ratify, in his review of the pending ADRs)"
+ratified-by: chris
+ratified-on: "2026-11-10"
 owner: chris
 kind: process
 built: n/a
@@ -52,3 +54,6 @@ amends: nothing
 
 - 2026-11-10: drafted from `AGENTS.md`, `docs/decisions/README.md` and the records cited above, in a backlog sweep
   chris asked for ("catch the backlog of decisions I have up until this point").
+- 2026-11-10: ratified by chris (answer "Ratify" to "ADR-004 … Ratify?", in his review of the pending ADRs). Prior header
+  values: status `proposed`, status-note `drafted 2026-11-10 from the project's records (backlog sweep, no
+  rounds, chris's choice); awaiting ratification`.

@@ -180,8 +180,9 @@ impl DragClock {
     /// The line a drag frame must stay under on the Pi, in milliseconds (20 frames a second).
     pub const BUDGET_MS: f64 = 50.0;
 
-    /// The share of frames (after the first) that must be under the line: the 95th percentile.
-    pub const PERCENTILE: f64 = 95.0;
+    /// The share of frames (after the first) that must be under the line: the 90th percentile
+    /// (ADR-009, ratified by chris 2026-11-10).
+    pub const PERCENTILE: f64 = 90.0;
 
     /// Adds one frame's time.
     pub fn record(&mut self, ms: f64) {

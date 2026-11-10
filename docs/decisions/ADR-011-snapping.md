@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: "drafted 2026-11-10 from the project's records (backlog sweep, no rounds, chris's choice); awaiting ratification"
+status: accepted
+status-note: "ratified by chris 2026-11-10 (Ratify both, for ADR-009 and ADR-011, after answering their asks)"
+ratified-by: chris
+ratified-on: "2026-11-10"
 owner: chris
 kind: design
 built: partial
@@ -46,9 +48,16 @@ consulted: Claude (Opus 5.5) proposed the reach and the tie order in the rung 4 
 
 ## Asks left open
 
-1. The 6-point reach and the tie order were the agent's: keep them?
-2. "Rhythm" includes subdivisions and whole-step sizes, and the half pixel is a device pixel: is that what you meant?
+1. Answered 2026-11-10: the 6-point reach and the tie order stay (chris: "Keep 6 pt and the order").
+2. Answered 2026-11-10: "rhythm" includes subdivisions and whole-step sizes, and the half pixel is a device pixel
+   (chris: "Yes, as built").
 
 ## History
 
 - 2026-11-10: drafted from the records cited above, in chris's backlog sweep.
+- 2026-11-10, before ratification, in chris's review of the pending ADRs: asked to keep the 6-point reach and the tie
+  order, chris answered "Keep 6 pt and the order"; asked whether "rhythm" and "half a pixel" meant what was built, chris
+  answered "Yes, as built". The Asks left open now record the answers; nothing else changed.
+- 2026-11-10: ratified by chris (answer "Ratify both" to "Ratify ADR-009 … and ADR-011 … with your answers above?").
+  Prior header values: status `proposed`, status-note `drafted 2026-11-10 from the project's records (backlog sweep, no
+  rounds, chris's choice); awaiting ratification`.

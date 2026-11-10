@@ -100,12 +100,12 @@ fn screen_list_matches_the_export_at_one_to_one_and_keeps_thin_lines() {
 }
 
 #[test]
-fn drag_frames_are_judged_by_the_95th_percentile() {
+fn drag_frames_are_judged_by_the_90th_percentile() {
     use quadrule_ui::DragClock;
-    // chris, 2026-11-10: "let's use a percentile". The first frame is not judged; of the 100 frames
-    // after it, 94 take 30 ms and 6 take 60 ms: the 95th percentile (nearest rank, the 95th
-    // slowest of 100 sorted) is 60, so it misses; with 5 slow ones it is 30, so it passes, though
-    // the worst frame is 60 either way.
+    // chris, 2026-11-10: "let's use a percentile", and 90 (ADR-009). The first frame is not judged;
+    // of the 100 frames after it, 89 take 30 ms and 11 take 60 ms: the 90th percentile (nearest
+    // rank, the 90th of 100 sorted fastest first) is 60, so it misses; with 10 slow ones it is 30,
+    // so it passes, though the worst frame is 60 either way.
     let clock = |slow: usize| {
         let mut c = DragClock::default();
         c.record(400.0);
@@ -114,22 +114,23 @@ fn drag_frames_are_judged_by_the_95th_percentile() {
         }
         c
     };
-    let (six, five) = (clock(6), clock(5));
-    let ok = six.percentile_ms() == 60.0
-        && !six.within_budget()
-        && five.percentile_ms() == 30.0
-        && five.within_budget()
-        && five.worst_ms == 60.0
-        && five.over_budget == 5
-        && five.first_ms == 400.0
+    let (eleven, ten) = (clock(11), clock(10));
+    let ok = DragClock::PERCENTILE == 90.0
+        && eleven.percentile_ms() == 60.0
+        && !eleven.within_budget()
+        && ten.percentile_ms() == 30.0
+        && ten.within_budget()
+        && ten.worst_ms == 60.0
+        && ten.over_budget == 10
+        && ten.first_ms == 400.0
         && DragClock::default().percentile_ms() == 0.0
         && !DragClock::default().within_budget();
     println!(
-        "\nCHECK crate=ui name=drag_clock_percentile result={} p95_six_slow={} p95_five_slow={} worst={}",
+        "\nCHECK crate=ui name=drag_clock_percentile result={} p90_eleven_slow={} p90_ten_slow={} worst={}",
         pass(ok),
-        six.percentile_ms(),
-        five.percentile_ms(),
-        five.worst_ms
+        eleven.percentile_ms(),
+        ten.percentile_ms(),
+        ten.worst_ms
     );
     assert!(ok);
 }

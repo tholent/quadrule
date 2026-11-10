@@ -89,7 +89,7 @@ pixel-locked rhythm on A5 X" (`docs/STATUS-debt.md`).
 - **After drawing (Q10):** back to Select; double-click a tool to keep it (a small mark on the button shows it is
   kept); Escape or V ends it. veto: none expected.
 - **Drawing speed:** not a stop line (Q12). Measure once on the Pi in a release build while dragging out a pattern
-  region at Fit zoom on both canvases, and write the 95th percentile in `docs/STATUS-log.md`. veto: make 50 ms a stop
+  region at Fit zoom on both canvases, and write the 90th percentile in `docs/STATUS-log.md`. veto: make 50 ms a stop
   line again.
 - **File format:** no change expected (New writes the existing fields). If one is needed, stop and say so before
   adding it. veto: none expected.
@@ -121,6 +121,11 @@ with its dialog (device, rhythm preset, title), the blank-document builder and m
 toolbars, with tests; (2) the left tools bar (Select, Line, Text, Pattern) with shortcuts, laid out to take more tools
 later; (3) drawing each kind by drag and by click with rung 4's snapping, one undo step each, back to Select after
 (double-click keeps a tool). Keep the export goldens unchanged; stop and ask chris if any export byte would change.
-Measure drawing once on the Pi in a release build on both canvases and log the 95th percentile. Update `README.md`
+Measure drawing once on the Pi in a release build on both canvases and log the 90th percentile (ADR-009). Update `README.md`
 and `DEVELOPMENT.md`. Show chris the window and stop for his look. Update `STATUS.md`, `docs/STATUS-log.md` and
 `docs/STATUS-debt.md` at the end of each session.
+
+## After the bbq (2026-11-10)
+
+The rules above are unchanged. chris ratified ADR-009 with the 90th percentile in place of the 95th, so the two
+mentions of "95th percentile" in Defaulted "Drawing speed" and in the Kickoff now read "90th".

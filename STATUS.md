@@ -45,8 +45,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   rhythm overlay (light blue, faint) and the snap switches are in the status bar and the Page tab and are kept between runs
   (`crates/app/src/main.rs`). No flag, as chris ruled; export bytes unchanged (`crates/ui/tests/editor.rs`,
   `crates/render/tests/golden/SHA256SUMS`).
-- Drag speed, judged by the 95th percentile of the frames (chris's ruling, 2026-11-10; the 95 is chosen for him to
-  veto): measured on the Pi in a release build with `quadrule --bench-drag` (the sample page's dot grid, Fit zoom):
+- Drag speed is judged by the 90th percentile of the frames, under 50 ms (ADR-009, ratified by chris 2026-11-10; it was
+  the 95th until then, and these numbers were measured at the 95th, so the 90th is no higher): measured on the Pi in a release build with `quadrule --bench-drag` (the sample page's dot grid, Fit zoom):
   export-pixels canvas 95th percentile 25.8–27.1 ms in 6 runs, graphics-chip canvas 31.2–31.5 ms in 3 runs, against the
   50 ms line (`crates/ui/src/canvas.rs`, `docs/STATUS-log.md`, 2026-11-10 rung 4a).
 - The safe-zone overlay has no labels, shows the left, right and top toolbar zones and the footers (not the floating
@@ -98,9 +98,6 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Rung 5, New and Insert, is planned (bbq, 12 questions; record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`):
   File → New with a device and rhythm dialog, and a left tools bar to draw a line, text box or pattern region. To be
   built by a fresh Sonnet 5.5 session at high effort from the record's kickoff.
-- chris to ratify, amend or turn down ADR-004 to ADR-006 and ADR-008 to ADR-013, drafted 2026-11-10 from the
-  records as `proposed` (`docs/decisions/INDEX.md`, record `docs/bbq/2026-11-10-adr-backlog.md`). ADR-007 and ADR-014
-  are ratified.
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -130,7 +127,8 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-10: Makefile for testing and review (bbq, 4 questions), built (`docs/STATUS-log.md`).
 - 2026-11-10: README.md and DEVELOPMENT.md written (bbq, 12 questions); GitHub description blocked by a 403 (`docs/STATUS-log.md`).
 - 2026-11-10: rung 4b approved, rung 4 done; rung 5 planned (bbq, 12 questions): New and Insert (`docs/STATUS-log.md`).
-- 2026-11-10: ADR backlog sweep: ADR-004 to ADR-014 drafted, proposed (`docs/STATUS-log.md`).
+- 2026-11-10: ADR backlog sweep: ADR-004 to ADR-014 drafted and all ratified by chris; drag speed now the 90th
+  percentile (`docs/STATUS-log.md`, `docs/decisions/INDEX.md`).
 
 ## How this file is kept
 

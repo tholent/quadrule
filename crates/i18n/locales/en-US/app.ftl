@@ -133,7 +133,7 @@ app-snap-equal = Equal spacing
 app-gap-size = { $px } px
 app-rhythm-overlay = Rhythm overlay
 app-snapping = Snapping and guides
-app-drag-clock = Drag: { $mean } ms a frame (95th percentile { $p95 } ms, worst { $worst } ms, { $frames } frames)
+app-drag-clock = Drag: { $mean } ms a frame (90th percentile { $p90 } ms, worst { $worst } ms, { $frames } frames)
 app-drop-here = Drop here
 
 app-x = X

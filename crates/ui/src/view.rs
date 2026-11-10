@@ -852,7 +852,7 @@ impl ViewerUi {
                 let c = &self.drag_clock;
                 let msg = Message::new("app-drag-clock")
                     .num("mean", c.mean_ms(), 0)
-                    .num("p95", c.percentile_ms(), 0)
+                    .num("p90", c.percentile_ms(), 0)
                     .num("worst", c.worst_ms, 0)
                     .num("frames", f64::from(c.frames), 0);
                 ui.label(self.strings.format(&msg));
@@ -990,7 +990,7 @@ impl ViewerUi {
                     "fail"
                 };
                 println!(
-                    "\nCHECK crate=ui name=drag_bench result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} p95_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
+                    "\nCHECK crate=ui name=drag_bench result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
                     if cfg!(debug_assertions) {
                         "debug"
                     } else {

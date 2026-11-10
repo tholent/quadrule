@@ -565,3 +565,13 @@ session. Built in this order, on `main`:
   `crates/layout/tests/layout.rs::pattern_shapes_are_centred_in_their_region_and_drawn_whole`; asked "Ratify ADR-014 as
   written?", chris: "Ratify". Napkin §5.2 got a dated note; the debt item "Pattern rule" is paid. No code or export
   bytes changed.
+- chris reviewed the pending ADRs in three rounds and ratified all of them: ADR-004, 005, 006, 008 ("Ratify"); then the
+  asks: percentile "90" (not 95), "Keep 100 ms", "Keep 6 pt and the order", "Yes, as built"; then ADR-009 and ADR-011
+  ("Ratify both"), ADR-010, 012, 013 ("Ratify"). All 14 ADRs are accepted (`docs/decisions/INDEX.md`);
+  `adr-check.py --root . --triggers-from 1` → 14 ADRs, 0 failures.
+- The 90 needed code: `DragClock::PERCENTILE` 95 → 90 (`crates/ui/src/canvas.rs`), the drag-clock label and its Fluent
+  message (`p90`), the bench CHECK line (`p90_ms`), and the test, renamed `drag_frames_are_judged_by_the_90th_percentile`
+  (11 slow frames in 100 miss, 10 pass). Said aloud as more than an ADR review. `cargo test -p quadrule-ui -p
+  quadrule-i18n --no-fail-fast -- --nocapture` → 54 passed, 0 failed, 55 `CHECK` lines, 0 `result=fail`; clippy `-D
+  warnings` on `quadrule-ui` and `cargo fmt --all --check` clean. Export bytes untouched (no render or layout change).
+  The rung 5 record's two "95th" mentions now read "90th", with a dated note.
