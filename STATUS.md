@@ -77,6 +77,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]*
   name=[^ ]*' | wc -l` → 162 `CHECK` lines, 0 with `result=fail`, 157 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
   CI for 4b: see `docs/STATUS-log.md` (`.github/workflows/ci.yml`).
+- A `Makefile` wraps the usual commands: `make` lists them; `make test` prints one `TESTS` line, `make check-all` is what CI
+  runs, `make review` adds the build-matches-HEAD proof and the diff against `origin/main` (`Makefile`,
+  `docs/bbq/2026-11-10-makefile.md`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).
 
@@ -109,6 +112,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
   look approved with two safe-zone changes, built (`docs/STATUS-log.md`).
 - 2026-11-10: rung 4b built (Sonnet 5.5, high): point snap, smart guides, equal spacing, copy and paste; measured on the
   Pi; waits for chris's look (`docs/STATUS-log.md`).
+- 2026-11-10: Makefile for testing and review (bbq, 4 questions), built (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

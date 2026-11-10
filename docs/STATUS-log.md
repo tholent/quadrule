@@ -488,3 +488,16 @@ session. Built in this order, on `main`:
     blue at 90 and 38). The shade is my guess; say if it should go lighter or darker.
   - Checks: 162 `CHECK` lines, 0 `result=fail`, 157 tests passed; clippy and fmt clean.
 
+
+## 2026-11-10 — Makefile (Sonnet 5.5)
+
+- chris asked for "a Makefile for easing developer testing and review"; bbq of 4 questions, record
+  `docs/bbq/2026-11-10-makefile.md`. Built `Makefile`: help, build, fmt, clippy, test, check (default members) and the
+  `-all` forms (`--workspace`, as CI), run, run-release, bench-drag, calibration-sheet, safe-zones, lint, fuzz,
+  build-proof, review. CI is unchanged and still calls cargo.
+- Tried on the Pi: `make` (help), `make fmt-check`, `make test` → `TESTS scope=default checks=109 check_fail=0 passed=105
+  failed=0 status=ok`; the failure path with a stand-in `cargo` that fails → `status=fail`, failing lines shown, exit 2;
+  `make lint`, `make safe-zones PROFILE=supernote.a6x2`; `make build-proof` → `BUILD head=934852f dirty=yes rebuilt=7`
+  (dirty because the Makefile was not committed yet).
+- Not run: `make check-all`, `make test-all`, `make clippy-all`, `make review` end to end, `make run`, `make bench-drag`,
+  `make fuzz`, `make calibration-sheet`, on macOS at all.
