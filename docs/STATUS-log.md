@@ -543,3 +543,7 @@ session. Built in this order, on `main`:
   "Stay smooth on the Pi" was offered but not picked, so drawing speed is measured and logged, not a stop line.
 - Asked again, still open: the GitHub description and topics (chris), and "Scale vs pixel-locked rhythm on A5 X"
   (`docs/STATUS-debt.md`).
+- Later the same session: chris set the GitHub description and topics by hand. Read back with `gh repo view --json
+  description,repositoryTopics`: description "Design pixel-perfect e-ink page templates"; topics design-tool, e-ink,
+  page, supernote, templates, vector-graphics. This differs from the README bbq's plan (description ended "for
+  Supernote tablets"; topic wallpaper, no topic page); told chris, the set values stand unless he changes them.

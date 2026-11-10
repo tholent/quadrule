@@ -86,8 +86,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 - A `README.md` for users (pre-alpha banner, what works today, e-ink features, how to run it) and a `DEVELOPMENT.md`
   for developers (setup, commands, crate map, contributing, calibration) are on `main` (`README.md`, `DEVELOPMENT.md`,
-  record `docs/bbq/2026-11-10-readme-and-description.md`). The GitHub description and topics are NOT set yet: the
-  `gh` token got HTTP 403 on `gh repo edit` (`docs/STATUS-log.md`).
+  record `docs/bbq/2026-11-10-readme-and-description.md`). The GitHub description and topics were set by hand by chris
+  on 2026-11-10 (the `gh` token got HTTP 403 on `gh repo edit`); read back with `gh repo view` (`docs/STATUS-log.md`).
 
 - README badges: AI framework pitmaster, CI (fmt, clippy, tests), Fuzz, and coverage. Coverage is new: `.github/workflows/coverage.yml`
   runs `cargo llvm-cov` on the workspace and `.github/scripts/publish-badge.sh` writes the percentage to a
@@ -98,7 +98,6 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Rung 5, New and Insert, is planned (bbq, 12 questions; record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`):
   File → New with a device and rhythm dialog, and a left tools bar to draw a line, text box or pattern region. To be
   built by a fresh Sonnet 5.5 session at high effort from the record's kickoff.
-- Owed to chris: the GitHub description and topics (`docs/STATUS-log.md`, README entry).
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
