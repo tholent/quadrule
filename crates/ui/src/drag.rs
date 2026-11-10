@@ -129,7 +129,11 @@ fn snap_rect(s: &Shape) -> PxRect {
 }
 
 /// The objects on the page other than `skip`, for point snap, smart guides and equal spacing.
-fn others(doc: &Document, placed: &[quadrule_layout::Placed], skip: &[Uuid]) -> Vec<Other> {
+pub(crate) fn others(
+    doc: &Document,
+    placed: &[quadrule_layout::Placed],
+    skip: &[Uuid],
+) -> Vec<Other> {
     placed
         .iter()
         .filter(|p| !skip.contains(&p.id))
@@ -153,7 +157,12 @@ fn resolved_px(o: &Object, primary: &Profile, shown: &Profile) -> PxRect {
 }
 
 /// The frame on the primary page that lands on `r` (pixels) on `shown`.
-fn frame_from_px(r: PxRect, c: Constraints, primary: &Profile, shown: &Profile) -> Frame {
+pub(crate) fn frame_from_px(
+    r: PxRect,
+    c: Constraints,
+    primary: &Profile,
+    shown: &Profile,
+) -> Frame {
     let per_mm = shown.mm_to_px(1.0);
     let resolved = Frame::new(
         r.x0 / per_mm,
@@ -197,19 +206,36 @@ fn near(a: &Frame, b: &Frame) -> bool {
 }
 
 impl Viewer {
-    /// Whether a drag is in progress.
+    /// Whether a drag, or a drawing with a tool (rung 5), is in progress.
     pub fn dragging(&self) -> bool {
-        self.drag.is_some()
+        self.drag.is_some() || self.draw.is_some()
     }
 
     /// What caught on the last move of the drag, to draw.
     pub fn drag_guides(&self) -> &[Guide] {
-        self.drag.as_ref().map_or(&[], |d| &d.guides)
+        match (&self.draw, &self.drag) {
+            (Some(d), _) => &d.guides,
+            (None, Some(d)) => &d.guides,
+            (None, None) => &[],
+        }
     }
 
     /// The points and equal gaps to draw for the last move of the drag.
     pub fn drag_marks(&self) -> &[Mark] {
-        self.drag.as_ref().map_or(&[], |d| &d.marks)
+        match (&self.draw, &self.drag) {
+            (Some(d), _) => &d.marks,
+            (None, Some(d)) => &d.marks,
+            (None, None) => &[],
+        }
+    }
+
+    /// Lets go of whatever the pointer is doing: ends the drag or the drawing.
+    pub fn gesture_end(&mut self) {
+        if self.draw.is_some() {
+            let _ = self.draw_end();
+        } else {
+            let _ = self.drag_end();
+        }
     }
 
     /// The marquee being drawn, in device pixels.
@@ -218,7 +244,7 @@ impl Viewer {
     }
 
     /// The primary profile, the profile on screen, and the shapes on the page.
-    fn geometry(&mut self) -> Option<(Profile, Profile, Vec<quadrule_layout::Placed>)> {
+    pub(crate) fn geometry(&mut self) -> Option<(Profile, Profile, Vec<quadrule_layout::Placed>)> {
         let (primary, shown) = self.profiles()?;
         let placed = self.page()?.placed.clone();
         Some((primary, shown, placed))
@@ -599,6 +625,10 @@ impl Viewer {
 
     /// Escape: drops the drag, as if it had not begun.
     pub fn drag_cancel(&mut self) {
+        if self.draw.is_some() {
+            self.draw_cancel();
+            return;
+        }
         let Some(drag) = self.drag.take() else {
             return;
         };
@@ -661,14 +691,14 @@ impl Viewer {
     }
 
     /// Shows `doc` instead of the open document until the preview is hidden.
-    fn show_preview(&mut self, doc: Document) {
+    pub(crate) fn show_preview(&mut self, doc: Document) {
         if let Some(o) = &mut self.open {
             o.preview = Some(doc);
         }
         self.bump();
     }
 
-    fn hide_preview(&mut self) {
+    pub(crate) fn hide_preview(&mut self) {
         if let Some(o) = &mut self.open {
             o.preview = None;
         }

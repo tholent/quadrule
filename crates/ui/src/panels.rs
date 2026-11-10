@@ -839,15 +839,25 @@ impl ViewerUi {
         ui.add_enabled_ui(enabled, |ui| {
             let label = ui.label(self.t("app-text-content"));
             let mut content = t.content.clone();
-            if ui
-                .add(
-                    egui::TextEdit::multiline(&mut content)
-                        .desired_rows(3)
-                        .desired_width(f32::INFINITY),
-                )
-                .labelled_by(label.id)
-                .changed()
-            {
+            let out = egui::TextEdit::multiline(&mut content)
+                .desired_rows(3)
+                .desired_width(f32::INFINITY)
+                .show(ui);
+            let field = egui::Response::clone(&out.response).labelled_by(label.id);
+            // A text box was just drawn: the cursor goes in with all its text selected, so typing
+            // replaces it (rung 5 bbq, Defaulted "Per kind").
+            if std::mem::take(&mut self.focus_text_content) {
+                field.request_focus();
+                let mut state = out.state;
+                state
+                    .cursor
+                    .set_char_range(Some(egui::text::CCursorRange::two(
+                        egui::text::CCursor::new(0),
+                        egui::text::CCursor::new(content.chars().count()),
+                    )));
+                state.store(ui.ctx(), field.id);
+            }
+            if field.changed() {
                 edit_text(&mut self.viewer, "text-content", &|t| {
                     t.content.clone_from(&content)
                 });

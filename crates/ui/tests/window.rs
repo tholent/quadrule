@@ -550,6 +550,36 @@ fn the_drag_benchmark_runs_and_leaves_the_document_alone() {
 }
 
 #[test]
+fn the_draw_benchmark_runs_and_leaves_the_document_alone() {
+    // `quadrule --bench-draw` drags a pattern region out with the Pattern tool through the real
+    // frame loop (rung 5); here, headless, to show it finishes, times its frames and undoes
+    // itself.
+    let mut h = harness();
+    h.state_mut().ui.bench = Some(quadrule_ui::DragBench::draw(12));
+    let mut steps = 0;
+    while !h.state().ui.bench_finished() && steps < 80 {
+        h.step();
+        steps += 1;
+    }
+    let ui = &h.state().ui;
+    let done = ui.bench_finished();
+    let timed = ui.drag_clock.frames > 0 && ui.drag_clock.mean_ms() > 0.0;
+    let clean = ui
+        .viewer
+        .doc()
+        .is_some_and(|d| *d == quadrule_model::sample::slice_document())
+        && !ui.viewer.is_dirty()
+        && !ui.viewer.dragging();
+    let ok = done && timed && clean;
+    println!(
+        "\nCHECK crate=ui name=window_draw_bench result={} finished={done} frames_timed={} clean_after={clean}",
+        pass(ok),
+        ui.drag_clock.frames
+    );
+    assert!(ok);
+}
+
+#[test]
 fn the_canvas_turns_pointer_drags_into_moves_marquees_and_escape() {
     // The real wiring: pointer events on the canvas, through egui, into the viewer's drag.
     let mut h = harness();
@@ -733,6 +763,159 @@ fn new_dialog_makes_a_blank_page_and_asks_before_replacing_changes() {
     let ok = dialog && opened && title && again && prompt && replaced;
     println!(
         "CHECK crate=ui name=window_new_dialog result={} dialog_shows={dialog} create_opens_untitled={opened} title_bar={title} ctrl_n_shows_dialog={again} unsaved_prompt_first={prompt} replaced_after_discard={replaced}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+fn harness_on_a_new_page() -> Harness<'static, Window> {
+    let mut h = harness();
+    h.get_all_by_label("New…").next().unwrap().click();
+    h.run();
+    h.get_by_label("Create").click();
+    h.run();
+    h
+}
+
+#[test]
+fn the_tools_bar_picks_tools_by_click_double_click_and_key() {
+    // Rung 5 bbq, Defaulted "The tools bar" and "After drawing (Q10)".
+    use quadrule_ui::Tool;
+    let mut h = harness_on_a_new_page();
+    let bar = [
+        "Select tool",
+        "Line tool",
+        "Text box tool",
+        "Pattern region tool",
+    ]
+    .iter()
+    .all(|l| h.query_by_label(l).is_some());
+    h.get_by_label("Line tool").click();
+    h.run();
+    let by_click = h.state().ui.viewer.tool == Tool::Line && !h.state().ui.viewer.tool_kept;
+    // egui_kittest cannot make a double-click (two clicks give `double_clicked() == false`,
+    // measured 2026-11-10), so keeping a tool is tested through `Viewer::keep_tool` in
+    // `crates/ui/tests/draw.rs`; here a single click on the button leaves the tool not kept.
+    h.get_by_label("Pattern region tool").click();
+    h.run();
+    let kept = h.state().ui.viewer.tool == Tool::Pattern && !h.state().ui.viewer.tool_kept;
+    h.key_press(Key::V);
+    h.run();
+    let v = h.state().ui.viewer.tool == Tool::Select && !h.state().ui.viewer.tool_kept;
+    let mut keys = true;
+    for (k, t) in [
+        (Key::L, Tool::Line),
+        (Key::T, Tool::Text),
+        (Key::P, Tool::Pattern),
+    ] {
+        h.key_press(k);
+        h.run();
+        keys &= h.state().ui.viewer.tool == t;
+    }
+    // Escape ends the tool but keeps the selection; Escape again clears it.
+    h.state_mut().ui.viewer.selection = vec![quadrule_model::Uuid::from_u128(7)];
+    h.key_press(Key::Escape);
+    h.run();
+    let esc = h.state().ui.viewer.tool == Tool::Select;
+    let ok = bar && by_click && kept && v && keys && esc;
+    println!(
+        "CHECK crate=ui name=window_tools_bar result={} four_buttons_named={bar} click_picks={by_click} single_click_does_not_keep={kept} v_l_t_p_keys={keys} escape_ends_tool={esc}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_drawn_text_box_takes_the_cursor_and_tool_keys_wait_while_typing() {
+    use quadrule_ui::{DragMods, Tab, Tool};
+    let mut h = harness_on_a_new_page();
+    h.state_mut().ui.viewer.set_tool(Tool::Text);
+    let none = DragMods::default();
+    let id = h.state_mut().ui.viewer.place_click(300.0, 400.0, none, 6.0);
+    h.run();
+    h.run();
+    let st = h.state();
+    let tab = st.ui.tab == Tab::Text;
+    let selected = id.is_some() && st.ui.viewer.selection == id.into_iter().collect::<Vec<_>>();
+    let focused = h.ctx.memory(|m| m.focused().is_some());
+    // A tool key typed into the field does not switch tools.
+    h.key_press(Key::L);
+    h.run();
+    let ignored = h.state().ui.viewer.tool == Tool::Select;
+    let ok = tab && selected && focused && ignored;
+    println!(
+        "CHECK crate=ui name=window_text_focus_and_keys result={} text_tab_open={tab} new_box_selected={selected} field_has_focus={focused} tool_keys_ignored_in_field={ignored}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn the_canvas_draws_with_a_tool_by_drag_and_by_click() {
+    // The real wiring: pointer events on the canvas, through egui, into the viewer's drawing
+    // (rung 5 bbq, Defaulted "Drawing (Q9)").
+    use quadrule_ui::Tool;
+    let mut h = harness_on_a_new_page();
+    h.run();
+    let at =
+        |h: &Harness<'static, Window>, x: f64, y: f64| h.state().ui.screen_point(x, y).unwrap();
+    let doc0 = h.state().ui.viewer.doc().unwrap().clone();
+    // The Pattern tool from its button; a drag from near the rhythm origin out to (6, 3) units.
+    h.get_by_label("Pattern region tool").click();
+    h.run();
+    let a = at(&h, 144.0, 144.0);
+    let b = at(&h, 142.0 + 6.0 * 71.0, 142.0 + 3.0 * 71.0);
+    h.hover_at(a);
+    h.step();
+    h.drag_at(a);
+    h.step();
+    h.hover_at(a + egui::vec2(10.0, 10.0));
+    h.step();
+    h.hover_at(b);
+    h.step();
+    h.step();
+    let drawing = h.state().ui.viewer.drawing();
+    let untouched = h.state().ui.viewer.doc().unwrap() == &doc0;
+    h.drop_at(b);
+    h.step();
+    h.step();
+    let v = &h.state().ui.viewer;
+    let landed = !v.drawing() && v.doc().unwrap().objects().count() == 1 && v.selection.len() == 1;
+    let one_step = v.open.as_ref().unwrap().history.undo_len() == 1;
+    let back = v.tool == Tool::Select;
+    let size = v.doc().unwrap().objects().next().map(|o| o.frame).unwrap();
+    let want = 6.0 * 71.0 * 25.4 / 300.0;
+    let sized = (size.w_mm - want).abs() < 0.05;
+    // The Line tool and a plain click: one 10-unit line.
+    h.get_by_label("Line tool").click();
+    h.run();
+    let c = at(&h, 300.0, 900.0);
+    h.hover_at(c);
+    h.step();
+    h.get_by_label("Line tool").click(); // leave the canvas press clean: re-pick, then click the page
+    h.run();
+    h.hover_at(c);
+    h.step();
+    h.drag_at(c);
+    h.step();
+    h.drop_at(c);
+    h.step();
+    h.step();
+    let n = h.state().ui.viewer.doc().unwrap().objects().count();
+    let clicked = n == 2
+        && h.state()
+            .ui
+            .viewer
+            .doc()
+            .unwrap()
+            .objects()
+            .nth(1)
+            .is_some_and(|o| {
+                (o.frame.w_mm - 710.0 * 25.4 / 300.0).abs() < 0.05 && o.frame.h_mm == 0.0
+            });
+    let ok = drawing && untouched && landed && one_step && back && sized && clicked;
+    println!(
+        "CHECK crate=ui name=window_canvas_draws result={} drawing_while_down={drawing} doc_untouched_midway={untouched} lands_one_object={landed} one_undo_step={one_step} tool_back_to_select={back} six_units_wide={sized} click_makes_default_line={clicked}",
         pass(ok)
     );
     assert!(ok);

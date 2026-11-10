@@ -10,10 +10,9 @@ Design pixel-perfect e-ink page templates for Supernote tablets.
 Quadrule is a free, open-source vector design tool. You draw lines, grids, boxes and text on a page, and it exports
 a PNG at your device's exact screen size, ready to copy to the tablet and use as a note template.
 
-> **Pre-alpha.** Quadrule runs, but it is not finished, and you cannot design a page from scratch in it yet: today it
-> opens and edits an existing page and exports it. There is no New page, no way to add shapes or text, no template
-> gallery, no wallpaper mode, and no prebuilt download (you build it from source, see below). Files and menus may
-> change without warning.
+> **Pre-alpha.** Quadrule runs, but it is not finished: you can start a blank page and draw lines, text boxes and
+> pattern regions on it, but there are no other shapes yet, no template gallery, no wallpaper mode, and no prebuilt
+> download (you build it from source, see below). Files and menus may change without warning.
 
 ## Why it exists
 
@@ -44,13 +43,17 @@ and error.
 
 ## What works today
 
+- Start a blank page (New…, Ctrl+N): pick the device (Manta or Nomad), a rhythm (handwriting 6 mm, narrow, college
+  or wide ruled, a 5 mm or 1/4 in grid) and a title. The margins clear the tablet's docked toolbars and footers.
 - Open a `.quad` file (Quadrule's own format) or the built-in sample page, and save changes.
+- Draw with the tools bar on the left: a line (L), a text box (T) or a pattern region (P); V goes back to Select.
+  Drag to draw (sizes snap to whole rhythm units), or click for a default size; double-click a tool to keep it on.
 - Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock and reorder layers;
   unlimited undo and redo; autosave with recovery after a crash.
 - Export a PNG for the Manta or the Nomad, named like `{title}_{manta|nomad}_{w}x{h}.png`.
 - Check a page with the linter (seven rules so far).
 
-Not yet: creating a new page, adding objects, the starter gallery and wallpapers. The plan is in the design spec,
+Not yet: shapes other than lines, text boxes and pattern regions, the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).
 
 ## Try it

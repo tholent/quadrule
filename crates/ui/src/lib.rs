@@ -26,17 +26,21 @@
 pub mod bench;
 pub mod canvas;
 pub mod drag;
+pub mod draw;
 pub mod editor;
 pub mod panels;
 pub mod recovery;
+pub mod tools;
 pub mod view;
 pub mod viewer;
 
 pub use bench::DragBench;
 pub use canvas::{CanvasMode, ChipRenderer, ChipState, DragClock, Fallback};
 pub use drag::{Drag, DragKind, DragMods, HandleHit};
+pub use draw::{Draw, DrawKind, NewNames};
 pub use editor::{DropOn, Toward, layer_drop_place, object_drop_place};
 pub use panels::Tab;
 pub use recovery::{Autosave, Recovered, Recovery};
+pub use tools::Tool;
 pub use view::{After, Request, UiFont, ViewerUi, install_fonts};
 pub use viewer::{ExportWhich, Source, Viewer, Zoom};

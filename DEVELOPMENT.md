@@ -73,7 +73,7 @@ numbers refer to the design spec.
 | `render` | The export renderer: `vello_cpu` to an 8-bit grayscale PNG (ADR-003) |
 | `lint` | The linter: rules that recommend and explain, never block (§8.3) |
 | `i18n` | Every string on screen, through Project Fluent; English first (§14) |
-| `ui` | The egui widgets and the editor's state: canvas, panels, dragging (§15.1) |
+| `ui` | The egui widgets and the editor's state: canvas, panels, dragging, the tools bar and drawing (§15.1) |
 | `app` | The program itself: window setup and preferences |
 | `xtask` | Maintainer tools, run as `cargo xtask` |
 

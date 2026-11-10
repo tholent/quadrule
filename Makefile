@@ -28,7 +28,7 @@ SECS ?= 60
 CHECK ?= check-all
 
 .PHONY: help build build-all fmt fmt-check clippy clippy-all test test-all test-v check check-all \
-        run run-release bench-drag calibration-sheet safe-zones lint fuzz build-proof review
+        run run-release bench-drag bench-draw calibration-sheet safe-zones lint fuzz build-proof review
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  make %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -99,8 +99,11 @@ run: ## Open the viewer/editor (FILE=page.quad, or the sample page)
 run-release: ## The same, as a release build (what the speed numbers use)
 	cargo run --release -p quadrule-app -- $(FILE)
 
-bench-drag: ## Drag-speed bench on the sample page, release build (FRAMES=150); the 95th percentile is the judge
+bench-drag: ## Drag-speed bench on the sample page, release build (FRAMES=150); the 90th percentile is the judge
 	cargo run --release -p quadrule-app -- --bench-drag $(FRAMES)
+
+bench-draw: ## Drawing-speed bench: drags a pattern region out over the sample page, release build (FRAMES=150)
+	cargo run --release -p quadrule-app -- --bench-draw $(FRAMES)
 
 # ---- maintainer tasks ----------------------------------------------------------------------------------------
 

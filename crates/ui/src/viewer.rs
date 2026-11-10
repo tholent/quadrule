@@ -159,6 +159,16 @@ pub struct Viewer {
     pub show_rhythm: bool,
     /// The drag in progress, if any (rung 4).
     pub drag: Option<crate::drag::Drag>,
+    /// The tool on (rung 5): Select, or one that draws.
+    pub tool: crate::tools::Tool,
+    /// The tool stays on after each object (a double-click on its button).
+    pub tool_kept: bool,
+    /// The drawing in progress, if any (rung 5).
+    pub draw: Option<crate::draw::Draw>,
+    /// The names a drawn object gets (the window fills them from Fluent).
+    pub names: crate::draw::NewNames,
+    /// A text box was just drawn: the window opens the Text tab with its text selected.
+    pub focus_new_text: bool,
     pub(crate) fonts: FontRegistry,
 }
 
@@ -200,6 +210,11 @@ impl Default for Viewer {
             paste_run: None,
             show_rhythm: false,
             drag: None,
+            tool: crate::tools::Tool::Select,
+            tool_kept: false,
+            draw: None,
+            names: crate::draw::NewNames::default(),
+            focus_new_text: false,
             fonts: FontRegistry::bundled_only(),
         }
     }
@@ -278,6 +293,10 @@ impl Viewer {
             findings: BTreeMap::new(),
         });
         self.drag = None;
+        self.draw = None;
+        self.tool = crate::tools::Tool::Select;
+        self.tool_kept = false;
+        self.focus_new_text = false;
         self.generation += 1;
         self.revision += 1;
         self.selection.clear();

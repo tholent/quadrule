@@ -26,6 +26,7 @@ use crate::drag::{DragKind, DragMods, HANDLE_SLACK_POINTS, HandleHit, SNAP_REACH
 use crate::editor::{PICK_SLACK_POINTS, Toward};
 use crate::panels::{Renaming, Tab};
 use crate::recovery::{Autosave, Recovered, Recovery};
+use crate::tools::{BAR_WIDTH, Tool};
 use crate::viewer::{
     CARD_WIDTH_MM, ExportWhich, PIXEL_GRID_FROM, Source, TOOLBARS_SHOWN, Tile, Viewer, Zoom,
     ruler_px_per_mm, shrink, tiles,
@@ -163,6 +164,9 @@ pub struct ViewerUi {
     cursor_px: Option<(f32, f32)>,
     canvas_size: Option<egui::Vec2>,
     pub(crate) selected_layer: Option<usize>,
+    /// Put the cursor in the Text tab's text field, with its text selected, on the next frame
+    /// that shows it (a text box was just drawn).
+    pub(crate) focus_text_content: bool,
     pub(crate) renaming: Option<Renaming>,
     /// What is typed in a length field while it has focus, by field key.
     pub(crate) field_text: HashMap<String, String>,
@@ -185,10 +189,17 @@ pub struct ViewerUi {
 
 impl ViewerUi {
     /// A window on the empty start screen.
-    pub fn new(viewer: Viewer) -> Self {
+    pub fn new(mut viewer: Viewer) -> Self {
+        let strings = Strings::english();
+        viewer.names = crate::draw::NewNames {
+            line: strings.get("new-name-line"),
+            text: strings.get("new-name-text"),
+            pattern: strings.get("new-name-pattern"),
+            text_content: strings.get("new-text-content"),
+        };
         ViewerUi {
             viewer,
-            strings: Strings::english(),
+            strings,
             theme: ThemePreference::System,
             show_lint: true,
             tab: Tab::Page,
@@ -209,6 +220,7 @@ impl ViewerUi {
             cursor_px: None,
             canvas_size: None,
             selected_layer: None,
+            focus_text_content: false,
             renaming: None,
             field_text: HashMap::new(),
             link_margins: true,
@@ -240,10 +252,20 @@ impl ViewerUi {
         self.drive_bench(&ctx);
         self.shortcuts(&ctx, &mut requests);
         self.tick_autosave(&ctx);
+        if std::mem::take(&mut self.viewer.focus_new_text) {
+            self.tab = Tab::Text;
+            self.focus_text_content = true;
+        }
         egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut requests));
         egui::Panel::bottom("status").show(ui, |ui| self.status_bar(ui));
-        // One panel on the right: the inspector, with the layers below it. The left side is
-        // kept free for a future tools bar (chris, 2026-11-10).
+        // The tools bar on the left (chris, 2026-11-10: the left side was kept for it; rung 5).
+        if self.viewer.open.is_some() {
+            egui::Panel::left("tools")
+                .resizable(false)
+                .exact_size(BAR_WIDTH)
+                .show(ui, |ui| self.tools_bar(ui));
+        }
+        // One panel on the right: the inspector, with the layers below it.
         if self.show_lint && self.viewer.open.is_some() {
             egui::Panel::right("inspector")
                 .default_size(320.0)
@@ -370,9 +392,16 @@ impl ViewerUi {
         } else if key(cmd, Key::OpenBracket) {
             self.move_selected(Toward::Back);
         }
-        if key(Modifiers::NONE, Key::Escape) {
+        // Escape ends a tool that is on first; with Select on, it clears the selection.
+        if key(Modifiers::NONE, Key::Escape) && !self.viewer.end_tool() {
             self.viewer.selection.clear();
             self.selected_layer = None;
+        }
+        // V, L, T and P pick a tool (a text field with focus never gets here).
+        for tool in Tool::ALL {
+            if key(Modifiers::NONE, tool.key()) {
+                self.viewer.set_tool(tool);
+            }
         }
         if !self.viewer.selection.is_empty() {
             for (k, dx, dy) in [
@@ -1085,14 +1114,16 @@ impl ViewerUi {
                     Some((x0, y0, x1, y1)) => {
                         b.centre = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
                         let none = DragMods::default();
-                        if self
-                            .viewer
-                            .drag_begin(b.centre.0, b.centre.1, none, 4.0, 6.0)
-                        {
-                            Phase::Run(0)
+                        let began = if b.draw {
+                            // From the page's top-left corner, out into the page.
+                            b.centre = (150.0, 150.0);
+                            self.viewer.set_tool(Tool::Pattern);
+                            self.viewer.draw_begin(150.0, 150.0, none, 6.0)
                         } else {
-                            Phase::Done
-                        }
+                            self.viewer
+                                .drag_begin(b.centre.0, b.centre.1, none, 4.0, 6.0)
+                        };
+                        if began { Phase::Run(0) } else { Phase::Done }
                     }
                     None => Phase::Done,
                 };
@@ -1100,17 +1131,29 @@ impl ViewerUi {
             Phase::Run(i) if i < b.frames => {
                 let t = f64::from(i);
                 let (cx, cy) = b.centre;
-                let (x, y) = (cx + 150.0 * (0.37 * t).sin(), cy + 120.0 * (0.23 * t).cos());
+                let (x, y) = if b.draw {
+                    // The far corner sweeps back and forth over most of the page.
+                    (
+                        150.0 + 900.0 + 800.0 * (0.31 * t).sin(),
+                        150.0 + 1200.0 + 1000.0 * (0.17 * t).sin(),
+                    )
+                } else {
+                    (cx + 150.0 * (0.37 * t).sin(), cy + 120.0 * (0.23 * t).cos())
+                };
                 let scale = self
                     .canvas_size
                     .and_then(|c| self.viewer.scale((c.x, c.y), ctx.pixels_per_point()))
                     .unwrap_or(0.3);
                 let reach = SNAP_REACH_POINTS / f64::from(scale);
-                self.viewer.drag_update(x, y, DragMods::default(), reach);
+                if b.draw {
+                    self.viewer.draw_update(x, y, DragMods::default(), reach);
+                } else {
+                    self.viewer.drag_update(x, y, DragMods::default(), reach);
+                }
                 b.phase = Phase::Run(i + 1);
             }
             Phase::Run(_) => {
-                let _ = self.viewer.drag_end();
+                self.viewer.gesture_end();
                 self.viewer.undo();
                 let c = self.drag_clock.clone();
                 let canvas = match (self.canvas_mode, &self.chip_state.fallback) {
@@ -1128,7 +1171,8 @@ impl ViewerUi {
                     "fail"
                 };
                 println!(
-                    "\nCHECK crate=ui name=drag_bench result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
+                    "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
+                    if b.draw { "draw_bench" } else { "drag_bench" },
                     if cfg!(debug_assertions) {
                         "debug"
                     } else {
@@ -1263,7 +1307,11 @@ impl ViewerUi {
             .collect();
 
         // What the drag draws, and the handles of the selection (all overlays, never exported).
-        let handles = self.viewer.handles();
+        let handles = if self.viewer.tool == Tool::Select {
+            self.viewer.handles()
+        } else {
+            Vec::new()
+        };
         let guides = self.viewer.drag_guides().to_vec();
         let marquee = self.viewer.drag_marquee();
         // Equal gaps are drawn with their size; the words come from Fluent.
@@ -1582,11 +1630,18 @@ impl ViewerUi {
             let slack = PICK_SLACK_POINTS / scale as f64;
             let handle_slack = HANDLE_SLACK_POINTS / scale as f64;
             let reach = SNAP_REACH_POINTS / scale as f64;
+            // With a drawing tool on, a press draws a new object instead of moving one (rung 5).
+            let drawing_tool = self.viewer.tool != Tool::Select;
             if response.drag_started_by(PointerButton::Primary)
                 && let Some(p) = ui.input(|i| i.pointer.press_origin())
             {
                 let (x, y) = to_dev(p);
-                if self.viewer.drag_begin(x, y, mods, slack, handle_slack) {
+                let began = if drawing_tool {
+                    self.viewer.draw_begin(x, y, mods, reach)
+                } else {
+                    self.viewer.drag_begin(x, y, mods, slack, handle_slack)
+                };
+                if began {
                     self.selected_layer = None;
                     self.pointer_drag = true;
                 }
@@ -1595,12 +1650,16 @@ impl ViewerUi {
             if self.viewer.dragging() && response.dragged() {
                 if let Some(p) = ui.input(|i| i.pointer.latest_pos()) {
                     let (x, y) = to_dev(p);
-                    self.viewer.drag_update(x, y, mods, reach);
+                    if self.viewer.drawing() {
+                        self.viewer.draw_update(x, y, mods, reach);
+                    } else {
+                        self.viewer.drag_update(x, y, mods, reach);
+                    }
                 }
                 ctx.request_repaint();
             }
             if response.drag_stopped() {
-                let _ = self.viewer.drag_end();
+                self.viewer.gesture_end();
                 ctx.request_repaint();
             }
             // A release the canvas never saw (the pointer let go outside the window) still ends
@@ -1609,7 +1668,7 @@ impl ViewerUi {
                 && self.viewer.dragging()
                 && !ui.input(|i| i.pointer.primary_down())
             {
-                let _ = self.viewer.drag_end();
+                self.viewer.gesture_end();
                 ctx.request_repaint();
             }
             if !self.viewer.dragging() {
@@ -1624,6 +1683,7 @@ impl ViewerUi {
             }
             // The pointer says what a press would do.
             let icon = match self.viewer.drag.as_ref().map(|d| d.kind) {
+                _ if drawing_tool => Some(CursorIcon::Crosshair),
                 Some(DragKind::Move) => Some(CursorIcon::Move),
                 Some(DragKind::Marquee) => Some(CursorIcon::Crosshair),
                 Some(DragKind::Handle(h)) => Some(handle_cursor(h)),
@@ -1636,12 +1696,17 @@ impl ViewerUi {
                 ctx.set_cursor_icon(icon);
             }
 
-            // A click picks the object under the pointer; Shift adds to the selection.
+            // A click picks the object under the pointer; Shift adds to the selection. With a
+            // drawing tool on, it drops a new object at its default size instead.
             if response.clicked()
                 && let Some(p) = response.interact_pointer_pos()
             {
                 let (x, y) = to_dev(p);
-                self.viewer.click(x, y, slack, mods.shift);
+                if drawing_tool {
+                    let _ = self.viewer.place_click(x, y, mods, reach);
+                } else {
+                    self.viewer.click(x, y, slack, mods.shift);
+                }
                 self.selected_layer = None;
             }
 

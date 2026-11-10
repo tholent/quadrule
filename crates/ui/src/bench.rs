@@ -14,7 +14,8 @@
 
 //! The drag benchmark's state (rung 4 bbq, Defaulted "Pi-smooth, the number"). The driver is
 //! [`ViewerUi`](crate::ViewerUi): it moves the sample page's dot grid along a path, one step per
-//! frame, through the same canvas a person's drag uses, and prints one `CHECK` line.
+//! frame, through the same canvas a person's drag uses, and prints one `CHECK` line. Rung 5 adds
+//! the same for drawing: it drags a pattern region out with the Pattern tool.
 
 /// Frames to let the first full render and the shaders settle before the drag starts.
 pub const WARM_FRAMES: u32 = 5;
@@ -41,6 +42,9 @@ pub struct DragBench {
     pub phase: Phase,
     /// Where the drag started, in device pixels.
     pub centre: (f64, f64),
+    /// Draws a pattern region with the Pattern tool instead of moving the dot grid (rung 5:
+    /// `--bench-draw`).
+    pub draw: bool,
 }
 
 impl DragBench {
@@ -50,6 +54,16 @@ impl DragBench {
             frames,
             phase: Phase::Warm(0),
             centre: (0.0, 0.0),
+            draw: false,
+        }
+    }
+
+    /// A benchmark of `frames` steps that drags a pattern region out with the Pattern tool, over
+    /// the sample page, and lets it go (the object is then undone).
+    pub fn draw(frames: u32) -> Self {
+        DragBench {
+            draw: true,
+            ..DragBench::new(frames)
         }
     }
 }

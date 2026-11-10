@@ -20,7 +20,8 @@
 //! `--canvas chip` starts on the graphics-chip canvas (View → Canvas), for measuring it.
 //! `--bench-drag` opens the sample page, replays a drag of its dot grid through the real window
 //! (150 steps unless told otherwise), prints one `CHECK crate=ui name=drag_bench` line with the
-//! frame times and closes.
+//! frame times and closes. `--bench-draw` does the same for dragging a pattern region out with
+//! the Pattern tool (rung 5; `name=draw_bench`).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -111,6 +112,8 @@ impl App {
         if let Some(frames) = args.bench_drag {
             // A timing run is not a session: it leaves no settings behind and opens no recovery.
             ui.bench = Some(quadrule_ui::DragBench::new(frames));
+        } else if let Some(frames) = args.bench_draw {
+            ui.bench = Some(quadrule_ui::DragBench::draw(frames));
         }
         App {
             ui,
@@ -297,6 +300,8 @@ struct Args {
     chip_canvas: bool,
     /// Replay a drag this many steps and close (`--bench-drag [frames]`).
     bench_drag: Option<u32>,
+    /// Replay drawing a pattern region this many steps and close (`--bench-draw [frames]`).
+    bench_draw: Option<u32>,
 }
 
 fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, String> {
@@ -315,6 +320,11 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
                 .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
                 .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
             out.bench_drag = Some(steps.unwrap_or(150));
+        } else if a == "--bench-draw" {
+            let steps = args
+                .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
+                .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
+            out.bench_draw = Some(steps.unwrap_or(150));
         } else {
             out.path = Some(PathBuf::from(a));
         }
@@ -361,6 +371,7 @@ mod tests {
                     path: Some("a.quad".into()),
                     chip_canvas: false,
                     bench_drag: None,
+                    ..Args::default()
                 }),
             ),
             (
@@ -369,6 +380,7 @@ mod tests {
                     path: Some("a.quad".into()),
                     chip_canvas: true,
                     bench_drag: None,
+                    ..Args::default()
                 }),
             ),
             (
@@ -377,6 +389,7 @@ mod tests {
                     path: None,
                     chip_canvas: false,
                     bench_drag: Some(150),
+                    ..Args::default()
                 }),
             ),
             (
@@ -385,6 +398,14 @@ mod tests {
                     path: None,
                     chip_canvas: true,
                     bench_drag: Some(60),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--bench-draw", "40"]),
+                Ok(Args {
+                    bench_draw: Some(40),
+                    ..Args::default()
                 }),
             ),
         ];

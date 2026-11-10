@@ -209,3 +209,20 @@ new-rhythm-college = College ruled, 9/32 in (7.14 mm)
 new-rhythm-wide = Wide ruled, 11/32 in (8.73 mm)
 new-rhythm-grid-5mm = 5 mm grid
 new-rhythm-grid-quarter-inch = 1/4 in grid (6.35 mm)
+
+# Tools bar (rung 5 bbq, Defaulted "The tools bar").
+tool-select = Select tool
+tool-select-tip = Select (V)
+tool-line = Line tool
+tool-line-tip = Line (L)
+tool-text = Text box tool
+tool-text-tip = Text box (T)
+tool-pattern = Pattern region tool
+tool-pattern-tip = Pattern region (P)
+tools-keep-hint = Double-click to keep it on for several objects.
+
+# What a drawn object is called, and what a new text box says.
+new-name-line = Line
+new-name-text = Text
+new-name-pattern = Pattern
+new-text-content = Text
