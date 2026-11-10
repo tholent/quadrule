@@ -121,5 +121,5 @@ Added after the build; the rules above are unchanged. chris's answers, word for 
 - The look, after the move: "the right pane looks good now, I approve of the look."
 - `u` in fields and Shift+arrow use the rhythm unit as the device on screen resolves it (a choice made inside
   Q10): "I approve the u choice, as far as I understand it."
-- The Label gray 153 vs dark grey pen 157 (asked again at session start): "leave the label gray issue open until
+- The Label gray 153 vs dark grey pen 157 (asked again at the end of the build session): "leave the label gray issue open until
   v1.1".
