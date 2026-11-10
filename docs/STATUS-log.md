@@ -547,3 +547,15 @@ session. Built in this order, on `main`:
   description,repositoryTopics`: description "Design pixel-perfect e-ink page templates"; topics design-tool, e-ink,
   page, supernote, templates, vector-graphics. This differs from the README bbq's plan (description ended "for
   Supernote tablets"; topic wallpaper, no topic page); told chris, the set values stand unless he changes them.
+
+## 2026-11-10 — ADR backlog sweep (Opus 5.5)
+
+- chris typed "makeadr", then, word for word: "I feel like I haven't commited many of the decisions to ADRs yet and want
+  to make sure to catch the backlog of decisions I have up until this point." Grew from one ADR to a sweep; said so.
+- Searched all 8 bbq records, this log, the debt list, `docs/proposals/`, ADR-001 to ADR-003, `AGENTS.md` and the spike
+  findings. chris chose: all groups, written from the records with no rounds, small ones merged, written here.
+- Drafted ADR-004 to ADR-014, all `proposed` (record `docs/bbq/2026-11-10-adr-backlog.md`). ADR-007 and ADR-014 were
+  never ruled by chris; the rest write down his rulings with their sources.
+- `adr-index.py --root .` → 14 ADRs; `adr-check.py --root . --triggers-from 1` → first 4 failures (option headings,
+  a missing Drivers list), fixed, then 0. The check resolves proofs; it does not run tests.
+- Paid the debt item "The project-setup decision is not on record yet" (ADR-004).

@@ -2,7 +2,6 @@
 
 Known debt and owed work. One line each. When an item is paid, remove it and note it in `STATUS-log.md`.
 
-- The project-setup decision is not on record yet (its decision format is now chosen: ADR+).
 - A lint/preflight rule for system-font use, at save and at export, is owed to the napkin's lint list (ADR-002).
 - Text spike T14/T15, what is left: system-font discovery on macOS and Windows. Layout and outlines with the bundled
   font now match byte for byte there (CI run 42660403429); system fonts are not loaded yet (`crates/text/src/lib.rs`).
@@ -16,7 +15,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - The `gh` fine-grained token cannot read check summaries (`gh pr checks` fails: GitHub offers no `checks:read` for
   fine-grained tokens); read CI with `gh run view <id> --log` instead.
 - ADR build status is in each ADR's `built` and `owed` header fields (`docs/decisions/INDEX.md`): ADR-001 and
-  ADR-002 partial, ADR-003 landed.
+  ADR-002 partial, ADR-003 landed; of the proposed ADR-004 to ADR-014, ADR-009, ADR-011 and ADR-012 are partial.
 - Pattern rule, chosen 2026-11-09 for chris to veto: a pattern draws every line and dot whose centre is in its
   region, whole, so a dot on the margin straddles the region edge rather than being cut (`crates/layout/src/lib.rs`;
   napkin §5.2 says patterns "clip to their bounds"). Trying whole-shapes-inside removed the slice's first dot row
