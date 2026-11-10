@@ -282,3 +282,100 @@ fn shift_arrow_moves_one_subdivision_when_they_are_on() {
     );
     assert!(ok);
 }
+
+#[test]
+fn copy_cut_and_paste() {
+    // Rung 4b (bbq Q8, Defaulted "Copy and paste"): the clipboard is text; a paste into the same
+    // document lands one rhythm unit down and right (6 mm on the sample page), each further paste
+    // one more; into another document at the same place; a cut puts back where it was.
+    let mut a = Viewer::default();
+    a.open_sample();
+    let objects_before = a
+        .doc()
+        .unwrap()
+        .layers
+        .iter()
+        .map(|l| l.objects.len())
+        .sum::<usize>();
+    a.selection = vec![ids::TITLE, ids::RULE];
+    let text = a.copy_text().expect("two objects to copy");
+    let copy_changed_nothing = !a.is_dirty() && a.open.as_ref().unwrap().history.undo_len() == 0;
+
+    assert!(a.paste_text(&text).unwrap());
+    let first = a.selection.clone();
+    let count = |v: &Viewer| {
+        v.doc()
+            .unwrap()
+            .layers
+            .iter()
+            .map(|l| l.objects.len())
+            .sum::<usize>()
+    };
+    let title0 = a.doc().unwrap().object(ids::TITLE).unwrap().frame;
+    let p1 = a.doc().unwrap().object(first[0]).unwrap().frame;
+    let one_unit =
+        (p1.x_mm - title0.x_mm - 6.0).abs() < 1e-9 && (p1.y_mm - title0.y_mm - 6.0).abs() < 1e-9;
+    let selected_new =
+        first.len() == 2 && first.iter().all(|id| *id != ids::TITLE && *id != ids::RULE);
+    assert!(a.paste_text(&text).unwrap());
+    let p2 = a.doc().unwrap().object(a.selection[0]).unwrap().frame;
+    let two_units = (p2.x_mm - title0.x_mm - 12.0).abs() < 1e-9;
+    let steps = a.open.as_ref().unwrap().history.undo_len();
+    a.undo();
+    a.undo();
+    let undone = count(&a) == objects_before;
+
+    // Text that is not quadrule's does nothing.
+    let ignored = !a.paste_text("just some words").unwrap() && count(&a) == objects_before;
+
+    // Another document (one that does not hold the copied objects): the first paste is in the
+    // same place.
+    let mut b = Viewer::default();
+    b.open_sample();
+    b.edit(quadrule_model::edit::remove(&[ids::TITLE, ids::RULE]), None)
+        .unwrap();
+    assert!(b.paste_text(&text).unwrap());
+    let q = b.doc().unwrap().object(b.selection[0]).unwrap().frame;
+    let same_place = q == title0;
+
+    // A cut takes the objects away, and pasting puts them back in the same place.
+    let mut c = Viewer::default();
+    c.open_sample();
+    c.selection = vec![ids::RULE];
+    let cut = c.cut_text().unwrap().expect("cut text");
+    let gone = c.doc().unwrap().object(ids::RULE).is_none() && c.selection.is_empty();
+    assert!(c.paste_text(&cut).unwrap());
+    let back = c.doc().unwrap().object(c.selection[0]).unwrap().frame
+        == a.doc().unwrap().object(ids::RULE).unwrap().frame;
+
+    // A locked object is copied but not cut.
+    let mut d = Viewer::default();
+    d.open_sample();
+    let (l, o) = d.doc().unwrap().find(ids::RULE).unwrap();
+    let mut locked = d.doc().unwrap().layers[l].objects[o].clone();
+    locked.locked = true;
+    d.edit(quadrule_model::edit::Command::SetObject(locked), None)
+        .unwrap();
+    d.selection = vec![ids::RULE];
+    let copied_locked = d.copy_text().is_some();
+    let not_cut = d.cut_text().unwrap().is_none() && d.doc().unwrap().object(ids::RULE).is_some();
+
+    let ok = copy_changed_nothing
+        && one_unit
+        && selected_new
+        && two_units
+        && steps == 2
+        && undone
+        && ignored
+        && same_place
+        && gone
+        && back
+        && copied_locked
+        && not_cut;
+    println!(
+        "\nCHECK crate=ui name=copy_cut_paste result={} copy_changes_nothing={copy_changed_nothing} one_unit_down_right={one_unit} copies_selected={selected_new} second_paste_two_units={two_units} one_step_each={} undone={undone} other_text_ignored={ignored} other_document_same_place={same_place} cut_removes={gone} cut_then_paste_in_place={back} locked_copied={copied_locked} locked_not_cut={not_cut}",
+        pass(ok),
+        steps == 2
+    );
+    assert!(ok);
+}

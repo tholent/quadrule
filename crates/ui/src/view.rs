@@ -36,7 +36,7 @@ use egui::{
     pos2, vec2,
 };
 use quadrule_i18n::{Message, Strings};
-use quadrule_layout::snap::{Handle, PxRect, SnapKind, union_outline};
+use quadrule_layout::snap::{Handle, Mark, PxRect, SnapKind, union_outline};
 use quadrule_layout::units::Axis;
 use quadrule_lint::Toolbar;
 use std::collections::HashMap;
@@ -71,6 +71,10 @@ pub enum After {
 
 /// Texture tiles are at most this many pixels a side.
 const TILE: u32 = 1024;
+
+/// The colour of what snaps to other objects (points, smart guides, equal gaps): an orange the
+/// rhythm's magenta and the margins' teal do not share. Overlays are never exported.
+const OBJECT_SNAP: Color32 = Color32::from_rgb(235, 100, 20);
 
 /// What the page texture shows: which document, which device, at what size.
 #[derive(Clone, Debug, PartialEq)]
@@ -307,6 +311,36 @@ impl ViewerUi {
         }
         if key(cmd, Key::D) {
             let _ = self.viewer.duplicate_selection();
+        }
+        // Copy, cut and paste arrive as events (egui turns Ctrl+C, Ctrl+X and Ctrl+V, Cmd on
+        // macOS, into them), and paste brings the clipboard's text (rung 4b).
+        let (copy, cut, pasted) = ctx.input_mut(|i| {
+            let (mut copy, mut cut, mut pasted) = (false, false, None);
+            i.events.retain(|e| match e {
+                egui::Event::Copy => {
+                    copy = true;
+                    false
+                }
+                egui::Event::Cut => {
+                    cut = true;
+                    false
+                }
+                egui::Event::Paste(text) => {
+                    pasted = Some(text.clone());
+                    false
+                }
+                _ => true,
+            });
+            (copy, cut, pasted)
+        });
+        if copy && let Some(text) = self.viewer.copy_text() {
+            ctx.copy_text(text);
+        }
+        if cut && let Ok(Some(text)) = self.viewer.cut_text() {
+            ctx.copy_text(text);
+        }
+        if let Some(text) = pasted {
+            let _ = self.viewer.paste_text(&text);
         }
         if key(Modifiers::NONE, Key::Delete) || key(Modifiers::NONE, Key::Backspace) {
             let _ = self.viewer.delete_selection();
@@ -842,7 +876,10 @@ impl ViewerUi {
             ("app-snap-pixel", 0),
             ("app-snap-rhythm", 1),
             ("app-snap-margins", 2),
-            ("app-rhythm-overlay", 3),
+            ("app-snap-points", 3),
+            ("app-snap-smart", 4),
+            ("app-snap-equal", 5),
+            ("app-rhythm-overlay", 6),
         ];
         for (id, which) in rows {
             let label = self.t(id);
@@ -850,6 +887,9 @@ impl ViewerUi {
                 0 => &mut self.viewer.snap.pixel_grid,
                 1 => &mut self.viewer.snap.rhythm,
                 2 => &mut self.viewer.snap.margins_safe,
+                3 => &mut self.viewer.snap.points,
+                4 => &mut self.viewer.snap.smart_guides,
+                5 => &mut self.viewer.snap.equal_spacing,
                 _ => &mut self.viewer.show_rhythm,
             };
             ui.checkbox(flag, label);
@@ -1088,6 +1128,21 @@ impl ViewerUi {
         let handles = self.viewer.handles();
         let guides = self.viewer.drag_guides().to_vec();
         let marquee = self.viewer.drag_marquee();
+        // Equal gaps are drawn with their size; the words come from Fluent.
+        let marks: Vec<(Mark, String)> = self
+            .viewer
+            .drag_marks()
+            .iter()
+            .map(|m| {
+                let label = match m {
+                    Mark::Gap { from, to, .. } => self
+                        .strings
+                        .format(&Message::new("app-gap-size").num("px", (to - from).abs(), 0)),
+                    Mark::Point { .. } => String::new(),
+                };
+                (*m, label)
+            })
+            .collect();
         let rhythm = self
             .viewer
             .show_rhythm
@@ -1289,17 +1344,68 @@ impl ViewerUi {
                 }
             }
             for g in &guides {
-                let (a, b) = match g.axis {
-                    Axis::X => (to_screen(g.at, 0.0), to_screen(g.at, h as f64)),
-                    Axis::Y => (to_screen(0.0, g.at), to_screen(w as f64, g.at)),
+                // A guide to another object runs from the lowest to the highest of the objects it
+                // joins; the rest run across the page.
+                let (lo, hi) = match (g.span, g.axis) {
+                    (Some(s), _) => s,
+                    (None, Axis::X) => (0.0, h as f64),
+                    (None, Axis::Y) => (0.0, w as f64),
                 };
-                // Rhythm and margin lines are a solid thin line; a size that matched is dashed.
+                let (a, b) = match g.axis {
+                    Axis::X => (to_screen(g.at, lo), to_screen(g.at, hi)),
+                    Axis::Y => (to_screen(lo, g.at), to_screen(hi, g.at)),
+                };
                 let color = match g.kind {
                     SnapKind::Rhythm | SnapKind::Subdivision => Color32::from_rgb(230, 40, 150),
                     SnapKind::RhythmSize => Color32::from_rgb(160, 60, 220),
                     SnapKind::Margin | SnapKind::SafeZone => Color32::from_rgb(0, 160, 170),
+                    SnapKind::Point | SnapKind::Smart | SnapKind::Equal => OBJECT_SNAP,
                 };
                 painter.line_segment([a, b], Stroke::new(1.0, color));
+            }
+            for (mark, label) in &marks {
+                match *mark {
+                    Mark::Point { x, y } => {
+                        // A ring with a cross through it, on the anchor that caught.
+                        let c = to_screen(x, y);
+                        let stroke = Stroke::new(1.5, OBJECT_SNAP);
+                        painter.circle_stroke(c, 5.0, stroke);
+                        painter.line_segment([c - vec2(8.0, 0.0), c + vec2(8.0, 0.0)], stroke);
+                        painter.line_segment([c - vec2(0.0, 8.0), c + vec2(0.0, 8.0)], stroke);
+                    }
+                    Mark::Gap {
+                        axis,
+                        from,
+                        to,
+                        cross,
+                    } => {
+                        // The gap as a measure: a line with a tick at each end, and its size.
+                        let (a, b, tick) = match axis {
+                            Axis::X => {
+                                (to_screen(from, cross), to_screen(to, cross), vec2(0.0, 4.0))
+                            }
+                            Axis::Y => {
+                                (to_screen(cross, from), to_screen(cross, to), vec2(4.0, 0.0))
+                            }
+                        };
+                        let stroke = Stroke::new(1.0, OBJECT_SNAP);
+                        painter.line_segment([a, b], stroke);
+                        painter.line_segment([a - tick, a + tick], stroke);
+                        painter.line_segment([b - tick, b + tick], stroke);
+                        let galley = painter.layout_no_wrap(
+                            label.clone(),
+                            egui::FontId::proportional(11.0),
+                            Color32::WHITE,
+                        );
+                        let at = a.lerp(b, 0.5) - galley.size() / 2.0;
+                        painter.rect_filled(
+                            Rect::from_min_size(at, galley.size()).expand(2.0),
+                            CornerRadius::same(2),
+                            OBJECT_SNAP,
+                        );
+                        painter.galley(at, galley, Color32::WHITE);
+                    }
+                }
             }
             if let Some(m) = marquee {
                 let r = Rect::from_min_max(to_screen(m.x0, m.y0), to_screen(m.x1, m.y1));

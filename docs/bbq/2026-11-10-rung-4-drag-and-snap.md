@@ -143,3 +143,14 @@ chris's next answer, word for word (2026-11-10, on the 60.1 ms frame and the saf
   number". The linter, the overlay and the snap now all use every toolbar position (this replaces the left-and-top
   lint choice of 2026-11-09 and the "lint unchanged" note above). Overlapping or touching zones draw one outline round
   their combined area.
+
+## After 4b (2026-11-10)
+
+Added after the 4b build; the rules above are unchanged. chris's go-ahead, word for word: "please proceed with rung 4b".
+Built as Defaulted says (6 px reach; tie order rhythm, margins and safe zones, point snap, smart guides, equal spacing;
+all switches on; Ctrl turns them off; guides and gaps never exported; clipboard text with the `"quadrule-clipboard": 1`
+marker; paste one rhythm unit down and right in the same document, in place in another). Two small additions, either can be
+vetoed: each further paste goes one more unit down and right; a cut leaves locked objects where they are. Equal spacing is
+for a move only. Open for chris's look: whether rhythm should beat an equal gap or smart guide that is a fraction of a
+pixel nearer (now: nearest wins).
+

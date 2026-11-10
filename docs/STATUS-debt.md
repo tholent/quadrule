@@ -58,3 +58,12 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   different layers are dragged together but a locked one among them stays put without saying so. The layers panel's
   drag-and-drop has no pointer test. Alt-drag may be taken by the window manager on the Pi. The status bar's snap
   switches may not fit in a narrow window.
+- Rung 4b, owed (`crates/layout/src/snap.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/editor.rs`): equal spacing works for a
+  move only (not a resize); a resize's corner has no point snap (its edges still get smart guides); point snap and smart
+  guides count every visible object, including a page-sized pattern region's edges and centre; the nearest catch wins
+  even by a fraction of a pixel, so an equal gap can beat a rhythm line (decision for chris); equal gaps may be half a
+  pixel (not rounded to the pixel grid); two open windows holding the same file count as "the same document" for the
+  paste offset; a paste goes to the first selected object's layer, not the layer picked in the layers panel; copy and
+  paste are tested with egui's events, not the real system clipboard; the status bar is full at 1280 px with seven switches
+  (a "Snap" menu would fit narrower windows).
+

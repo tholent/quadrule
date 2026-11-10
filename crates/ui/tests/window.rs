@@ -452,12 +452,21 @@ fn snap_toggles_and_subdivisions_are_named_controls() {
         "Pixel grid",
         "Rhythm",
         "Margins and safe zones",
+        "Point snap",
+        "Smart guides",
+        "Equal spacing",
         "Rhythm overlay",
     ];
     let twice = names.iter().all(|n| h.get_all_by_label(n).count() >= 2);
     let on_at_start = {
         let s = &h.state().ui.viewer;
-        s.snap.pixel_grid && s.snap.rhythm && s.snap.margins_safe && !s.show_rhythm
+        s.snap.pixel_grid
+            && s.snap.rhythm
+            && s.snap.margins_safe
+            && s.snap.points
+            && s.snap.smart_guides
+            && s.snap.equal_spacing
+            && !s.show_rhythm
     };
     // The harness drops a first click that no hover came before; hover, then click.
     h.get_all_by_label("Pixel grid").next().unwrap().hover();
@@ -468,10 +477,13 @@ fn snap_toggles_and_subdivisions_are_named_controls() {
     h.get_all_by_label("Rhythm overlay").next().unwrap().click();
     h.run();
     let overlay_on = h.state().ui.viewer.show_rhythm;
+    h.get_all_by_label("Smart guides").next().unwrap().click();
+    h.run();
+    let smart_off = !h.state().ui.viewer.snap.smart_guides;
     let sub_field = h.query_by_label("Subdivisions").is_some();
-    let ok = twice && on_at_start && overlay_on && grid_off && sub_field;
+    let ok = twice && on_at_start && overlay_on && grid_off && smart_off && sub_field;
     println!(
-        "\nCHECK crate=ui name=window_snap_toggles result={} in_status_and_page_tab={twice} on_at_start={on_at_start} overlay_toggles={overlay_on} pixel_grid_toggles={grid_off} subdivisions_field={sub_field}",
+        "\nCHECK crate=ui name=window_snap_toggles result={} in_status_and_page_tab={twice} on_at_start={on_at_start} overlay_toggles={overlay_on} pixel_grid_toggles={grid_off} smart_guides_toggles={smart_off} subdivisions_field={sub_field}",
         pass(ok)
     );
     assert!(ok);
@@ -627,6 +639,59 @@ fn the_canvas_turns_pointer_drags_into_moves_marquees_and_escape() {
         dragging && untouched && one_step && moved && selected && box_drawn && marquee && escaped;
     println!(
         "\nCHECK crate=ui name=window_pointer_drag result={} dragging={dragging} doc_untouched_midway={untouched} one_step={one_step} rule_moved={moved} selected={selected} marquee_box={box_drawn} marquee_selects_title={marquee} escape_drops={escaped}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn copy_cut_and_paste_keys() {
+    // Rung 4b: Ctrl+C, Ctrl+X and Ctrl+V reach the viewer as egui's copy, cut and paste events;
+    // a copy puts quadrule's text on the clipboard, a paste of that text makes new objects.
+    let mut h = harness();
+    h.get_by_label("Open sample page").click();
+    h.run();
+    h.state_mut().ui.viewer.selection = vec![ids::RULE];
+    let objects = |h: &Harness<'_, Window>| {
+        h.state()
+            .ui
+            .viewer
+            .doc()
+            .unwrap()
+            .layers
+            .iter()
+            .map(|l| l.objects.len())
+            .sum::<usize>()
+    };
+    let before = objects(&h);
+    h.event(egui::Event::Copy);
+    h.step();
+    let on_clipboard = h
+        .output()
+        .platform_output
+        .commands
+        .iter()
+        .find_map(|c| match c {
+            egui::OutputCommand::CopyText(t) => Some(t.clone()),
+            _ => None,
+        });
+    let copied = on_clipboard
+        .as_ref()
+        .is_some_and(|t| t.contains("quadrule-clipboard"));
+    let text = on_clipboard.unwrap_or_default();
+    h.event(egui::Event::Paste(text.clone()));
+    h.run();
+    let pasted = objects(&h) == before + 1;
+    h.event(egui::Event::Paste("not ours".into()));
+    h.run();
+    let ignored = objects(&h) == before + 1;
+    h.state_mut().ui.viewer.selection = vec![ids::RULE];
+    h.event(egui::Event::Cut);
+    h.run();
+    let cut = objects(&h) == before;
+    let ok = copied && pasted && ignored && cut;
+    println!(
+        "\nCHECK crate=ui name=window_copy_paste_keys result={} copy_on_clipboard={copied} paste_adds={pasted} other_text_ignored={ignored} cut_removes={cut}",
         pass(ok)
     );
     assert!(ok);

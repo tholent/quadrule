@@ -429,3 +429,44 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   - Overlapping or touching safe zones draw one outline round the combined area (`union_outline`, `crates/layout/src/snap.rs`,
     check `union_outline`). Their translucent fills still add up where they overlap; not asked, so not changed.
   - Checks: 146 `CHECK` lines, 0 `result=fail`, 141 tests passed, 0 failed; clippy and fmt clean.
+
+## 2026-11-10 — rung 4b built (Sonnet 5.5, high effort)
+
+Asked by chris: "please proceed with rung 4b". Size said up front: the record's estimate was 2–3 sessions; it went in one
+session. Built in this order, on `main`:
+- Clipboard, `crates/model/src/clipboard.rs` and `edit::paste`: the copied objects, bottom first, as JSON under the marker
+  `"quadrule-clipboard": 1`; a paste reads only text with that marker (other text, a newer marker, broken JSON: ignored),
+  gives each object a new id, unlocks it, and puts it on top of the layer of the first selected object (or the top
+  unlocked layer). Into the document the objects came from (any pasted id is in it) it lands one rhythm unit down and
+  right; text outlines are not copied (made again at Save). `serde_json` moved from a dev-dependency to a dependency of
+  `model`; it was already in the workspace, so no new crate. Checks `paste_round_trip`, `paste_offset_and_locks`,
+  `clipboard_ignores_other_text`, `copy_cut_paste`, `window_copy_paste_keys`.
+- Snap engine, `crates/layout/src/snap.rs`: `SnapKind` gains `Point`, `Smart`, `Equal` after `SafeZone` (the record's tie
+  order); `SnapToggles` gains `points`, `smart_guides`, `equal_spacing`; `SnapWorld::with_others` takes the other objects'
+  boxes (`Other`, with a flag for lines); `Guide` gains an optional `span` (a guide to an object runs only between the
+  objects it joins); new `Mark` (a point ring, an equal gap); `snap_point` returns `PointSnap`. Point snap needs both
+  coordinates within reach of one anchor (box corners, edge midpoints, centre; a line's two ends and middle). Equal
+  spacing is for a move only: between two objects (gaps equal), or beside two objects that already have a gap (the same
+  gap again), in the dragged box's row or column; touching objects (under 1 px) leave no gap to copy. Resizes and line
+  ends get smart guides; a line end gets point snap too. Checks `snap_points`, `snap_smart_guides`, `snap_equal_spacing`,
+  `snap_priority_4b`.
+- Window: the three switches (status bar and Page tab, kept between runs), orange for what snaps to objects (ring on a
+  point, guide line, gap measures with "N px" labels from Fluent). Others are the objects of the page except the ones
+  dragged; for an Alt-drag the originals count. Ctrl+C/X/V are egui's copy, cut and paste events, taken only when no text
+  field has focus. Checks `drag_smart_guide`, `drag_point_snap`, `drag_equal_spacing`, `drag_alt_copy_lines_up`.
+- Grown past what was asked, said out loud: each further paste of the same clipboard text goes one more unit down and
+  right (otherwise repeated pastes stack exactly); a cut keeps locked objects. Both are small and easy to veto.
+- Found while testing: the nearest catch wins even when it is a fraction of a pixel nearer (the record's rule: "nearest
+  wins, tie goes to rhythm"). On the sample page an equal gap sits 0.2 px nearer than a rhythm line and wins, so the
+  rule snapped to 236.2, not 236.0. The 4a test now sets the three 4a switches. chris may want rhythm to win within a
+  small distance (say half a pixel); not changed.
+- Drag speed on the Pi, release build, `quadrule --bench-drag 150`, all helpers on: export-pixels canvas 95th percentile
+  25.0, 25.6, 26.2 ms (worst 40.6, 45.7, 76.6 ms; one frame over 50 ms in the second run, the same kind of odd frame as
+  before); graphics-chip canvas 31.6, 31.8, 32.1 ms (worst 32.8–35.0). All pass.
+- Seen in the real window (grim screenshot of `--bench-drag` on the Pi): the status bar with all seven switches and the
+  drag clock fits at 1280 px wide, with no room to spare; the equal-gap labels show.
+- Checks: 159 `CHECK` lines, 0 `result=fail`, 154 tests passed, 0 failed; clippy and fmt clean; export goldens unchanged.
+- Not checked: copy and paste through the real system clipboard and between two running windows (the tests use egui's
+  events); drawing of a ring or gap by a person with a pointer (the screenshot was the bench's drag).
+- Stopped for chris's look at 4b.
+

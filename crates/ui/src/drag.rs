@@ -28,7 +28,9 @@
 //! Snapping is done on that device's pixels (Q10).
 
 use crate::viewer::Viewer;
-use quadrule_layout::snap::{Guide, Handle, PxRect, ResizeMods, SnapToggles, SnapWorld};
+use quadrule_layout::snap::{
+    Guide, Handle, Mark, Other, PxRect, ResizeMods, SnapToggles, SnapWorld,
+};
 use quadrule_layout::units::Axis;
 use quadrule_layout::{Shape, resolve_frame, unresolve_frame};
 use quadrule_model::edit::{Command, EditError, duplicate, is_empty, set_frames};
@@ -111,6 +113,8 @@ pub struct Drag {
     world: SnapWorld,
     /// What caught on the last move.
     pub guides: Vec<Guide>,
+    /// Points and equal gaps to draw for the last move (rung 4b).
+    pub marks: Vec<Mark>,
     /// Marquee: the box being drawn, in device pixels.
     pub marquee: Option<PxRect>,
     /// The frames the drag would leave the objects with (primary mm), latest first-to-last.
@@ -122,6 +126,18 @@ fn snap_rect(s: &Shape) -> PxRect {
         Shape::Segment { x0, y0, x1, y1, .. } => PxRect::from_corners(x0, y0, x1, y1),
         Shape::Box { x0, y0, x1, y1 } => PxRect { x0, y0, x1, y1 },
     }
+}
+
+/// The objects on the page other than `skip`, for point snap, smart guides and equal spacing.
+fn others(doc: &Document, placed: &[quadrule_layout::Placed], skip: &[Uuid]) -> Vec<Other> {
+    placed
+        .iter()
+        .filter(|p| !skip.contains(&p.id))
+        .map(|p| Other {
+            rect: snap_rect(&p.shape),
+            line: matches!(doc.object(p.id).map(|o| &o.kind), Some(ObjectKind::Line(_))),
+        })
+        .collect()
 }
 
 /// An object's frame on `shown`, in pixels.
@@ -189,6 +205,11 @@ impl Viewer {
     /// What caught on the last move of the drag, to draw.
     pub fn drag_guides(&self) -> &[Guide] {
         self.drag.as_ref().map_or(&[], |d| &d.guides)
+    }
+
+    /// The points and equal gaps to draw for the last move of the drag.
+    pub fn drag_marks(&self) -> &[Mark] {
+        self.drag.as_ref().map_or(&[], |d| &d.marks)
     }
 
     /// The marquee being drawn, in device pixels.
@@ -348,6 +369,7 @@ impl Viewer {
             base,
             world,
             guides: Vec::new(),
+            marks: Vec::new(),
             marquee: None,
             frames: Vec::new(),
         };
@@ -367,6 +389,14 @@ impl Viewer {
         }
         let mut base_doc = doc.clone();
         let mut targets = ids.clone();
+        // What the drag can line up with: everything on the page it is not moving. An Alt-drag
+        // leaves the originals where they are, so they count.
+        let leave_out: &[Uuid] = if kind == DragKind::Move && mods.alt {
+            &[]
+        } else {
+            &ids
+        };
+        drag.world = drag.world.with_others(others(&doc, &placed, leave_out));
         if kind == DragKind::Move && mods.alt {
             let (cmd, copies) = duplicate(&doc, &ids, Uuid::new_v4);
             if copies.len() == ids.len()
@@ -445,10 +475,12 @@ impl Viewer {
             return;
         };
         let start = drag.start_box;
+        let mut marks = Vec::new();
         let (new_box, guides) = match drag.kind {
             DragKind::Move => {
                 let raw = start.moved(delta.0, delta.1);
                 let s = drag.world.snap_move(&raw, reach, toggles);
+                marks = s.marks;
                 (start.moved(delta.0 + s.dx, delta.1 + s.dy), s.guides)
             }
             DragKind::Handle(HandleHit::Box(h)) => {
@@ -473,10 +505,14 @@ impl Viewer {
                 } else {
                     ((start.x1, start.y1), (start.x0, start.y0))
                 };
-                let (p, guides) =
+                let snapped =
                     drag.world
                         .snap_point((moving.0 + delta.0, moving.1 + delta.1), reach, toggles);
-                (PxRect::from_corners(p.0, p.1, fixed.0, fixed.1), guides)
+                marks = snapped.marks;
+                (
+                    PxRect::from_corners(snapped.at.0, snapped.at.1, fixed.0, fixed.1),
+                    snapped.guides,
+                )
             }
             DragKind::Marquee => unreachable!("handled above"),
         };
@@ -509,6 +545,7 @@ impl Viewer {
             frames.push((item.id, frame));
         }
         drag.guides = guides;
+        drag.marks = marks;
         if frames != drag.frames {
             let mut preview = base_doc;
             for (id, frame) in &frames {

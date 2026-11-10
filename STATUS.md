@@ -52,6 +52,19 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - The safe-zone overlay has no labels, shows every toolbar position (left, right, top, floating) and the footers, draws
   borders only round the combined area where zones overlap, and the linter checks every position too; dragged objects
   snap to the same zones (`crates/ui/src/view.rs`, `crates/ui/src/viewer.rs`, `crates/layout/src/snap.rs`).
+- Rung 4b, the rest of snapping and copy and paste, is built; chris's look is still to come (record
+  `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`): a dragged box's corners, midpoints and centre land on another
+  object's (a line's ends and middle), with a ring where they meet (point snap); its edges and centre line up with
+  other objects', with an orange guide joining them (smart guides); and it goes where the gaps to its neighbours in
+  a row or column are equal, or equal to the gap between two others, with each gap drawn and its size (equal
+  spacing). A resize and a line end use the same guides and point snap. Each has its own switch in the status bar
+  and the Page tab, kept between runs, and Ctrl turns them off with the rest (`crates/layout/src/snap.rs`,
+  `crates/ui/src/drag.rs`, `crates/ui/src/view.rs`). Ctrl+C, Ctrl+X and Ctrl+V copy, cut and paste objects as text
+  on the system clipboard, between documents too; a paste into the same document lands one rhythm unit down and
+  right, each further paste one unit more (`crates/model/src/clipboard.rs`, `crates/ui/src/editor.rs`). Drag speed
+  re-measured on the Pi with all helpers on, release build: export canvas 95th percentile 25.0–26.2 ms (3 runs),
+  chip canvas 31.6–32.1 ms (3 runs), against 50 ms (`docs/STATUS-log.md`). Export bytes unchanged
+  (`crates/render/tests/golden/SHA256SUMS`).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with the seven rules that need no calibration (`crates/lint/src/lib.rs`); `cargo xtask lint`.
@@ -60,15 +73,14 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
 - Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]*
-  name=[^ ]*' | wc -l` → 146 `CHECK` lines, 0 with `result=fail`, 141 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
-  CI run 42837337943 on `c176a2f` passed on Linux, macOS and Windows (`.github/workflows/ci.yml`).
+  name=[^ ]*' | wc -l` → 159 `CHECK` lines, 0 with `result=fail`, 154 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
+  CI for 4b: see `docs/STATUS-log.md` (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).
 
 ## Next
 
-- Rung 4b: point snap, smart guides, equal spacing, copy and paste (record `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`,
-  Q11).
+- chris's look at rung 4b (record `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`, Q11); rung 4 is done when he approves it.
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -93,6 +105,8 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-10: rung 4 planned (bbq, 12 questions): dragging and snapping, split 4a/4b (`docs/STATUS-log.md`).
 - 2026-11-10: rung 4a built (Sonnet 5.5, high): drag, handles, marquee, layer drag, snapping, overlay; measured on the Pi;
   look approved with two safe-zone changes, built (`docs/STATUS-log.md`).
+- 2026-11-10: rung 4b built (Sonnet 5.5, high): point snap, smart guides, equal spacing, copy and paste; measured on the
+  Pi; waits for chris's look (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

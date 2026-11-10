@@ -34,6 +34,16 @@ pub enum Axis {
     Y,
 }
 
+impl Axis {
+    /// The other axis.
+    pub fn other(self) -> Axis {
+        match self {
+            Axis::X => Axis::Y,
+            Axis::Y => Axis::X,
+        }
+    }
+}
+
 /// What a typed length means in one field.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct UnitContext {

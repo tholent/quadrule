@@ -479,6 +479,41 @@ pub fn duplicate(
     (Command::Batch(cmds), copies)
 }
 
+/// The command that pastes `objects` (read from the clipboard, [`crate::clipboard::from_text`])
+/// on top of `layer`, each with a new id from `new_id` and unlocked, moved by `offset_mm` (x, y),
+/// and the new ids in the order of `objects` (rung 4 bbq, Defaulted "Copy and paste"). They keep
+/// their order, so the first is lowest. A layer that is not there gives an empty command.
+pub fn paste(
+    doc: &Document,
+    objects: &[Object],
+    layer: usize,
+    offset_mm: (f64, f64),
+    mut new_id: impl FnMut() -> Uuid,
+) -> (Command, Vec<Uuid>) {
+    let Some(target) = doc.layers.get(layer) else {
+        return (Command::Batch(Vec::new()), Vec::new());
+    };
+    let mut ids = Vec::with_capacity(objects.len());
+    let cmds = objects
+        .iter()
+        .enumerate()
+        .map(|(n, o)| {
+            let mut copy = o.clone();
+            copy.id = new_id();
+            copy.locked = false;
+            copy.frame.x_mm += offset_mm.0;
+            copy.frame.y_mm += offset_mm.1;
+            ids.push(copy.id);
+            Command::Insert {
+                layer,
+                index: target.objects.len() + n,
+                object: copy,
+            }
+        })
+        .collect();
+    (Command::Batch(cmds), ids)
+}
+
 /// The command that gives objects new frames: a move or a resize, made when the mouse is let go
 /// (rung 4 bbq, Defaulted "One drag, one undo step"). Objects that are gone, or that already
 /// have the frame, are left out; the rest are one step. It is refused, with nothing changed, if

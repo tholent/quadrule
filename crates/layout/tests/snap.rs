@@ -34,6 +34,9 @@ const ALL: SnapToggles = SnapToggles {
     pixel_grid: true,
     rhythm: true,
     margins_safe: true,
+    points: true,
+    smart_guides: true,
+    equal_spacing: true,
 };
 
 fn world_with(subdivisions: Option<u8>, zones: &[PxRect]) -> SnapWorld {
@@ -213,8 +216,7 @@ fn pixel_grid_rounds_when_nothing_caught_and_ctrl_turns_all_off() {
         REACH,
         SnapToggles {
             pixel_grid: true,
-            rhythm: false,
-            margins_safe: false,
+            ..SnapToggles::OFF
         },
     );
     // Off: nothing moves, even a box on a line.
@@ -421,8 +423,12 @@ fn resize_with_shift_keeps_proportions_and_alt_works_from_the_centre() {
 #[test]
 fn line_ends_snap_as_points() {
     let w = world();
-    let (p, g) = w.snap_point((168.0, 305.0), REACH, ALL);
-    let (q, h) = w.snap_point((168.0, 305.0), REACH, SnapToggles::OFF);
+    let PointSnap {
+        at: p, guides: g, ..
+    } = w.snap_point((168.0, 305.0), REACH, ALL);
+    let PointSnap {
+        at: q, guides: h, ..
+    } = w.snap_point((168.0, 305.0), REACH, SnapToggles::OFF);
     let ok = close(p.0, 165.0)
         && close(p.1, 307.0)
         && g.len() == 2
@@ -562,6 +568,418 @@ fn union_outline_leaves_out_borders_inside_the_combined_area() {
         len(&met),
         len(&nested),
         len(&apart)
+    );
+    assert!(ok);
+}
+
+// ---- Rung 4b: point snap, smart guides, equal spacing ----
+
+fn boxed(x0: f64, y0: f64, x1: f64, y1: f64) -> Other {
+    Other {
+        rect: PxRect { x0, y0, x1, y1 },
+        line: false,
+    }
+}
+
+fn only(f: impl FnOnce(&mut SnapToggles)) -> SnapToggles {
+    let mut t = SnapToggles::OFF;
+    f(&mut t);
+    t
+}
+
+#[test]
+fn snap_point_to_anchors() {
+    let a = boxed(500.0, 500.0, 700.0, 600.0);
+    let line = Other {
+        rect: PxRect {
+            x0: 1000.0,
+            y0: 1000.0,
+            x1: 1200.0,
+            y1: 1100.0,
+        },
+        line: true,
+    };
+    let w = world().with_others(vec![a, line]);
+    let pts = only(|t| t.points = true);
+    // The box's top-left corner is 4 and 3 px from the box's top-right corner: it lands on it.
+    let near = w.snap_move(
+        &PxRect {
+            x0: 704.0,
+            y0: 503.0,
+            x1: 804.0,
+            y1: 553.0,
+        },
+        REACH,
+        pts,
+    );
+    let landed = close(near.dx, -4.0)
+        && close(near.dy, -3.0)
+        && near.marks == vec![Mark::Point { x: 700.0, y: 500.0 }]
+        && near.guides.is_empty();
+    // 8 px off on one axis: out of reach on that axis, so no catch at all.
+    let far = w.snap_move(
+        &PxRect {
+            x0: 704.0,
+            y0: 508.0,
+            x1: 804.0,
+            y1: 558.0,
+        },
+        REACH,
+        pts,
+    );
+    let missed = far.dx == 0.0 && far.dy == 0.0 && far.marks.is_empty();
+    // The box's centre lands on a line's midpoint.
+    let mid = w.snap_move(
+        &PxRect {
+            x0: 1052.0,
+            y0: 1032.0,
+            x1: 1152.0,
+            y1: 1072.0,
+        },
+        REACH,
+        pts,
+    );
+    let on_mid = close(mid.dx, -2.0)
+        && close(mid.dy, -2.0)
+        && mid.marks
+            == vec![Mark::Point {
+                x: 1100.0,
+                y: 1050.0,
+            }];
+    // A line has no anchor at the corners of its box: a box corner by (1200, 1000) does not catch.
+    let corner = w.snap_move(
+        &PxRect {
+            x0: 1102.0,
+            y0: 1002.0,
+            x1: 1197.0,
+            y1: 1060.0,
+        },
+        REACH,
+        pts,
+    );
+    let not_corner = corner.marks.is_empty() && corner.dx == 0.0 && corner.dy == 0.0;
+    // Ctrl (all off) and the toggle off: nothing moves.
+    let raw = PxRect {
+        x0: 704.0,
+        y0: 503.0,
+        x1: 804.0,
+        y1: 553.0,
+    };
+    let off = w.snap_move(&raw, REACH, SnapToggles::OFF);
+    let toggled = w.snap_move(&raw, REACH, only(|t| t.points = false));
+    let quiet =
+        off.dx == 0.0 && off.marks.is_empty() && toggled.dx == 0.0 && toggled.marks.is_empty();
+    // A line's end: the same.
+    let end = w.snap_point((703.0, 503.0), REACH, pts);
+    let end_ok = end.at == (700.0, 500.0) && end.marks == vec![Mark::Point { x: 700.0, y: 500.0 }];
+    let ok = landed && missed && on_mid && not_corner && quiet && end_ok;
+    println!(
+        "\nCHECK crate=layout name=snap_points result={} landed={landed} out_of_reach={missed} line_midpoint={on_mid} line_box_corner={not_corner} off={quiet} line_end={end_ok}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn snap_smart_guides_line_up() {
+    let a = boxed(500.0, 500.0, 700.0, 600.0);
+    let w = world().with_others(vec![a]);
+    let smart = only(|t| t.smart_guides = true);
+    // The box's centre (597) is 3 px from the other's centre (600); its edges are far from any.
+    let c = w.snap_move(
+        &PxRect {
+            x0: 547.0,
+            y0: 800.0,
+            x1: 647.0,
+            y1: 850.0,
+        },
+        REACH,
+        smart,
+    );
+    let g = c.guides.first().copied();
+    let centre = close(c.dx, 3.0)
+        && c.dy == 0.0
+        && g.map(|g| (g.axis, g.at, g.kind)) == Some((Axis::X, 600.0, SnapKind::Smart))
+        // The line joins the two boxes: from the other's top (500) to the moved box's bottom (850).
+        && g.and_then(|g| g.span) == Some((500.0, 850.0));
+    // An edge to an edge, on the other axis too.
+    let e = w.snap_move(
+        &PxRect {
+            x0: 900.0,
+            y0: 598.0,
+            x1: 1000.0,
+            y1: 650.0,
+        },
+        REACH,
+        smart,
+    );
+    let edges = close(e.dy, 2.0) && e.guides.iter().any(|g| g.axis == Axis::Y && g.at == 600.0);
+    // A resize edge lines up too: the right edge pulled to 697 goes to 700.
+    let start = PxRect {
+        x0: 100.0,
+        y0: 800.0,
+        x1: 400.0,
+        y1: 850.0,
+    };
+    let (r, rg) = w.snap_resize(
+        &start,
+        Handle::E,
+        (297.0, 0.0),
+        ResizeMods::default(),
+        REACH,
+        smart,
+        1.0,
+    );
+    let resized = close(r.x1, 700.0)
+        && rg
+            .iter()
+            .any(|g| g.kind == SnapKind::Smart && g.at == 700.0);
+    // Rhythm outranks a smart guide at the same distance (a line at 307 is also an edge of the other).
+    let b = boxed(307.0, 900.0, 400.0, 950.0);
+    let w2 = world().with_others(vec![b]);
+    let both = only(|t| {
+        t.rhythm = true;
+        t.smart_guides = true;
+    });
+    let tie = w2.snap_span(Axis::X, 309.0, 409.0, REACH, both);
+    let rhythm_first = tie.kind == Some(SnapKind::Rhythm);
+    let alone = w2.snap_span(Axis::X, 309.0, 409.0, REACH, smart);
+    let smart_alone = alone.kind == Some(SnapKind::Smart) && close(alone.delta, -2.0);
+    // Off: nothing.
+    let off = w.snap_move(
+        &PxRect {
+            x0: 547.0,
+            y0: 800.0,
+            x1: 647.0,
+            y1: 850.0,
+        },
+        REACH,
+        SnapToggles::OFF,
+    );
+    let quiet = off.dx == 0.0 && off.guides.is_empty();
+    let ok = centre && edges && resized && rhythm_first && smart_alone && quiet;
+    println!(
+        "\nCHECK crate=layout name=snap_smart_guides result={} centre={centre} edges={edges} resize={resized} rhythm_first={rhythm_first} alone={smart_alone} off={quiet}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn snap_equal_spacing() {
+    let eq = only(|t| t.equal_spacing = true);
+    let row = |others: Vec<Other>| world().with_others(others);
+    let gap = |axis, from, to, cross| Mark::Gap {
+        axis,
+        from,
+        to,
+        cross,
+    };
+    // Between two boxes: gaps of 103 and 97 become 100 and 100.
+    let w = row(vec![
+        boxed(100.0, 500.0, 200.0, 600.0),
+        boxed(500.0, 500.0, 600.0, 600.0),
+    ]);
+    let between = w.snap_move(
+        &PxRect {
+            x0: 303.0,
+            y0: 500.0,
+            x1: 403.0,
+            y1: 600.0,
+        },
+        REACH,
+        eq,
+    );
+    let is_between = close(between.dx, -3.0)
+        && between.dy == 0.0
+        && between.guides.is_empty()
+        && between.marks
+            == vec![
+                gap(Axis::X, 200.0, 300.0, 550.0),
+                gap(Axis::X, 400.0, 500.0, 550.0),
+            ];
+    // Beside two boxes with a gap of 100: the same gap to the right of them.
+    let w = row(vec![
+        boxed(100.0, 500.0, 200.0, 600.0),
+        boxed(300.0, 500.0, 400.0, 600.0),
+    ]);
+    let right = w.snap_move(
+        &PxRect {
+            x0: 503.0,
+            y0: 500.0,
+            x1: 603.0,
+            y1: 600.0,
+        },
+        REACH,
+        eq,
+    );
+    let is_right = close(right.dx, -3.0)
+        && right.marks
+            == vec![
+                gap(Axis::X, 200.0, 300.0, 550.0),
+                gap(Axis::X, 400.0, 500.0, 550.0),
+            ];
+    // ... and to the left of two others.
+    let w = row(vec![
+        boxed(600.0, 500.0, 700.0, 600.0),
+        boxed(800.0, 500.0, 900.0, 600.0),
+    ]);
+    let left = w.snap_move(
+        &PxRect {
+            x0: 397.0,
+            y0: 500.0,
+            x1: 497.0,
+            y1: 600.0,
+        },
+        REACH,
+        eq,
+    );
+    let is_left = close(left.dx, 3.0) && left.marks.len() == 2;
+    // A column works the same way, down the page.
+    let w = row(vec![
+        boxed(500.0, 100.0, 600.0, 200.0),
+        boxed(500.0, 500.0, 600.0, 600.0),
+    ]);
+    let col = w.snap_move(
+        &PxRect {
+            x0: 500.0,
+            y0: 303.0,
+            x1: 600.0,
+            y1: 403.0,
+        },
+        REACH,
+        eq,
+    );
+    let is_col = close(col.dy, -3.0)
+        && col.dx == 0.0
+        && col.marks
+            == vec![
+                gap(Axis::Y, 200.0, 300.0, 550.0),
+                gap(Axis::Y, 400.0, 500.0, 550.0),
+            ];
+    // Objects in another row are not neighbours.
+    let w = row(vec![
+        boxed(100.0, 700.0, 200.0, 800.0),
+        boxed(500.0, 700.0, 600.0, 800.0),
+    ]);
+    let other_row = w.snap_move(
+        &PxRect {
+            x0: 303.0,
+            y0: 500.0,
+            x1: 403.0,
+            y1: 600.0,
+        },
+        REACH,
+        eq,
+    );
+    let not_row = other_row.dx == 0.0 && other_row.marks.is_empty();
+    // Out of reach, toggled off, and Ctrl: nothing.
+    let w = row(vec![
+        boxed(100.0, 500.0, 200.0, 600.0),
+        boxed(500.0, 500.0, 600.0, 600.0),
+    ]);
+    let raw = PxRect {
+        x0: 310.0,
+        y0: 500.0,
+        x1: 410.0,
+        y1: 600.0,
+    };
+    let far = w.snap_move(&raw, REACH, eq);
+    let near = PxRect { x0: 303.0, ..raw };
+    let near = PxRect { x1: 403.0, ..near };
+    let toggled = w.snap_move(&near, REACH, only(|t| t.equal_spacing = false));
+    let off = w.snap_move(&near, REACH, SnapToggles::OFF);
+    let quiet = far.dx == 0.0
+        && far.marks.is_empty()
+        && toggled.dx == 0.0
+        && toggled.marks.is_empty()
+        && off.dx == 0.0
+        && off.marks.is_empty();
+    // Touching boxes leave no gap to copy.
+    let w = row(vec![
+        boxed(100.0, 500.0, 200.0, 600.0),
+        boxed(200.0, 500.0, 300.0, 600.0),
+    ]);
+    let touching = w.snap_move(
+        &PxRect {
+            x0: 402.0,
+            y0: 500.0,
+            x1: 502.0,
+            y1: 600.0,
+        },
+        REACH,
+        eq,
+    );
+    let no_gap = touching.dx == 0.0 && touching.marks.is_empty();
+    let ok = is_between && is_right && is_left && is_col && not_row && quiet && no_gap;
+    println!(
+        "\nCHECK crate=layout name=snap_equal_spacing result={} between={is_between} right={is_right} left={is_left} column={is_col} other_row_ignored={not_row} off={quiet} touching={no_gap}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn snap_priority_with_the_new_helpers() {
+    // The order is the tie-break order: rhythm, subdivision, size, margin, safe zone, point,
+    // smart guide, equal gap.
+    let order = [
+        SnapKind::Rhythm,
+        SnapKind::Subdivision,
+        SnapKind::RhythmSize,
+        SnapKind::Margin,
+        SnapKind::SafeZone,
+        SnapKind::Point,
+        SnapKind::Smart,
+        SnapKind::Equal,
+    ];
+    let sorted = order.windows(2).all(|w| w[0] < w[1]);
+    // A corner 4 px from another's corner: the point and the two guides at the same distance, and
+    // the point wins on both axes, so a marker is drawn and no lines.
+    let a = boxed(500.0, 500.0, 700.0, 600.0);
+    let w = world().with_others(vec![a]);
+    let raw = PxRect {
+        x0: 704.0,
+        y0: 504.0,
+        x1: 804.0,
+        y1: 554.0,
+    };
+    let all = only(|t| {
+        t.points = true;
+        t.smart_guides = true;
+    });
+    let both = w.snap_move(&raw, REACH, all);
+    let point_wins =
+        both.marks == vec![Mark::Point { x: 700.0, y: 500.0 }] && both.guides.is_empty();
+    // With point snap off the same catch is two smart guides.
+    let guides_only = w.snap_move(&raw, REACH, only(|t| t.smart_guides = true));
+    let two_guides = guides_only.marks.is_empty()
+        && guides_only.guides.len() == 2
+        && guides_only.guides.iter().all(|g| g.kind == SnapKind::Smart);
+    // A rhythm line nearer than a point wins: x = 307 (rhythm) is 1 px away, the other's corner 5.
+    let b = boxed(200.0, 900.0, 312.0, 1000.0);
+    let w = world().with_others(vec![b]);
+    let rh = w.snap_move(
+        &PxRect {
+            x0: 308.0,
+            y0: 905.0,
+            x1: 408.0,
+            y1: 955.0,
+        },
+        REACH,
+        only(|t| {
+            t.rhythm = true;
+            t.points = true;
+        }),
+    );
+    let nearest = rh
+        .guides
+        .iter()
+        .any(|g| g.kind == SnapKind::Rhythm && g.at == 307.0);
+    let ok = sorted && point_wins && two_guides && nearest;
+    println!(
+        "\nCHECK crate=layout name=snap_priority_4b result={} order={sorted} point_over_smart={point_wins} smart_alone={two_guides} nearest_wins={nearest}",
+        pass(ok)
     );
     assert!(ok);
 }

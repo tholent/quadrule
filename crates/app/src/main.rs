@@ -43,6 +43,9 @@ const KEY_RULER: &str = "screen_px_per_mm";
 const KEY_SNAP_PIXEL: &str = "snap_pixel_grid";
 const KEY_SNAP_RHYTHM: &str = "snap_rhythm";
 const KEY_SNAP_MARGINS: &str = "snap_margins_safe";
+const KEY_SNAP_POINTS: &str = "snap_points";
+const KEY_SNAP_SMART: &str = "snap_smart_guides";
+const KEY_SNAP_EQUAL: &str = "snap_equal_spacing";
 const KEY_RHYTHM_OVERLAY: &str = "show_rhythm_overlay";
 
 struct App {
@@ -74,6 +77,11 @@ impl App {
             snap.rhythm = eframe::get_value(storage, KEY_SNAP_RHYTHM).unwrap_or(snap.rhythm);
             snap.margins_safe =
                 eframe::get_value(storage, KEY_SNAP_MARGINS).unwrap_or(snap.margins_safe);
+            snap.points = eframe::get_value(storage, KEY_SNAP_POINTS).unwrap_or(snap.points);
+            snap.smart_guides =
+                eframe::get_value(storage, KEY_SNAP_SMART).unwrap_or(snap.smart_guides);
+            snap.equal_spacing =
+                eframe::get_value(storage, KEY_SNAP_EQUAL).unwrap_or(snap.equal_spacing);
             ui.viewer.show_rhythm =
                 eframe::get_value(storage, KEY_RHYTHM_OVERLAY).unwrap_or(ui.viewer.show_rhythm);
         }
@@ -191,6 +199,9 @@ impl eframe::App for App {
         eframe::set_value(storage, KEY_SNAP_PIXEL, &v.snap.pixel_grid);
         eframe::set_value(storage, KEY_SNAP_RHYTHM, &v.snap.rhythm);
         eframe::set_value(storage, KEY_SNAP_MARGINS, &v.snap.margins_safe);
+        eframe::set_value(storage, KEY_SNAP_POINTS, &v.snap.points);
+        eframe::set_value(storage, KEY_SNAP_SMART, &v.snap.smart_guides);
+        eframe::set_value(storage, KEY_SNAP_EQUAL, &v.snap.equal_spacing);
         eframe::set_value(storage, KEY_RHYTHM_OVERLAY, &v.show_rhythm);
     }
 }

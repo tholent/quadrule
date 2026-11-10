@@ -145,6 +145,9 @@ pub struct Viewer {
     /// Which snap helpers are on (rung 4 bbq, Defaulted "Toggles"): app settings, not saved in
     /// the `.quad` file.
     pub snap: SnapToggles,
+    /// The clipboard text last pasted and how many times in a row, so each paste goes one more
+    /// step down and right of the last (rung 4b).
+    pub(crate) paste_run: Option<(String, u32)>,
     /// Whether the rhythm is drawn faintly over the page (rung 4 bbq Q9); never exported.
     pub show_rhythm: bool,
     /// The drag in progress, if any (rung 4).
@@ -187,6 +190,7 @@ impl Default for Viewer {
             notice: None,
             export_dir: None,
             snap: SnapToggles::default(),
+            paste_run: None,
             show_rhythm: false,
             drag: None,
             fonts: FontRegistry::bundled_only(),

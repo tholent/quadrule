@@ -19,9 +19,10 @@
 //! The sample page on the Manta: 300 ppi, margins 8 mm = 94 px, rhythm 6 mm = 71 px.
 
 use quadrule_layout::Shape;
-use quadrule_layout::snap::SnapToggles;
+use quadrule_layout::snap::{Mark, SnapKind, SnapToggles};
+use quadrule_model::edit::{Command, remove};
 use quadrule_model::sample::*;
-use quadrule_model::{MM_PER_IN, Uuid};
+use quadrule_model::{Frame, MM_PER_IN, Uuid};
 use quadrule_ui::{DragKind, DragMods, HandleHit, Viewer};
 
 fn pass(ok: bool) -> &'static str {
@@ -54,6 +55,15 @@ const FREE: DragMods = DragMods {
     snapping_off: true,
 };
 const REACH: f64 = 6.0;
+/// Rung 4a's three helpers only: the sample page's own objects would otherwise catch too.
+const FOUR_A: SnapToggles = SnapToggles {
+    pixel_grid: true,
+    rhythm: true,
+    margins_safe: true,
+    points: false,
+    smart_guides: false,
+    equal_spacing: false,
+};
 
 fn grab(v: &mut Viewer, x: f64, y: f64, mods: DragMods) -> bool {
     v.drag_begin(x, y, mods, 4.0, 6.0)
@@ -117,6 +127,7 @@ fn a_move_snaps_to_the_rhythm_and_ctrl_turns_it_off() {
     // The rule runs along y = 22 mm = 259.8 px. Dragged up 20 px it is at 239.8, 3.8 px from the
     // rhythm line at 236: it snaps there. With snapping off it stays where the pointer put it.
     let mut v = sample();
+    v.snap = FOUR_A;
     grab(&mut v, px(50.0), px(22.0), NONE);
     v.drag_update(px(50.0), px(22.0) - 20.0, NONE, REACH);
     let guides = v.drag_guides().to_vec();
@@ -132,9 +143,8 @@ fn a_move_snaps_to_the_rhythm_and_ctrl_turns_it_off() {
     // The toggles are app settings: with the rhythm helper off nothing but the pixel grid works.
     v.undo();
     v.snap = SnapToggles {
-        rhythm: false,
-        margins_safe: false,
         pixel_grid: true,
+        ..SnapToggles::OFF
     };
     grab(&mut v, px(50.0), px(22.0), NONE);
     v.drag_update(px(50.0), px(22.0) - 20.0, NONE, REACH);
@@ -553,9 +563,8 @@ fn the_right_toolbar_zone_is_shown_and_caught_by_default() {
     // Rhythm and margins off: only the zones can catch. The rule's right edge ends 94 px in from the
     // page edge; drag it so that edge is 3 px short of the zone's left edge.
     v.snap = SnapToggles {
-        pixel_grid: false,
-        rhythm: false,
         margins_safe: true,
+        ..SnapToggles::OFF
     };
     let Shape::Segment { x1, y0, .. } = shape(&mut v, ids::RULE) else {
         panic!("a line is a segment")
@@ -571,6 +580,158 @@ fn the_right_toolbar_zone_is_shown_and_caught_by_default() {
     let ok = caught && listed;
     println!(
         "\nCHECK crate=ui name=right_zone_shown_by_default result={} zone_edge_x={edge} caught={caught} every_toolbar_in_use={listed}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+// ---- Rung 4b: point snap, smart guides, equal spacing ----
+
+fn only(f: impl FnOnce(&mut SnapToggles)) -> SnapToggles {
+    let mut t = SnapToggles::OFF;
+    f(&mut t);
+    t
+}
+
+#[test]
+fn a_move_lines_up_with_another_object() {
+    // The rule is dragged until it is 3 px below the title's bottom edge: the smart guide pulls it
+    // onto that edge and the guide runs from the title to the rule. Ctrl turns it off.
+    let mut v = sample();
+    v.snap = only(|t| t.smart_guides = true);
+    let Shape::Box {
+        y1: title_bottom, ..
+    } = shape(&mut v, ids::TITLE)
+    else {
+        panic!("a text box is a box")
+    };
+    let dy = title_bottom + 3.0 - px(22.0);
+    grab(&mut v, px(50.0), px(22.0), NONE);
+    v.drag_update(px(50.0), px(22.0) + dy, NONE, REACH);
+    let guides = v.drag_guides().to_vec();
+    v.drag_end().unwrap();
+    let landed = close(px(frame(&v, ids::RULE).y_mm), title_bottom);
+    let guide = guides
+        .iter()
+        .any(|g| g.kind == SnapKind::Smart && close(g.at, title_bottom) && g.span.is_some());
+    v.undo();
+    grab(&mut v, px(50.0), px(22.0), NONE);
+    v.drag_update(px(50.0), px(22.0) + dy, FREE, REACH);
+    let quiet = v.drag_guides().is_empty() && v.drag_marks().is_empty();
+    v.drag_end().unwrap();
+    let free = close(px(frame(&v, ids::RULE).y_mm), title_bottom + 3.0);
+    let ok = landed && guide && quiet && free;
+    println!(
+        "\nCHECK crate=ui name=drag_smart_guide result={} on_edge={landed} guide_drawn={guide} ctrl_off_quiet={quiet} ctrl_off_free={free}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_line_end_snaps_to_another_objects_corner() {
+    // The rule's end handle is pulled to 3 px short of the lines pattern's top-right corner; the
+    // point snap puts it on the corner and draws a marker there.
+    let mut v = sample();
+    v.snap = only(|t| t.points = true);
+    let Shape::Box { x1: cx, y0: cy, .. } = shape(&mut v, ids::LINES) else {
+        panic!("a pattern is a box")
+    };
+    grab(&mut v, px(50.0), px(22.0), NONE);
+    v.drag_cancel();
+    let end = v
+        .handles()
+        .into_iter()
+        .find(|h| h.0 == HandleHit::LineEnd)
+        .expect("a selected line has an end handle");
+    let started = grab(&mut v, end.1, end.2, NONE) && v.dragging();
+    v.drag_update(cx + 3.0, cy - 3.0, NONE, REACH);
+    let marks = v.drag_marks().to_vec();
+    v.drag_end().unwrap();
+    let f = frame(&v, ids::RULE);
+    let on_corner = close(px(f.x_mm + f.w_mm), cx) && close(px(f.y_mm + f.h_mm), cy);
+    let marker = marks == vec![Mark::Point { x: cx, y: cy }];
+    let ok = started && on_corner && marker;
+    println!(
+        "\nCHECK crate=ui name=drag_point_snap result={} started={started} end_on_corner={on_corner} marker_drawn={marker}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_move_snaps_to_equal_gaps() {
+    // Three boxes in a row: the left and right ones 60 mm apart, the middle one 0.3 mm off the
+    // place with equal gaps. Dragged a pixel, it goes to that place and both gaps are drawn.
+    let mut v = sample();
+    let template = v.doc().unwrap().object(ids::DOTS).unwrap().clone();
+    let (layer, _) = v.doc().unwrap().find(ids::DOTS).unwrap();
+    let mut cmds = vec![remove(&[ids::TITLE, ids::RULE, ids::DOTS, ids::LINES])];
+    let boxes = [(20.0, 1u128), (59.7, 2), (100.0, 3)];
+    for (i, (x, n)) in boxes.into_iter().enumerate() {
+        let mut o = template.clone();
+        o.id = Uuid::from_u128(0xE000 + n);
+        o.frame = Frame::new(x, 100.0, 20.0, 10.0);
+        cmds.push(Command::Insert {
+            layer,
+            index: i,
+            object: o,
+        });
+    }
+    v.edit(Command::Batch(cmds), None).unwrap();
+    let middle = Uuid::from_u128(0xE000 + 2);
+    v.snap = only(|t| t.equal_spacing = true);
+    let (x, y) = (px(69.7), px(105.0));
+    let started = grab(&mut v, x, y, NONE);
+    v.drag_update(x + 1.0, y, NONE, REACH);
+    let marks = v.drag_marks().to_vec();
+    v.drag_end().unwrap();
+    let centred = close(frame(&v, middle).x_mm, 60.0);
+    let gaps: Vec<f64> = marks
+        .iter()
+        .filter_map(|m| match m {
+            Mark::Gap { from, to, .. } => Some(to - from),
+            Mark::Point { .. } => None,
+        })
+        .collect();
+    let both = gaps.len() == 2 && close(gaps[0], gaps[1]) && close(gaps[0], px(20.0));
+    // Ctrl: it stays where the pointer left it, a pixel on, and nothing is drawn.
+    v.undo();
+    grab(&mut v, x, y, NONE);
+    v.drag_update(x + 1.0, y, FREE, REACH);
+    let quiet = v.drag_marks().is_empty();
+    v.drag_end().unwrap();
+    let free = close(px(frame(&v, middle).x_mm), px(59.7) + 1.0);
+    let ok = started && centred && both && quiet && free;
+    println!(
+        "\nCHECK crate=ui name=drag_equal_spacing result={} started={started} centred={centred} two_equal_gaps={both} ctrl_off_quiet={quiet} ctrl_off_free={free}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn an_alt_drag_copy_lines_up_with_its_original() {
+    // The original stays where it is while its copy is dragged, so it counts as another object:
+    // the copy, 3 px off in height, goes back to the original's height with a guide.
+    let mut v = sample();
+    v.snap = only(|t| t.smart_guides = true);
+    let alt = DragMods { alt: true, ..NONE };
+    let before = frame(&v, ids::RULE).y_mm;
+    grab(&mut v, px(50.0), px(22.0), alt);
+    v.drag_update(px(50.0) + 200.0, px(22.0) + 3.0, alt, REACH);
+    let guided = v
+        .drag_guides()
+        .iter()
+        .any(|g| g.kind == SnapKind::Smart && close(g.at, px(before)));
+    v.drag_end().unwrap();
+    let copy = v.selection[0];
+    let ok = copy != ids::RULE
+        && guided
+        && close(frame(&v, copy).y_mm, before)
+        && close(frame(&v, ids::RULE).y_mm, before);
+    println!(
+        "\nCHECK crate=ui name=drag_alt_copy_lines_up result={} guided={guided}",
         pass(ok)
     );
     assert!(ok);

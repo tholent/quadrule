@@ -23,8 +23,9 @@ use quadrule_format::{FontRef, QuadFile};
 use quadrule_i18n::Message;
 use quadrule_layout::lay_out_text;
 use quadrule_layout::units::{Axis, UnitContext};
+use quadrule_model::clipboard;
 use quadrule_model::edit::{
-    Command, EditError, LayerProps, duplicate, is_empty, remove, reorder_to,
+    Command, EditError, LayerProps, duplicate, is_empty, paste, remove, reorder_to,
 };
 use quadrule_model::{Document, Extra, Object, ObjectKind, Uuid};
 use quadrule_profiles::{Profile, builtin};
@@ -263,6 +264,71 @@ impl Viewer {
         self.edit(cmd, None)?;
         self.selection = copies;
         Ok(())
+    }
+
+    /// The clipboard text for the selected objects, locked ones too (Ctrl+C; rung 4b bbq,
+    /// Defaulted "Copy and paste"). Nothing is changed.
+    pub fn copy_text(&mut self) -> Option<String> {
+        let text = clipboard::to_text(self.doc()?, &self.selection)?;
+        // A new copy starts the paste steps again.
+        self.paste_run = None;
+        Some(text)
+    }
+
+    /// Copies the editable selected objects and deletes them (Ctrl+X); the text is for the
+    /// clipboard. Locked objects stay, and are not copied.
+    pub fn cut_text(&mut self) -> Result<Option<String>, EditError> {
+        let ids = self.editable_selection();
+        self.locked_notice_if_none_editable();
+        let Some(text) = self.doc().and_then(|d| clipboard::to_text(d, &ids)) else {
+            return Ok(None);
+        };
+        self.paste_run = None;
+        self.edit(remove(&ids), None)?;
+        self.selection.retain(|id| !ids.contains(id));
+        Ok(Some(text))
+    }
+
+    /// Pastes clipboard `text` if it is quadrule's (Ctrl+V); returns whether anything was
+    /// pasted. The copies are new objects on top of the layer of the first selected object (or
+    /// the top unlocked layer), and become the selection. Into the document they came from they
+    /// land one rhythm unit down and right, and each paste in a row one unit further; into
+    /// another document the first lands in the same place.
+    pub fn paste_text(&mut self, text: &str) -> Result<bool, EditError> {
+        let Some(objects) = clipboard::from_text(text) else {
+            return Ok(false);
+        };
+        let Some(doc) = self.doc() else {
+            return Ok(false);
+        };
+        let layer = self
+            .selection
+            .iter()
+            .find_map(|id| doc.find(*id).map(|(l, _)| l))
+            .filter(|&l| !doc.layers[l].locked)
+            .or_else(|| doc.layers.iter().rposition(|l| !l.locked));
+        let Some(layer) = layer else {
+            self.notice = Some(crate::viewer::Notice {
+                message: Message::new("notice-locked"),
+                error: true,
+            });
+            return Ok(false);
+        };
+        let times = match &self.paste_run {
+            Some((t, n)) if t == text => n + 1,
+            _ => 1,
+        };
+        let from_here = objects.iter().any(|o| doc.object(o.id).is_some());
+        let steps = f64::from(if from_here { times } else { times - 1 });
+        let offset = (doc.rhythm.h_unit_mm * steps, doc.rhythm.v_unit_mm * steps);
+        let (cmd, new) = paste(doc, &objects, layer, offset, Uuid::new_v4);
+        if is_empty(&cmd) {
+            return Ok(false);
+        }
+        self.edit(cmd, None)?;
+        self.selection = new;
+        self.paste_run = Some((text.to_owned(), times));
+        Ok(true)
     }
 
     /// Moves each selected object one place up or down within its layer (Move up / Move down).
