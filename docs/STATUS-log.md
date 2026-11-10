@@ -687,3 +687,7 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   `v0.1.0` `00ad0e2` (chris merged PR #1), `v0.2.0` `52c7ee9`, `v0.3.0` `50bd8db`, `v0.4.0` `c176a2f` (4a), `v0.4.1`
   `6ced5c2` (4b), `v0.5.0` `9bb8122`; pushed (`git ls-remote --tags origin`). The workspace version stays 0.1.0 in
   those commits. The arc's tag rule now bumps the last number per split part (`docs/arcs/v1/README.md`).
+- Later the same session: chris, word for word: "please make github releases for v0.5.0 and for any approved rung
+  (release) moving forward". Notes written for v0.5.0 (pre-release, no installers yet); `gh release create v0.5.0
+  --verify-tag --prerelease …` → `HTTP 403: Resource not accessible by personal access token`, so no release exists
+  yet. The rule is on the arc board; the token gap is in `docs/STATUS-debt.md`.

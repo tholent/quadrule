@@ -13,7 +13,9 @@ Model-shaping rungs come first, so features built later need no rework (Q5). Eac
 questions before building (Q6), its own budget from `budget-select` at kickoff (Q9), and chris's look before it is
 done (ADR-007). A rung bigger than one session splits into 6a, 6b… with a look each (Q10). When chris approves a rung,
 it becomes version `0.N.0` with a pushed git tag `v0.N.0` (Q19); each later part of a split rung bumps the last
-number (6a `v0.6.0`, 6b `v0.6.1`), as rungs 1 to 5 were tagged (chris, 2026-11-10).
+number (6a `v0.6.0`, 6b `v0.6.1`), as rungs 1 to 5 were tagged (chris, 2026-11-10). Each approved rung or part also gets a
+GitHub release on its tag, marked pre-release until v1.0, with notes on what the rung added (chris, 2026-11-10:
+"please make github releases for v0.5.0 and for any approved rung (release) moving forward").
 
 | Rung | What it holds | Size | State |
 |---|---|---|---|
@@ -52,6 +54,9 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
   - Bullet journal (rapid log, habit tracker, future log, index): after rung 10.
   - Creative (storyboard, music staff, handwriting practice): after rung 9.
 - **Looks:** one per rung or part (ADR-007).
+- **Releases:** the `gh` token cannot create releases (HTTP 403, 2026-11-10). Either renew it with Contents: read
+  and write on `tholent/quadrule`, or publish v0.5.0 by hand from the tag page with the notes in
+  `docs/arcs/v1/release-notes/v0.5.0.md`. Each rung's notes go in that folder.
 
 ## Standing rules for every rung
 
@@ -81,3 +86,5 @@ above (which chris approves before it counts).
 - 2026-11-10: rungs 1 to 5 tagged at their approval commits: `v0.1.0` (`00ad0e2`), `v0.2.0` (`52c7ee9`), `v0.3.0`
   (`50bd8db`), `v0.4.0` 4a (`c176a2f`), `v0.4.1` 4b (`6ced5c2`), `v0.5.0` (`9bb8122`). The workspace `Cargo.toml`
   still says 0.1.0 at all of them; from rung 6 the bump goes in the approval commit.
+- 2026-11-10: releases ruled for v0.5.0 and every approved rung after it. v0.5.0's release is blocked: the `gh`
+  token gets HTTP 403 on `gh release create` (see chris's queue).
