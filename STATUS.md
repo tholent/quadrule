@@ -111,15 +111,18 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Next
 
-- Rung 6 is chris's to plan (the napkin's next steps, `napkins/quadrule-spec.md` §16; the tools bar takes rectangle,
-  ellipse, polygon and repeat as one entry each, `crates/ui/src/tools.rs`).
-- Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
-  `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
+- **Arc v1** plans the rest of the way to v1.0 (the full §16 list) as rungs 6 to 18: the board is
+  `docs/arcs/v1/README.md`, and the next lead's prompt is `docs/arcs/v1/v1-PROMPT-2026-11-10.md` (Opus 5.5 high
+  leads, Sonnet 5.5 high builds). Next: rung 6, shapes, starting with a short bbq.
+- Waits on chris (early, alongside rungs 6–7): the clean gray levels on both devices, and a landscape check on a
+  device plus landscape toolbar screenshots (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
+  (`napkins/quadrule-spec.md` §8.3 note).
 
 ## Known debt
 
 Full debt list: `docs/STATUS-debt.md`.
-- Clean gray levels are not measured on either device; the Manta's pen shades are assumed (`docs/STATUS-debt.md`).
+- Clean gray levels are not measured on either device; the Manta's pen shades are ruled equal to the Nomad's
+  (`docs/STATUS-debt.md`).
 - ADR parts not built yet: font signature, fuzzing, hinting flag, system-font fallback and substitution, canvas
   (`docs/STATUS-debt.md`).
 
@@ -147,6 +150,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-10: rung 5 built (Sonnet 5.5, high): New, the tools bar, drawing; measured on the Pi; waits for chris's look
   (`docs/STATUS-log.md`).
 - 2026-11-10: rung 5 approved by chris; L06 stops checking the floating toolbar (ADR-012 amended) (`docs/STATUS-log.md`).
+- 2026-11-10: arc v1 planned (Arc bbq, 20 questions): rungs 6–18 to v1.0 (`docs/arcs/v1/README.md`, `docs/STATUS-log.md`).
 
 ## How this file is kept
 

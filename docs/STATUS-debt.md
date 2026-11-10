@@ -8,8 +8,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; the build-folder instruction the render worker
   reports (`spikes/render/FINDINGS.md`). (Canvas fallback to vello_cpu on weak GPUs: ruled yes, 2026-11-09.)
 - Calibration, still to measure: the clean gray levels on both devices (the profiles keep 16 evenly spaced
-  estimates), which the gray lint rules need; and the Manta's pen shades, assumed equal to the Nomad's
-  (`crates/profiles/data/`, `docs/device-measurements/README.md`).
+  estimates), which the gray lint rules need (`crates/profiles/data/`, `docs/device-measurements/README.md`). The
+  Manta's pen shades are not owed: chris ruled them equal to the Nomad's (2026-11-10, arc v1 bbq Q8).
 - The `gh` token expires 90 days after it was made (chris, 2026-11-09); if made 2026-11-09, that is about 2027-02-07.
   Renew it before then, or `gh` stops opening PRs and reading CI (rung 1 record, Defaulted "Repository").
 - The `gh` fine-grained token cannot read check summaries (`gh pr checks` fails: GitHub offers no `checks:read` for

@@ -448,6 +448,9 @@ The linter runs continuously, with results in a Lint panel and an issue count in
 | L18 | Rhythm doesn't fit the page evenly (leftover strip larger than half a unit at the page edge) | Info |
 | L19 | Physical-locked rhythm causes uneven pixel spacing on a profile | Info |
 
+> Amended 2026-11-10, chris in the v1 arc bbq (`docs/arcs/v1/v1-PROMPT-2026-11-10.md`, Q7): L04 moves to v1.1, since
+> the Label gray question it depends on stays open until v1.1. Every other rule above that is not marked v1.1 is v1.
+
 Rhythm rules offer quick fixes: "Snap to rhythm" (single object or all off-rhythm objects), "Bind to rhythm," and "Center rhythm origin." Objects can be marked **"Free placement"** in the Arrange tab to opt out of L16 deliberately, e.g. a decorative element.
 
 Each rule has a tooltip that explains the problem in plain language and offers a quick fix ("Snap to pixel grid", "Use Guide role", "Move inside safe area"). Rules and thresholds read from the active profile's presets. Lint runs per profile, and the panel can filter by profile.
@@ -674,6 +677,10 @@ The `model`, `layout`, `lint` and `format` crates must be fully testable headles
 - Windows: MSI installer, plus winget listing.
 - Linux: AppImage and Flatpak (Flathub).
 
+> Amended 2026-11-10, chris in the v1 arc bbq (`docs/arcs/v1/v1-PROMPT-2026-11-10.md`, Q12, Q14): v1.0 ships as a
+> GitHub release only (unsigned `.dmg`, MSI, AppImage), after a public `1.0.0-rc.1` for testers; winget and Flathub
+> listings come after v1.0.
+
 ---
 
 ## 16. Roadmap
@@ -691,6 +698,8 @@ The `model`, `layout`, `lint` and `format` crates must be fully testable headles
 - PNG export, batch export with naming scheme, device preview mode.
 - Project file format with text outlines and missing-font flow.
 - Dark mode, UI scaling, translation infrastructure.
+
+> Amended 2026-11-10: the work from here to v1.0 is planned as arc v1, rungs 6 to 18 (`docs/arcs/v1/README.md`).
 
 ### v1.1: Images and wallpapers
 - Remaining Supernote profiles (marked "Unverified" until calibrated on hardware).
@@ -722,6 +731,8 @@ The `model`, `layout`, `lint` and `format` crates must be fully testable headles
 ### 17.1 Open: maintainer measurements (before v1)
 
 1. **Gray levels and ink values:** Measure with calibration sheets (§8.4) on Manta and Nomad.
+   > Amended 2026-11-10, chris in the v1 arc bbq (Q8): "consider the manta's pen shades as equivalent to the nomad
+   > shades". The Manta's ink values are the Nomad's; only the clean gray levels are still to measure.
 2. **Safe zones:** Measure from toolbar screenshots (§3.5), per toolbar state and orientation.
 3. **Landscape templates:** Export one landscape PNG and confirm whether the device expects rotated pixels or swapped dimensions.
 

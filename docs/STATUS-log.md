@@ -667,3 +667,18 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   untouched (no render or layout change).
 - Smoothness: chris saw it over VNC, so it is not a reading of the app's own speed. The Pi's own numbers, measured at
   the screen, stay those of the rung 5 entry (export canvas p90 about 26 ms, chip canvas about 42 ms).
+
+## 2026-11-10 — arc v1 planned (Arc bbq, 20 questions; Opus 5.5)
+
+- Session start: `make build-proof` → `BUILD head=9bb8122 dirty=no rebuilt=6`. Asked again: "Scale vs pixel-locked
+  rhythm on A5 X", now parked until v1.1 (Q16).
+- Compared `main` with the spec's v1.0 list (§16): done, partial and missing items are summed up in the record
+  (`docs/arcs/v1/v1-PROMPT-2026-11-10.md`, "The gap, in short"), and the rest becomes rungs 6 to 18 on the board
+  (`docs/arcs/v1/README.md`).
+- chris's rulings: the full §16 list is v1.0; Opus 5.5 high leads, Sonnet 5.5 high builds; model-shaping rungs first;
+  a short bbq per rung; L04 to v1.1; hardware early, and "consider the manta's pen shades as equivalent to the nomad
+  shades"; budgets per rung; split big rungs; chris designs one starter per category; GitHub release only, with an
+  rc for testers; re-plan after every rung; each rung pays its own debt; the full release bar; `0.N.0` and a tag per
+  rung; existing export bytes frozen.
+- Spec notes dated 2026-11-10 added for L04 (§8.3), channels (§15.4), the arc (§16) and pen shades (§17.1).
+- No code changed. Next: rung 6 (shapes), from the kickoff in the record.
