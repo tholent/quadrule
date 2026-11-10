@@ -84,5 +84,5 @@ above (which chris approves before it counts).
   (`50bd8db`), `v0.4.0` 4a (`c176a2f`), `v0.4.1` 4b (`6ced5c2`), `v0.5.0` (`9bb8122`). The workspace `Cargo.toml`
   still says 0.1.0 at all of them; from rung 6 the bump goes in the approval commit.
 - 2026-11-10: releases ruled for v0.5.0 and every approved rung after it. v0.5.0's release was first blocked (HTTP 403);
-  chris widened the token and it was published: https://github.com/tholent/quadrule/releases/tag/v0.5.0. Each
+  on a retry the token worked (what changed is not recorded) and it was published: https://github.com/tholent/quadrule/releases/tag/v0.5.0. Each
   rung's notes go in `docs/arcs/v1/release-notes/`.
