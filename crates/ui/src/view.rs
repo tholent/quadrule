@@ -140,6 +140,9 @@ pub struct ViewerUi {
     clock_live: bool,
     /// Set when this frame made the page again (a new texture, or a new chip frame).
     rebuilt: bool,
+    /// Where the page's top-left corner was drawn in screen points, and how many screen points a
+    /// device pixel took, on the last frame (for tests that press the canvas).
+    geom: Option<(egui::Pos2, f32)>,
     /// The drag in progress was begun by the pointer on the canvas (not by a test or the
     /// benchmark), so a release the canvas missed must still end it.
     pointer_drag: bool,
@@ -185,6 +188,7 @@ impl ViewerUi {
             clock_live: false,
             rebuilt: false,
             pointer_drag: false,
+            geom: None,
             bench: None,
             vector: None,
             texture: None,
@@ -945,7 +949,7 @@ impl ViewerUi {
                     "fail"
                 };
                 println!(
-                    "\nCHECK crate=ui name=drag_bench result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} worst_ms={:.1} first_ms={:.1} budget_ms={}",
+                    "\nCHECK crate=ui name=drag_bench result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
                     if cfg!(debug_assertions) {
                         "debug"
                     } else {
@@ -955,6 +959,7 @@ impl ViewerUi {
                     c.mean_ms(),
                     c.worst_ms,
                     c.first_ms,
+                    c.over_budget,
                     DragClock::BUDGET_MS
                 );
                 b.phase = Phase::Done;
@@ -962,6 +967,13 @@ impl ViewerUi {
             Phase::Done => {}
         }
         self.bench = Some(b);
+    }
+
+    /// The screen point of device pixel (x, y) of the page on the last frame, for tests that press
+    /// the canvas with a pointer.
+    pub fn screen_point(&self, x: f64, y: f64) -> Option<egui::Pos2> {
+        let (min, scale) = self.geom?;
+        Some(pos2(min.x + x as f32 * scale, min.y + y as f32 * scale))
     }
 
     /// Whether the benchmark has run to the end.
@@ -1097,6 +1109,7 @@ impl ViewerUi {
             let min = rect.center() - size / 2.0;
             let min = pos2((min.x * ppp).round() / ppp, (min.y * ppp).round() / ppp);
             let page_rect = Rect::from_min_size(min, size);
+            self.geom = Some((min, scale));
             let painter = ui.painter_at(rect);
             let to_screen =
                 |x: f64, y: f64| pos2(min.x + x as f32 * scale, min.y + y as f32 * scale);
@@ -1252,7 +1265,8 @@ impl ViewerUi {
                 for (hit, hx, hy) in &handles {
                     let c = to_screen(*hx, *hy);
                     let r = Rect::from_center_size(c, vec2(8.0, 8.0));
-                    painter.rect_filled(r, CornerRadius::ZERO, ui.visuals().extreme_bg_color);
+                    // White on any theme: the handles sit on the page, which is always light.
+                    painter.rect_filled(r, CornerRadius::ZERO, Color32::WHITE);
                     painter.rect_stroke(
                         r,
                         CornerRadius::ZERO,

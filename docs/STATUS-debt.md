@@ -49,4 +49,12 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - `CHECK` lines can share a line with the test runner's output under `--nocapture`, so `grep '^CHECK'` (used in
   `.github/workflows/ci.yml`'s Structured results step and in past log entries) can miss one. Turn it into
   something a test enforces: print each line starting with a newline, or count with `grep -o` (`docs/STATUS-log.md`,
-  2026-11-10).
+  2026-11-10). Rung 4's new checks print the newline; the older ones do not, and nothing enforces it yet.
+- Rung 4a, owed (`crates/ui/src/drag.rs`, `crates/layout/src/snap.rs`, `crates/ui/src/view.rs`): drag speed is measured
+  only on the sample page at Fit zoom (export canvas: one 60.1 ms frame in 1,595; chip canvas: none over 34 ms); not
+  zoomed in, not on a text-heavy page, not on a desktop card. No autoscroll when a drag reaches the canvas edge. A
+  group resized past its opposite side flips as a box but its contents are not mirrored. A line cannot point up and
+  to the right (its frame is a diagonal), so dragging an end past the other turns it. Several objects selected on
+  different layers are dragged together but a locked one among them stays put without saying so. The layers panel's
+  drag-and-drop has no pointer test. Alt-drag may be taken by the window manager on the Pi. The status bar's snap
+  switches may not fit in a narrow window.

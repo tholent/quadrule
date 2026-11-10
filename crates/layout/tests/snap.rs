@@ -492,3 +492,29 @@ fn rect_helpers_for_the_marquee() {
     );
     assert!(ok);
 }
+
+#[test]
+fn nothing_snaps_to_rhythm_lines_off_the_page() {
+    // The rhythm runs on past the page edge (a line at 23, the next at -48), but only lines on the
+    // page catch: an edge 3 px past x = -48 finds nothing, one near 23 still does.
+    let w = world();
+    let off_page = w.snap_span(Axis::X, -45.0, -20.0, REACH, ALL);
+    let on_page = w.snap_span(Axis::X, 26.0, 60.0, REACH, ALL);
+    let lines: Vec<f64> = w
+        .lines(Axis::X, -200.0, 200.0)
+        .iter()
+        .map(|l| l.0)
+        .collect();
+    let ok = off_page.guide.is_none()
+        && on_page.guide.map(|g| g.at) == Some(23.0)
+        && lines.iter().all(|&x| x >= 0.0)
+        && lines.first() == Some(&23.0);
+    println!(
+        "\nCHECK crate=layout name=snap_rhythm_stays_on_the_page result={} off_page_guide={:?} on_page_guide={:?} first_line={:?}",
+        pass(ok),
+        off_page.guide.map(|g| g.at),
+        on_page.guide.map(|g| g.at),
+        lines.first()
+    );
+    assert!(ok);
+}

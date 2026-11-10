@@ -429,13 +429,14 @@ impl SnapWorld {
         self.page
     }
 
-    /// The rhythm lines along `axis` between `lo` and `hi`, subdivisions included when on.
+    /// The rhythm lines along `axis` between `lo` and `hi`, subdivisions included when on. Only
+    /// lines on the page count: the rhythm runs on past its edge, but nothing snaps there.
     pub fn lines(&self, axis: Axis, lo: f64, hi: f64) -> Vec<(f64, bool)> {
-        let (o, u) = match axis {
-            Axis::X => (self.origin.0, self.unit.0),
-            Axis::Y => (self.origin.1, self.unit.1),
+        let (o, u, page) = match axis {
+            Axis::X => (self.origin.0, self.unit.0, self.page.0),
+            Axis::Y => (self.origin.1, self.unit.1, self.page.1),
         };
-        rhythm_lines(o, u, self.subdivisions, lo, hi)
+        rhythm_lines(o, u, self.subdivisions, lo.max(0.0), hi.min(page))
     }
 
     /// One step of the rhythm along `axis`: a unit, or a subdivision of it.

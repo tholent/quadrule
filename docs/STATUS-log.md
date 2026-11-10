@@ -343,3 +343,68 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   overlay; snapping in the device on screen. No flag (overruled; waives the AGENTS.md flag rule for rung 4 only).
   Split 4a / 4b with chris's look check after each; dragging must stay under 50 ms a frame on the Pi (release
   build). Lead for the build: Sonnet 5.5 at high effort (tier-select). About 4–6 sessions.
+
+## 2026-11-10 — rung 4a built
+
+- Session start (Sonnet 5.5, high; the model read from the session, the effort from `echo "$CLAUDE_EFFORT"` → `high`):
+  clean tree at HEAD `bbf7024`; `CARGO_BUILD_JOBS=2 cargo build --workspace` → `Finished` in 0.68 s with nothing
+  compiled, so the build on disk matched HEAD.
+- Built in the order the Kickoff gives, on `main` (commits `61ac6d7`, `bcbff04`, `7037ee2`, and the one that carries
+  this entry):
+  1. `Rhythm.subdivisions: Option<u8>` (2–10; a number outside that reads as off; absent in the file when off) and file
+     format 0.3 → 0.4 with an identity migration (`crates/model/src/lib.rs`, `crates/format/src/migrate.rs`; check
+     `open_0_3_file`).
+  2. The snap engine, headless, in `crates/layout/src/snap.rs`: rhythm and subdivisions, a resize's size in whole
+     steps, margins, safe-zone edges, the pixel grid, Shift and Alt resizing, handles, marquee geometry; plus
+     `unresolve_frame`, the inverse of `resolve_frame`, so a drag on the Nomad lands where the pointer put the
+     object. 13 checks in `crates/layout/tests/snap.rs`.
+  3. Drag commands in `crates/model/src/edit.rs`: `set_frames`, `reorder_to`, `is_empty` (a drag is one `Batch`).
+  4. The drag in `crates/ui/src/drag.rs`: move, eight handles, a line's two ends, marquee, Alt-drag duplicate, Ctrl
+     (Cmd) off, Escape. While the pointer is down the page shows a preview copy of the document; the real change is one
+     command on release. 8 checks in `crates/ui/tests/drag.rs`, plus one real-pointer check in
+     `crates/ui/tests/window.rs` (`window_pointer_drag`: press, move, release and Escape through egui).
+  5. Layers panel drag-to-reorder (objects among objects or onto a layer's row; layers among layers), the rhythm
+     overlay, the three snap switches (status bar and Page tab, kept between runs in the app's storage), the Page tab's
+     Subdivisions field, Shift+arrow by one subdivision when they are on.
+- Measured on the Pi, 2026-11-10, release build (`CARGO_BUILD_JOBS=2 cargo build --release -p quadrule-app`), command
+  `./target/release/quadrule --canvas export|chip --bench-drag 150`: the sample page at Fit zoom, its dot grid
+  dragged along a path with snapping on, one step a frame through the real window. Frame time is the canvas's own
+  clock (`DragClock` in `crates/ui/src/canvas.rs`): from the start of the canvas to its end, for every frame that
+  made the page again (layout, render, shrink or tiles, and on the chip canvas the chip frame; egui's own paint is not
+  in it). 145 timed frames a run.
+  - Export-pixels canvas, 11 runs: mean 24.3–26.9 ms; worst frame 29.9–46.8 ms in 10 runs; **one run had a 60.1 ms
+    frame** (1 frame of 1,595 at 50 ms or over; the other 10 runs had none).
+  - Graphics-chip canvas (no fallback), 8 runs: mean 30.8–31.0 ms; worst 32.6–33.9 ms.
+  - The record's line is "each frame is under 50 ms" and says to stop and tell chris, with the numbers, before speeding
+    anything up. By that letter the export canvas missed once. Nothing was sped up. For chris: judge by the worst frame
+    (a miss), by a percentile, or by the mean?
+- Checks: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]* name=[^ ]*' | wc -l` →
+  143; `grep 'CHECK crate=' | grep -c 'result=fail'` → 0; 138 tests passed, 0 failed; `cargo clippy --workspace
+  --all-targets -- -D warnings` and `cargo fmt --all --check` clean. Export bytes: rung 1's goldens and the stock-grid
+  test pass unchanged; the page after a drag and its undo equals the page before, byte for byte (`drag_move_one_step`).
+  New checks print each line starting with a newline.
+- Seen by screenshot of the running window (`grim`, mid-benchmark): the selection with eight handles, a magenta guide where
+  a rhythm line caught, a teal one at a margin, the rhythm overlay, the status-bar switches and the drag clock. Two
+  things fixed after looking: rhythm lines beyond the page edge no longer catch, and the handles are white squares
+  on any theme.
+- Choices made inside the bbq's rules, for chris to veto:
+  - Handles sit on the geometry of the objects, not their strokes. A text box gets left and right handles only (it
+    grows downward by itself); one selected line shows its two ends instead of a box; several objects share one box.
+  - Resizing a side past the opposite one flips the box (no mirroring of what is inside a group); with Shift it never
+    flips; no side goes under 1 device pixel. Shift on an edge handle grows the other side about its centre.
+  - A line is its frame's diagonal, top-left to bottom-right, so a line cannot point up and to the right, and
+    pulling one end past the other turns it to the other diagonal (a limit of `ObjectKind::Line`, `crates/model/src/lib.rs`).
+  - A press on a selected object moves the whole selection; a press on an unselected one selects it (Shift adds) and
+    moves it; a press on a locked object cannot pick it, so it draws a marquee; a marquee selects what it touches.
+  - Escape during a marquee puts the old selection back; during a move or a handle the object stays selected.
+  - Alt-drag copies sit just above their originals in the same layer and are selected after; an Alt-drag that goes
+    nowhere makes no copy.
+  - Guides: magenta for a rhythm or subdivision line, purple for a size that matched, teal for a margin or safe zone.
+    Rhythm overlay: units stronger than subdivisions; off by default.
+  - The drag clock stays in the status bar after a drag ("Drag: 25 ms a frame (worst 34 ms, 142 frames)").
+- Grown past what was asked, said out loud: the middle button pans the page (a plain drag now moves objects, so it no
+  longer scrolls; the scroll bars and the wheel still do); `quadrule --bench-drag [steps]` (needed to measure the
+  rule); the drag clock in the status bar; a screen-point accessor for tests.
+- Not checked: Alt-drag in the real window. Raspberry Pi OS's window manager may take Alt+drag to move the window; if it
+  does, Ctrl+D still duplicates. The layers panel's drag-and-drop through egui is checked only by its index maths, not
+  by a pointer. Stopped here for chris's look at 4a before 4b (point snap, smart guides, equal spacing, copy and paste).

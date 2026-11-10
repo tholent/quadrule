@@ -12,7 +12,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Calibration sheets (napkin §8.4): `cargo xtask calibration-sheet` writes lines, dots, text and writing pages per
   profile, each sample coded, with a `codes.txt` key (`crates/xtask/src/calib.rs`, how-to in `docs/calibration.md`).
 - Both devices calibrated by chris (2026-11-09): role values, the new Dot grid and Label roles, in their profiles
-  (`crates/profiles/data/`, records in `docs/device-measurements/*/calibration.md`); file format 0.3.
+  (`crates/profiles/data/`, records in `docs/device-measurements/*/calibration.md`); file format 0.3 then.
 - Safe zones measured for both devices from screenshots (portrait: toolbar left, right, top, floating; plus the
   footer), by `cargo xtask safe-zones`, and written into the profiles (`crates/profiles/data/`,
   `docs/device-measurements/README.md`). A test keeps the profiles and screenshots in step.
@@ -34,6 +34,20 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (vello on wgpu, `crates/app/src/chip.rs`), falling back to vello_cpu when the chip cannot start or a frame
   takes over 100 ms (`crates/ui/src/canvas.rs`); on the Pi it measured 40 ms a frame (`docs/STATUS-log.md`).
   Export bytes are unchanged (`crates/ui/tests/editor.rs`).
+- Rung 4a, dragging and the first snapping, is built and waits for chris's look (record
+  `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`): drag an object to move it; eight resize handles (Shift keeps
+  proportions, Alt resizes from the centre; text boxes get left and right only); a line shows its two ends; drag
+  on empty page for a marquee (Shift adds); Alt-drag duplicates; Ctrl turns snapping off for a drag; Escape drops
+  it; one drag is one undo step; drag rows in the layers panel to reorder. Snapping catches within 6 screen points:
+  the rhythm and its subdivisions (2–10 a unit, file format 0.4, `Rhythm.subdivisions`), a resize's size in whole
+  steps, the margins and safe-zone edges, and the pixel grid (`crates/layout/src/snap.rs`,
+  `crates/model/src/edit.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/view.rs`, `crates/ui/src/panels.rs`). The
+  rhythm overlay and the three snap switches are in the status bar and the Page tab and are kept between runs
+  (`crates/app/src/main.rs`). No flag, as chris ruled; export bytes unchanged (`crates/ui/tests/editor.rs`,
+  `crates/render/tests/golden/SHA256SUMS`).
+- Drag speed, measured on the Pi in a release build with `quadrule --bench-drag` (the sample page's dot grid, Fit
+  zoom): export-pixels canvas mean 24–27 ms a frame, worst 30–47 ms in 10 of 11 runs, and one 60.1 ms frame in
+  1,595; graphics-chip canvas mean 31 ms, worst 33.9 ms in 8 runs (`docs/STATUS-log.md`, 2026-11-10 rung 4a).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with the seven rules that need no calibration (`crates/lint/src/lib.rs`); `cargo xtask lint`.
@@ -42,17 +56,16 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
 - Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]*
-  name=[^ ]*' | wc -l` → 112 `CHECK` lines, none with `result=fail` (83 with the default members); clippy `-D warnings` and fmt clean. CI on Linux, macOS and Windows
-  (`.github/workflows/ci.yml`).
+  name=[^ ]*' | wc -l` → 143 `CHECK` lines, 0 with `result=fail`, 138 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
+  CI on Linux, macOS and Windows (`.github/workflows/ci.yml`; not yet run on the rung 4a commits).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).
 
 ## Next
 
-- Rung 4, dragging and snapping, is planned (bbq, 12 questions, record `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`),
-  in two parts with a look check after each. 4a: move, resize, marquee, layer drag, Alt-drag duplicate; pixel, rhythm
-  (with subdivisions, file format 0.4) and margin snapping; the rhythm overlay. 4b: point snap, smart guides, equal
-  spacing, copy and paste. Lead: Sonnet 5.5, high effort; no flag (chris overruled); about 4–6 sessions.
+- Rung 4a is waiting for chris's look. Then 4b: point snap, smart guides, equal spacing, copy and paste (record
+  `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`, Q11). Also waiting on chris: the one 60.1 ms drag frame (the
+  record says to stop and ask before speeding anything up), and the veto list in `docs/STATUS-log.md`.
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -75,6 +88,8 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-10: rung 3 built (steps 1–9), chip canvas measured on the Pi; layers moved right; look approved
   (`docs/STATUS-log.md`).
 - 2026-11-10: rung 4 planned (bbq, 12 questions): dragging and snapping, split 4a/4b (`docs/STATUS-log.md`).
+- 2026-11-10: rung 4a built (Sonnet 5.5, high): drag, handles, marquee, layer drag, snapping, overlay; measured on the Pi
+  (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

@@ -166,6 +166,8 @@ pub struct DragClock {
     pub first_ms: f64,
     /// The slowest frame after the first, in milliseconds.
     pub worst_ms: f64,
+    /// How many frames after the first took [`DragClock::BUDGET_MS`] or more.
+    pub over_budget: u32,
 }
 
 impl DragClock {
@@ -178,6 +180,9 @@ impl DragClock {
             self.first_ms = ms;
         } else {
             self.worst_ms = self.worst_ms.max(ms);
+            if ms >= Self::BUDGET_MS {
+                self.over_budget += 1;
+            }
         }
         self.frames += 1;
         self.total_ms += ms;

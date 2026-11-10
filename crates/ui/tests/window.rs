@@ -535,3 +535,98 @@ fn the_drag_benchmark_runs_and_leaves_the_document_alone() {
     );
     assert!(ok);
 }
+
+#[test]
+fn the_canvas_turns_pointer_drags_into_moves_marquees_and_escape() {
+    // The real wiring: pointer events on the canvas, through egui, into the viewer's drag.
+    let mut h = harness();
+    h.get_by_label("Open sample page").click();
+    h.run();
+    h.run();
+    let px = |mm: f64| mm * 300.0 / 25.4;
+    let at = |h: &Harness<'static, Window>, x_mm: f64, y_mm: f64| {
+        h.state().ui.screen_point(px(x_mm), px(y_mm)).unwrap()
+    };
+    let doc0 = h.state().ui.viewer.doc().unwrap().clone();
+
+    // Press on the title rule, move 40 points down, let go: the rule moves, as one step.
+    let p0 = at(&h, 50.0, 22.0);
+    h.hover_at(p0);
+    h.step();
+    h.drag_at(p0);
+    h.step();
+    h.hover_at(p0 + egui::vec2(0.0, 12.0));
+    h.step();
+    h.hover_at(p0 + egui::vec2(0.0, 40.0));
+    h.step();
+    h.step();
+    let dragging = h.state().ui.viewer.dragging();
+    let untouched = h.state().ui.viewer.doc().unwrap() == &doc0;
+    h.drop_at(p0 + egui::vec2(0.0, 40.0));
+    h.step();
+    h.step();
+    let v = &h.state().ui.viewer;
+    let one_step = !v.dragging() && v.open.as_ref().unwrap().history.undo_len() == 1;
+    let moved = v.doc().unwrap().object(ids::RULE).unwrap().frame.y_mm > 22.0 + 1.0;
+    let selected = v.selection == vec![ids::RULE];
+
+    // Press on empty page and sweep over the title: a marquee selects it.
+    h.state_mut().ui.viewer.selection.clear();
+    let a = at(&h, 2.0, 2.0);
+    let b = at(&h, 100.0, 20.0);
+    h.hover_at(a);
+    h.step();
+    h.drag_at(a);
+    h.step();
+    h.hover_at(a + egui::vec2(10.0, 10.0));
+    h.step();
+    h.hover_at(b);
+    h.step();
+    h.step();
+    let box_drawn = h.state().ui.viewer.drag_marquee().is_some();
+    h.drop_at(b);
+    h.step();
+    h.step();
+    let marquee = h.state().ui.viewer.selection == vec![ids::TITLE];
+
+    // Escape mid-drag drops it.
+    let steps_before = h
+        .state()
+        .ui
+        .viewer
+        .open
+        .as_ref()
+        .unwrap()
+        .history
+        .undo_len();
+    let doc1 = h.state().ui.viewer.doc().unwrap().clone();
+    let t = at(&h, 50.0, 12.0);
+    h.hover_at(t);
+    h.step();
+    h.drag_at(t);
+    h.step();
+    h.hover_at(t + egui::vec2(10.0, 10.0));
+    h.step();
+    h.hover_at(t + egui::vec2(30.0, 30.0));
+    h.step();
+    h.step();
+    let moving = h.state().ui.viewer.dragging();
+    h.key_press(Key::Escape);
+    h.step();
+    h.step();
+    h.drop_at(t + egui::vec2(30.0, 30.0));
+    h.step();
+    h.step();
+    let v = &h.state().ui.viewer;
+    let escaped = moving
+        && !v.dragging()
+        && v.doc().unwrap() == &doc1
+        && v.open.as_ref().unwrap().history.undo_len() == steps_before;
+    let ok =
+        dragging && untouched && one_step && moved && selected && box_drawn && marquee && escaped;
+    println!(
+        "\nCHECK crate=ui name=window_pointer_drag result={} dragging={dragging} doc_untouched_midway={untouched} one_step={one_step} rule_moved={moved} selected={selected} marquee_box={box_drawn} marquee_selects_title={marquee} escape_drops={escaped}",
+        pass(ok)
+    );
+    assert!(ok);
+}
