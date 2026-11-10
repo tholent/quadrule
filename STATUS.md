@@ -34,7 +34,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (vello on wgpu, `crates/app/src/chip.rs`), falling back to vello_cpu when the chip cannot start or a frame
   takes over 100 ms (`crates/ui/src/canvas.rs`); on the Pi it measured 40 ms a frame (`docs/STATUS-log.md`).
   Export bytes are unchanged (`crates/ui/tests/editor.rs`).
-- Rung 4a, dragging and the first snapping, is built and waits for chris's look (record
+- Rung 4a, dragging and the first snapping, is built; look approved by chris 2026-11-10 with two changes to the safe-zone display, built (record
   `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`): drag an object to move it; eight resize handles (Shift keeps
   proportions, Alt resizes from the centre; text boxes get left and right only); a line shows its two ends; drag
   on empty page for a marquee (Shift adds); Alt-drag duplicates; Ctrl turns snapping off for a drag; Escape drops
@@ -56,16 +56,16 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
 - Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]*
-  name=[^ ]*' | wc -l` → 143 `CHECK` lines, 0 with `result=fail`, 138 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
+  name=[^ ]*' | wc -l` → 144 `CHECK` lines, 0 with `result=fail`, 139 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
   CI run 42835008247 on `3c4558d` passed on Linux, macOS and Windows (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).
 
 ## Next
 
-- Rung 4a is waiting for chris's look. Then 4b: point snap, smart guides, equal spacing, copy and paste (record
-  `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`, Q11). Also waiting on chris: the one 60.1 ms drag frame (the
-  record says to stop and ask before speeding anything up), and the veto list in `docs/STATUS-log.md`.
+- Rung 4b: point snap, smart guides, equal spacing, copy and paste (record `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`,
+  Q11). Ask chris again first: the one 60.1 ms export-canvas drag frame (worst frame, percentile or mean?), still
+  unanswered (`docs/STATUS-log.md`, 2026-11-10 rung 4a).
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -88,8 +88,8 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-10: rung 3 built (steps 1–9), chip canvas measured on the Pi; layers moved right; look approved
   (`docs/STATUS-log.md`).
 - 2026-11-10: rung 4 planned (bbq, 12 questions): dragging and snapping, split 4a/4b (`docs/STATUS-log.md`).
-- 2026-11-10: rung 4a built (Sonnet 5.5, high): drag, handles, marquee, layer drag, snapping, overlay; measured on the Pi
-  (`docs/STATUS-log.md`).
+- 2026-11-10: rung 4a built (Sonnet 5.5, high): drag, handles, marquee, layer drag, snapping, overlay; measured on the Pi;
+  look approved with two safe-zone changes, built (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

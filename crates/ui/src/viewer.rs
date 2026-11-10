@@ -34,6 +34,11 @@ use std::path::{Path, PathBuf};
 /// top"), the same default as `cargo xtask lint` (rung 2 bbq, Defaulted "Lint toolbars").
 pub const TOOLBARS_IN_USE: [Toolbar; 2] = [Toolbar::Left, Toolbar::Top];
 
+/// Toolbar positions whose safe zones the window shows over the page, and that dragged objects
+/// snap to: the linted ones and the right side as well (chris, 2026-11-10: "include the right
+/// hand side safe area by default"). The linter still checks only [`TOOLBARS_IN_USE`].
+pub const TOOLBARS_SHOWN: [Toolbar; 3] = [Toolbar::Left, Toolbar::Right, Toolbar::Top];
+
 /// Where the open document came from.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Source {
@@ -472,13 +477,13 @@ fn make_page(
     })
 }
 
-/// The safe zones that count on `p`, as pixel rectangles: those of the toolbars in use, the same
+/// The safe zones that count on `p`, as pixel rectangles: those of the toolbars shown, the same
 /// ones the overlay draws (rung 2 bbq, Q6).
 pub(crate) fn active_zone_rects(p: &Profile) -> Vec<quadrule_layout::snap::PxRect> {
     p.safe_zones
         .iter()
         .filter(|z| match quadrule_lint::Toolbar::of_zone(&z.name) {
-            Ok(Some(t)) => TOOLBARS_IN_USE.contains(&t),
+            Ok(Some(t)) => TOOLBARS_SHOWN.contains(&t),
             _ => true,
         })
         .map(|z| {

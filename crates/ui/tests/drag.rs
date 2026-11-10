@@ -537,3 +537,40 @@ fn layers_drag_to_reorder() {
     );
     assert!(ok);
 }
+
+#[test]
+fn the_right_toolbar_zone_is_shown_and_caught_by_default() {
+    // chris, 2026-11-10: the right-hand safe area is included by default. A dragged object's edge
+    // catches the left edge of the Manta's right toolbar zone, as it does the left and top ones.
+    let manta = quadrule_profiles::builtin(MANTA_ID).unwrap();
+    let right = manta
+        .safe_zones
+        .iter()
+        .find(|z| z.name == "toolbar_right")
+        .unwrap();
+    let edge = f64::from(right.rect.0);
+    let mut v = sample();
+    // Rhythm and margins off: only the zones can catch. The rule's right edge ends 94 px in from the
+    // page edge; drag it so that edge is 3 px short of the zone's left edge.
+    v.snap = SnapToggles {
+        pixel_grid: false,
+        rhythm: false,
+        margins_safe: true,
+    };
+    let Shape::Segment { x1, y0, .. } = shape(&mut v, ids::RULE) else {
+        panic!("a line is a segment")
+    };
+    let start = px(50.0);
+    grab(&mut v, start, y0, NONE);
+    v.drag_update(start + (edge - 3.0 - x1), y0, NONE, REACH);
+    let caught = v.drag_guides().iter().any(|g| g.at == edge);
+    v.drag_cancel();
+    let listed = quadrule_ui::viewer::TOOLBARS_SHOWN.contains(&quadrule_lint::Toolbar::Right)
+        && !quadrule_ui::viewer::TOOLBARS_IN_USE.contains(&quadrule_lint::Toolbar::Right);
+    let ok = caught && listed;
+    println!(
+        "\nCHECK crate=ui name=right_zone_shown_by_default result={} zone_edge_x={edge} caught={caught} lint_unchanged={listed}",
+        pass(ok)
+    );
+    assert!(ok);
+}

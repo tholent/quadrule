@@ -410,3 +410,9 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
 - Not checked: Alt-drag in the real window. Raspberry Pi OS's window manager may take Alt+drag to move the window; if it
   does, Ctrl+D still duplicates. The layers panel's drag-and-drop through egui is checked only by its index maths, not
   by a pointer. Stopped here for chris's look at 4a before 4b (point snap, smart guides, equal spacing, copy and paste).
+- chris, word for word, after the 4a look: "I approve the work so far, with two changes to the safe area display. I would
+  like to remove the labels and include the right hand side safe area by default." Built: the safe-zone overlay has no
+  labels; `TOOLBARS_SHOWN` (left, right, top) drives the overlay and the zones dragged objects snap to; the linter
+  still uses `TOOLBARS_IN_USE` (left, top), because the words named the display (`crates/ui/src/viewer.rs`; check
+  `right_zone_shown_by_default`). Checks now: 144 `CHECK` lines, 0 `result=fail`, 139 tests passed, 0 failed; clippy
+  and fmt clean. The 60.1 ms question was not answered; it is asked again at the next session start. Rung 4a is done.

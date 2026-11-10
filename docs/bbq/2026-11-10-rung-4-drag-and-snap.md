@@ -123,3 +123,14 @@ layers panel; the rhythm overlay and the snap toggles. Keep the export goldens u
 Pi in a release build on both canvases (under 50 ms a frame). Show chris the window and stop for the 4a look
 before starting 4b (point snap, smart guides, equal spacing, copy and paste). Update `STATUS.md`,
 `docs/STATUS-log.md` and `docs/STATUS-debt.md` at the end of each session.
+
+## After 4a (2026-11-10)
+
+Added after the 4a build; the rules above are unchanged. chris's answer, word for word, after trying the window:
+- "I approve the work so far, with two changes to the safe area display. I would like to remove the labels and
+  include the right hand side safe area by default."
+  Built: the safe-zone overlay draws no labels; it shows the left, right and top toolbar zones (and the footers),
+  and dragged objects snap to the same zones. The linter still checks only the left and top toolbars (the choice of
+  2026-11-09 in rung 2's Defaulted "Lint toolbars"); chris's words named the display, so lint was not changed.
+- Not answered, so still open: the one 60.1 ms export-canvas drag frame (judge by the worst frame, a percentile or
+  the mean?). Ask it again at the next session start.

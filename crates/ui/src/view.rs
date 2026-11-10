@@ -27,13 +27,13 @@ use crate::editor::{PICK_SLACK_POINTS, Toward};
 use crate::panels::{Renaming, Tab};
 use crate::recovery::{Autosave, Recovered, Recovery};
 use crate::viewer::{
-    CARD_WIDTH_MM, ExportWhich, PIXEL_GRID_FROM, Source, TOOLBARS_IN_USE, Tile, Viewer, Zoom,
+    CARD_WIDTH_MM, ExportWhich, PIXEL_GRID_FROM, Source, TOOLBARS_SHOWN, Tile, Viewer, Zoom,
     ruler_px_per_mm, shrink, tiles,
 };
 use egui::{
-    Align2, Color32, ColorImage, CornerRadius, CursorIcon, FontId, Key, KeyboardShortcut,
-    Modifiers, PointerButton, Rect, ScrollArea, Sense, Stroke, StrokeKind, TextureHandle,
-    TextureOptions, ThemePreference, pos2, vec2,
+    Color32, ColorImage, CornerRadius, CursorIcon, Key, KeyboardShortcut, Modifiers, PointerButton,
+    Rect, ScrollArea, Sense, Stroke, StrokeKind, TextureHandle, TextureOptions, ThemePreference,
+    pos2, vec2,
 };
 use quadrule_i18n::{Message, Strings};
 use quadrule_layout::snap::{Handle, SnapKind};
@@ -1190,11 +1190,11 @@ impl ViewerUi {
                 }
             }
 
-            // Safe zones the linter checks (Q6): fixed ones red, movable ones amber.
+            // Safe zones (Q6), with no labels (chris, 2026-11-10): fixed ones red, movable ones amber.
             if self.viewer.show_safe_zones {
                 for z in &zones {
                     if let Ok(Some(t)) = Toolbar::of_zone(&z.name)
-                        && !TOOLBARS_IN_USE.contains(&t)
+                        && !TOOLBARS_SHOWN.contains(&t)
                     {
                         continue;
                     }
@@ -1214,13 +1214,6 @@ impl ViewerUi {
                         CornerRadius::ZERO,
                         Stroke::new(1.0, color),
                         StrokeKind::Inside,
-                    );
-                    painter.text(
-                        r.left_top() + vec2(4.0, 4.0),
-                        Align2::LEFT_TOP,
-                        self.strings.get(&format!("lint-zone-{}", z.name)),
-                        FontId::proportional(12.0),
-                        color,
                     );
                 }
             }
