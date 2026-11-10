@@ -58,9 +58,10 @@ fn empty_start_then_sample() {
     h.get_by_label("Open sample page").click();
     h.run();
     let opened = h.state().ui.viewer.open.is_some();
-    // In the toolbar and the status bar.
-    let count = h.query_all_by_label("⚠ 5").count() == 2;
-    let panel = h.query_by_label("Lint (5)").is_some();
+    // In the toolbar and the status bar. The Manta has seven findings with every toolbar position
+    // checked (chris, 2026-11-10); with only left and top it had five.
+    let count = h.query_all_by_label("⚠ 7").count() == 2;
+    let panel = h.query_by_label("Lint (7)").is_some();
     let ok = empty && opened && count && panel;
     println!(
         "CHECK crate=ui name=window_empty_then_sample result={} empty_start={empty} opened={opened} lint_count_shown={count} lint_panel={panel}",
@@ -102,7 +103,7 @@ fn findings_zoom_and_theme() {
     h.run();
     // Clicking a finding selects it, for the outline on the page (Q6). Findings are on the
     // inspector's Lint tab (rung 3 bbq Q8).
-    h.get_by_label("Lint (5)").click();
+    h.get_by_label("Lint (7)").click();
     h.run();
     h.get_by_label_contains("L16").click();
     h.run();

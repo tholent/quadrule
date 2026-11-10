@@ -155,7 +155,11 @@ pub fn screen_list(dl: &DisplayList, view: &ScreenView) -> DisplayList {
 /// How long the frames of a drag took (rung 4 bbq, Defaulted "Pi-smooth, the number"): each frame
 /// in which the page was made again, from the start of the canvas to its end, so the page's
 /// layout and render, the texture and (on the chip canvas) the chip frame are all in it.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+///
+/// chris ruled (2026-11-10, "let's use a percentile") that the 50 ms line is judged by a
+/// percentile of the frames, not by the worst one: [`DragClock::PERCENTILE`], chosen here for
+/// chris to veto.
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct DragClock {
     /// Frames that made the page again.
     pub frames: u32,
@@ -168,11 +172,16 @@ pub struct DragClock {
     pub worst_ms: f64,
     /// How many frames after the first took [`DragClock::BUDGET_MS`] or more.
     pub over_budget: u32,
+    /// The times of the frames after the first, in the order they came.
+    later_ms: Vec<f64>,
 }
 
 impl DragClock {
     /// The line a drag frame must stay under on the Pi, in milliseconds (20 frames a second).
     pub const BUDGET_MS: f64 = 50.0;
+
+    /// The share of frames (after the first) that must be under the line: the 95th percentile.
+    pub const PERCENTILE: f64 = 95.0;
 
     /// Adds one frame's time.
     pub fn record(&mut self, ms: f64) {
@@ -183,6 +192,7 @@ impl DragClock {
             if ms >= Self::BUDGET_MS {
                 self.over_budget += 1;
             }
+            self.later_ms.push(ms);
         }
         self.frames += 1;
         self.total_ms += ms;
@@ -197,8 +207,20 @@ impl DragClock {
         }
     }
 
-    /// Whether every frame after the first stayed under [`DragClock::BUDGET_MS`].
+    /// The [`DragClock::PERCENTILE`]th percentile of the frames after the first (nearest rank),
+    /// in milliseconds; 0 before there are any.
+    pub fn percentile_ms(&self) -> f64 {
+        if self.later_ms.is_empty() {
+            return 0.0;
+        }
+        let mut v = self.later_ms.clone();
+        v.sort_by(f64::total_cmp);
+        let rank = (Self::PERCENTILE / 100.0 * v.len() as f64).ceil() as usize;
+        v[rank.clamp(1, v.len()) - 1]
+    }
+
+    /// Whether the percentile of the frames after the first is under [`DragClock::BUDGET_MS`].
     pub fn within_budget(&self) -> bool {
-        self.frames > 0 && self.worst_ms < Self::BUDGET_MS
+        !self.later_ms.is_empty() && self.percentile_ms() < Self::BUDGET_MS
     }
 }

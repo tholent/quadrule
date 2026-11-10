@@ -540,7 +540,7 @@ fn layers_drag_to_reorder() {
 
 #[test]
 fn the_right_toolbar_zone_is_shown_and_caught_by_default() {
-    // chris, 2026-11-10: the right-hand safe area is included by default. A dragged object's edge
+    // chris, 2026-11-10: the right-hand safe area is included. A dragged object's edge
     // catches the left edge of the Manta's right toolbar zone, as it does the left and top ones.
     let manta = quadrule_profiles::builtin(MANTA_ID).unwrap();
     let right = manta
@@ -565,11 +565,12 @@ fn the_right_toolbar_zone_is_shown_and_caught_by_default() {
     v.drag_update(start + (edge - 3.0 - x1), y0, NONE, REACH);
     let caught = v.drag_guides().iter().any(|g| g.at == edge);
     v.drag_cancel();
-    let listed = quadrule_ui::viewer::TOOLBARS_SHOWN.contains(&quadrule_lint::Toolbar::Right)
-        && !quadrule_ui::viewer::TOOLBARS_IN_USE.contains(&quadrule_lint::Toolbar::Right);
+    let listed = quadrule_lint::Toolbar::ALL
+        .iter()
+        .all(|t| quadrule_ui::viewer::TOOLBARS_IN_USE.contains(t));
     let ok = caught && listed;
     println!(
-        "\nCHECK crate=ui name=right_zone_shown_by_default result={} zone_edge_x={edge} caught={caught} lint_unchanged={listed}",
+        "\nCHECK crate=ui name=right_zone_shown_by_default result={} zone_edge_x={edge} caught={caught} every_toolbar_in_use={listed}",
         pass(ok)
     );
     assert!(ok);

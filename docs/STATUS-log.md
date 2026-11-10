@@ -416,3 +416,16 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   still uses `TOOLBARS_IN_USE` (left, top), because the words named the display (`crates/ui/src/viewer.rs`; check
   `right_zone_shown_by_default`). Checks now: 144 `CHECK` lines, 0 `result=fail`, 139 tests passed, 0 failed; clippy
   and fmt clean. The 60.1 ms question was not answered; it is asked again at the next session start. Rung 4a is done.
+- chris, word for word: "let's use a percentile. the safe area linting should look at all safe areas, including the
+  right one. Also, when two safe areas overlap, don't draw the borders that occur inside the combined area." Built:
+  - Drag speed is judged by the 95th percentile of the frames after the first (nearest rank; `DragClock::percentile_ms`;
+    the 95 is mine, for chris to veto). `--bench-drag` prints `p95_ms`; the status bar shows it. Measured again on the
+    Pi, release build, 150 steps: export-pixels canvas p95 25.8–27.1 ms in 6 runs (mean 24.5–25.4; one run had one 64.3 ms
+    frame, worst of the others 26.2–36.0); graphics-chip canvas p95 31.2–31.5 ms in 3 runs (worst 33.8–33.9). All pass.
+    The two odd frames seen so far (60.1 and 64.3 ms) are 2 in about 2,500 timed export-canvas frames.
+  - The linter, the overlay and snapping share `TOOLBARS_IN_USE`, now all four positions (`crates/ui/src/viewer.rs`);
+    `cargo xtask lint` defaults to `all`; the Lint tab's note says so. The sample page on the Manta now has 7 findings
+    (it had 5): the window tests were updated from 5 to 7.
+  - Overlapping or touching safe zones draw one outline round the combined area (`union_outline`, `crates/layout/src/snap.rs`,
+    check `union_outline`). Their translucent fills still add up where they overlap; not asked, so not changed.
+  - Checks: 146 `CHECK` lines, 0 `result=fail`, 141 tests passed, 0 failed; clippy and fmt clean.

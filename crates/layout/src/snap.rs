@@ -186,6 +186,65 @@ impl PxRect {
     }
 }
 
+/// A straight piece of an outline, from one point to another (always horizontal or vertical).
+pub type Segment = ((f64, f64), (f64, f64));
+
+/// The outline of the combined area of `rects`: for each rectangle, the pieces of its four edges
+/// that are not inside another rectangle, each with the index of the rectangle it belongs to.
+/// Where two rectangles overlap or meet, the borders inside the combined area are left out
+/// (chris, 2026-11-10: "when two safe areas overlap, don't draw the borders that occur inside the
+/// combined area"). Rectangles with no area are skipped.
+pub fn union_outline(rects: &[PxRect]) -> Vec<(usize, Segment)> {
+    // A probe this far outside an edge tells whether another rectangle lies beyond it.
+    const EPS: f64 = 1e-4;
+    let inside = |skip: usize, x: f64, y: f64| {
+        rects.iter().enumerate().any(|(j, b)| {
+            j != skip && b.w() > 0.0 && b.h() > 0.0 && x > b.x0 && x < b.x1 && y > b.y0 && y < b.y1
+        })
+    };
+    let mut out = Vec::new();
+    for (i, a) in rects.iter().enumerate() {
+        if a.w() <= 0.0 || a.h() <= 0.0 {
+            continue;
+        }
+        // (fixed coordinate, outward sign, runs along x?)
+        let edges = [
+            (a.y0, -1.0, true),
+            (a.y1, 1.0, true),
+            (a.x0, -1.0, false),
+            (a.x1, 1.0, false),
+        ];
+        for (fixed, sign, along_x) in edges {
+            let (lo, hi) = if along_x { (a.x0, a.x1) } else { (a.y0, a.y1) };
+            let mut cuts = vec![lo, hi];
+            for b in rects {
+                let (b0, b1) = if along_x { (b.x0, b.x1) } else { (b.y0, b.y1) };
+                cuts.extend([b0, b1].into_iter().filter(|&c| c > lo && c < hi));
+            }
+            cuts.sort_by(f64::total_cmp);
+            cuts.dedup();
+            for w in cuts.windows(2) {
+                let mid = (w[0] + w[1]) / 2.0;
+                let beyond = fixed + sign * EPS;
+                let covered = if along_x {
+                    inside(i, mid, beyond)
+                } else {
+                    inside(i, beyond, mid)
+                };
+                if !covered {
+                    let seg = if along_x {
+                        ((w[0], fixed), (w[1], fixed))
+                    } else {
+                        ((fixed, w[0]), (fixed, w[1]))
+                    };
+                    out.push((i, seg));
+                }
+            }
+        }
+    }
+    out
+}
+
 /// One of the eight handles of a selection's box.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Handle {

@@ -518,3 +518,50 @@ fn nothing_snaps_to_rhythm_lines_off_the_page() {
     );
     assert!(ok);
 }
+
+#[test]
+fn union_outline_leaves_out_borders_inside_the_combined_area() {
+    let len = |segs: &[(usize, Segment)]| -> f64 {
+        segs.iter()
+            .map(|(_, ((x0, y0), (x1, y1)))| (x1 - x0).abs() + (y1 - y0).abs())
+            .sum()
+    };
+    let r = |x0, y0, x1, y1| PxRect { x0, y0, x1, y1 };
+    // One rectangle: its whole border (40).
+    let one = union_outline(&[r(0.0, 0.0, 10.0, 10.0)]);
+    // Two that overlap by 5 x 5: the union's border is 40 + 40 - 20 = 60, and no piece lies strictly
+    // inside the other rectangle.
+    let (a, b) = (r(0.0, 0.0, 10.0, 10.0), r(5.0, 5.0, 15.0, 15.0));
+    let two = union_outline(&[a, b]);
+    let strictly_inside = |rc: &PxRect, ((x0, y0), (x1, y1)): ((f64, f64), (f64, f64))| {
+        let (mx, my) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
+        mx > rc.x0 && mx < rc.x1 && my > rc.y0 && my < rc.y1
+    };
+    let none_inside = two
+        .iter()
+        .all(|&(i, s)| !strictly_inside(if i == 0 { &b } else { &a }, s));
+    // Two that meet along a whole edge: the shared edge goes (60 = the 20 x 10 box's border).
+    let met = union_outline(&[r(0.0, 0.0, 10.0, 10.0), r(10.0, 0.0, 20.0, 10.0)]);
+    // One inside another: only the outer border is left (40).
+    let nested = union_outline(&[r(0.0, 0.0, 10.0, 10.0), r(2.0, 2.0, 4.0, 4.0)]);
+    // Apart: both borders (80). A rectangle with no area draws nothing.
+    let apart = union_outline(&[r(0.0, 0.0, 10.0, 10.0), r(20.0, 0.0, 30.0, 10.0)]);
+    let flat = union_outline(&[r(0.0, 0.0, 0.0, 10.0)]);
+    let ok = len(&one) == 40.0
+        && len(&two) == 60.0
+        && none_inside
+        && len(&met) == 60.0
+        && len(&nested) == 40.0
+        && len(&apart) == 80.0
+        && flat.is_empty();
+    println!(
+        "\nCHECK crate=layout name=union_outline result={} one={} overlap={} meet={} nested={} apart={}",
+        pass(ok),
+        len(&one),
+        len(&two),
+        len(&met),
+        len(&nested),
+        len(&apart)
+    );
+    assert!(ok);
+}

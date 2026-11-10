@@ -27,7 +27,7 @@ use crate::editor::{PICK_SLACK_POINTS, Toward};
 use crate::panels::{Renaming, Tab};
 use crate::recovery::{Autosave, Recovered, Recovery};
 use crate::viewer::{
-    CARD_WIDTH_MM, ExportWhich, PIXEL_GRID_FROM, Source, TOOLBARS_SHOWN, Tile, Viewer, Zoom,
+    CARD_WIDTH_MM, ExportWhich, PIXEL_GRID_FROM, Source, TOOLBARS_IN_USE, Tile, Viewer, Zoom,
     ruler_px_per_mm, shrink, tiles,
 };
 use egui::{
@@ -36,7 +36,7 @@ use egui::{
     pos2, vec2,
 };
 use quadrule_i18n::{Message, Strings};
-use quadrule_layout::snap::{Handle, SnapKind};
+use quadrule_layout::snap::{Handle, PxRect, SnapKind, union_outline};
 use quadrule_layout::units::Axis;
 use quadrule_lint::Toolbar;
 use std::collections::HashMap;
@@ -815,9 +815,10 @@ impl ViewerUi {
             }
             if self.drag_clock.frames > 0 {
                 ui.separator();
-                let c = self.drag_clock;
+                let c = &self.drag_clock;
                 let msg = Message::new("app-drag-clock")
                     .num("mean", c.mean_ms(), 0)
+                    .num("p95", c.percentile_ms(), 0)
                     .num("worst", c.worst_ms, 0)
                     .num("frames", f64::from(c.frames), 0);
                 ui.label(self.strings.format(&msg));
@@ -933,7 +934,7 @@ impl ViewerUi {
             Phase::Run(_) => {
                 let _ = self.viewer.drag_end();
                 self.viewer.undo();
-                let c = self.drag_clock;
+                let c = self.drag_clock.clone();
                 let canvas = match (self.canvas_mode, &self.chip_state.fallback) {
                     (CanvasMode::ExportPixels, _) => "export",
                     (CanvasMode::Chip, None) => "chip",
@@ -949,7 +950,7 @@ impl ViewerUi {
                     "fail"
                 };
                 println!(
-                    "\nCHECK crate=ui name=drag_bench result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
+                    "\nCHECK crate=ui name=drag_bench result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} p95_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
                     if cfg!(debug_assertions) {
                         "debug"
                     } else {
@@ -957,6 +958,7 @@ impl ViewerUi {
                     },
                     c.frames,
                     c.mean_ms(),
+                    c.percentile_ms(),
                     c.worst_ms,
                     c.first_ms,
                     c.over_budget,
@@ -1192,28 +1194,42 @@ impl ViewerUi {
 
             // Safe zones (Q6), with no labels (chris, 2026-11-10): fixed ones red, movable ones amber.
             if self.viewer.show_safe_zones {
-                for z in &zones {
-                    if let Ok(Some(t)) = Toolbar::of_zone(&z.name)
-                        && !TOOLBARS_SHOWN.contains(&t)
-                    {
-                        continue;
-                    }
-                    let (x, y, zw, zh) = z.rect;
-                    let r = Rect::from_min_max(
-                        to_screen(x as f64, y as f64),
-                        to_screen((x + zw) as f64, (y + zh) as f64),
-                    );
-                    let color = if z.advisory {
+                let shown: Vec<_> = zones
+                    .iter()
+                    .filter(|z| match Toolbar::of_zone(&z.name) {
+                        Ok(Some(t)) => TOOLBARS_IN_USE.contains(&t),
+                        _ => true,
+                    })
+                    .collect();
+                let rects: Vec<PxRect> = shown
+                    .iter()
+                    .map(|z| {
+                        let (x, y, zw, zh) = z.rect;
+                        PxRect {
+                            x0: x as f64,
+                            y0: y as f64,
+                            x1: (x + zw) as f64,
+                            y1: (y + zh) as f64,
+                        }
+                    })
+                    .collect();
+                let color_of = |i: usize| {
+                    if shown[i].advisory {
                         Color32::from_rgb(230, 150, 0)
                     } else {
                         Color32::from_rgb(220, 40, 40)
-                    };
-                    painter.rect_filled(r, CornerRadius::ZERO, color.gamma_multiply(0.18));
-                    painter.rect_stroke(
-                        r,
-                        CornerRadius::ZERO,
-                        Stroke::new(1.0, color),
-                        StrokeKind::Inside,
+                    }
+                };
+                for (i, r) in rects.iter().enumerate() {
+                    let r = Rect::from_min_max(to_screen(r.x0, r.y0), to_screen(r.x1, r.y1));
+                    painter.rect_filled(r, CornerRadius::ZERO, color_of(i).gamma_multiply(0.18));
+                }
+                // Borders only round the combined area: where zones overlap or meet, the edges
+                // inside it are not drawn (chris, 2026-11-10).
+                for (i, ((ax, ay), (bx, by))) in union_outline(&rects) {
+                    painter.line_segment(
+                        [to_screen(ax, ay), to_screen(bx, by)],
+                        Stroke::new(1.0, color_of(i)),
                     );
                 }
             }

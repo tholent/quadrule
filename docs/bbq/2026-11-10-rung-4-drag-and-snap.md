@@ -134,3 +134,12 @@ Added after the 4a build; the rules above are unchanged. chris's answer, word fo
   2026-11-09 in rung 2's Defaulted "Lint toolbars"); chris's words named the display, so lint was not changed.
 - Not answered, so still open: the one 60.1 ms export-canvas drag frame (judge by the worst frame, a percentile or
   the mean?). Ask it again at the next session start.
+
+chris's next answer, word for word (2026-11-10, on the 60.1 ms frame and the safe zones):
+- "let's use a percentile. the safe area linting should look at all safe areas, including the right one. Also, when
+  two safe areas overlap, don't draw the borders that occur inside the combined area."
+  Built: the 50 ms line in Q12 is judged by the 95th percentile of the drag frames after the first (the 95 was not
+  named; chosen for chris to veto). This replaces "each frame is under 50 ms" in Q12 and Defaulted "Pi-smooth, the
+  number". The linter, the overlay and the snap now all use every toolbar position (this replaces the left-and-top
+  lint choice of 2026-11-09 and the "lint unchanged" note above). Overlapping or touching zones draw one outline round
+  their combined area.

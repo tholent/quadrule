@@ -45,7 +45,7 @@ app-empty-drop = or drag a .quad file onto this window
 
 # Lint panel.
 app-lint-heading = Lint ({ $count })
-app-lint-toolbars = Checked for the toolbar docked left and docked top, and the footers.
+app-lint-toolbars = Checked for the toolbar docked left, right or top, the floating toolbar, and the footers.
 app-lint-none = Nothing to report on this device.
 app-saved-outlines = A font is missing here, so text shows as saved in the file.
 
@@ -129,7 +129,7 @@ app-snap-rhythm = Rhythm
 app-snap-margins = Margins and safe zones
 app-rhythm-overlay = Rhythm overlay
 app-snapping = Snapping and guides
-app-drag-clock = Drag: { $mean } ms a frame (worst { $worst } ms, { $frames } frames)
+app-drag-clock = Drag: { $mean } ms a frame (95th percentile { $p95 } ms, worst { $worst } ms, { $frames } frames)
 app-drop-here = Drop here
 
 app-x = X

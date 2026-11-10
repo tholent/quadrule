@@ -165,9 +165,10 @@ fn safe_zones(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// Toolbar positions `cargo xtask lint` checks unless told otherwise: the ones chris uses
-/// (2026-11-09, "Docked left, Docked top"; docs/device-measurements/supernote.a6x2/calibration.md).
-const DEFAULT_TOOLBARS: &str = "left,top";
+/// Toolbar positions `cargo xtask lint` checks unless told otherwise: all of them (chris,
+/// 2026-11-10: "the safe area linting should look at all safe areas, including the right one";
+/// on 2026-11-09 it was "Docked left, Docked top"; docs/device-measurements/supernote.a6x2/calibration.md).
+const DEFAULT_TOOLBARS: &str = "all";
 
 /// Lints a `.quad` file (or the rung 1 slice document) on each of its profiles and prints one
 /// line per finding: profile, rule, severity, message. `--toolbars` takes a comma-separated
