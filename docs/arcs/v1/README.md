@@ -54,9 +54,6 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
   - Bullet journal (rapid log, habit tracker, future log, index): after rung 10.
   - Creative (storyboard, music staff, handwriting practice): after rung 9.
 - **Looks:** one per rung or part (ADR-007).
-- **Releases:** the `gh` token cannot create releases (HTTP 403, 2026-11-10). Either renew it with Contents: read
-  and write on `tholent/quadrule`, or publish v0.5.0 by hand from the tag page with the notes in
-  `docs/arcs/v1/release-notes/v0.5.0.md`. Each rung's notes go in that folder.
 
 ## Standing rules for every rung
 
@@ -86,5 +83,6 @@ above (which chris approves before it counts).
 - 2026-11-10: rungs 1 to 5 tagged at their approval commits: `v0.1.0` (`00ad0e2`), `v0.2.0` (`52c7ee9`), `v0.3.0`
   (`50bd8db`), `v0.4.0` 4a (`c176a2f`), `v0.4.1` 4b (`6ced5c2`), `v0.5.0` (`9bb8122`). The workspace `Cargo.toml`
   still says 0.1.0 at all of them; from rung 6 the bump goes in the approval commit.
-- 2026-11-10: releases ruled for v0.5.0 and every approved rung after it. v0.5.0's release is blocked: the `gh`
-  token gets HTTP 403 on `gh release create` (see chris's queue).
+- 2026-11-10: releases ruled for v0.5.0 and every approved rung after it. v0.5.0's release was first blocked (HTTP 403);
+  chris widened the token and it was published: https://github.com/tholent/quadrule/releases/tag/v0.5.0. Each
+  rung's notes go in `docs/arcs/v1/release-notes/`.

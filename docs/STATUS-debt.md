@@ -12,8 +12,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   Manta's pen shades are not owed: chris ruled them equal to the Nomad's (2026-11-10, arc v1 bbq Q8).
 - The `gh` token expires 90 days after it was made (chris, 2026-11-09); if made 2026-11-09, that is about 2027-02-07.
   Renew it before then, or `gh` stops opening PRs and reading CI (rung 1 record, Defaulted "Repository").
-- The `gh` token cannot create releases (`gh release create v0.5.0` → HTTP 403, 2026-11-10); the arc publishes one per
-  approved rung (`docs/arcs/v1/README.md`). Needs Contents: read and write on the repository.
 - The `gh` fine-grained token cannot read check summaries (`gh pr checks` fails: GitHub offers no `checks:read` for
   fine-grained tokens); read CI with `gh run view <id> --log` instead.
 - ADR build status is in each ADR's `built` and `owed` header fields (`docs/decisions/INDEX.md`): ADR-001 and

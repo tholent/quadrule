@@ -691,3 +691,6 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   (release) moving forward". Notes written for v0.5.0 (pre-release, no installers yet); `gh release create v0.5.0
   --verify-tag --prerelease …` → `HTTP 403: Resource not accessible by personal access token`, so no release exists
   yet. The rule is on the arc board; the token gap is in `docs/STATUS-debt.md`.
+- Then: chris, "try using the token again". `gh release create v0.5.0 --verify-tag --prerelease …` succeeded;
+  `gh release view v0.5.0` → pre-release, not a draft, https://github.com/tholent/quadrule/releases/tag/v0.5.0.
+  The token debt line is paid (removed from `docs/STATUS-debt.md`).
