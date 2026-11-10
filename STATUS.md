@@ -68,6 +68,19 @@ The project's live state. Update it when work lands. Every claim cites at least 
   chip canvas 31.6–32.1 ms (3 runs), against 50 ms (`docs/STATUS-log.md`). A rhythm catch beats any other kind that is
   less than half a pixel nearer (chris's ruling, `crates/layout/src/snap.rs`). Export bytes unchanged
   (`crates/render/tests/golden/SHA256SUMS`).
+- Rung 5, New and Insert, is built and waits for chris's look (record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`).
+  **New…** (button, Ctrl+N; on the empty screen too) asks for a device, a rhythm preset (handwriting 6 mm, narrow,
+  college and wide ruled, 5 mm grid, 1/4 in grid) and a title, then opens a blank template that targets both devices
+  with margins rounded up to whole rhythm units that clear the docked toolbars and footers, so a region filling them
+  passes lint L06 on both (`crates/layout/src/newpage.rs`, `crates/model/src/blank.rs`, `crates/ui/src/view.rs`). A
+  **tools bar** on the left (Select V, Line L, Text T, Pattern P; Escape ends a tool; a double-click keeps one on) is a
+  list that takes more tools (`crates/ui/src/tools.rs`). **Drawing**: drag to draw with rung 4's snapping (a drawn size
+  lands on whole rhythm units), or click for a default (a line or text box 10 units long, a pattern region filling the
+  margins); one undo step each; the tool goes back to Select; a new text box opens the Text tab with its text selected
+  (`crates/ui/src/draw.rs`). Drawing speed on the Pi, release build, `quadrule --bench-draw` over the sample page:
+  export canvas 90th percentile 25.5–26.1 ms (3 runs), chip canvas 41.4–42.3 ms (3 runs), against 50 ms
+  (`docs/STATUS-log.md`). No flag, as chris ruled; export bytes unchanged (`crates/ui/tests/draw.rs`,
+  `crates/render/tests/golden/SHA256SUMS`).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with the seven rules that need no calibration (`crates/lint/src/lib.rs`); `cargo xtask lint`.
@@ -75,9 +88,11 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/format/fuzz/fuzz_targets/open_quad.rs`).
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
-- Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]*
-  name=[^ ]*' | wc -l` → 162 `CHECK` lines, 0 with `result=fail`, 157 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
-  CI for 4b: see `docs/STATUS-log.md` (`.github/workflows/ci.yml`).
+- Checks, 2026-11-10 on the Pi: `make check-all` → `TESTS scope=workspace checks=187 check_fail=0 passed=182 failed=0
+  status=ok` (the summary counts only `CHECK` lines that start a row; `grep -o 'CHECK crate=[^ ]* name=[^ ]*'
+  target/test.log | wc -l` → 188, 0 with `result=fail`: parallel output split one); fmt and clippy `-D warnings` clean
+  (`Makefile`). CI for rung 5: see `docs/STATUS-log.md`
+  (`.github/workflows/ci.yml`).
 - A `Makefile` wraps the usual commands: `make` lists them; `make test` prints one `TESTS` line, `make check-all` is what CI
   runs, `make review` adds the build-matches-HEAD proof and the diff against `origin/main` (`Makefile`,
   `docs/bbq/2026-11-10-makefile.md`).
@@ -95,9 +110,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Next
 
-- Rung 5, New and Insert, is planned (bbq, 12 questions; record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`):
-  File → New with a device and rhythm dialog, and a left tools bar to draw a line, text box or pattern region. To be
-  built by a fresh Sonnet 5.5 session at high effort from the record's kickoff.
+- chris's look at rung 5 (`make run`: New…, then the tools on the left). Rung 5 is done when he approves it; what to
+  look at is in `docs/STATUS-log.md`, 2026-11-10 rung 5. Then rung 6 is chris's to plan.
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -129,6 +143,8 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-10: rung 4b approved, rung 4 done; rung 5 planned (bbq, 12 questions): New and Insert (`docs/STATUS-log.md`).
 - 2026-11-10: ADR backlog sweep: ADR-004 to ADR-014 drafted and all ratified by chris; drag speed now the 90th
   percentile (`docs/STATUS-log.md`, `docs/decisions/INDEX.md`).
+- 2026-11-10: rung 5 built (Sonnet 5.5, high): New, the tools bar, drawing; measured on the Pi; waits for chris's look
+  (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

@@ -129,3 +129,12 @@ and `DEVELOPMENT.md`. Show chris the window and stop for his look. Update `STATU
 
 The rules above are unchanged. chris ratified ADR-009 with the 90th percentile in place of the 95th, so the two
 mentions of "95th percentile" in Defaulted "Drawing speed" and in the Kickoff now read "90th".
+
+## After the build (2026-11-10)
+
+Added after the build; the rules above are unchanged. Built as Defaulted says, with these additions the record did not
+settle (each can be vetoed; see `docs/STATUS-log.md`, 2026-11-10 rung 5, and `docs/STATUS-debt.md`): a new page targets
+both devices and its margins clear both; a line dragged up and to the right runs along an axis (the model's line is its
+box's top-left to bottom-right diagonal); a clicked pattern region is pinned to every edge, a drag-drawn one keeps the
+Scale default; New is a flat toolbar button, not a File menu; a text box is 12 pt regular Atkinson Hyperlegible Next.
+Steps 1 to 3 landed in one session, not two or three. Waiting for chris's look.

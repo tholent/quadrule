@@ -588,3 +588,60 @@ session. Built in this order, on `main`:
   touching the format or model crates will show it. CI for `297ab31` (run 42881539789) and Coverage (42881539825) passed.
   Repository caches: `gh cache list --limit 100 --json sizeInBytes` → 16 caches, 9.88 GiB, against GitHub's 10 GB
   repository limit; old entries (from older `Cargo.lock` hashes) are evicted oldest first.
+
+## 2026-11-10 — rung 5 built: New and Insert (Sonnet 5.5, `CLAUDE_EFFORT=high`)
+
+Kickoff from `docs/bbq/2026-11-10-rung-5-new-and-insert.md`. Preconditions, all met: model Sonnet 5.5 and `echo
+"$CLAUDE_EFFORT"` → `high`; `make build-proof` at the start → `BUILD head=6fa87b1 dirty=no rebuilt=0`. Said up front
+in the record: 2–3 sessions; it took one (three commits' worth of steps below).
+
+- **Step 1, New** (`e751c58`): New… button on the toolbar and the empty screen, and Ctrl+N (Cmd+N); a dialog with device
+  (the last one picked is remembered between runs, Manta first), rhythm preset and title; Create asks the unsaved-changes
+  prompt first, then opens a blank template (`crates/ui/src/view.rs`, `crates/model/src/blank.rs`,
+  `crates/layout/src/newpage.rs`). Margins are the least whole number of rhythm units that clears the docked left, right
+  and top toolbars and the footers on every device the page targets (12 mm at 6 mm rhythm on both). An untitled
+  document has no file until Save (Save asks where), autosaves and is recovered as untitled (`Source::Untitled`,
+  `crates/ui/src/recovery.rs`).
+- **Step 2, tools bar** (`2fcb4d3`): a left panel, 48 points wide, listing Select, Line, Text, Pattern as painted icons
+  with tooltips and screen-reader names; V, L, T, P pick them (ignored while a text field has focus); Escape ends a tool
+  before it clears the selection; a double-click keeps a tool, shown by a dot. It is a list in `Tool::ALL`, so
+  rectangle, ellipse, polygon and repeat are each one more entry and icon (`crates/ui/src/tools.rs`).
+- **Step 3, drawing** (`2fcb4d3`): `crates/ui/src/draw.rs`. A drag draws with rung 4's snap engine on (start corner by
+  point snap, a box's far corner by resize snap from a zero-size box, so sizes land on whole rhythm units and the
+  guides show), live through the preview document, landing as one undo step; Ctrl turns snapping off; Escape drops it.
+  A click, or a drag shorter than 6 screen points, drops the default: a line or text box 10 units long (slid left to
+  fit the page), a pattern region filling the page margins. Layer: the first selected object's layer, else the top
+  unlocked one; a locked layer refuses with the "locked" note. The tool goes back to Select unless kept. A drawn
+  text box opens the Text tab with its text selected.
+- **Things I chose that the record did not say** (each can be vetoed; they are also in `docs/STATUS-debt.md`): a new
+  page targets both devices (the chosen one first), so its margins clear both; a line dragged up and to the right (a
+  diagonal the model cannot hold) runs along the axis the pointer went further on, as with Shift; a clicked pattern region
+  is pinned to every edge (LeftRight/TopBottom) because with the default Scale constraints its margins shrank on the
+  Nomad and a test caught an L06 finding there, while a drag-drawn region keeps the napkin's Scale default; a text box
+  is 12 pt regular Atkinson Hyperlegible Next, one rhythm unit tall until its text decides; New is a flat toolbar button,
+  not a File menu (the toolbar has none); object names ("Line", "Text", "Pattern") come from Fluent when drawn.
+- **Measured** (Pi, release build, `quadrule --bench-draw 150`, which drags a pattern region out over the sample page
+  through the real frame loop; `make bench-draw`): export canvas `p90_ms` 26.0, 25.5, 26.1 (worst 64.6, 27.0, 30.2);
+  chip canvas `p90_ms` 41.5, 41.4, 42.3 (worst 43.9, 46.1, 44.7); budget 50 ms (ADR-009; for drawing it is a
+  reading, not a stop line, per Q12). All six `result=pass`.
+- **Checks:** `make check-all` → `TESTS scope=workspace checks=187 check_fail=0 passed=182 failed=0 status=ok` on the
+  final tree (an earlier run read 188: the summary counts only `CHECK` lines that start a row, and parallel test
+  output splits one now and then; `grep -o 'CHECK crate=[^ ]* name=[^ ]*' target/test.log | wc -l` → 188, 0 with
+  `result=fail`; before rung 5: 162 checks, 157 passed); 25 new tests and 26 new `CHECK` lines (the draw bench prints its own): `crates/ui/tests/new.rs` (8),
+  `crates/ui/tests/draw.rs` (12), `crates/ui/tests/window.rs` (5); the app's `command_line` test also covers
+  `--bench-draw`. Export bytes unchanged: rung 1's golden test and the stock-grid test pass untouched, and
+  `draw_export_bytes_unchanged` shows draw then undo restores both devices' pixels byte for byte.
+- **CI:** push `e751c58`: CI 42885131520 success (three systems), Coverage 42885131427, Fuzz 42885131467 success; push
+  `2fcb4d3`: CI 42887050036 and Coverage 42887049623 success. The Fuzz run is the first warm one: "Cache hit",
+  `full match: true` (2 m 31 s against 2 m 59 s cold); the debt noted in the 297ab31 entry is settled.
+- **Seen on screen** (a screenshot of `target/release/quadrule` on a saved drawn page, this session): the bar, a ruled
+  region, a line and a text box show as drawn; the layers panel lists them by name. I could not click in the window from
+  here, so the live drag, the dialog's look and the double-click are for chris's look.
+- Also: the Makefile's `bench-drag` help said the 95th percentile; it is the 90th since ADR-009 (corrected), and
+  `bench-draw` is new. The README's "no New page, no way to add shapes" line and what-works list are now true
+  (`README.md`, `DEVELOPMENT.md` crate table).
+- **Waits on chris:** the look at rung 5 (`make run`). Try: New… (Manta then Nomad; each rhythm), Ctrl+N with unsaved
+  changes; the four tools by click and by V L T P; drag and click for each; Shift on a line; Ctrl while drawing; Escape
+  mid-draw; double-click a tool to keep it; the Text tab taking the cursor after a text box; undo after a draw. Open
+  questions still open from before, not part of this rung: the GitHub description and topics (`gh repo edit`, HTTP
+  403), and "Scale vs pixel-locked rhythm on A5 X" (`docs/STATUS-debt.md`).

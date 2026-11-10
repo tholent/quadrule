@@ -289,6 +289,9 @@ impl ViewerUi {
                 }
             });
         self.ruler_window(&ctx);
+        // The Text tab, if it showed, has taken the cursor by now; a request it could not use
+        // (no text box selected) must not wait for a later selection.
+        self.focus_text_content = false;
         self.new_dialog(&ctx, &mut requests);
         self.unsaved_prompt(&ctx, &mut requests);
         self.recovery_prompt(&ctx);
