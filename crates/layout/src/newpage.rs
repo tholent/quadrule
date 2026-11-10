@@ -16,7 +16,7 @@
 //! docs/bbq/2026-11-10-rung-5-new-and-insert.md, Defaulted "New page margins"). The margins
 //! clear the docked left, right and top toolbars and the footers of every device the page
 //! targets, rounded up to whole rhythm units, so a region that fills the margins passes lint
-//! rule L06. The floating toolbar moves, so it is not cleared (the linter only notes it).
+//! rule L06. The floating toolbar moves, so it is neither cleared nor linted.
 
 use quadrule_model::blank::{RhythmPreset, blank_document};
 use quadrule_model::{Document, Margins};

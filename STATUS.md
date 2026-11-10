@@ -51,8 +51,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   50 ms line (`crates/ui/src/canvas.rs`, `docs/STATUS-log.md`, 2026-11-10 rung 4a).
 - The safe-zone overlay has no labels, shows the left, right and top toolbar zones and the footers (not the floating
   toolbar), fills overlapping zones once so they are no darker, draws borders only round the combined area, and the
-  linter checks every position including the floating one; dragged objects
-  snap to the same zones (`crates/ui/src/view.rs`, `crates/ui/src/viewer.rs`, `crates/layout/src/snap.rs`).
+  linter checks the same three docked positions and the footers, not the floating toolbar (chris, after rung 5; ADR-012
+  amendment); dragged objects snap to the same zones (`crates/ui/src/view.rs`, `crates/ui/src/viewer.rs`,
+  `crates/layout/src/snap.rs`, `crates/lint/src/lib.rs`).
 - Rung 4b, the rest of snapping and copy and paste, is built; look approved by chris 2026-11-10, so rung 4 is done
   (record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`, Q4; rung 4 record
   `docs/bbq/2026-11-10-rung-4-drag-and-snap.md`): a dragged box's corners, midpoints and centre land on another
@@ -68,7 +69,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   chip canvas 31.6–32.1 ms (3 runs), against 50 ms (`docs/STATUS-log.md`). A rhythm catch beats any other kind that is
   less than half a pixel nearer (chris's ruling, `crates/layout/src/snap.rs`). Export bytes unchanged
   (`crates/render/tests/golden/SHA256SUMS`).
-- Rung 5, New and Insert, is built and waits for chris's look (record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`).
+- Rung 5, New and Insert, is done, look approved by chris 2026-11-10 (record `docs/bbq/2026-11-10-rung-5-new-and-insert.md`).
   **New…** (button, Ctrl+N; on the empty screen too) asks for a device, a rhythm preset (handwriting 6 mm, narrow,
   college and wide ruled, 5 mm grid, 1/4 in grid) and a title, then opens a blank template that targets both devices
   with margins rounded up to whole rhythm units that clear the docked toolbars and footers, so a region filling them
@@ -110,8 +111,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 ## Next
 
-- chris's look at rung 5 (`make run`: New…, then the tools on the left). Rung 5 is done when he approves it; what to
-  look at is in `docs/STATUS-log.md`, 2026-11-10 rung 5. Then rung 6 is chris's to plan.
+- Rung 6 is chris's to plan (the napkin's next steps, `napkins/quadrule-spec.md` §16; the tools bar takes rectangle,
+  ellipse, polygon and repeat as one entry each, `crates/ui/src/tools.rs`).
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on the Label gray question, open until v1.1;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -145,6 +146,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
   percentile (`docs/STATUS-log.md`, `docs/decisions/INDEX.md`).
 - 2026-11-10: rung 5 built (Sonnet 5.5, high): New, the tools bar, drawing; measured on the Pi; waits for chris's look
   (`docs/STATUS-log.md`).
+- 2026-11-10: rung 5 approved by chris; L06 stops checking the floating toolbar (ADR-012 amended) (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

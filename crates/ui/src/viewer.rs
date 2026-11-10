@@ -30,15 +30,16 @@ use quadrule_text::FontRegistry;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-/// Toolbar positions the viewer lints for, shows safe zones for, and snaps to: all of them, the
-/// right side included (chris, 2026-11-10: "the safe area linting should look at all safe areas,
-/// including the right one"; earlier, 2026-11-09, only "Docked left, Docked top"). It is the one
-/// list, so what is drawn is what is checked.
-pub const TOOLBARS_IN_USE: [Toolbar; 4] = Toolbar::ALL;
+/// Toolbar positions the viewer lints for, shows safe zones for, and snaps to: the docked ones,
+/// left, right and top (chris, 2026-11-10: "the safe area linting should look at all safe areas,
+/// including the right one"; and, after rung 5, that L06 checking the floating menu bar "isn't
+/// desired"; earlier, 2026-11-09, only "Docked left, Docked top"). It is the one list, so what is
+/// drawn is what is checked.
+pub const TOOLBARS_IN_USE: [Toolbar; 3] = Toolbar::DOCKED;
 
 /// Toolbar positions whose safe zones are drawn and snapped to: left, right and top, not the
 /// floating toolbar (chris, 2026-11-10: "the safe zone overlay should not include the floating
-/// menu"). The linter still checks every position ([`TOOLBARS_IN_USE`]).
+/// menu"). Since rung 5 the linter leaves it out too ([`TOOLBARS_IN_USE`]).
 pub const TOOLBARS_SHOWN: [Toolbar; 3] = [Toolbar::Left, Toolbar::Right, Toolbar::Top];
 
 /// Where the open document came from.

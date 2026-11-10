@@ -51,3 +51,27 @@ amends: nothing
 - 2026-11-10: ratified by chris (answer "Ratify" to "ADR-012 … Ratify?", in his review of the pending ADRs). Prior header
   values: status `proposed`, status-note `drafted 2026-11-10 from the project's records (backlog sweep, no
   rounds, chris's choice); awaiting ratification`.
+- 2026-11-10: amended by chris, after trying rung 5: the linter no longer checks the floating toolbar (see the
+  Amendment below). Header values unchanged.
+
+## Amendment — 2026-11-10, chris
+
+**Touches:** Decision item 5 and the title's "linted at every toolbar position". Their text above stands as ruled and
+is superseded here for the floating toolbar only.
+
+chris, word for word, after trying rung 5: "There is one linting issue, L06 still checks for collisions with the
+floating menu bar, which isn't desired."
+
+**What changes:** lint checks the docked toolbars (left, right, top) and the footers by default; it does not check the
+floating toolbar. The overlay and the snap already left it out (item 6), so the window now draws, snaps to and lints
+the same three toolbar positions. The floating position stays in the code as an opt-in only (`cargo xtask lint
+--toolbars all`), where its notes are Info as before. The new-page margins never cleared it
+(`crates/layout/src/newpage.rs`).
+
+**Why:** the floating toolbar moves, and chris does not want a page flagged for sitting where it first appears.
+
+**Built:** `Toolbar::DOCKED` and `Options::default` in `crates/lint/src/lib.rs`; `TOOLBARS_IN_USE` in
+`crates/ui/src/viewer.rs`; `cargo xtask lint` defaults to `left,right,top`; the Lint panel's note
+(`app-lint-toolbars`). Proof: `crates/lint/tests/lint.rs::floating_toolbar_is_not_linted_unless_asked`,
+`crates/ui/tests/drag.rs::the_floating_toolbar_zone_is_not_shown_or_caught`. The sample page's Manta findings went from
+7 to 5 (`crates/ui/tests/window.rs::empty_start_then_sample`).

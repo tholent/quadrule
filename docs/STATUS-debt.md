@@ -69,8 +69,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   not through the harness (`egui_kittest` cannot make a double-click: two clicks give `double_clicked() == false`,
   measured 2026-11-10); chris's look is its first real check. New… is a flat toolbar button, not a File menu (the
   toolbar has no File menu; the napkin's "File → New"). A new page targets both devices, so its margins clear the
-  larger of both devices' toolbars and footers (12 mm at 6 mm rhythm); the floating toolbar is not cleared (lint
-  notes it as Info). The ruled-paper inch presets (9/32 in, 11/32 in) are the agent's, for chris to veto. A drawn
+  larger of both devices' toolbars and footers (12 mm at 6 mm rhythm); the floating toolbar is neither cleared nor
+  linted (chris, 2026-11-10). The ruled-paper inch presets (9/32 in, 11/32 in) are the agent's, for chris to veto. A drawn
   object's name is its Fluent text at the time ("Line", "Text", "Pattern") stored as the file's own data. A drag-drawn
   object has Scale constraints (the napkin default); only a clicked pattern region is pinned to every edge. The text
   box is 12 pt regular Atkinson Hyperlegible Next with no choice in the dialog.

@@ -650,3 +650,20 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   chris set them by hand (the entry at "Later the same session"), and said again: "the description and topics are both
   set and should be considered closed". Closed; do not ask again. The only question still open from before is "Scale
   vs pixel-locked rhythm on A5 X" (`docs/STATUS-debt.md`).
+
+## 2026-11-10 — rung 5 approved; L06 leaves the floating toolbar out (Sonnet 5.5, `CLAUDE_EFFORT=high`)
+
+- chris, word for word, after trying the window: "this feels and looks great. There is one linting issue, L06 still
+  checks for collisions with the floating menu bar, which isn't desired. The app isn't super smooth, but I'm also
+  checking it across a VNC connection. other than the linting issue, I approve this rung". **Rung 5 is done.**
+- The lint fix: the default toolbar positions are the docked three (`Toolbar::DOCKED`, `Options::default`,
+  `crates/lint/src/lib.rs`); the window's list is the same (`TOOLBARS_IN_USE`, `crates/ui/src/viewer.rs`);
+  `cargo xtask lint` defaults to `left,right,top` and `--toolbars all` adds the floating one; the Lint panel's note no
+  longer names it. The sample page on the Manta now shows 5 findings, not 7 (the two missing were the floating
+  toolbar's Info notes). ADR-012 got a dated amendment (item 5 and its title); `adr-check.py` → 14 ADRs, 0 failures
+  (it checks headers and that proofs resolve, not behaviour). Tests: `floating_toolbar_is_not_linted_unless_asked`
+  (was `floating_toolbar_is_info_only`), the drag and window tests that held the old count.
+- `make check-all` → `TESTS scope=workspace checks=188 check_fail=0 passed=182 failed=0 status=ok`. Export bytes
+  untouched (no render or layout change).
+- Smoothness: chris saw it over VNC, so it is not a reading of the app's own speed. The Pi's own numbers, measured at
+  the screen, stay those of the rung 5 entry (export canvas p90 about 26 ms, chip canvas about 42 ms).

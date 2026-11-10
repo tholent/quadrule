@@ -137,4 +137,13 @@ settle (each can be vetoed; see `docs/STATUS-log.md`, 2026-11-10 rung 5, and `do
 both devices and its margins clear both; a line dragged up and to the right runs along an axis (the model's line is its
 box's top-left to bottom-right diagonal); a clicked pattern region is pinned to every edge, a drag-drawn one keeps the
 Scale default; New is a flat toolbar button, not a File menu; a text box is 12 pt regular Atkinson Hyperlegible Next.
-Steps 1 to 3 landed in one session, not two or three. Waiting for chris's look.
+Steps 1 to 3 landed in one session, not two or three.
+
+## After the look (2026-11-10)
+
+chris's answer, word for word, after trying rung 5: "this feels and looks great. There is one linting issue, L06 still
+checks for collisions with the floating menu bar, which isn't desired. The app isn't super smooth, but I'm also checking
+it across a VNC connection. other than the linting issue, I approve this rung". Rung 5 is done. Built: the linter, the
+overlay and the snap now all use the three docked toolbars and leave the floating one out (this replaces "the linter
+still checks it" in rung 4's "After 4b"); ADR-012 is amended. The drawing-speed line stays a reading, not a stop line
+(Q12); chris's "not super smooth" came over VNC.

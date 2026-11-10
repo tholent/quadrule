@@ -118,7 +118,7 @@ fn new_gives_the_chosen_device_rhythm_and_margins() {
 #[test]
 fn a_blank_page_passes_lint_on_both_devices() {
     // A region that fills the margins touches no docked toolbar or footer: no L06 finding. (The
-    // floating toolbar is advisory; it may give an Info, never a Warn.)
+    // floating toolbar is not linted.)
     let mut results = Vec::new();
     let mut ok = true;
     for device in [MANTA_ID, NOMAD_ID] {

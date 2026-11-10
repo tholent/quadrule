@@ -189,7 +189,7 @@ fn wide_strip_and_centred_rhythm() {
 }
 
 #[test]
-fn floating_toolbar_is_info_only() {
+fn floating_toolbar_is_not_linted_unless_asked() {
     let mut doc = slice_document();
     // A line through the middle of the Manta, where the floating toolbar starts (x 848-964).
     doc.layers[0].objects = vec![line(
@@ -198,13 +198,23 @@ fn floating_toolbar_is_info_only() {
         Style::Role(LineRole::Guide),
     )];
     doc.layers[1].objects.clear();
-    let f = run(&doc, &builtin(MANTA_ID).unwrap());
+    let manta = builtin(MANTA_ID).unwrap();
+    // By default (chris, 2026-11-10: checking the floating menu bar "isn't desired"): nothing.
+    let by_default = run(&doc, &manta).iter().filter(|x| x.rule == "L06").count();
+    // Asked for with Toolbar::ALL (`--toolbars all`), it is Info only and names the floating toolbar.
+    let primary = builtin(&doc.primary_profile_id).unwrap();
+    let laid = lay_out_text(&doc, &primary, &manta, &mut FontRegistry::bundled_only()).unwrap();
+    let opts = Options {
+        toolbars: Toolbar::ALL.to_vec(),
+    };
+    let f = lint_with(&doc, &primary, &manta, &laid.outlines, &opts);
     let l06: Vec<_> = f.iter().filter(|x| x.rule == "L06").collect();
-    let ok = !l06.is_empty()
+    let ok = by_default == 0
+        && !l06.is_empty()
         && l06.iter().all(|x| x.severity == Severity::Info)
         && l06.iter().all(|x| text(x).contains("floating toolbar"));
     println!(
-        "CHECK crate=lint name=floating_toolbar_info result={} l06={}",
+        "CHECK crate=lint name=floating_toolbar_opt_in result={} l06_by_default={by_default} l06_opted_in={}",
         pass(ok),
         l06.len()
     );
@@ -234,7 +244,7 @@ fn every_toolbar_zone_is_known() {
 #[test]
 fn only_chosen_toolbars() {
     // chris docks left and top (2026-11-09): the slice header is then flagged for those two and
-    // the footers only; the right and floating toolbars are not mentioned.
+    // the footers only; the right toolbar is not mentioned (the default now has it, not the floating one).
     let doc = slice_document();
     let manta = builtin(MANTA_ID).unwrap();
     let primary = builtin(&doc.primary_profile_id).unwrap();

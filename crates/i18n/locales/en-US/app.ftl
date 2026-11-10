@@ -48,7 +48,7 @@ app-empty-drop = or drag a .quad file onto this window
 
 # Lint panel.
 app-lint-heading = Lint ({ $count })
-app-lint-toolbars = Checked for the toolbar docked left, right or top, the floating toolbar, and the footers.
+app-lint-toolbars = Checked for the toolbar docked left, right or top, and the footers.
 app-lint-none = Nothing to report on this device.
 app-saved-outlines = A font is missing here, so text shows as saved in the file.
 

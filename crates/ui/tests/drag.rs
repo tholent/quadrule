@@ -574,7 +574,7 @@ fn the_right_toolbar_zone_is_shown_and_caught_by_default() {
     v.drag_update(start + (edge - 3.0 - x1), y0, NONE, REACH);
     let caught = v.drag_guides().iter().any(|g| g.at == edge);
     v.drag_cancel();
-    let listed = quadrule_lint::Toolbar::ALL
+    let listed = quadrule_lint::Toolbar::DOCKED
         .iter()
         .all(|t| quadrule_ui::viewer::TOOLBARS_IN_USE.contains(t));
     let ok = caught && listed;
@@ -763,10 +763,11 @@ fn the_floating_toolbar_zone_is_not_shown_or_caught() {
     v.drag_cancel();
     let shown = quadrule_ui::viewer::TOOLBARS_SHOWN;
     let list = !shown.contains(&quadrule_lint::Toolbar::Floating) && shown.len() == 3;
+    // Nor linted (chris, after rung 5: checking the floating menu bar "isn't desired").
     let linted = quadrule_ui::viewer::TOOLBARS_IN_USE.contains(&quadrule_lint::Toolbar::Floating);
-    let ok = !caught && list && linted;
+    let ok = !caught && list && !linted;
     println!(
-        "\nCHECK crate=ui name=floating_zone_not_shown result={} zone_edge_x={edge} caught={caught} not_in_shown={list} still_linted={linted}",
+        "\nCHECK crate=ui name=floating_zone_not_shown result={} zone_edge_x={edge} caught={caught} not_in_shown={list} linted={linted}",
         pass(ok)
     );
     assert!(ok);

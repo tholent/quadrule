@@ -97,7 +97,12 @@ pub enum Toolbar {
 }
 
 impl Toolbar {
-    /// Every position.
+    /// The docked positions: what L06 checks unless told otherwise. The floating toolbar moves,
+    /// so it is left out (chris, 2026-11-10: the linter "still checks for collisions with the
+    /// floating menu bar, which isn't desired").
+    pub const DOCKED: [Toolbar; 3] = [Toolbar::Left, Toolbar::Right, Toolbar::Top];
+
+    /// Every position, the floating one included (opt-in).
     pub const ALL: [Toolbar; 4] = [
         Toolbar::Left,
         Toolbar::Right,
@@ -133,14 +138,14 @@ impl Toolbar {
 /// Choices that change what the linter checks.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Options {
-    /// Toolbar positions the user uses; L06 ignores the others. Default: all of them.
+    /// Toolbar positions the user uses; L06 ignores the others. Default: the docked ones.
     pub toolbars: Vec<Toolbar>,
 }
 
 impl Default for Options {
     fn default() -> Self {
         Options {
-            toolbars: Toolbar::ALL.to_vec(),
+            toolbars: Toolbar::DOCKED.to_vec(),
         }
     }
 }
