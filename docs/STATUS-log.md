@@ -575,3 +575,10 @@ session. Built in this order, on `main`:
   quadrule-i18n --no-fail-fast -- --nocapture` → 54 passed, 0 failed, 55 `CHECK` lines, 0 `result=fail`; clippy `-D
   warnings` on `quadrule-ui` and `cargo fmt --all --check` clean. Export bytes untouched (no render or layout change).
   The rung 5 record's two "95th" mentions now read "90th", with a dated note.
+- chris: "I think we need to make sure our CI workflows are using caching. the coverage check compiles everything".
+  Measured from `gh run view <id> --json jobs`: CI and Coverage already use `Swatinem/rust-cache@v2` and hit it. Coverage
+  run 42868546083 (the first ever, no cache) Measure 185 s, cargo-llvm-cov install 56 s; run 42881539825 cache hit (`full
+  match: true`), Measure 72 s, install 2 s; coverage must still rebuild the workspace's own crates, instrumented. CI run
+  42864690998's 11 minutes were a 10-minute wait for a macOS runner, not compiling. Fuzz had no cache (cargo-fuzz install
+  21 s, fuzz build about 47 s, run 42860903920): added `rust-cache` for the fuzz crate's own workspace, keyed on the
+  nightly version (`.github/workflows/fuzz.yml`).

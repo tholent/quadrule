@@ -36,10 +36,20 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v7
-      - name: Nightly and cargo-fuzz
+      - name: Nightly
+        id: nightly
         run: |
           rustup toolchain install nightly --profile minimal
-          cargo +nightly install cargo-fuzz --locked
+          echo "version=$(rustc +nightly --version | tr -c 'A-Za-z0-9.-' '-')" >> "$GITHUB_OUTPUT"
+      # The fuzz crate is its own workspace (crates/format/fuzz/Cargo.toml) with its own target folder.
+      # rust-cache keys on the pinned stable rustc (rust-toolchain.toml), so the nightly version goes in
+      # the key by hand; cache-bin keeps the installed cargo-fuzz.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/format/fuzz -> target
+          key: ${{ steps.nightly.outputs.version }}
+      - name: cargo-fuzz
+        run: cargo +nightly install cargo-fuzz --locked
       - name: Fuzz
         working-directory: crates/format
         run: |
