@@ -582,3 +582,9 @@ session. Built in this order, on `main`:
   42864690998's 11 minutes were a 10-minute wait for a macOS runner, not compiling. Fuzz had no cache (cargo-fuzz install
   21 s, fuzz build about 47 s, run 42860903920): added `rust-cache` for the fuzz crate's own workspace, keyed on the
   nightly version (`.github/workflows/fuzz.yml`).
+- Fuzz cache, first run 42882032539 (`ae45358`): "No cache found", then saved
+  `v0-rust-rustc-1.102.0-nightly--ac8310ba6-2026-11-09---fuzz-Linux-x64-f0bd66ff-87bd2034` (94.82 MiB, `gh cache list`).
+  A warm run is not proven yet: `gh workflow run fuzz.yml` → HTTP 403 (the token cannot start workflows); the next push
+  touching the format or model crates will show it. CI for `297ab31` (run 42881539789) and Coverage (42881539825) passed.
+  Repository caches: `gh cache list --limit 100 --json sizeInBytes` → 16 caches, 9.88 GiB, against GitHub's 10 GB
+  repository limit; old entries (from older `Cargo.lock` hashes) are evicted oldest first.
