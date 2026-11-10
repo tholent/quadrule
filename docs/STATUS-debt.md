@@ -36,6 +36,13 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   `.AppleSystemUIFont`, unverified (no Mac here); if fontdb cannot find it, egui's own font shows. Ctrl + scroll
   zooms by a step but does not keep the point under the pointer still. The export writes no PNG text note (napkin
   §11.1 has it on by default), so its bytes match rung 1's goldens; the note belongs with the export settings.
-- The graphics-chip (vello on wgpu) canvas and its vello_cpu fallback on weak chips (ruled yes, 2026-11-09) are
-  deferred to the editing rung, to be measured on a desktop graphics card (rung 2 bbq Q3).
+- The graphics-chip canvas (built in rung 3, `crates/app/src/chip.rs`) is measured only on the Pi at Fit zoom (40 ms
+  a frame, release build); still to measure zoomed in, while scrolling, and on a desktop graphics card (rung 3 bbq
+  Q7). It redraws the visible area on every scroll step.
+- Rung 3 editor, owed (`crates/ui/src/editor.rs`, `crates/ui/src/panels.rs`, `crates/ui/src/view.rs`): Save does not
+  update `metadata.modified`. When a font is missing here, Save keeps the file's saved outlines for that device even
+  if the text changed. A multiple selection shows the first object's values, not "mixed". "Don't save" followed by
+  cancelling the Open dialog leaves the document unsaved with its recovery file deleted (the next autosave writes
+  it again). Only one recovery file is restored per start. Lint keeps its own copy of the object-bounds maths
+  that `quadrule_layout::placed_objects` now has (`crates/lint/src/lib.rs`).
 

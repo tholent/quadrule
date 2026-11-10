@@ -268,3 +268,45 @@ A dated, append-only record of what each session did. Newest at the bottom; spli
   (select, layers panel, inspector tabs, nudge, undo/redo, Save, autosave and recovery), with both canvases
   switchable (overruled the export-pixels-only recommendation) and no feature flag (overruled; waives the AGENTS.md
   flag rule for rung 3 only). Dragging and snapping move to rung 4. Export goldens stay fixed. About 3–5 sessions.
+
+## 2026-11-10 — rung 3 built
+
+- Session start: asked to run on Opus 5.5 at high effort; the session showed a lower effort, so the lead stopped
+  and said so. chris set `/effort high` and wrote, word for word: "Carry on". Clean tree at HEAD `87b7ed0`;
+  `CARGO_BUILD_JOBS=2 cargo build --workspace` → `Finished` with nothing to rebuild, so the build matched HEAD.
+  The open 153/157 Label-gray question was not asked at the start; it is asked at the end of this session.
+- Step 1–2 (`f8e8562`): `model::edit` — every edit a `Command` that returns its own undo; `History` with
+  unlimited depth, typing in one field merged into one step until the field loses focus, dirty tracking by the
+  saved step; locks refuse edits but not the panel's name, eye and lock. `layout::units` — one parser for mm, pt,
+  px, in, %, u. `layout::placed_objects` — each object's shape on a device for picking, apart from `display_list`.
+- Steps 3–8 (`83b20c4`): selection, layers panel, inspector tabs, keys, Save / Save As / unsaved-changes prompt,
+  autosave and recovery (`crates/ui/src/editor.rs`, `panels.rs`, `recovery.rs`, `view.rs`; the app's Save As
+  dialog, close guard and recovery folder from `directories` 6.0.0). Window tests: findings moved to the Lint tab.
+- Step 9 (`3075188`): the graphics-chip canvas, vello 0.11.0 on egui's wgpu 30.0.1 (one wgpu in `Cargo.lock`), with
+  the vello_cpu fallback; `quadrule --canvas chip|export`.
+- Found and fixed while building: (1) starting vello together with the window kept the window from ever showing on
+  the Pi (the main thread sat idle in winit's event loop, no window mapped); vello now starts on its first frame.
+  (2) vello_cpu draws `Rect` items with a hard 50 % edge, so a 1 px line shrunk to a quarter would vanish; the
+  screen-resolution list draws them as anti-aliased fills (test `screen_canvas_list`: 15 ruled lines in the
+  export, 15 at 1/4). (3) The first chip frame is not judged, so nothing was judged until the next zoom or edit; a
+  judged frame now follows the warm-up at once.
+- Measured on the Pi's display (Wayland, V3D), sample page on the Manta at Fit zoom, status bar read from a `grim`
+  screenshot: debug build, first frame (shaders being built) 747 ms; release build
+  (`cargo build --release -p quadrule-app`), judged frame 40 ms, so the canvas stays on the chip. The spike's
+  392 ms (R12) was a whole 1920 × 2560 page; the canvas draws only the visible area (about 580 × 780 screen pixels
+  here). Not measured: zoomed in, or while scrolling. A desktop-card check waits for one (bbq Q7).
+- Checks on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -c '^CHECK'` → 110, none failing;
+  `cargo test -- --nocapture | grep -c '^CHECK'` (default members) → 83. Both goldens still match
+  (`slice_golden`), and the export after an edit and undo matches them (`export_unchanged_after_edit_undo`).
+  `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --all --check` clean.
+- Taste calls made while building, for chris's look check (each can be changed): Save, Save As…, Undo, Redo as
+  words in the toolbar after Open…; the layers panel shows the top layer first, with 👁 and 🔒 toggles (egui's
+  emoji font) and Move up / Move down buttons above the tree (keys Ctrl+] and Ctrl+[); the toolbar's lint count
+  opens the Lint tab (or hides the right panel when it is showing); the title reads `● name.quad — quadrule`
+  while unsaved; Duplicate puts the copy in place, just above the original; the selection outline is the theme's
+  accent, 1.5 points; a multiple selection shows the first object's values and edits apply to all of it.
+- Choices made inside the bbq's rules, to veto: `u` in a field and Shift+arrow use the rhythm unit as the device
+  on screen resolves it (pixel-locked 6 mm = 71 px on the Manta = 6.011 mm), so `2u` is exactly two grid steps on
+  that device; a comma works as the decimal point when there is no full stop; the rhythm fields do not read `u`.
+- CI run 42816727214 on `3075188` passed on Linux, macOS and Windows (goldens matched on all three); fuzz run
+  42816727323 passed.

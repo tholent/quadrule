@@ -24,6 +24,16 @@ The project's live state. Update it when work lands. Every claim cites at least 
   safe zones, and exports PNGs named `{title}_{manta|nomad}_{w}x{h}.png` (`crates/ui/`, `crates/app/`; record
   `docs/bbq/2026-11-09-rung-2-viewer.md`). It is an opt-in build: plain `cargo build`/`cargo test` leave it out
   (`Cargo.toml` `default-members`); CI builds and tests it on three OSes.
+- Rung 3, the first editor, is built on `main`, look not yet approved (record
+  `docs/bbq/2026-11-10-rung-3-first-editor.md`): click and Shift-click to select, a layers panel (eye, lock,
+  rename, Move up/down), the inspector's tabs (Page; Arrange, Style, Text, Constraints; Lint) with one length
+  field reading mm, pt, px, in, %, u; arrows nudge 1 device pixel, Shift+arrows one rhythm unit; Delete, Ctrl+D;
+  unlimited undo/redo; Save, Save As and the unsaved-changes prompt; autosave every 30 s and on focus loss, with
+  Restore offered after a crash (`crates/model/src/edit.rs`, `crates/layout/src/units.rs`, `crates/ui/src/editor.rs`,
+  `crates/ui/src/panels.rs`, `crates/ui/src/recovery.rs`). View → Canvas switches to the graphics-chip canvas
+  (vello on wgpu, `crates/app/src/chip.rs`), falling back to vello_cpu when the chip cannot start or a frame
+  takes over 100 ms (`crates/ui/src/canvas.rs`); on the Pi it measured 40 ms a frame (`docs/STATUS-log.md`).
+  Export bytes are unchanged (`crates/ui/tests/editor.rs`).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with the seven rules that need no calibration (`crates/lint/src/lib.rs`); `cargo xtask lint`.
@@ -31,17 +41,17 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/format/fuzz/fuzz_targets/open_quad.rs`).
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
-- Checks, 2026-11-09 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture` → 87 `CHECK` lines, all
-  pass (74 with the default members); clippy `-D warnings` and fmt clean. CI on Linux, macOS and Windows
+- Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture` → 110 `CHECK` lines, all
+  pass (83 with the default members); clippy `-D warnings` and fmt clean. CI on Linux, macOS and Windows
   (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).
 
 ## Next
 
-- Rung 3, the first editor, is planned (record `docs/bbq/2026-11-10-rung-3-first-editor.md`, about 3–5 sessions):
-  select, layers panel, inspector, nudge, undo/redo, Save, autosave; both canvases switchable. Rung 4: dragging
-  and snapping.
+- Rung 3 waits on chris's look check of the window (`docs/bbq/2026-11-10-rung-3-first-editor.md`, Kickoff): try
+  `cargo run --release -p quadrule-app -- [file.quad]` (add `--canvas chip` for the chip canvas). Taste calls
+  made for it are listed in `docs/STATUS-log.md` (2026-11-10, rung 3 built). Then rung 4: dragging and snapping.
 - Also owed: the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14; L04 waits on an open question;
   `crates/lint/src/lib.rs`, `docs/STATUS-debt.md`).
 
@@ -61,6 +71,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
   linter started; fuzzing (`docs/STATUS-log.md`).
 - 2026-11-09: rung 2 planned (bbq, 12 questions) and built: the viewer window; spike R15 paid (`docs/STATUS-log.md`).
 - 2026-11-10: rung 3 planned (bbq, 12 questions): the first editor (`docs/STATUS-log.md`).
+- 2026-11-10: rung 3 built (steps 1–9), chip canvas measured on the Pi; look waits on chris (`docs/STATUS-log.md`).
 
 ## How this file is kept
 
