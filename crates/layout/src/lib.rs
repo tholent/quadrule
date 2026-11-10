@@ -22,6 +22,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod units;
+
 use kurbo::{BezPath, Point};
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{
@@ -497,4 +499,152 @@ pub fn text_path(
         }
     }
     Ok(path)
+}
+
+/// Where an object falls on one profile's page, in device pixels, for picking it with the
+/// pointer and outlining it (rung 3). Worked out apart from [`display_list`], so the export path
+/// is untouched.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Placed {
+    /// The object.
+    pub id: Uuid,
+    /// Its layer's index, bottom first.
+    pub layer: usize,
+    /// Its shape.
+    pub shape: Shape,
+}
+
+/// An object's shape for picking.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Shape {
+    /// A line: its centre line and stroke width.
+    Segment {
+        /// Start x.
+        x0: f64,
+        /// Start y.
+        y0: f64,
+        /// End x.
+        x1: f64,
+        /// End y.
+        y1: f64,
+        /// Stroke width in pixels.
+        width: f64,
+    },
+    /// A filled area: a pattern region's box, or a text box's width by its laid-out height.
+    Box {
+        /// Left edge.
+        x0: f64,
+        /// Top edge.
+        y0: f64,
+        /// Right edge.
+        x1: f64,
+        /// Bottom edge.
+        y1: f64,
+    },
+}
+
+impl Shape {
+    /// The shape's bounds (x0, y0, x1, y1), half the stroke included for a line.
+    pub fn bounds(&self) -> (f64, f64, f64, f64) {
+        match *self {
+            Shape::Segment {
+                x0,
+                y0,
+                x1,
+                y1,
+                width,
+            } => {
+                let h = width / 2.0;
+                (
+                    x0.min(x1) - h,
+                    y0.min(y1) - h,
+                    x0.max(x1) + h,
+                    y0.max(y1) + h,
+                )
+            }
+            Shape::Box { x0, y0, x1, y1 } => (x0, y0, x1, y1),
+        }
+    }
+
+    /// Whether (x, y) is on the shape, or within `slack` pixels of it.
+    pub fn hit(&self, x: f64, y: f64, slack: f64) -> bool {
+        match *self {
+            Shape::Segment {
+                x0,
+                y0,
+                x1,
+                y1,
+                width,
+            } => {
+                let (dx, dy) = (x1 - x0, y1 - y0);
+                let len2 = dx * dx + dy * dy;
+                let t = if len2 == 0.0 {
+                    0.0
+                } else {
+                    (((x - x0) * dx + (y - y0) * dy) / len2).clamp(0.0, 1.0)
+                };
+                let (px, py) = (x0 + t * dx, y0 + t * dy);
+                ((x - px).powi(2) + (y - py).powi(2)).sqrt() <= width / 2.0 + slack
+            }
+            Shape::Box { x0, y0, x1, y1 } => {
+                x >= x0 - slack && x <= x1 + slack && y >= y0 - slack && y <= y1 + slack
+            }
+        }
+    }
+}
+
+/// Every object's shape on `target`, hidden and locked ones included, bottom first. A text box
+/// is as tall as its laid-out text in `outlines` (or its frame, when the outlines lack it).
+pub fn placed_objects(
+    doc: &Document,
+    primary: &Profile,
+    target: &Profile,
+    outlines: &ProfileOutlines,
+) -> Vec<Placed> {
+    let (from, to) = (primary.page_mm(), target.page_mm());
+    let px = |mm: f64| target.mm_to_px(mm);
+    let mut out = Vec::new();
+    for (li, layer) in doc.layers.iter().enumerate() {
+        for o in &layer.objects {
+            let f = resolve_frame(o.frame, o.constraints, from, to);
+            let (x0, y0, x1, y1) = (
+                px(f.x_mm),
+                px(f.y_mm),
+                px(f.x_mm + f.w_mm),
+                px(f.y_mm + f.h_mm),
+            );
+            let shape = match &o.kind {
+                ObjectKind::Line(_) => Shape::Segment {
+                    x0,
+                    y0,
+                    x1,
+                    y1,
+                    width: stroke(o.style, target).0 as f64,
+                },
+                ObjectKind::Pattern(_) => Shape::Box {
+                    x0: x0.min(x1),
+                    y0: y0.min(y1),
+                    x1: x0.max(x1),
+                    y1: y0.max(y1),
+                },
+                ObjectKind::Text(_) => {
+                    let h = outlines
+                        .text(o.id)
+                        .map_or(y1 - y0, |t| px(t.height_mm as f64));
+                    Shape::Box {
+                        x0,
+                        y0,
+                        x1,
+                        y1: y0 + h,
+                    }
+                }
+            };
+            out.push(Placed {
+                id: o.id,
+                layer: li,
+                shape,
+            });
+        }
+    }
+    out
 }

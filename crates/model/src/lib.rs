@@ -22,6 +22,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod edit;
 pub mod outlines;
 pub mod sample;
 
