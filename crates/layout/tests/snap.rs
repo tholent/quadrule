@@ -983,3 +983,43 @@ fn snap_priority_with_the_new_helpers() {
     );
     assert!(ok);
 }
+
+#[test]
+fn rhythm_wins_within_half_a_pixel() {
+    // chris, 2026-11-10: "let rhythm win within half a pixel". A box edge at 306.5 has the rhythm
+    // line (307) 0.5 away and another object's edge (306.7) 0.2 away: rhythm still wins. A guide
+    // that is more than half a pixel nearer wins.
+    let near = boxed(306.7, 900.0, 400.0, 950.0);
+    let w = world().with_others(vec![near]);
+    let both = only(|t| {
+        t.rhythm = true;
+        t.smart_guides = true;
+    });
+    let within = w.snap_span(Axis::X, 306.5, 406.5, REACH, both);
+    let rhythm_wins = within.kind == Some(SnapKind::Rhythm) && close(within.delta, 0.5);
+    // Edge at 306.0: the line is 1.0 away, the guide 0.7 away (0.3 nearer): rhythm.
+    let still = w.snap_span(Axis::X, 306.0, 406.0, REACH, both);
+    let still_rhythm = still.kind == Some(SnapKind::Rhythm);
+    // Edge on the guide (306.7): the line is 0.3 away: rhythm, being within half a pixel.
+    let on = w.snap_span(Axis::X, 306.7, 406.7, REACH, both);
+    let on_rhythm = on.kind == Some(SnapKind::Rhythm);
+    // An edge at 303 on a guide: the guide is 0 away, the line 4 away, so the guide wins.
+    let far = boxed(303.0, 900.0, 400.0, 950.0);
+    let w2 = world().with_others(vec![far]);
+    let guide_wins = w2.snap_span(Axis::X, 303.0, 403.0, REACH, both).kind == Some(SnapKind::Smart);
+    // Rhythm off: the guide is the only catch.
+    let alone = w.snap_span(
+        Axis::X,
+        306.5,
+        406.5,
+        REACH,
+        only(|t| t.smart_guides = true),
+    );
+    let alone_ok = alone.kind == Some(SnapKind::Smart);
+    let ok = rhythm_wins && still_rhythm && on_rhythm && guide_wins && alone_ok;
+    println!(
+        "\nCHECK crate=layout name=snap_rhythm_half_pixel result={} within_half={rhythm_wins} still={still_rhythm} on_guide={on_rhythm} far_guide_wins={guide_wins} rhythm_off={alone_ok}",
+        pass(ok)
+    );
+    assert!(ok);
+}

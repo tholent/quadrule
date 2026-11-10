@@ -469,4 +469,10 @@ session. Built in this order, on `main`:
 - Not checked: copy and paste through the real system clipboard and between two running windows (the tests use egui's
   events); drawing of a ring or gap by a person with a pointer (the screenshot was the bench's drag).
 - Stopped for chris's look at 4b.
+- chris, word for word, on the open question: "let rhythm win within half a pixel". Built: a rhythm catch (a unit line, a
+  subdivision or a whole-step size) beats any other kind unless that kind is more than 0.5 px nearer; between two kinds
+  that are both rhythm, or both not, the rule is as before (`better` in `crates/layout/src/snap.rs`; check
+  `snap_rhythm_half_pixel`). I read "rhythm" as including subdivisions and sizes, and the half pixel as device pixels;
+  both are mine, for chris to veto. Checks now: 160 `CHECK` lines, 0 `result=fail`, 155 tests passed; clippy and fmt
+  clean. CI for 4b's first commit `97350a7` passed on Linux, macOS and Windows.
 

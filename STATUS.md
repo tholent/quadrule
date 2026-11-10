@@ -63,7 +63,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   on the system clipboard, between documents too; a paste into the same document lands one rhythm unit down and
   right, each further paste one unit more (`crates/model/src/clipboard.rs`, `crates/ui/src/editor.rs`). Drag speed
   re-measured on the Pi with all helpers on, release build: export canvas 95th percentile 25.0–26.2 ms (3 runs),
-  chip canvas 31.6–32.1 ms (3 runs), against 50 ms (`docs/STATUS-log.md`). Export bytes unchanged
+  chip canvas 31.6–32.1 ms (3 runs), against 50 ms (`docs/STATUS-log.md`). A rhythm catch beats any other kind that is
+  less than half a pixel nearer (chris's ruling, `crates/layout/src/snap.rs`). Export bytes unchanged
   (`crates/render/tests/golden/SHA256SUMS`).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
@@ -73,7 +74,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
 - Checks, 2026-11-10 on the Pi: `cargo test --workspace --no-fail-fast -- --nocapture | grep -o 'CHECK crate=[^ ]*
-  name=[^ ]*' | wc -l` → 159 `CHECK` lines, 0 with `result=fail`, 154 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
+  name=[^ ]*' | wc -l` → 160 `CHECK` lines, 0 with `result=fail`, 155 tests passed, 0 failed; clippy `-D warnings` and fmt clean.
   CI for 4b: see `docs/STATUS-log.md` (`.github/workflows/ci.yml`).
 - Work goes straight to `main` until a job needs a branch (chris's ruling, `AGENTS.md`). Rust 1.99.1 pinned
   (`rust-toolchain.toml`).

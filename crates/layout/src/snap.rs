@@ -30,7 +30,8 @@
 //! A snap catches within `reach` pixels (the caller converts 6 screen pixels to device pixels, so
 //! it does not grow with zoom). When two targets are in reach the nearest wins; on a tie, rhythm
 //! first, then margins and safe zones, then point snap, smart guides and equal spacing
-//! ([`SnapKind`] order; napkin §6.2: rhythm "takes priority over smart guides").
+//! ([`SnapKind`] order; napkin §6.2: rhythm "takes priority over smart guides"). A rhythm catch
+//! also beats any other kind that is less than half a pixel nearer.
 
 use crate::RhythmPx;
 use crate::units::Axis;
@@ -537,9 +538,25 @@ struct Cand {
     kind: SnapKind,
 }
 
+/// A rhythm catch beats any other kind that is not more than this many pixels nearer (chris,
+/// 2026-11-10: "let rhythm win within half a pixel").
+const RHYTHM_EDGE_PX: f64 = 0.5;
+
+fn is_rhythm(k: SnapKind) -> bool {
+    matches!(
+        k,
+        SnapKind::Rhythm | SnapKind::Subdivision | SnapKind::RhythmSize
+    )
+}
+
 fn better(a: &Cand, b: &Cand) -> bool {
-    // Distances within a millionth of a pixel tie; then the kind decides.
     let (da, db) = (a.delta.abs(), b.delta.abs());
+    match (is_rhythm(a.kind), is_rhythm(b.kind)) {
+        (true, false) => return da <= db + RHYTHM_EDGE_PX,
+        (false, true) => return da + RHYTHM_EDGE_PX < db,
+        _ => {}
+    }
+    // Distances within a millionth of a pixel tie; then the kind decides.
     if (da - db).abs() > 1e-6 {
         da < db
     } else {

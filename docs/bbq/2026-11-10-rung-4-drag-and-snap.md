@@ -151,6 +151,9 @@ Built as Defaulted says (6 px reach; tie order rhythm, margins and safe zones, p
 all switches on; Ctrl turns them off; guides and gaps never exported; clipboard text with the `"quadrule-clipboard": 1`
 marker; paste one rhythm unit down and right in the same document, in place in another). Two small additions, either can be
 vetoed: each further paste goes one more unit down and right; a cut leaves locked objects where they are. Equal spacing is
-for a move only. Open for chris's look: whether rhythm should beat an equal gap or smart guide that is a fraction of a
-pixel nearer (now: nearest wins).
+for a move only. 
+
+chris's next answer, word for word: "let rhythm win within half a pixel". Built: a rhythm catch beats any other kind unless
+that kind is more than half a device pixel nearer. This refines Defaulted "Snap distance" ("the nearest wins, and on a
+tie ..."): the tie band for rhythm is half a pixel, not a millionth.
 
