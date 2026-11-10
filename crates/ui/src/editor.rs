@@ -23,7 +23,9 @@ use quadrule_format::{FontRef, QuadFile};
 use quadrule_i18n::Message;
 use quadrule_layout::lay_out_text;
 use quadrule_layout::units::{Axis, UnitContext};
-use quadrule_model::edit::{Command, EditError, LayerProps, duplicate, remove};
+use quadrule_model::edit::{
+    Command, EditError, LayerProps, duplicate, is_empty, remove, reorder_to,
+};
 use quadrule_model::{Document, Extra, Object, ObjectKind, Uuid};
 use quadrule_profiles::{Profile, builtin};
 use quadrule_text::BundledFont;
@@ -206,15 +208,20 @@ impl Viewer {
     }
 
     /// Moves the selection by `dx`, `dy` device pixels of the device on screen (arrow keys), or,
-    /// with `rhythm`, by that many rhythm units as that device resolves them (Shift+arrow; napkin
-    /// §6.2). Designs live in the primary profile's mm, so the step is converted at the shown
+    /// with `rhythm`, by that many rhythm units (or subdivisions, when on) as that device resolves them
+    /// (Shift+arrow; napkin §6.2). Designs live in the primary profile's mm, so the step is converted at the shown
     /// device's pixel size (rung 3 bbq, Defaulted "Edits change the shared design").
     pub fn nudge(&mut self, dx: f64, dy: f64, rhythm: bool) -> Result<(), EditError> {
         let (Some(cx), Some(cy)) = (self.unit_context(Axis::X), self.unit_context(Axis::Y)) else {
             return Ok(());
         };
+        // One rhythm unit, or one subdivision of it when subdivisions are on (napkin §6.2).
+        let parts = self
+            .doc()
+            .and_then(|d| d.rhythm.subdivisions_on())
+            .map_or(1.0, f64::from);
         let (sx, sy) = if rhythm {
-            (cx.rhythm_mm, cy.rhythm_mm)
+            (cx.rhythm_mm / parts, cy.rhythm_mm / parts)
         } else {
             (1.0 / cx.px_per_mm, 1.0 / cy.px_per_mm)
         };
@@ -314,6 +321,33 @@ impl Viewer {
             _ => return Ok(()),
         };
         self.edit(Command::MoveLayer { from: index, to }, None)
+    }
+
+    /// Moves an object to `index` in `layer` (counted after it is taken out of its place): the
+    /// layers panel's drag-to-reorder (rung 4 bbq Q6). One undo step; a move to the place it is
+    /// already in does nothing. Locked objects and locked layers refuse it.
+    pub fn move_object_to(
+        &mut self,
+        id: Uuid,
+        layer: usize,
+        index: usize,
+    ) -> Result<(), EditError> {
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        let cmd = reorder_to(doc, id, layer, index);
+        if is_empty(&cmd) {
+            return Ok(());
+        }
+        self.edit(cmd, None)
+    }
+
+    /// Moves layer `from` to index `to` in the stack (drag-to-reorder of a layer row).
+    pub fn move_layer_to(&mut self, from: usize, to: usize) -> Result<(), EditError> {
+        if from == to {
+            return Ok(());
+        }
+        self.edit(Command::MoveLayer { from, to }, None)
     }
 
     /// Sets a layer's name, eye or lock (the layers panel).
@@ -476,5 +510,54 @@ fn edit_error_message(e: &EditError, doc: &Document) -> Message {
                 .unwrap_or_default(),
         ),
         other => Message::new("notice-edit-failed").text("error", other.to_string()),
+    }
+}
+
+/// Where a dragged object was dropped in the layers panel.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DropOn {
+    /// On the row of the object at this place: above it (drawn earlier in the list, later in the
+    /// stack) or below it.
+    Object {
+        /// The target's layer.
+        layer: usize,
+        /// The target's index in its layer, bottom first.
+        index: usize,
+    },
+    /// On a layer's own row: the object goes to the top of that layer.
+    LayerTop(usize),
+}
+
+/// The (layer, index) to give [`Viewer::move_object_to`] for `dragged` dropped on `target`.
+/// `above` is whether the pointer was in the upper half of a target object's row (the panel
+/// lists the top of the stack first, so above means later in the layer).
+pub fn object_drop_place(
+    doc: &Document,
+    dragged: Uuid,
+    target: DropOn,
+    above: bool,
+) -> Option<(usize, usize)> {
+    let (dl, di) = doc.find(dragged)?;
+    let (layer, raw) = match target {
+        DropOn::Object { layer, index } => (layer, if above { index + 1 } else { index }),
+        DropOn::LayerTop(layer) => (layer, doc.layers.get(layer)?.objects.len()),
+    };
+    // The index counts after the dragged object leaves its place.
+    let index = if dl == layer && di < raw {
+        raw - 1
+    } else {
+        raw
+    };
+    Some((layer, index))
+}
+
+/// The index to give [`Viewer::move_layer_to`] for layer `from` dropped on layer `target`'s row,
+/// above it (later in the stack) or below it.
+pub fn layer_drop_place(from: usize, target: usize, above: bool) -> usize {
+    match (above, from < target) {
+        (true, true) => target,
+        (true, false) => target + 1,
+        (false, true) => target - 1,
+        (false, false) => target,
     }
 }

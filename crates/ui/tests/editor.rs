@@ -258,3 +258,27 @@ fn autosave_and_recovery() {
     );
     assert!(ok);
 }
+
+#[test]
+fn shift_arrow_moves_one_subdivision_when_they_are_on() {
+    // Napkin §6.2: Shift+arrow is one rhythm unit, or one subdivision if subdivisions are on.
+    let mut v = sample();
+    v.selection = vec![ids::RULE];
+    let x0 = x_of(&v, ids::RULE);
+    v.nudge(1.0, 0.0, true).unwrap();
+    let unit = x_of(&v, ids::RULE) - x0;
+    v.undo();
+    let mut r = v.doc().unwrap().rhythm.clone();
+    r.subdivisions = Some(4);
+    v.edit(quadrule_model::edit::Command::SetRhythm(r), None)
+        .unwrap();
+    v.nudge(1.0, 0.0, true).unwrap();
+    let sub = x_of(&v, ids::RULE) - x0;
+    // 6 mm on the Manta is 71 px (pixel-locked): 71 px, and a quarter of it.
+    let ok = (unit - 71.0 * 25.4 / 300.0).abs() < 1e-9 && (sub - unit / 4.0).abs() < 1e-9;
+    println!(
+        "\nCHECK crate=ui name=nudge_subdivision result={} unit_mm={unit:.4} sub_mm={sub:.4}",
+        pass(ok)
+    );
+    assert!(ok);
+}

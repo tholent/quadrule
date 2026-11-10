@@ -19,7 +19,10 @@
 //! The widgets never open a system dialog themselves: they return a [`Request`], and the app
 //! answers it (the file dialog lives in `quadrule-app`), so this crate runs headless in tests.
 
-use crate::canvas::{CanvasMode, ChipRenderer, ChipState, Fallback, ScreenView, screen_list};
+use crate::canvas::{
+    CanvasMode, ChipRenderer, ChipState, DragClock, Fallback, ScreenView, screen_list,
+};
+use crate::drag::{DragKind, DragMods, HANDLE_SLACK_POINTS, HandleHit, SNAP_REACH_POINTS};
 use crate::editor::{PICK_SLACK_POINTS, Toward};
 use crate::panels::{Renaming, Tab};
 use crate::recovery::{Autosave, Recovered, Recovery};
@@ -28,11 +31,13 @@ use crate::viewer::{
     ruler_px_per_mm, shrink, tiles,
 };
 use egui::{
-    Align2, Color32, ColorImage, CornerRadius, FontId, Key, KeyboardShortcut, Modifiers, Rect,
-    ScrollArea, Sense, Stroke, StrokeKind, TextureHandle, TextureOptions, ThemePreference, pos2,
-    vec2,
+    Align2, Color32, ColorImage, CornerRadius, CursorIcon, FontId, Key, KeyboardShortcut,
+    Modifiers, PointerButton, Rect, ScrollArea, Sense, Stroke, StrokeKind, TextureHandle,
+    TextureOptions, ThemePreference, pos2, vec2,
 };
 use quadrule_i18n::{Message, Strings};
+use quadrule_layout::snap::{Handle, SnapKind};
+use quadrule_layout::units::Axis;
 use quadrule_lint::Toolbar;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -129,6 +134,17 @@ pub struct ViewerUi {
     pub chip: Result<Box<dyn ChipRenderer>, String>,
     /// What the chip canvas has done this session, and whether it has fallen back.
     pub chip_state: ChipState,
+    /// How long the frames of the last drag took (rung 4 bbq, Defaulted "Pi-smooth, the number").
+    pub drag_clock: DragClock,
+    /// A drag is being timed.
+    clock_live: bool,
+    /// Set when this frame made the page again (a new texture, or a new chip frame).
+    rebuilt: bool,
+    /// The drag in progress was begun by the pointer on the canvas (not by a test or the
+    /// benchmark), so a release the canvas missed must still end it.
+    pointer_drag: bool,
+    /// A drag replayed through the real frame loop, to time it (`quadrule --bench-drag`).
+    pub bench: Option<crate::bench::DragBench>,
     vector: Option<(String, VectorTexture)>,
     texture: Option<(TextureKey, Vec<(Tile, TextureHandle)>)>,
     ruler: Option<Ruler>,
@@ -165,6 +181,11 @@ impl ViewerUi {
             canvas_mode: CanvasMode::ExportPixels,
             chip: Err("no graphics-chip renderer".into()),
             chip_state: ChipState::default(),
+            drag_clock: DragClock::default(),
+            clock_live: false,
+            rebuilt: false,
+            pointer_drag: false,
+            bench: None,
             vector: None,
             texture: None,
             ruler: None,
@@ -198,6 +219,7 @@ impl ViewerUi {
             self.viewer.seal();
         }
         self.take_dropped_files(&ctx, &mut requests);
+        self.drive_bench(&ctx);
         self.shortcuts(&ctx, &mut requests);
         self.tick_autosave(&ctx);
         egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut requests));
@@ -257,6 +279,14 @@ impl ViewerUi {
         let key = |m: Modifiers, k: Key| {
             ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(m, k)))
         };
+        // While an object is being dragged, only Escape counts: it drops the drag (rung 4 bbq,
+        // Defaulted "One drag, one undo step").
+        if self.viewer.dragging() {
+            if key(Modifiers::NONE, Key::Escape) {
+                self.viewer.drag_cancel();
+            }
+            return;
+        }
         // Most specific first: Ctrl+Shift+S before Ctrl+S.
         if key(shift_cmd, Key::S) {
             requests.push(Request::SaveAsDialog(None));
@@ -770,9 +800,23 @@ impl ViewerUi {
                 let msg = Message::new("app-lint-count").num("count", count as f64, 0);
                 ui.label(self.strings.format(&msg));
             }
+            if self.viewer.open.is_some() {
+                // The snap helpers and the rhythm overlay, each on or off (napkin §6.2).
+                ui.separator();
+                self.snap_toggles(ui);
+            }
             if let Some(line) = self.canvas_status() {
                 ui.separator();
                 ui.label(line);
+            }
+            if self.drag_clock.frames > 0 {
+                ui.separator();
+                let c = self.drag_clock;
+                let msg = Message::new("app-drag-clock")
+                    .num("mean", c.mean_ms(), 0)
+                    .num("worst", c.worst_ms, 0)
+                    .num("frames", f64::from(c.frames), 0);
+                ui.label(self.strings.format(&msg));
             }
             if let Some(n) = &self.viewer.notice {
                 ui.separator();
@@ -784,6 +828,27 @@ impl ViewerUi {
                 }
             }
         });
+    }
+
+    /// The snap helpers' switches and the rhythm overlay's, for the status bar and the Page tab.
+    /// They are app settings, kept between runs, not saved in the document.
+    pub(crate) fn snap_toggles(&mut self, ui: &mut egui::Ui) {
+        let rows = [
+            ("app-snap-pixel", 0),
+            ("app-snap-rhythm", 1),
+            ("app-snap-margins", 2),
+            ("app-rhythm-overlay", 3),
+        ];
+        for (id, which) in rows {
+            let label = self.t(id);
+            let flag = match which {
+                0 => &mut self.viewer.snap.pixel_grid,
+                1 => &mut self.viewer.snap.rhythm,
+                2 => &mut self.viewer.snap.margins_safe,
+                _ => &mut self.viewer.show_rhythm,
+            };
+            ui.checkbox(flag, label);
+        }
     }
 
     pub(crate) fn lint_count(&mut self) -> usize {
@@ -806,7 +871,127 @@ impl ViewerUi {
         });
     }
 
+    /// Replays a drag of the sample page's dot grid through the real frame loop and prints its
+    /// timing as a `CHECK` line (`quadrule --bench-drag`; rung 4 bbq, Defaulted "Pi-smooth, the
+    /// number"). One step per frame, so the canvas does the work it does for a person dragging.
+    fn drive_bench(&mut self, ctx: &egui::Context) {
+        use crate::bench::Phase;
+        let Some(mut b) = self.bench.take() else {
+            return;
+        };
+        ctx.request_repaint();
+        match b.phase {
+            Phase::Warm(n) => {
+                if self.viewer.open.is_none() {
+                    self.viewer.open_sample();
+                }
+                b.phase = if n >= crate::bench::WARM_FRAMES {
+                    Phase::Begin
+                } else {
+                    Phase::Warm(n + 1)
+                };
+            }
+            Phase::Begin => {
+                let at = self.viewer.page().and_then(|p| {
+                    p.placed
+                        .iter()
+                        .find(|s| s.id == quadrule_model::sample::ids::DOTS)
+                        .map(|s| s.shape.bounds())
+                });
+                b.phase = match at {
+                    Some((x0, y0, x1, y1)) => {
+                        b.centre = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
+                        let none = DragMods::default();
+                        if self
+                            .viewer
+                            .drag_begin(b.centre.0, b.centre.1, none, 4.0, 6.0)
+                        {
+                            Phase::Run(0)
+                        } else {
+                            Phase::Done
+                        }
+                    }
+                    None => Phase::Done,
+                };
+            }
+            Phase::Run(i) if i < b.frames => {
+                let t = f64::from(i);
+                let (cx, cy) = b.centre;
+                let (x, y) = (cx + 150.0 * (0.37 * t).sin(), cy + 120.0 * (0.23 * t).cos());
+                let scale = self
+                    .canvas_size
+                    .and_then(|c| self.viewer.scale((c.x, c.y), ctx.pixels_per_point()))
+                    .unwrap_or(0.3);
+                let reach = SNAP_REACH_POINTS / f64::from(scale);
+                self.viewer.drag_update(x, y, DragMods::default(), reach);
+                b.phase = Phase::Run(i + 1);
+            }
+            Phase::Run(_) => {
+                let _ = self.viewer.drag_end();
+                self.viewer.undo();
+                let c = self.drag_clock;
+                let canvas = match (self.canvas_mode, &self.chip_state.fallback) {
+                    (CanvasMode::ExportPixels, _) => "export",
+                    (CanvasMode::Chip, None) => "chip",
+                    (CanvasMode::Chip, Some(_)) => "chip-cpu-fallback",
+                };
+                // The 50 ms line is for a release build on the Pi; a debug build is far slower, so
+                // it only reports.
+                let verdict = if cfg!(debug_assertions) {
+                    "n/a"
+                } else if c.within_budget() {
+                    "pass"
+                } else {
+                    "fail"
+                };
+                println!(
+                    "\nCHECK crate=ui name=drag_bench result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} worst_ms={:.1} first_ms={:.1} budget_ms={}",
+                    if cfg!(debug_assertions) {
+                        "debug"
+                    } else {
+                        "release"
+                    },
+                    c.frames,
+                    c.mean_ms(),
+                    c.worst_ms,
+                    c.first_ms,
+                    DragClock::BUDGET_MS
+                );
+                b.phase = Phase::Done;
+            }
+            Phase::Done => {}
+        }
+        self.bench = Some(b);
+    }
+
+    /// Whether the benchmark has run to the end.
+    pub fn bench_finished(&self) -> bool {
+        self.bench
+            .as_ref()
+            .is_some_and(|b| b.phase == crate::bench::Phase::Done)
+    }
+
+    /// The canvas, timed: while an object is dragged, each frame that made the page again is
+    /// added to [`ViewerUi::drag_clock`].
     fn canvas(&mut self, ui: &mut egui::Ui) {
+        let start = std::time::Instant::now();
+        self.rebuilt = false;
+        self.canvas_frame(ui);
+        if self.viewer.dragging() {
+            if !self.clock_live {
+                self.clock_live = true;
+                self.drag_clock = DragClock::default();
+            }
+            if self.rebuilt {
+                self.drag_clock
+                    .record(start.elapsed().as_secs_f64() * 1000.0);
+            }
+        } else {
+            self.clock_live = false;
+        }
+    }
+
+    fn canvas_frame(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
         let ppp = ctx.pixels_per_point();
         let avail = ui.available_size();
@@ -864,6 +1049,7 @@ impl ViewerUi {
                 })
                 .collect();
             self.texture = Some((key, tiles));
+            self.rebuilt = true;
         }
         let tiles: Vec<_> = match &self.texture {
             Some((_, tiles)) if export_canvas => {
@@ -884,6 +1070,16 @@ impl ViewerUi {
             .map(|p| p.shape.bounds())
             .collect();
 
+        // What the drag draws, and the handles of the selection (all overlays, never exported).
+        let handles = self.viewer.handles();
+        let guides = self.viewer.drag_guides().to_vec();
+        let marquee = self.viewer.drag_marquee();
+        let rhythm = self
+            .viewer
+            .show_rhythm
+            .then(|| self.viewer.rhythm_overlay())
+            .flatten();
+
         let size = if phys < 1.0 {
             vec2(tw as f32 / ppp, th as f32 / ppp)
         } else {
@@ -895,7 +1091,7 @@ impl ViewerUi {
                 (size.x + 2.0 * margin).max(avail.x),
                 (size.y + 2.0 * margin).max(avail.y),
             );
-            let (rect, response) = ui.allocate_exact_size(total, Sense::click());
+            let (rect, response) = ui.allocate_exact_size(total, Sense::click_and_drag());
             // The page's corner sits on a whole screen pixel, so 1:1 and the zoom steps stay
             // sharp.
             let min = rect.center() - size / 2.0;
@@ -947,6 +1143,37 @@ impl ViewerUi {
                 for y in y0..=y1 {
                     let sy = min.y + y as f32 * scale;
                     painter.line_segment([pos2(clip.min.x, sy), pos2(clip.max.x, sy)], stroke);
+                }
+            }
+
+            let accent = ui.visuals().selection.stroke.color;
+
+            // The rhythm, faintly: units stronger than subdivisions (rung 4 bbq Q9).
+            if let Some((xs, ys)) = &rhythm {
+                let clip = painter.clip_rect().intersect(page_rect);
+                let line = |major: bool| {
+                    Stroke::new(
+                        1.0 / ppp,
+                        Color32::from_rgba_unmultiplied(40, 110, 220, if major { 90 } else { 38 }),
+                    )
+                };
+                for &(x, major) in xs {
+                    let sx = min.x + x as f32 * scale;
+                    if sx >= clip.min.x && sx <= clip.max.x {
+                        painter.line_segment(
+                            [pos2(sx, clip.min.y), pos2(sx, clip.max.y)],
+                            line(major),
+                        );
+                    }
+                }
+                for &(y, major) in ys {
+                    let sy = min.y + y as f32 * scale;
+                    if sy >= clip.min.y && sy <= clip.max.y {
+                        painter.line_segment(
+                            [pos2(clip.min.x, sy), pos2(clip.max.x, sy)],
+                            line(major),
+                        );
+                    }
                 }
             }
 
@@ -1003,7 +1230,6 @@ impl ViewerUi {
             }
 
             // The selected objects.
-            let accent = ui.visuals().selection.stroke.color;
             for (x0, y0, x1, y1) in &outlines {
                 let r = Rect::from_min_max(to_screen(*x0, *y0), to_screen(*x1, *y1)).expand(2.0);
                 painter.rect_stroke(
@@ -1014,15 +1240,124 @@ impl ViewerUi {
                 );
             }
 
+            // Handles on the selection, then what the drag shows: the snap that caught, and the
+            // marquee box.
+            let to_dev = |p: egui::Pos2| {
+                (
+                    ((p.x - min.x) / scale) as f64,
+                    ((p.y - min.y) / scale) as f64,
+                )
+            };
+            if marquee.is_none() {
+                for (hit, hx, hy) in &handles {
+                    let c = to_screen(*hx, *hy);
+                    let r = Rect::from_center_size(c, vec2(8.0, 8.0));
+                    painter.rect_filled(r, CornerRadius::ZERO, ui.visuals().extreme_bg_color);
+                    painter.rect_stroke(
+                        r,
+                        CornerRadius::ZERO,
+                        Stroke::new(1.5, accent),
+                        if matches!(hit, HandleHit::Box(_)) {
+                            StrokeKind::Inside
+                        } else {
+                            StrokeKind::Middle
+                        },
+                    );
+                }
+            }
+            for g in &guides {
+                let (a, b) = match g.axis {
+                    Axis::X => (to_screen(g.at, 0.0), to_screen(g.at, h as f64)),
+                    Axis::Y => (to_screen(0.0, g.at), to_screen(w as f64, g.at)),
+                };
+                // Rhythm and margin lines are a solid thin line; a size that matched is dashed.
+                let color = match g.kind {
+                    SnapKind::Rhythm | SnapKind::Subdivision => Color32::from_rgb(230, 40, 150),
+                    SnapKind::RhythmSize => Color32::from_rgb(160, 60, 220),
+                    SnapKind::Margin | SnapKind::SafeZone => Color32::from_rgb(0, 160, 170),
+                };
+                painter.line_segment([a, b], Stroke::new(1.0, color));
+            }
+            if let Some(m) = marquee {
+                let r = Rect::from_min_max(to_screen(m.x0, m.y0), to_screen(m.x1, m.y1));
+                painter.rect_filled(r, CornerRadius::ZERO, accent.gamma_multiply(0.12));
+                painter.rect_stroke(
+                    r,
+                    CornerRadius::ZERO,
+                    Stroke::new(1.0, accent),
+                    StrokeKind::Inside,
+                );
+            }
+
+            // Dragging (rung 4a): a press that moves is a drag; one that does not is a click.
+            let mods = ui.input(|i| DragMods {
+                shift: i.modifiers.shift,
+                alt: i.modifiers.alt,
+                snapping_off: i.modifiers.command,
+            });
+            let slack = PICK_SLACK_POINTS / scale as f64;
+            let handle_slack = HANDLE_SLACK_POINTS / scale as f64;
+            let reach = SNAP_REACH_POINTS / scale as f64;
+            if response.drag_started_by(PointerButton::Primary)
+                && let Some(p) = ui.input(|i| i.pointer.press_origin())
+            {
+                let (x, y) = to_dev(p);
+                if self.viewer.drag_begin(x, y, mods, slack, handle_slack) {
+                    self.selected_layer = None;
+                    self.pointer_drag = true;
+                }
+                ctx.request_repaint();
+            }
+            if self.viewer.dragging() && response.dragged() {
+                if let Some(p) = ui.input(|i| i.pointer.latest_pos()) {
+                    let (x, y) = to_dev(p);
+                    self.viewer.drag_update(x, y, mods, reach);
+                }
+                ctx.request_repaint();
+            }
+            if response.drag_stopped() {
+                let _ = self.viewer.drag_end();
+                ctx.request_repaint();
+            }
+            // A release the canvas never saw (the pointer let go outside the window) still ends
+            // the drag the pointer began.
+            if self.pointer_drag
+                && self.viewer.dragging()
+                && !ui.input(|i| i.pointer.primary_down())
+            {
+                let _ = self.viewer.drag_end();
+                ctx.request_repaint();
+            }
+            if !self.viewer.dragging() {
+                self.pointer_drag = false;
+            }
+            // The middle button pans: a plain drag now moves objects, so it no longer scrolls.
+            if response.dragged_by(PointerButton::Middle) {
+                ui.scroll_with_delta_animation(
+                    response.drag_delta(),
+                    egui::style::ScrollAnimation::none(),
+                );
+            }
+            // The pointer says what a press would do.
+            let icon = match self.viewer.drag.as_ref().map(|d| d.kind) {
+                Some(DragKind::Move) => Some(CursorIcon::Move),
+                Some(DragKind::Marquee) => Some(CursorIcon::Crosshair),
+                Some(DragKind::Handle(h)) => Some(handle_cursor(h)),
+                None => response.hover_pos().and_then(|p| {
+                    let (x, y) = to_dev(p);
+                    self.viewer.handle_at(x, y, handle_slack).map(handle_cursor)
+                }),
+            };
+            if let Some(icon) = icon {
+                ctx.set_cursor_icon(icon);
+            }
+
             // A click picks the object under the pointer; Shift adds to the selection.
             if response.clicked()
                 && let Some(p) = response.interact_pointer_pos()
             {
-                let x = ((p.x - min.x) / scale) as f64;
-                let y = ((p.y - min.y) / scale) as f64;
-                let add = ui.input(|i| i.modifiers.shift);
-                let slack = PICK_SLACK_POINTS / scale as f64;
-                self.viewer.click(x, y, slack, add);
+                let (x, y) = to_dev(p);
+                self.viewer.click(x, y, slack, mods.shift);
                 self.selected_layer = None;
             }
 
@@ -1119,6 +1454,7 @@ impl ViewerUi {
             };
             // After the warm-up frame the key is left stale, so the next frame draws again.
             self.vector = Some((if warm_up_done { String::new() } else { key }, tex));
+            self.rebuilt = true;
             if warm_up_done {
                 ctx.request_repaint();
             }
@@ -1223,6 +1559,17 @@ impl ViewerUi {
 }
 
 /// The backdrop round the page (napkin §14: it follows the theme; the page never does).
+/// The mouse cursor over a handle.
+fn handle_cursor(h: HandleHit) -> CursorIcon {
+    match h {
+        HandleHit::Box(Handle::NW | Handle::SE) => CursorIcon::ResizeNwSe,
+        HandleHit::Box(Handle::NE | Handle::SW) => CursorIcon::ResizeNeSw,
+        HandleHit::Box(Handle::N | Handle::S) => CursorIcon::ResizeVertical,
+        HandleHit::Box(Handle::E | Handle::W) => CursorIcon::ResizeHorizontal,
+        HandleHit::LineStart | HandleHit::LineEnd => CursorIcon::Crosshair,
+    }
+}
+
 fn backdrop(v: &egui::Visuals) -> Color32 {
     if v.dark_mode {
         Color32::from_gray(40)

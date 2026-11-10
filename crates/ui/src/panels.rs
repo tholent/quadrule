@@ -18,17 +18,17 @@
 //! moved the layers there from the left on 2026-11-10, keeping the left side for a future tools
 //! bar.
 
-use crate::editor::Toward;
+use crate::editor::{DropOn, Toward, layer_drop_place, object_drop_place};
 use crate::view::ViewerUi;
-use egui::{RichText, Role, ScrollArea, WidgetInfo};
+use egui::{RichText, Role, ScrollArea, Sense, WidgetInfo};
 use quadrule_i18n::Message;
 use quadrule_layout::RhythmPx;
 use quadrule_layout::units::{Axis, UnitContext, format_length, parse_length, trim_number};
 use quadrule_lint::Severity;
 use quadrule_model::edit::Command;
 use quadrule_model::{
-    HConstraint, LineRole, Object, ObjectKind, Pattern, RhythmOrigin, RhythmResolution, Style,
-    TextAlign, Unit, Uuid, VConstraint,
+    Document, HConstraint, LineRole, Object, ObjectKind, Pattern, RhythmOrigin, RhythmResolution,
+    Style, TextAlign, Unit, Uuid, VConstraint,
 };
 
 /// The inspector's tabs.
@@ -65,6 +65,24 @@ const ROLES: [(LineRole, &str); 7] = [
     (LineRole::Label, "app-role-label"),
 ];
 
+/// A row of the layers panel as a place to drop.
+#[derive(Clone, Copy, Debug)]
+enum Drop {
+    /// A layer's row, by index.
+    Layer(usize),
+    /// An object's row: its layer and its index in it.
+    Object(usize, usize),
+}
+
+/// What a row of the layers panel carries while it is dragged (rung 4 bbq Q6).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum LayerDrag {
+    /// An object's row.
+    Object(Uuid),
+    /// A layer's row, by its index.
+    Layer(usize),
+}
+
 impl ViewerUi {
     // ------------------------------------------------------------------ layers panel
 
@@ -94,7 +112,7 @@ impl ViewerUi {
             .show(ui, |ui| {
                 // Top of the stack first, as it is drawn last.
                 for (li, layer) in doc.layers.iter().enumerate().rev() {
-                    ui.horizontal(|ui| {
+                    let row = ui.horizontal(|ui| {
                         if let Some(v) =
                             self.eye_and_lock(ui, &layer.name, layer.visible, layer.locked)
                         {
@@ -111,6 +129,7 @@ impl ViewerUi {
                             &layer.name,
                             selected,
                             true,
+                            Some(LayerDrag::Layer(li)),
                         ) {
                             match name {
                                 NameEvent::Click => {
@@ -123,8 +142,9 @@ impl ViewerUi {
                             }
                         }
                     });
-                    for o in layer.objects.iter().rev() {
-                        ui.horizontal(|ui| {
+                    self.row_drop(ui, &row.response, &doc, Drop::Layer(li));
+                    for (oi, o) in layer.objects.iter().enumerate().rev() {
+                        let row = ui.horizontal(|ui| {
                             ui.add_space(18.0);
                             if let Some(v) = self.eye_and_lock(ui, &o.name, o.visible, o.locked) {
                                 let _ = self.viewer.set_object_panel(o.id, |obj| {
@@ -139,6 +159,7 @@ impl ViewerUi {
                                 &o.name,
                                 selected,
                                 false,
+                                Some(LayerDrag::Object(o.id)),
                             ) {
                                 match ev {
                                     NameEvent::Click if add => self.viewer.toggle(o.id),
@@ -154,9 +175,77 @@ impl ViewerUi {
                                 }
                             }
                         });
+                        self.row_drop(ui, &row.response, &doc, Drop::Object(li, oi));
                     }
                 }
             });
+    }
+
+    /// A row of the layers panel as a place to drop: draws where the dragged row would land and,
+    /// on release, moves it there as one undo step (rung 4 bbq Q6). Objects go among objects, or
+    /// to the top of a layer when dropped on its row; layers go among layers.
+    fn row_drop(&mut self, ui: &mut egui::Ui, row: &egui::Response, doc: &Document, at: Drop) {
+        let Some(payload) = row.dnd_hover_payload::<LayerDrag>() else {
+            return;
+        };
+        let above = ui
+            .input(|i| i.pointer.latest_pos())
+            .is_some_and(|p| p.y < row.rect.center().y);
+        // Where it would go: None when the row is no place for this payload.
+        enum Plan {
+            Object(Uuid, usize, usize),
+            Layer(usize, usize),
+        }
+        let plan = match (*payload, at) {
+            (LayerDrag::Object(id), Drop::Object(layer, index)) => {
+                object_drop_place(doc, id, DropOn::Object { layer, index }, above)
+                    .map(|(l, i)| Plan::Object(id, l, i))
+            }
+            (LayerDrag::Object(id), Drop::Layer(layer)) => {
+                object_drop_place(doc, id, DropOn::LayerTop(layer), above)
+                    .map(|(l, i)| Plan::Object(id, l, i))
+            }
+            (LayerDrag::Layer(from), Drop::Layer(target)) => {
+                Some(Plan::Layer(from, layer_drop_place(from, target, above)))
+            }
+            (LayerDrag::Layer(_), Drop::Object(..)) => None,
+        };
+        if plan.is_none() {
+            return;
+        }
+        // The line where it lands: the row's top edge for above, bottom for below; a drop on a
+        // layer's own row goes inside it, so that row is boxed instead.
+        let accent = ui.visuals().selection.stroke.color;
+        let stroke = egui::Stroke::new(2.0, accent);
+        match (*payload, at) {
+            (LayerDrag::Object(_), Drop::Layer(_)) => {
+                ui.painter()
+                    .rect_stroke(row.rect, 2.0, stroke, egui::StrokeKind::Inside);
+            }
+            _ => {
+                let y = if above {
+                    row.rect.top()
+                } else {
+                    row.rect.bottom()
+                };
+                ui.painter().hline(row.rect.x_range(), y, stroke);
+            }
+        }
+        if row.dnd_release_payload::<LayerDrag>().is_some() {
+            match plan {
+                Some(Plan::Object(id, layer, index)) => {
+                    let _ = self.viewer.move_object_to(id, layer, index);
+                }
+                Some(Plan::Layer(from, to)) => {
+                    // The selected layer goes with its row.
+                    let moved = self.viewer.move_layer_to(from, to).is_ok();
+                    if moved && self.selected_layer == Some(from) {
+                        self.selected_layer = Some(to);
+                    }
+                }
+                None => {}
+            }
+        }
     }
 
     /// Move up / Move down: the selected objects, or else the selected layer.
@@ -212,6 +301,7 @@ impl ViewerUi {
         name: &str,
         selected: bool,
         strong: bool,
+        drag: Option<LayerDrag>,
     ) -> Option<NameEvent> {
         let same = |r: &Renaming| match (r, &target) {
             (Renaming::Layer(a, _), Renaming::Layer(b, _)) => a == b,
@@ -242,7 +332,11 @@ impl ViewerUi {
         } else {
             RichText::new(name)
         };
-        let resp = ui.add(egui::Button::selectable(selected, text));
+        // A row can be dragged to a new place (rung 4 bbq Q6) as well as clicked.
+        let resp = ui.add(egui::Button::selectable(selected, text).sense(Sense::click_and_drag()));
+        if let Some(d) = drag {
+            resp.dnd_set_drag_payload(d);
+        }
         if resp.double_clicked() {
             self.renaming = Some(match target {
                 Renaming::Layer(i, _) => Renaming::Layer(i, name.to_string()),
@@ -516,6 +610,35 @@ impl ViewerUi {
                     let _ = self.viewer.edit(Command::SetRhythm(nr), None);
                 }
                 ui.end_row();
+
+                // Subdivisions: finer steps for snapping and Shift+arrow (napkin §6.3).
+                let label = ui.label(self.t("app-rhythm-subdivisions"));
+                let mut sub = r.subdivisions_on();
+                let name = |n: Option<u8>| match n {
+                    None => self.t("app-subdivisions-off"),
+                    Some(n) => self.strings.format(&Message::new("app-subdivisions-n").num(
+                        "n",
+                        f64::from(n),
+                        0,
+                    )),
+                };
+                egui::ComboBox::from_id_salt("subdivisions")
+                    .selected_text(name(sub))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut sub, None, name(None));
+                        for n in quadrule_model::SUBDIVISIONS_MIN..=quadrule_model::SUBDIVISIONS_MAX
+                        {
+                            ui.selectable_value(&mut sub, Some(n), name(Some(n)));
+                        }
+                    })
+                    .response
+                    .labelled_by(label.id);
+                if sub != r.subdivisions_on() {
+                    let mut nr = r.clone();
+                    nr.subdivisions = sub;
+                    let _ = self.viewer.edit(Command::SetRhythm(nr), None);
+                }
+                ui.end_row();
             });
         // The unit as each device resolves it (napkin §6.3: "5 mm → 59 px (Manta)").
         for id in doc.profile_ids() {
@@ -545,6 +668,12 @@ impl ViewerUi {
         ui.add_space(6.0);
         let label = self.t("app-safe-zones");
         ui.checkbox(&mut self.viewer.show_safe_zones, label);
+
+        // The helpers that catch a dragged object, each on or off (napkin §6.2). Holding Ctrl
+        // (Cmd on macOS) while dragging turns them all off for that drag.
+        ui.add_space(6.0);
+        ui.strong(self.t("app-snapping"));
+        self.snap_toggles(ui);
     }
 
     fn arrange_tab(&mut self, ui: &mut egui::Ui) {

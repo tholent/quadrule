@@ -29,6 +29,7 @@
 
 use crate::viewer::Viewer;
 use quadrule_layout::snap::{Guide, Handle, PxRect, ResizeMods, SnapToggles, SnapWorld};
+use quadrule_layout::units::Axis;
 use quadrule_layout::{Shape, resolve_frame, unresolve_frame};
 use quadrule_model::edit::{Command, EditError, duplicate, is_empty, set_frames};
 use quadrule_model::{Constraints, Document, Frame, Object, ObjectKind, Uuid};
@@ -566,6 +567,17 @@ impl Viewer {
         };
         self.selection = drag.selection_before;
         self.hide_preview();
+    }
+
+    /// The rhythm lines to draw over the page for the device shown (rung 4 bbq Q9): the vertical
+    /// lines' x positions and the horizontal lines' y positions, each with whether it is a full
+    /// unit rather than a subdivision. They are an overlay and never exported.
+    #[allow(clippy::type_complexity)]
+    pub fn rhythm_overlay(&mut self) -> Option<(Vec<(f64, bool)>, Vec<(f64, bool)>)> {
+        let (_, shown) = self.profiles()?;
+        let world = SnapWorld::new(self.doc()?, &shown, &[]);
+        let (w, h) = world.page();
+        Some((world.lines(Axis::X, 0.0, w), world.lines(Axis::Y, 0.0, h)))
     }
 
     /// Objects a marquee box touches: visible, unlocked, in unlocked layers (what a click could

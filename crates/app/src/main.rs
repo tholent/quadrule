@@ -14,9 +14,13 @@
 
 //! `quadrule`, the app (napkin §15.1). Rung 2 made the viewer window
 //! (docs/bbq/2026-11-09-rung-2-viewer.md); rung 3 the first editor
-//! (docs/bbq/2026-11-10-rung-3-first-editor.md). Usage: `quadrule [--canvas chip|export]
-//! [file.quad]`, or `cargo run -p quadrule-app -- [file.quad]`. `--canvas chip` starts on the
-//! graphics-chip canvas (View → Canvas), for measuring it.
+//! (docs/bbq/2026-11-10-rung-3-first-editor.md); rung 4 dragging and snapping
+//! (docs/bbq/2026-11-10-rung-4-drag-and-snap.md). Usage: `quadrule [--canvas chip|export]
+//! [--bench-drag [frames]] [file.quad]`, or `cargo run -p quadrule-app -- [file.quad]`.
+//! `--canvas chip` starts on the graphics-chip canvas (View → Canvas), for measuring it.
+//! `--bench-drag` opens the sample page, replays a drag of its dot grid through the real window
+//! (150 steps unless told otherwise), prints one `CHECK crate=ui name=drag_bench` line with the
+//! frame times and closes.
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -35,6 +39,11 @@ use std::sync::Arc;
 /// Preference keys in eframe's storage.
 const KEY_THEME: &str = "theme";
 const KEY_RULER: &str = "screen_px_per_mm";
+/// The snap helpers and the rhythm overlay (rung 4 bbq, Defaulted "Toggles"): app settings.
+const KEY_SNAP_PIXEL: &str = "snap_pixel_grid";
+const KEY_SNAP_RHYTHM: &str = "snap_rhythm";
+const KEY_SNAP_MARGINS: &str = "snap_margins_safe";
+const KEY_RHYTHM_OVERLAY: &str = "show_rhythm_overlay";
 
 struct App {
     ui: ViewerUi,
@@ -60,6 +69,13 @@ impl App {
                 };
             }
             ui.viewer.screen_px_per_mm = eframe::get_value(storage, KEY_RULER);
+            let snap = &mut ui.viewer.snap;
+            snap.pixel_grid = eframe::get_value(storage, KEY_SNAP_PIXEL).unwrap_or(snap.pixel_grid);
+            snap.rhythm = eframe::get_value(storage, KEY_SNAP_RHYTHM).unwrap_or(snap.rhythm);
+            snap.margins_safe =
+                eframe::get_value(storage, KEY_SNAP_MARGINS).unwrap_or(snap.margins_safe);
+            ui.viewer.show_rhythm =
+                eframe::get_value(storage, KEY_RHYTHM_OVERLAY).unwrap_or(ui.viewer.show_rhythm);
         }
         cc.egui_ctx.set_theme(ui.theme);
         // Recovery files live in the user's data folder (rung 3 bbq, Defaulted "Autosave"),
@@ -78,6 +94,10 @@ impl App {
         }
         if let Some(p) = path {
             ui.open_file(&p);
+        }
+        if let Some(frames) = args.bench_drag {
+            // A timing run is not a session: it leaves no settings behind and opens no recovery.
+            ui.bench = Some(quadrule_ui::DragBench::new(frames));
         }
         App {
             ui,
@@ -144,6 +164,10 @@ impl eframe::App for App {
         for req in self.ui.show(ui) {
             self.answer(req);
         }
+        if self.ui.bench_finished() {
+            self.closing = true;
+            self.ctx_close = true;
+        }
         if std::mem::take(&mut self.ctx_close) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
@@ -163,6 +187,11 @@ impl eframe::App for App {
         };
         eframe::set_value(storage, KEY_THEME, &theme.to_string());
         eframe::set_value(storage, KEY_RULER, &self.ui.viewer.screen_px_per_mm);
+        let v = &self.ui.viewer;
+        eframe::set_value(storage, KEY_SNAP_PIXEL, &v.snap.pixel_grid);
+        eframe::set_value(storage, KEY_SNAP_RHYTHM, &v.snap.rhythm);
+        eframe::set_value(storage, KEY_SNAP_MARGINS, &v.snap.margins_safe);
+        eframe::set_value(storage, KEY_RHYTHM_OVERLAY, &v.show_rhythm);
     }
 }
 
@@ -249,10 +278,13 @@ fn wgpu_options() -> WgpuConfiguration {
 struct Args {
     path: Option<PathBuf>,
     chip_canvas: bool,
+    /// Replay a drag this many steps and close (`--bench-drag [frames]`).
+    bench_drag: Option<u32>,
 }
 
-fn parse_args(mut args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, String> {
+fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, String> {
     let mut out = Args::default();
+    let mut args = args.peekable();
     while let Some(a) = args.next() {
         if a == "--canvas" {
             match args.next().as_ref().and_then(|v| v.to_str()) {
@@ -260,6 +292,12 @@ fn parse_args(mut args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args
                 Some("export") => out.chip_canvas = false,
                 other => return Err(format!("--canvas takes chip or export, not {other:?}")),
             }
+        } else if a == "--bench-drag" {
+            // An optional step count follows; anything else is the next argument.
+            let steps = args
+                .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
+                .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
+            out.bench_drag = Some(steps.unwrap_or(150));
         } else {
             out.path = Some(PathBuf::from(a));
         }
@@ -305,6 +343,7 @@ mod tests {
                 Ok(Args {
                     path: Some("a.quad".into()),
                     chip_canvas: false,
+                    bench_drag: None,
                 }),
             ),
             (
@@ -312,6 +351,23 @@ mod tests {
                 Ok(Args {
                     path: Some("a.quad".into()),
                     chip_canvas: true,
+                    bench_drag: None,
+                }),
+            ),
+            (
+                p(&["--bench-drag"]),
+                Ok(Args {
+                    path: None,
+                    chip_canvas: false,
+                    bench_drag: Some(150),
+                }),
+            ),
+            (
+                p(&["--bench-drag", "60", "--canvas", "chip"]),
+                Ok(Args {
+                    path: None,
+                    chip_canvas: true,
+                    bench_drag: Some(60),
                 }),
             ),
         ];

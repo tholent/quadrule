@@ -439,3 +439,99 @@ fn dont_save_then_close_leaves_no_recovery_file() {
     );
     assert!(ok);
 }
+
+#[test]
+fn snap_toggles_and_subdivisions_are_named_controls() {
+    // Rung 4a: each helper has a switch in the status bar and in the Page tab, named for screen
+    // readers by its label; the Page tab has a Subdivisions field.
+    let mut h = harness();
+    h.get_by_label("Open sample page").click();
+    h.run();
+    let names = [
+        "Pixel grid",
+        "Rhythm",
+        "Margins and safe zones",
+        "Rhythm overlay",
+    ];
+    let twice = names.iter().all(|n| h.get_all_by_label(n).count() >= 2);
+    let on_at_start = {
+        let s = &h.state().ui.viewer;
+        s.snap.pixel_grid && s.snap.rhythm && s.snap.margins_safe && !s.show_rhythm
+    };
+    // The harness drops a first click that no hover came before; hover, then click.
+    h.get_all_by_label("Pixel grid").next().unwrap().hover();
+    h.run();
+    h.get_all_by_label("Pixel grid").next().unwrap().click();
+    h.run();
+    let grid_off = !h.state().ui.viewer.snap.pixel_grid;
+    h.get_all_by_label("Rhythm overlay").next().unwrap().click();
+    h.run();
+    let overlay_on = h.state().ui.viewer.show_rhythm;
+    let sub_field = h.query_by_label("Subdivisions").is_some();
+    let ok = twice && on_at_start && overlay_on && grid_off && sub_field;
+    println!(
+        "\nCHECK crate=ui name=window_snap_toggles result={} in_status_and_page_tab={twice} on_at_start={on_at_start} overlay_toggles={overlay_on} pixel_grid_toggles={grid_off} subdivisions_field={sub_field}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn escape_drops_a_drag_and_other_keys_wait() {
+    let mut h = harness();
+    h.get_by_label("Open sample page").click();
+    h.run();
+    let doc0 = h.state().ui.viewer.doc().unwrap().clone();
+    // A drag begun and moved through the viewer's own calls, as the canvas makes them.
+    {
+        let v = &mut h.state_mut().ui.viewer;
+        let px = |mm: f64| mm * 300.0 / 25.4;
+        assert!(v.drag_begin(px(50.0), px(22.0), Default::default(), 4.0, 6.0));
+        v.drag_update(px(60.0), px(40.0), Default::default(), 6.0);
+    }
+    h.run();
+    let dragging = h.state().ui.viewer.dragging();
+    // Ctrl+Z means nothing mid-drag.
+    h.key_combination_modifiers(Modifiers::COMMAND, &[Key::Z]);
+    h.run();
+    let still = h.state().ui.viewer.dragging();
+    h.key_press(Key::Escape);
+    h.run();
+    let v = &h.state().ui.viewer;
+    let dropped = !v.dragging() && v.doc().unwrap() == &doc0 && !v.is_dirty();
+    let ok = dragging && still && dropped;
+    println!(
+        "\nCHECK crate=ui name=window_escape_drag result={} was_dragging={dragging} undo_key_waits={still} escape_drops_it={dropped}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn the_drag_benchmark_runs_and_leaves_the_document_alone() {
+    // `quadrule --bench-drag` replays a drag through the real frame loop; here, headless, to
+    // show it finishes, times its frames and undoes itself.
+    let mut h = harness();
+    h.state_mut().ui.bench = Some(quadrule_ui::DragBench::new(12));
+    let mut steps = 0;
+    while !h.state().ui.bench_finished() && steps < 80 {
+        h.step();
+        steps += 1;
+    }
+    let ui = &h.state().ui;
+    let done = ui.bench_finished();
+    let timed = ui.drag_clock.frames > 0 && ui.drag_clock.mean_ms() > 0.0;
+    let clean = ui
+        .viewer
+        .doc()
+        .is_some_and(|d| *d == quadrule_model::sample::slice_document())
+        && !ui.viewer.is_dirty()
+        && !ui.viewer.dragging();
+    let ok = done && timed && clean;
+    println!(
+        "\nCHECK crate=ui name=window_drag_bench result={} finished={done} frames_timed={} clean_after={clean}",
+        pass(ok),
+        ui.drag_clock.frames
+    );
+    assert!(ok);
+}

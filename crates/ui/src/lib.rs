@@ -23,6 +23,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod bench;
 pub mod canvas;
 pub mod drag;
 pub mod editor;
@@ -31,9 +32,10 @@ pub mod recovery;
 pub mod view;
 pub mod viewer;
 
-pub use canvas::{CanvasMode, ChipRenderer, ChipState, Fallback};
+pub use bench::DragBench;
+pub use canvas::{CanvasMode, ChipRenderer, ChipState, DragClock, Fallback};
 pub use drag::{Drag, DragKind, DragMods, HandleHit};
-pub use editor::Toward;
+pub use editor::{DropOn, Toward, layer_drop_place, object_drop_place};
 pub use panels::Tab;
 pub use recovery::{Autosave, Recovered, Recovery};
 pub use view::{After, Request, UiFont, ViewerUi, install_fonts};

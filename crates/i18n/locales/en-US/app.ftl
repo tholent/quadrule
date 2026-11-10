@@ -119,6 +119,18 @@ app-rhythm-resolution = Resolution
 app-res-pixel = Pixel-locked
 app-res-physical = Physical-locked
 app-rhythm-on-device = { $px } px on { $device }
+app-rhythm-subdivisions = Subdivisions
+app-subdivisions-off = Off
+app-subdivisions-n = { $n } a unit
+
+app-snap = Snap
+app-snap-pixel = Pixel grid
+app-snap-rhythm = Rhythm
+app-snap-margins = Margins and safe zones
+app-rhythm-overlay = Rhythm overlay
+app-snapping = Snapping and guides
+app-drag-clock = Drag: { $mean } ms a frame (worst { $worst } ms, { $frames } frames)
+app-drop-here = Drop here
 
 app-x = X
 app-y = Y

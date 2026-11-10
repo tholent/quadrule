@@ -475,3 +475,65 @@ fn dragging_on_the_nomad_lands_where_the_pointer_put_it() {
     );
     assert!(ok);
 }
+
+#[test]
+fn layers_drag_to_reorder() {
+    use quadrule_ui::{DropOn, layer_drop_place, object_drop_place};
+    // Layer 0 is [Dot grid, Ruled lines], layer 1 is [Title, Title rule], bottom first.
+    let mut v = sample();
+    let doc0 = v.doc().unwrap().clone();
+    let on = |layer, index| DropOn::Object { layer, index };
+    let ids_of = |v: &Viewer, l: usize| -> Vec<Uuid> {
+        v.doc().unwrap().layers[l]
+            .objects
+            .iter()
+            .map(|o| o.id)
+            .collect()
+    };
+    // The rule dropped on the upper half of the ruled lines' row goes above them, in layer 0.
+    let place = object_drop_place(&doc0, ids::RULE, on(0, 1), true);
+    let (l, i) = place.unwrap();
+    v.move_object_to(ids::RULE, l, i).unwrap();
+    let into_layer = place == Some((0, 2))
+        && ids_of(&v, 0) == vec![ids::DOTS, ids::LINES, ids::RULE]
+        && ids_of(&v, 1) == vec![ids::TITLE]
+        && steps(&v) == 1;
+    v.undo();
+    let undone = v.doc().unwrap() == &doc0;
+    // Within a layer the index counts after the object leaves: the dot grid dropped above the
+    // ruled lines lands on top; dropped below them it stays, and a move that goes nowhere is no step.
+    let up = object_drop_place(&doc0, ids::DOTS, on(0, 1), true);
+    let stay = object_drop_place(&doc0, ids::DOTS, on(0, 1), false);
+    v.move_object_to(ids::DOTS, 0, stay.unwrap().1).unwrap();
+    let no_step = steps(&v) == 0;
+    v.move_object_to(ids::DOTS, 0, up.unwrap().1).unwrap();
+    let swapped = ids_of(&v, 0) == vec![ids::LINES, ids::DOTS];
+    v.undo();
+    // On a layer's own row, an object goes to the top of that layer.
+    let top = object_drop_place(&doc0, ids::TITLE, DropOn::LayerTop(0), true) == Some((0, 2));
+    // Layers: above or below the target, from either side.
+    let layers = layer_drop_place(0, 1, true) == 1
+        && layer_drop_place(1, 0, true) == 1
+        && layer_drop_place(1, 0, false) == 0
+        && layer_drop_place(0, 1, false) == 0;
+    v.move_layer_to(0, 1).unwrap();
+    let names: Vec<_> = v
+        .doc()
+        .unwrap()
+        .layers
+        .iter()
+        .map(|l| l.name.clone())
+        .collect();
+    let layer_moved = names == vec!["Header", "Grid"] && steps(&v) == 1;
+    v.undo();
+    // A locked layer, or a locked object, refuses the drop and nothing changes.
+    v.set_layer(0, |p| p.locked = true).unwrap();
+    let before = v.doc().unwrap().clone();
+    let refused = v.move_object_to(ids::RULE, 0, 2).is_err() && v.doc().unwrap() == &before;
+    let ok = into_layer && undone && no_step && swapped && top && layers && layer_moved && refused;
+    println!(
+        "\nCHECK crate=ui name=layers_drag_reorder result={} into_layer={into_layer} undone={undone} same_place_no_step={no_step} within_layer={swapped} layer_row_is_top={top} layer_places={layers} layer_moved={layer_moved} locked_refused={refused}",
+        pass(ok)
+    );
+    assert!(ok);
+}

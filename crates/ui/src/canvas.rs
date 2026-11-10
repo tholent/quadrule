@@ -151,3 +151,49 @@ pub fn screen_list(dl: &DisplayList, view: &ScreenView) -> DisplayList {
         items,
     }
 }
+
+/// How long the frames of a drag took (rung 4 bbq, Defaulted "Pi-smooth, the number"): each frame
+/// in which the page was made again, from the start of the canvas to its end, so the page's
+/// layout and render, the texture and (on the chip canvas) the chip frame are all in it.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct DragClock {
+    /// Frames that made the page again.
+    pub frames: u32,
+    /// All their times added, in milliseconds.
+    pub total_ms: f64,
+    /// The first frame's time: it builds the shaders on the chip canvas, so it is reported but
+    /// not judged (as in [`ChipState::record_chip`]).
+    pub first_ms: f64,
+    /// The slowest frame after the first, in milliseconds.
+    pub worst_ms: f64,
+}
+
+impl DragClock {
+    /// The line a drag frame must stay under on the Pi, in milliseconds (20 frames a second).
+    pub const BUDGET_MS: f64 = 50.0;
+
+    /// Adds one frame's time.
+    pub fn record(&mut self, ms: f64) {
+        if self.frames == 0 {
+            self.first_ms = ms;
+        } else {
+            self.worst_ms = self.worst_ms.max(ms);
+        }
+        self.frames += 1;
+        self.total_ms += ms;
+    }
+
+    /// The mean frame time, 0 before any frame.
+    pub fn mean_ms(&self) -> f64 {
+        if self.frames == 0 {
+            0.0
+        } else {
+            self.total_ms / f64::from(self.frames)
+        }
+    }
+
+    /// Whether every frame after the first stayed under [`DragClock::BUDGET_MS`].
+    pub fn within_budget(&self) -> bool {
+        self.frames > 0 && self.worst_ms < Self::BUDGET_MS
+    }
+}
