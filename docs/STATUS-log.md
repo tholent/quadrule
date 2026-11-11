@@ -833,3 +833,29 @@ it took one.
 
 **Waits on chris:** the look at 6a (`cargo run --release -p quadrule-app -- --shapes-page`, then draw with R, E, Y, Shift,
 and the Style tab). Owed items are in `docs/STATUS-debt.md` (rung 6a line).
+
+## 2026-11-10 — rung 6a lead: judged, measured, waits for chris's look (Opus 5.5, `CLAUDE_EFFORT=high`)
+
+- Start: chris set the effort to high when asked (it was not high at first); `echo "$CLAUDE_EFFORT"` → `high`;
+  `make build-proof` → `BUILD head=fdbb35c dirty=no rebuilt=1`.
+- Budget: meter read by chris as "about 46–50 %"; logged as 50 (the top of the range) with `spend-ledger.py reading 50`.
+  Share 15 points stands (hard stop 75 − 50 = 25). Stop lines: ledger 15 points or meter 61 %.
+- Builder: Sonnet 5.5 at high effort, as a subagent of this session, briefed from the bbq record
+  (`docs/bbq/2026-11-10-rung-6-shapes.md`). Its entry is above ("rung 6a built"); commits `4ba233b`, `46d3637`,
+  `789f424`; about 351k tokens. Ledger so far ≈ (351k + this session's context, about 100k) ÷ 0.79M × 1.5 ≈ 0.9 points.
+- Judged against the record, all preconditions met: `make build-proof` → `BUILD head=789f424 dirty=no rebuilt=1`;
+  `make check-all` → `TESTS scope=workspace checks=221 check_fail=0 passed=209 failed=0 status=ok`;
+  `git diff fdbb35c HEAD -- crates/render/tests/golden/SHA256SUMS` adds two lines and leaves the two existing ones as
+  they were; CI run 42940487205 (`789f424`) success on ubuntu, macos and windows.
+- Portable maths (ADR-003 item 2): on CI, `gh run view 42940487205 --log | grep shapes_golden` shows the shapes page
+  exports the **same sha256 on Linux x86-64, Windows x86-64 and macOS ARM64** (and the Pi), so item 2's trigger
+  ("Intel and ARM giving different bytes") is not met. The portable maths differ from the fast ones on x86 only (16 px
+  on the Manta, 21 on the Nomad, each 1 gray level); exports use the fast ones. The shapes golden test fails on any
+  system whose export differs from the golden, so a real trigger becomes a red build. Noted for chris; no change.
+- Speed, release build on the Pi, `--shapes-page`, 150 frames, 3 runs each (90th percentile, ADR-009, 50 ms line):
+  export canvas drag 23.8–24.2 ms; draw rect 23.9, ellipse 23.7–24.1, polygon 23.7–23.9 ms. Chip canvas drag
+  45.9–46.0 ms; draw rect 47.8–47.9, ellipse 48.3–48.4, polygon 47.8–47.9 ms. All `result=pass`. The chip canvas has
+  little headroom (it was 41–42 ms on the sample page at rung 5). The sample page re-timed: export draw 26.1 ms, chip
+  draw 42.4 ms, the same as rung 5. Command: `./target/release/quadrule --shapes-page --bench-draw 150 --bench-tool
+  <rect|ellipse|polygon> --canvas <export|chip>` (and `--bench-drag 150`).
+- Waits on chris: the look at 6a. After his approval: bump to `0.6.0`, tag `v0.6.0`, the pre-release, then 6b.

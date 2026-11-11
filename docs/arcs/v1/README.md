@@ -19,7 +19,7 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 
 | Rung | What it holds | Size | State |
 |---|---|---|---|
-| 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity. Split (bbq Q1, `docs/bbq/2026-11-10-rung-6-shapes.md`): **6a** all the shapes, fill (Shade and Block roles), dashes and caps; **6b** rotation, lines any way, opacity | large: 6a + 6b | planned; 6a next |
+| 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity. Split (bbq Q1, `docs/bbq/2026-11-10-rung-6-shapes.md`): **6a** all the shapes, fill (Shade and Block roles), dashes and caps; **6b** rotation, lines any way, opacity | large: 6a + 6b | 6a built 2026-11-10 (`46d3637`), waits for chris's look; 6b next |
 | 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3) | medium | — |
 | 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (needs chris's landscape check, below) | large | — |
 | 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | — |
