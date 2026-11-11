@@ -715,3 +715,9 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   `CHECK crate=ui name=draw_bench result=pass build=release canvas=export frames=40 … p90_ms=28.7 … budget_ms=50`.
   Not run by anyone yet: the `.dmg`, the `.msi`, the x86-64 packages (no Mac, Windows or x86 machine here).
 - Waits on chris: approve the packages; then publish v0.5.0's (`-f publish=true`) and switch on the release trigger.
+
+- 2026-11-10, release packages: chris, word for word: "the macos package is confirmed working" (the `.dmg` from dry run
+  42902842053). Not yet published to the v0.5.0 release; that waits on chris's word. He also reports: "when I zoom the
+  rhythm overlay changes and becomes very small squares"; most likely the device-pixel grid that appears from 8×
+  (`PIXEL_GRID_FROM`, `crates/ui/src/viewer.rs`; rung 2 bbq Q10), drawn in a blue close to the rhythm's
+  (`crates/ui/src/view.rs`), not a change in the rhythm itself. Unconfirmed; asked chris.

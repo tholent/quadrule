@@ -78,5 +78,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   ruled square), chris's to replace. Linux has no MIME definition for `application/x-quadrule`, so `.quad` files are
   not yet recognised by the file manager. The `.deb` puts the @2x icons in `64x64@2` and `1024x1024@2` folders (the
   standard names are `32x32@2`, `512x512@2`); harmless, the plain sizes cover it. The `.dmg` and `.msi` are unsigned
-  (macOS Gatekeeper and Windows SmartScreen will warn) and nobody has opened them yet; the rc testers (arc Q14) are
-  their first check. A pre-release version (`1.0.0-rc.1`) builds an NSIS `.exe` instead of an `.msi`, untried.
+  (macOS Gatekeeper and Windows SmartScreen will warn). chris confirmed the dry run's `.dmg` works on a Mac
+  (2026-11-10); nobody has opened the `.msi` or the x86-64 Linux packages yet, and the rc testers (arc Q14) are their
+  first check. A pre-release version (`1.0.0-rc.1`) builds an NSIS `.exe` instead of an `.msi`, untried.
