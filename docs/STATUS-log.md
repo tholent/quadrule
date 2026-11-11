@@ -730,4 +730,7 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   - Publish run 42932771588 (`gh workflow run release.yml -f tag=v0.5.0 -f publish=true`) started; result below.
   - `release: published` trigger switched on in `.github/workflows/release.yml`; README "Download" section with the
     unsigned-app steps (macOS Open Anyway, Windows Run anyway, AppImage chmod +x); v0.5.0 notes say where to download.
+  - Publish run 42932771588: success on all five jobs (four builds and "Attach to the release"). `gh release view
+    v0.5.0 --json assets` lists seven files: the six packages and `SHA256SUMS.txt`. The release text was replaced
+    with `docs/arcs/v1/release-notes/v0.5.0.md` (`gh release edit v0.5.0 --notes-file …`).
 
