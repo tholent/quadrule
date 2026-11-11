@@ -18,11 +18,12 @@ export CARGO_BUILD_JOBS := $(JOBS)
 LOG := target/test.log
 
 # For `run`, `lint`: FILE=path/to/page.quad. For `bench-drag`: FRAMES=150; SHAPES=1 runs it over the shapes page (every
-# new kind); `bench-draw` also takes TOOL=rect|ellipse|polygon|pattern|line|text. For `calibration-sheet` and
+# new kind), TRANSFORMS=1 over the transforms page (turned shapes, lines every way, opacity; `bench-rotate` always); `bench-draw` also takes TOOL=rect|ellipse|polygon|pattern|line|text. For `calibration-sheet` and
 # `safe-zones`: PROFILE=supernote.a6x2 (default all). For `fuzz`: SECS=60.
 FILE ?=
 FRAMES ?= 150
 SHAPES ?=
+TRANSFORMS ?=
 TOOL ?=
 PROFILE ?= all
 OUT ?= calib
@@ -31,7 +32,7 @@ SECS ?= 60
 CHECK ?= check-all
 
 .PHONY: help build build-all fmt fmt-check clippy clippy-all test test-all test-v check check-all \
-        run run-release bench-drag bench-draw calibration-sheet safe-zones lint fuzz build-proof review
+        run run-release bench-drag bench-draw bench-rotate calibration-sheet safe-zones lint fuzz build-proof review
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  make %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -103,10 +104,13 @@ run-release: ## The same, as a release build (what the speed numbers use)
 	cargo run --release -p quadrule-app -- $(FILE)
 
 bench-drag: ## Drag-speed bench on the sample page, release build (FRAMES=150, SHAPES=1 for the shapes page); the 90th percentile is the judge
-	cargo run --release -p quadrule-app -- --bench-drag $(FRAMES) $(if $(SHAPES),--shapes-page)
+	cargo run --release -p quadrule-app -- --bench-drag $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page)
 
 bench-draw: ## Drawing-speed bench: drags a pattern region out over the sample page, release build (FRAMES=150, SHAPES=1, TOOL=rect|ellipse|polygon)
-	cargo run --release -p quadrule-app -- --bench-draw $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TOOL),--bench-tool $(TOOL))
+	cargo run --release -p quadrule-app -- --bench-draw $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page) $(if $(TOOL),--bench-tool $(TOOL))
+
+bench-rotate: ## Rotate-speed bench: turns the transforms page's big rectangle with its handle, release build (FRAMES=150)
+	cargo run --release -p quadrule-app -- --bench-rotate $(FRAMES)
 
 # ---- maintainer tasks ----------------------------------------------------------------------------------------
 

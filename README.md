@@ -56,8 +56,13 @@ and error.
   unlimited undo and redo; autosave with recovery after a crash.
 - Export a PNG for the Manta or the Nomad, named like `{title}_{manta|nomad}_{w}x{h}.png`.
 - Check a page with the linter (seven rules so far).
+- Turn a line or a shape with the round handle above its top edge (it catches at 0, 90, 180 and 270 degrees; Shift
+  holds 15-degree steps) or type an angle in the Arrange tab; a turned shape resizes along its own sides. Lines point any
+  way (draw one up and to the right, or drag its ends past each other). Opacity, 0 to 100 percent, is in the Style tab;
+  the export is flattened to gray, with no transparency. A turned edge is smooth; a quarter turn keeps sharp edges.
+  Text boxes and pattern regions do not turn yet.
 
-Not yet: rotation, lines that point up and to the right, opacity, the starter gallery and wallpapers. The plan is in the design spec,
+Not yet: the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).
 
 ## Download
@@ -84,7 +89,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page`. To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

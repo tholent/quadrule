@@ -1353,7 +1353,7 @@ impl ViewerUi {
             .and_then(|f| f.area);
         // The selection's outlines: an overlay, never exported (rung 3 bbq, Defaulted
         // "Selecting").
-        let outlines: Vec<((f64, f64, f64, f64), Option<[(f64, f64); 4]>)> = page
+        let outlines: Vec<Outline> = page
             .placed
             .iter()
             .filter(|p| selection.contains(&p.id))
@@ -1990,6 +1990,9 @@ fn device_name(id: &str) -> String {
         .map(|p| p.display_name)
         .unwrap_or_else(|_| id.to_string())
 }
+
+/// A selected object's outline: its bounds, and its turned corners when it is a turned shape.
+type Outline = ((f64, f64, f64, f64), Option<[(f64, f64); 4]>);
 
 fn handle_cursor(h: HandleHit) -> CursorIcon {
     match h {

@@ -48,8 +48,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Rung 4a, owed (`crates/ui/src/drag.rs`, `crates/layout/src/snap.rs`, `crates/ui/src/view.rs`): drag speed is measured
   only on the sample page at Fit zoom (export canvas: one 60.1 ms frame in 1,595; chip canvas: none over 34 ms); not
   zoomed in, not on a text-heavy page, not on a desktop card. No autoscroll when a drag reaches the canvas edge. A
-  group resized past its opposite side flips as a box but its contents are not mirrored. A line cannot point up and
-  to the right (its frame is a diagonal), so dragging an end past the other turns it. Several objects selected on
+  group resized past its opposite side flips as a box but its contents are not mirrored. Several objects selected on
   different layers are dragged together but a locked one among them stays put without saying so. The layers panel's
   drag-and-drop has no pointer test. Alt-drag may be taken by the window manager on the Pi. The status bar's snap
   switches may not fit in a narrow window.
@@ -63,9 +62,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   (a "Snap" menu would fit narrower windows).
 
 - Rung 5, owed (`crates/ui/src/draw.rs`, `crates/ui/src/tools.rs`, `crates/ui/src/view.rs`, `crates/layout/src/newpage.rs`):
-  a line dragged up and to the right (or down and to the left) runs along the axis the pointer went further on, as
-  with Shift, because a line is its box's top-left to bottom-right diagonal (the rung 4a debt; no 45° or free angle
-  until the model can point a line the other way). Double-click to keep a tool is tested through `Viewer::keep_tool`,
+  Double-click to keep a tool is tested through `Viewer::keep_tool`,
   not through the harness (`egui_kittest` cannot make a double-click: two clicks give `double_clicked() == false`,
   measured 2026-11-10); chris's look is its first real check. New… is a flat toolbar button, not a File menu (the
   toolbar has no File menu; the napkin's "File → New"). A new page targets both devices, so its margins clear the

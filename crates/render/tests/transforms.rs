@@ -178,11 +178,6 @@ fn rect_kind() -> ObjectKind {
     ObjectKind::Rect(RectShape::default())
 }
 
-fn px(doc: &Document, id: &str, x: f64, y: f64) -> u8 {
-    let img = render(&list(id, doc), Math::Fastest);
-    img.at(x as u32, y as u32)
-}
-
 #[test]
 fn opacity_flattens_over_what_lies_beneath() {
     // A gray-100 bar with a gray-200 rectangle across it at 50 percent: over the bar the pixel is

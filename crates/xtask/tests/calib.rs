@@ -265,6 +265,8 @@ fn sheets_keep_clear_of_docked_toolbars_and_footer() {
                         x0.max(*x1) + width,
                         y0.max(*y1) + width,
                     ),
+                    // An opacity group holds nothing of its own (calibration sheets have none).
+                    Item::BeginAlpha { .. } | Item::EndAlpha => continue,
                 };
                 if hits(x0, y0, x1, y1) {
                     overlaps += 1;
