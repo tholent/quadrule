@@ -521,3 +521,180 @@ fn the_benchmarks_run_over_the_transforms_page_and_turn_its_rectangle() {
     );
     assert!(ok);
 }
+
+// ---- Look change (chris, 2026-11-11): the box and its handles turn with the object ----
+
+fn dist(a: (f64, f64), b: (f64, f64)) -> f64 {
+    (a.0 - b.0).hypot(a.1 - b.1)
+}
+
+fn mid(a: (f64, f64), b: (f64, f64)) -> (f64, f64) {
+    ((a.0 + b.0) / 2.0, (a.1 + b.1) / 2.0)
+}
+
+fn close2(a: (f64, f64), b: (f64, f64)) -> bool {
+    dist(a, b) < 1e-6
+}
+
+/// The turned corners of the selected shape as the page shows it now (the preview during a drag).
+fn shown_corners(v: &mut Viewer, id: Uuid) -> [(f64, f64); 4] {
+    v.page()
+        .unwrap()
+        .placed
+        .iter()
+        .find(|p| p.id == id)
+        .and_then(|p| p.shape.corners())
+        .expect("a turned shape has corners")
+}
+
+/// Whether the eight handles, the rotate handle and the handle squares of the selected shape sit
+/// on the turned corners it is drawn with, with the angle `deg`.
+fn handles_follow(v: &mut Viewer, id: Uuid, deg: f64) -> bool {
+    let c = shown_corners(v, id);
+    let pos = |v: &mut Viewer, h: Handle| handle_pos(v, h);
+    let on_corners = close2(pos(v, Handle::NW), c[0])
+        && close2(pos(v, Handle::NE), c[1])
+        && close2(pos(v, Handle::SE), c[2])
+        && close2(pos(v, Handle::SW), c[3])
+        && close2(pos(v, Handle::N), mid(c[0], c[1]))
+        && close2(pos(v, Handle::E), mid(c[1], c[2]))
+        && close2(pos(v, Handle::S), mid(c[2], c[3]))
+        && close2(pos(v, Handle::W), mid(c[3], c[0]));
+    let centre = mid(c[0], c[2]);
+    let r = v.rotate_handle().expect("a rotate handle");
+    // The stalk leaves the middle of the top edge straight outward, 60 px long.
+    let out = dist(r.base, centre);
+    let want_tip = (
+        r.base.0 + 60.0 * (r.base.0 - centre.0) / out,
+        r.base.1 + 60.0 * (r.base.1 - centre.1) / out,
+    );
+    let stalk = close2(r.base, mid(c[0], c[1])) && close2(r.tip, want_tip);
+    // Each handle's square is turned with the box: its top side runs at the object's angle.
+    let squares = v.handle_squares(5.0);
+    let turned = squares.len() == 8
+        && squares.iter().all(|(_, q)| {
+            let side = (q[1].0 - q[0].0, q[1].1 - q[0].1);
+            let a = side.1.atan2(side.0).to_degrees().rem_euclid(360.0);
+            (side.0.hypot(side.1) - 10.0).abs() < 1e-6
+                && ((a - deg).rem_euclid(360.0) < 1e-6 || (deg - a).rem_euclid(360.0) < 1e-6)
+        });
+    let angle = (v.selection_angle() - deg).abs() < 1e-6;
+    on_corners && stalk && turned && angle
+}
+
+#[test]
+fn the_box_and_its_handles_turn_with_the_object_while_it_turns() {
+    let mut v = page();
+    let id = rect(&mut v);
+    let c = (550.0, 600.0);
+    let tip = v.rotate_handle().unwrap().tip;
+    let upright_at_start =
+        v.selection_angle() == 0.0 && v.handle_squares(5.0).iter().all(|(_, q)| q[0].1 == q[1].1);
+    assert!(v.drag_begin(tip.0, tip.1, NONE, 4.0, 6.0));
+    let mut parts = Vec::new();
+    let mut ok = upright_at_start;
+    // Free of the catch, so the angles are what the pointer asks for. Each step is checked while
+    // the pointer is still down, on the preview.
+    for deg in [20.0, 45.0, 77.0, 133.0, 200.0, 310.0] {
+        let p = at_angle(c, deg);
+        v.drag_update(p.0, p.1, FREE, REACH);
+        let good = handles_follow(&mut v, id, deg);
+        // The committed document is still the old one: it was the cause of the stale handles.
+        let uncommitted = obj(&v, id).rotation_deg == 0.0;
+        ok &= good && uncommitted;
+        parts.push(format!("{deg}={good}"));
+    }
+    v.drag_end().unwrap();
+    let after = handles_follow(&mut v, id, 310.0);
+    ok &= after;
+    println!(
+        "\nCHECK crate=ui name=handles_turn_during_rotate_drag result={} upright_at_start={upright_at_start} {} after_release={after}",
+        pass(ok),
+        parts.join(" ")
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_turned_shapes_handles_follow_it_through_a_move_and_a_resize() {
+    let mut v = page();
+    let id = rect(&mut v);
+    v.edit_selected(None, |o| o.rotation_deg = 30.0).unwrap();
+    let start = handle_pos(&mut v, Handle::SE);
+    // Move: grab the middle, pull 100 right and 50 down; the handles are on the moved corners.
+    assert!(v.drag_begin(550.0, 600.0, FREE, 4.0, 6.0));
+    v.drag_update(650.0, 650.0, FREE, REACH);
+    let moved = handles_follow(&mut v, id, 30.0)
+        && close2(
+            handle_pos(&mut v, Handle::SE),
+            (start.0 + 100.0, start.1 + 50.0),
+        );
+    v.drag_end().unwrap();
+    // Resize: pull the south-east handle outward along the turned sides; handles are on the new
+    // corners at every step.
+    let se = handle_pos(&mut v, Handle::SE);
+    assert!(v.drag_begin(se.0, se.1, FREE, 4.0, 6.0));
+    let mut resized = true;
+    for k in 1..=3 {
+        let d = 20.0 * f64::from(k);
+        v.drag_update(se.0 + d, se.1 + d / 2.0, FREE, REACH);
+        resized &= handles_follow(&mut v, id, 30.0);
+    }
+    v.drag_end().unwrap();
+    resized &= handles_follow(&mut v, id, 30.0);
+    let ok = moved && resized;
+    println!(
+        "\nCHECK crate=ui name=handles_follow_turned_move_and_resize result={} move={moved} resize={resized}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_turned_line_is_outlined_along_its_turned_frame() {
+    let mut v = page();
+    v.set_tool(Tool::Line);
+    assert!(v.draw_begin(400.0, 500.0, FREE, REACH));
+    v.draw_update(600.0, 500.0, FREE, REACH);
+    let id = v.draw_end().unwrap();
+    let upright = v.turned_line_outline(id, 3.0).is_none();
+    // Turning it by the handle: while the pointer is down the outline, the selection angle and
+    // the handle squares are those of the turned line.
+    let c = (500.0, 500.0);
+    let tip = v.rotate_handle().unwrap().tip;
+    assert!(v.drag_begin(tip.0, tip.1, NONE, 4.0, 6.0));
+    let p = at_angle(c, 90.0);
+    v.drag_update(p.0, p.1, FREE, REACH);
+    let o = v
+        .turned_line_outline(id, 3.0)
+        .expect("a turned line has an outline");
+    // The 200 by 0 frame turned 90 about (500, 500) is 0 by 200 up and down, grown by 3.
+    let xs = o.iter().map(|q| q.0);
+    let ys = o.iter().map(|q| q.1);
+    let (x0, x1) = (
+        xs.clone().fold(f64::MAX, f64::min),
+        xs.fold(f64::MIN, f64::max),
+    );
+    let (y0, y1) = (
+        ys.clone().fold(f64::MAX, f64::min),
+        ys.fold(f64::MIN, f64::max),
+    );
+    let box_ok = (x0 - 497.0).abs() < 1e-6
+        && (x1 - 503.0).abs() < 1e-6
+        && (y0 - 397.0).abs() < 1e-6
+        && (y1 - 603.0).abs() < 1e-6;
+    let angle = (v.selection_angle() - 90.0).abs() < 1e-6;
+    // The two end handles are on the turned ends, their squares turned.
+    let ends = v.handle_squares(4.0);
+    let turned_ends = ends.len() == 2
+        && ends
+            .iter()
+            .all(|(_, q)| (q[1].1 - q[0].1).abs() > 7.9 && (q[1].0 - q[0].0).abs() < 1e-6);
+    v.drag_end().unwrap();
+    let ok = upright && box_ok && angle && turned_ends;
+    println!(
+        "\nCHECK crate=ui name=turned_line_outline result={} upright_has_none={upright} outline_is_turned_frame={box_ok} angle_follows={angle} end_squares_turned={turned_ends}",
+        pass(ok)
+    );
+    assert!(ok);
+}

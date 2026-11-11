@@ -1353,12 +1353,21 @@ impl ViewerUi {
             .and_then(|f| f.area);
         // The selection's outlines: an overlay, never exported (rung 3 bbq, Defaulted
         // "Selecting").
-        let outlines: Vec<Outline> = page
+        let mut outlines: Vec<(quadrule_model::Uuid, Outline)> = page
             .placed
             .iter()
             .filter(|p| selection.contains(&p.id))
-            .map(|p| (p.shape.bounds(), p.shape.corners()))
+            .map(|p| (p.id, (p.shape.bounds(), p.shape.corners())))
             .collect();
+        // A turned line is outlined along its turned frame, like a turned shape (the page's own
+        // shape for a line is its segment).
+        for (id, o) in &mut outlines {
+            if o.1.is_none() {
+                o.1 = self
+                    .viewer
+                    .turned_line_outline(*id, OUTLINE_PAD_POINTS / f64::from(scale));
+            }
+        }
 
         // What the drag draws, and the handles of the selection (all overlays, never exported).
         let handles = if self.viewer.tool == Tool::Select {
@@ -1569,7 +1578,7 @@ impl ViewerUi {
             }
 
             // The selected objects.
-            for ((x0, y0, x1, y1), corners) in &outlines {
+            for (_, ((x0, y0, x1, y1), corners)) in &outlines {
                 if let Some(c) = corners {
                     // A turned shape is outlined along its turned corners.
                     let pts: Vec<egui::Pos2> = c.iter().map(|&(x, y)| to_screen(x, y)).collect();
@@ -1604,7 +1613,29 @@ impl ViewerUi {
                     painter.circle_filled(b, 5.0, Color32::WHITE);
                     painter.circle_stroke(b, 5.0, Stroke::new(1.5, accent));
                 }
+                // Each handle is a square turned with the selection, so the box reads as turned.
+                let angle = self.viewer.selection_angle();
+                let squares = if angle == 0.0 {
+                    Vec::new()
+                } else {
+                    self.viewer.handle_squares(4.0 / f64::from(scale))
+                };
                 for (hit, hx, hy) in &handles {
+                    let stroke_kind = if matches!(hit, HandleHit::Box(_)) {
+                        StrokeKind::Inside
+                    } else {
+                        StrokeKind::Middle
+                    };
+                    if let Some((_, c)) = squares.iter().find(|(h, _)| h == hit) {
+                        let pts: Vec<egui::Pos2> =
+                            c.iter().map(|&(x, y)| to_screen(x, y)).collect();
+                        painter.add(egui::Shape::convex_polygon(
+                            pts,
+                            Color32::WHITE,
+                            Stroke::new(1.5, accent),
+                        ));
+                        continue;
+                    }
                     let c = to_screen(*hx, *hy);
                     let r = Rect::from_center_size(c, vec2(8.0, 8.0));
                     // White on any theme: the handles sit on the page, which is always light.
@@ -1613,11 +1644,7 @@ impl ViewerUi {
                         r,
                         CornerRadius::ZERO,
                         Stroke::new(1.5, accent),
-                        if matches!(hit, HandleHit::Box(_)) {
-                            StrokeKind::Inside
-                        } else {
-                            StrokeKind::Middle
-                        },
+                        stroke_kind,
                     );
                 }
             }
@@ -1992,6 +2019,8 @@ fn device_name(id: &str) -> String {
 }
 
 /// A selected object's outline: its bounds, and its turned corners when it is a turned shape.
+const OUTLINE_PAD_POINTS: f64 = 2.0;
+
 type Outline = ((f64, f64, f64, f64), Option<[(f64, f64); 4]>);
 
 fn handle_cursor(h: HandleHit) -> CursorIcon {

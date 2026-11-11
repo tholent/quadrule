@@ -408,7 +408,8 @@ impl Viewer {
         let Some((primary, shown, placed)) = self.geometry() else {
             return Vec::new();
         };
-        let Some(doc) = self.doc() else {
+        // What is drawn: during a drag, the preview, so the handles turn and move with the object.
+        let Some(doc) = self.shown_doc() else {
             return Vec::new();
         };
         if let [id] = ids[..]
@@ -457,6 +458,54 @@ impl Viewer {
             .collect()
     }
 
+    /// The document as it is drawn: the preview while a drag or a drawing runs, else the open one.
+    pub(crate) fn shown_doc(&self) -> Option<&Document> {
+        self.open
+            .as_ref()
+            .map(|o| o.preview.as_ref().unwrap_or(&o.doc))
+    }
+
+    /// The angle the selection's box is drawn at: that of the one selected object (as it is drawn
+    /// now, so during a turn it follows the pointer), 0 for none or for several (rung 6b).
+    pub fn selection_angle(&self) -> f64 {
+        let ids = self.editable_selection();
+        match (&ids[..], self.shown_doc()) {
+            ([id], Some(doc)) => doc.object(*id).map_or(0.0, Object::rotation),
+            _ => 0.0,
+        }
+    }
+
+    /// The square each box or end handle is painted as: `half` pixels from its centre to a side,
+    /// turned by [`Viewer::selection_angle`] so the box and its handles read as turned together.
+    /// Corners in device pixels, clockwise from the top-left.
+    pub fn handle_squares(&mut self, half: f64) -> Vec<(HandleHit, [(f64, f64); 4])> {
+        let angle = self.selection_angle();
+        self.handles()
+            .into_iter()
+            .map(|(h, x, y)| {
+                let c = (x, y);
+                let corners = [(-half, -half), (half, -half), (half, half), (-half, half)]
+                    .map(|(dx, dy)| rotate::rotate_point((x + dx, y + dy), c, angle));
+                (h, corners)
+            })
+            .collect()
+    }
+
+    /// The outline of a turned line: its frame turned with it, grown by `pad` pixels, so a turned
+    /// line is outlined like a turned shape. None for a line that is not turned, or not a line.
+    pub fn turned_line_outline(&mut self, id: Uuid, pad: f64) -> Option<[(f64, f64); 4]> {
+        let (primary, shown, _) = self.geometry()?;
+        let o = self.shown_doc()?.object(id)?;
+        if !matches!(o.kind, ObjectKind::Line(_)) || o.rotation() == 0.0 {
+            return None;
+        }
+        let r = resolved_px(o, &primary, &shown);
+        Some(rotate::rotated_corners(
+            (r.x0 - pad, r.y0 - pad, r.x1 + pad, r.y1 + pad),
+            o.rotation(),
+        ))
+    }
+
     /// The rotate handle (Q5): a round handle on a short stalk above the middle of the top edge
     /// of the one selected line or shape, turned with it. None for anything else (a text box, a
     /// pattern region, several objects) or when it is locked.
@@ -466,7 +515,7 @@ impl Viewer {
             return None;
         };
         let (primary, shown, _) = self.geometry()?;
-        let o = self.doc()?.object(id)?;
+        let o = self.shown_doc()?.object(id)?;
         if !o.kind.can_rotate() {
             return None;
         }
