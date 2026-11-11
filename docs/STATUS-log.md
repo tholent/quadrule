@@ -935,7 +935,7 @@ or release, and did not touch `STATUS.md` or the board.
   `command_line` (two more cases).
 - **CI:** push `32f4abb`: CI 43021220344, Fuzz 43021220184 and Coverage 43021220085 all success. The golden sha256 is the same on
   macOS ARM64, Linux x86-64 and Windows x86-64 and the Pi: transforms `fa85a493…29b7` (Manta) and `f21ff25d…3bee` (Nomad); shapes
-  `8b9c24d1…5369` and `f0d6636b…fe23`'s 6a values unchanged. The portable maths differ from the fast ones on x86 only (transforms
+  `8b9c24d1…5369` (Manta) and `f0d6636b…7270` (Nomad), the 6a values, unchanged. The portable maths differ from the fast ones on x86 only (transforms
   page: 11 px Manta, 2 px Nomad, each 1 gray level; shapes page as in 6a), printed not enforced; no exported sha differs between systems.
 - **Measured** (Pi, release build from `32f4abb`, 150 frames, `p90_ms`, budget 50, ADR-009; the lead does the official run):
   export canvas, transforms page: drag 24.9 / 25.0, draw line 24.2 / 25.7, rotate 25.6 / 24.6 (two runs; one run each had a single
