@@ -15,11 +15,13 @@
 //! Calibration sheets (napkin §8.4): pages of labelled samples, drawn by the app's own export
 //! renderer at each profile's native resolution, to copy to a device and judge by eye and pen.
 //!
-//! Four sheets, each one or more pages:
+//! Five sheets, each one or more pages:
 //! - **lines**: line widths 1–6 px × 15 grays, then dashed and dotted lines × 5 grays;
 //! - **dots**: square dots 1–4 px and round dots 2–6 px × 8 grays;
 //! - **text**: the bundled font at 6–18 pt, regular and bold, × 4 grays;
-//! - **writing**: wide strips of ruled lines and dot rows to write across with each pen.
+//! - **writing**: wide strips of ruled lines and dot rows to write across with each pen;
+//! - **grays**: flat patches at 30 grays and a smooth ramp, to find the grays the panel shows
+//!   clean (flat, no speckle or banding), which fills will need.
 //!
 //! Every sample has a code (e.g. `LB7`); the code and what it means are on the sheet and in
 //! `codes.txt`. Codes mean the same on every profile, so results can be compared.
@@ -96,6 +98,18 @@ pub const STRIP_LINES: [(u32, u8); 12] = [
 /// Writing strips W13–W18: square dot rows, size × gray (set 2: the sizes that showed on the
 /// Nomad, at the two darkest favourites).
 pub const STRIP_DOTS: [(u32, u8); 6] = [(2, 51), (2, 102), (3, 51), (3, 102), (4, 51), (4, 102)];
+
+/// Flat gray patches G1–G15: the even steps of 17 from 0 to 238, where a 16-level panel's own
+/// levels are expected to fall (added 2026-11-10 for rung 6's fills; arc v1 board, chris's queue).
+pub const PATCH_STEP_GRAYS: [u8; 15] = [
+    0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238,
+];
+/// Flat gray patches G16–G30: halfway between the steps, to show what an off-step gray becomes.
+pub const PATCH_BETWEEN_GRAYS: [u8; 15] = [
+    8, 25, 42, 59, 76, 93, 110, 127, 144, 161, 178, 195, 212, 229, 246,
+];
+/// Patches per row on the grays sheet.
+const PATCH_COLUMNS: usize = 5;
 
 const LABEL_GRAY: u8 = 0;
 /// Height of one writing strip: label, three lines 7 mm apart, and room before the next.
@@ -452,13 +466,91 @@ fn row_letter(i: usize) -> char {
     ROWS.as_bytes()[i] as char
 }
 
-/// Every calibration page for one profile, in order: lines, dots, text, writing.
+/// Every calibration page for one profile, in order: lines, dots, text, writing, grays.
 pub fn sheets(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<Vec<Page>> {
     let mut all = lines_sheet(p, reg, version)?;
     all.extend(dots_sheet(p, reg, version)?);
     all.extend(text_sheet(p, reg, version)?);
     all.extend(writing_sheet(p, reg, version)?);
+    all.extend(grays_sheet(p, reg, version)?);
     Ok(all)
+}
+
+/// The gray a ramp column shows: 0 at the left edge to 255 at the right, linear.
+pub fn ramp_gray(i: u32, width: u32) -> u8 {
+    if width < 2 {
+        return 0;
+    }
+    ((i as f64 * 255.0 / (width - 1) as f64).round()) as u8
+}
+
+fn grays_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<Vec<Page>> {
+    let mut pg = Pager::new(p, reg);
+    pg.paragraph(
+        "Flat grays. G1–G15: the even steps 0, 17, 34 … 238. G16–G30: halfway between them (8, 25, 42 … 246). \
+         Each patch is one gray, the same in every pixel. Note which patches look flat and even (clean), and which \
+         show speckle, dots, stripes or blotches. GR: a smooth ramp from black (left) to white (right); note \
+         whether it shows steps or bands, and about how many.",
+        8.0,
+        400,
+    )?;
+    let cw = (pg.width() / PATCH_COLUMNS as f64).floor();
+    let (pad, label_h, patch_h) = (pg.mm(1.0), pg.mm(3.5), pg.mm(14.0));
+    let mut n = 0;
+    for (set, grays) in [
+        ("an even step", &PATCH_STEP_GRAYS),
+        ("between steps", &PATCH_BETWEEN_GRAYS),
+    ] {
+        for row in grays.chunks(PATCH_COLUMNS) {
+            let y0 = pg.row(label_h + patch_h + pg.mm(2.0));
+            for (c, &g) in row.iter().enumerate() {
+                n += 1;
+                let code = format!("G{n}");
+                let x0 = pg.left + c as f64 * cw;
+                let what = format!("flat patch, gray {g} ({set})");
+                pg.text(
+                    &format!("{code} · {g}"),
+                    6.0,
+                    700,
+                    LABEL_GRAY,
+                    (x0 + pad, y0),
+                    20.0,
+                )?;
+                let (a, b) = (x0 + pad, x0 + cw - pad);
+                let (top, bottom) = (y0 + label_h, y0 + label_h + patch_h);
+                pg.rect(a, top, b, bottom, g);
+                pg.sample(code, what, (a, top, b, bottom));
+            }
+        }
+        pg.gap(2.0);
+    }
+    let ramp_h = pg.mm(14.0);
+    let y0 = pg.row(label_h + ramp_h + pg.mm(2.0));
+    let (left, right) = (pg.left, pg.right);
+    pg.text(
+        "GR · ramp, 0 (black) left to 255 (white) right",
+        6.0,
+        700,
+        LABEL_GRAY,
+        (left, y0),
+        80.0,
+    )?;
+    let (top, bottom) = (y0 + label_h, y0 + label_h + ramp_h);
+    let w = (right - left) as u32;
+    for i in 0..w {
+        let x = left + i as f64;
+        pg.rect(x, top, x + 1.0, bottom, ramp_gray(i, w));
+    }
+    // The ramp's last columns are white; a thin frame shows where it ends.
+    pg.hline(left, right, top - 1.0, 1, 0);
+    pg.hline(left, right, bottom, 1, 0);
+    pg.rect(right, top - 1.0, right + 1.0, bottom + 1.0, 0);
+    pg.sample(
+        "GR".into(),
+        "ramp, gray 0 at the left to 255 at the right".into(),
+        (left, top, right, bottom),
+    );
+    pg.finish("grays", "Grays", version)
 }
 
 fn lines_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<Vec<Page>> {

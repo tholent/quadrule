@@ -79,7 +79,10 @@ fn codes_are_unique_and_mean_the_same_everywhere() {
         + DOTS.len() * DOT_GRAYS.len()
         + TEXT_SIZES_PT.len() * TEXT_WEIGHTS.len() * TEXT_GRAYS.len()
         + STRIP_LINES.len()
-        + STRIP_DOTS.len();
+        + STRIP_DOTS.len()
+        + PATCH_STEP_GRAYS.len()
+        + PATCH_BETWEEN_GRAYS.len()
+        + 1;
     ok &= same && per_profile.iter().all(|m| m.len() == expected);
     println!(
         "CHECK crate=xtask name=calib_codes result={} same_on_all_profiles={same} expected={expected} {}",
@@ -139,6 +142,59 @@ fn line_samples_print_what_their_codes_say() {
     let ok = fails.is_empty() && checked > 0;
     println!(
         "CHECK crate=xtask name=calib_lines_exact result={} samples={checked} fails={fails:?}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn gray_patches_are_flat_and_the_ramp_climbs() {
+    // Every pixel of patch Gn is exactly its claimed gray; the ramp starts at 0, ends at 255 and
+    // never gets darker from left to right.
+    let claimed: Vec<u8> = PATCH_STEP_GRAYS
+        .iter()
+        .chain(&PATCH_BETWEEN_GRAYS)
+        .copied()
+        .collect();
+    let (mut patches, mut fails) = (0, Vec::new());
+    let mut ramps = 0;
+    for id in builtin_ids() {
+        let p = builtin(id).unwrap();
+        for page in pages(&p).iter().filter(|pg| pg.sheet == "grays") {
+            let img = render(&page.dl, Math::Fastest);
+            for s in &page.samples {
+                let (x0, y0, x1, y1) = (
+                    s.area.0 as u32,
+                    s.area.1 as u32,
+                    s.area.2 as u32,
+                    s.area.3 as u32,
+                );
+                if s.code == "GR" {
+                    ramps += 1;
+                    let y = (y0 + y1) / 2;
+                    let row: Vec<u8> = (x0..x1).map(|x| img.at(x, y)).collect();
+                    let climbs = row.windows(2).all(|w| w[0] <= w[1]);
+                    if row.first() != Some(&0) || row.last() != Some(&255) || !climbs {
+                        fails.push(format!("{id}:GR"));
+                    }
+                    continue;
+                }
+                let n: usize = s.code[1..].parse().expect("G code");
+                let g = claimed[n - 1];
+                patches += 1;
+                let wrong = (y0..y1)
+                    .flat_map(|y| (x0..x1).map(move |x| (x, y)))
+                    .filter(|&(x, y)| img.at(x, y) != g)
+                    .count();
+                if wrong > 0 {
+                    fails.push(format!("{id}:{}:wrong={wrong}", s.code));
+                }
+            }
+        }
+    }
+    let ok = fails.is_empty() && patches == 2 * claimed.len() && ramps == 2;
+    println!(
+        "CHECK crate=xtask name=calib_gray_patches result={} patches={patches} ramps={ramps} fails={fails:?}",
         pass(ok)
     );
     assert!(ok);

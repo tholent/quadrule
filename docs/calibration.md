@@ -23,6 +23,7 @@ same wherever the toolbar is docked; only the floating toolbar can cover them.
 | dots | square dots 1–4 px and round dots 2–6 px × 8 grays | `P…` |
 | text | Atkinson Hyperlegible Next 6–18 pt, regular and bold × 4 grays (0, 51, 102, 153) | `T…` |
 | writing | wide ruled-line and dot-row strips to write across (set 2: grays 51–187) | `W1`–`W18` |
+| grays | flat patches: the even steps 0, 17 … 238, then halfway between them (8, 25 … 246); a smooth ramp 0–255 | `G1`–`G30`, `GR` |
 
 ## 2. Put them on the device
 
@@ -35,17 +36,21 @@ Customization tab in notes (napkin §11.3). Open a note with each sheet as its t
   looks best, the faintest code you can still see, and the lightest gray that is clean (no speckle or banding).
 - **dots:** say whether square or round reads better at the sizes you like.
 - **text:** the smallest size you read comfortably, and the gray you prefer for labels.
+- **grays:** which patches look flat and even (clean), and which speckle, dot, stripe or blotch; on the ramp, whether
+  it shows steps or bands, and about how many. These are the device's clean gray levels (napkin §8.2, lint L05), which
+  filled shapes need.
 - **writing:** write across every strip with each pen you use. Note the strips whose lines stay visible but do not
   compete with your writing.
 
 ## 4. Report
 
 Codes are enough, e.g. "Guide: LB10. Whisper dots: PB6, square. Smallest text: TC1. Writing: W6 and W14 best;
-W1 competes with the fine pen." Photos or device screenshots go in `docs/device-measurements/<profile_id>/`
+W1 competes with the fine pen. Clean: G1–G15; G16 and up speckle; ramp shows about 16 bands." Photos or device screenshots go in `docs/device-measurements/<profile_id>/`
 (napkin §8.4 step 4). The values then go into the profile's RON file (`crates/profiles/data/`) with
 `calibration_meta.verified: true`, and the slice's golden images are regenerated.
 
 ## Not on the sheets yet
 
 Ink-competition thresholds per pen color are not measured by these sheets; safe zones come from screenshots instead
-(`docs/device-measurements/README.md`). The device's real clean gray levels are unknown, so the sheets use evenly spaced steps of 17.
+(`docs/device-measurements/README.md`). The device's real clean gray levels are unknown until the grays sheet is judged (added 2026-11-10), so the
+other sheets use evenly spaced steps of 17.

@@ -9,7 +9,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - Rung 1, the headless end-to-end slice, is on `main` (PR #1, `00ad0e2`): a test builds a document, saves it as
   `.quad`, reopens it and exports Manta and Nomad PNGs matching golden images byte for byte
   (`crates/render/tests/slice.rs`, `crates/render/tests/golden/SHA256SUMS`).
-- Calibration sheets (napkin §8.4): `cargo xtask calibration-sheet` writes lines, dots, text and writing pages per
+- Calibration sheets (napkin §8.4): `cargo xtask calibration-sheet` writes lines, dots, text, writing and grays pages per
   profile, each sample coded, with a `codes.txt` key (`crates/xtask/src/calib.rs`, how-to in `docs/calibration.md`).
 - Both devices calibrated by chris (2026-11-09): role values, the new Dot grid and Label roles, in their profiles
   (`crates/profiles/data/`, records in `docs/device-measurements/*/calibration.md`); file format 0.3 then.
