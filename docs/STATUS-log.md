@@ -721,3 +721,13 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   rhythm overlay changes and becomes very small squares"; most likely the device-pixel grid that appears from 8×
   (`PIXEL_GRID_FROM`, `crates/ui/src/viewer.rs`; rung 2 bbq Q10), drawn in a blue close to the rhythm's
   (`crates/ui/src/view.rs`), not a change in the rhythm itself. Unconfirmed; asked chris.
+- 2026-11-10, chris's answers: "Only from 16×" (the pixel grid) and "Publish now" (the packages, with the automatic
+  trigger). Done:
+  - `PIXEL_GRID_FROM` 8.0 → 16.0 (`crates/ui/src/viewer.rs`), amendment added under Q10 of
+    `docs/bbq/2026-11-09-rung-2-viewer.md`. `cargo fmt --all --check`, `cargo clippy -p quadrule-ui -p quadrule-app
+    --all-targets -- -D warnings` clean; `cargo test -p quadrule-ui`: `TESTS crate=ui passed=75 failed=0`. Export
+    bytes untouched (screen overlay only). chris's look is its check.
+  - Publish run 42932771588 (`gh workflow run release.yml -f tag=v0.5.0 -f publish=true`) started; result below.
+  - `release: published` trigger switched on in `.github/workflows/release.yml`; README "Download" section with the
+    unsigned-app steps (macOS Open Anyway, Windows Run anyway, AppImage chmod +x); v0.5.0 notes say where to download.
+

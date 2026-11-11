@@ -120,8 +120,9 @@ pub enum Zoom {
 /// The zoom steps, in screen pixels per device pixel: down to 1/8, up to 16× (rung 2 bbq, Q10).
 pub const ZOOM_STEPS: [f32; 8] = [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0];
 
-/// From this zoom up, the canvas draws a grid between device pixels (rung 2 bbq, Q10).
-pub const PIXEL_GRID_FROM: f32 = 8.0;
+/// From this zoom up, the canvas draws a grid between device pixels (rung 2 bbq, Q10; moved from 8× to
+/// 16× by chris, 2026-11-10, because at 8× its squares read as the rhythm overlay shrinking).
+pub const PIXEL_GRID_FROM: f32 = 16.0;
 
 /// A bank card's width (ISO/IEC 7810 ID-1), one of the ruler check's references.
 pub const CARD_WIDTH_MM: f64 = 85.6;

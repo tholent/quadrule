@@ -38,6 +38,8 @@ Measured at the start of this session (2026-11-09, on the Pi, Wayland desktop on
   Linux, macOS and Windows. Until chris approves the look, nothing else ships it.
 - **Q10 Zoom.** Fit page; 1:1 (one device pixel per screen pixel); zoom up to 16× with square (nearest-neighbour)
   pixels and a pixel grid from 8×; and "real size", the page at its true size on the tablet.
+  - Amended 2026-11-10 by chris: the pixel grid shows from 16×, not 8× (he saw its squares at 8× as "the rhythm
+    overlay changes and becomes very small squares", and picked "Only from 16×").
 - **Q11 Theme.** Follow the system, with Light / Dark / System under View. The page is never tinted; only the
   backdrop and controls follow the theme.
 - **Q12 Anything else to protect or avoid?** Nothing more.

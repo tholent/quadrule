@@ -11,8 +11,7 @@ Quadrule is a free, open-source vector design tool. You draw lines, grids, boxes
 a PNG at your device's exact screen size, ready to copy to the tablet and use as a note template.
 
 > **Pre-alpha.** Quadrule runs, but it is not finished: you can start a blank page and draw lines, text boxes and
-> pattern regions on it, but there are no other shapes yet, no template gallery, no wallpaper mode, and no prebuilt
-> download (you build it from source, see below). Files and menus may change without warning.
+> pattern regions on it, but there are no other shapes yet, no template gallery and no wallpaper mode. Files and menus may change without warning.
 
 ## Why it exists
 
@@ -56,7 +55,21 @@ and error.
 Not yet: shapes other than lines, text boxes and pattern regions, the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).
 
-## Try it
+## Download
+
+Installers for macOS, Windows and Linux are attached to each release on the
+[releases page](https://github.com/tholent/quadrule/releases): a `.dmg` for macOS (Apple chip or Intel), an `.msi`
+for Windows, and an AppImage or a `.deb` for Linux on x86-64 or ARM. Every release so far is a pre-release.
+
+The macOS and Windows packages are not signed yet, so the system warns the first time you open one:
+
+- **macOS:** open the app once and close the warning, then go to System Settings → Privacy & Security and click
+  **Open Anyway** next to the message about Quadrule.
+- **Windows:** when SmartScreen says it protected your PC, click **More info**, then **Run anyway**.
+- **Linux AppImage:** mark the file as a program first (`chmod +x quadrule-*.AppImage`, or tick "Allow executing"
+  in its properties), then open it.
+
+## Build from source
 
 You need [Rust](https://rustup.rs) (the repository pins the exact version in `rust-toolchain.toml`, and `rustup`
 installs it for you). Then, from a clone of this repository:

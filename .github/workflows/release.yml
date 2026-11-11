@@ -7,12 +7,13 @@
 # The packaging config lives in packaging/ (packager.json, icons, prepare.py). A tag made before
 # that folder existed (v0.5.0) is built with main's copy laid over it; a later tag uses its own.
 #
-# Switched on by hand only, until chris approves the first packages (AGENTS.md: work that
-# acts outside the app window lands switched off). Run it from the Actions tab or with
+# Runs by itself when a release is published (chris approved the first packages, 2026-11-10:
+# "Publish now"), so each rung's release gets its packages without a hand step. It can also be
+# run from the Actions tab or with
 #   gh workflow run release.yml -f tag=v0.5.0                 # dry run: packages as run artifacts
 #   gh workflow run release.yml -f tag=v0.5.0 -f publish=true # also attach them to the release
-# Once approved, the `release: published` trigger below is switched on, so each rung's release
-# gets its packages without a hand step.
+# A release made with the workflow's own GITHUB_TOKEN would not start it (GitHub's rule against
+# loops); one made with a person's token or `gh release create` on a signed-in machine does.
 #
 # Cost: the repository is public, so GitHub's standard runners are free.
 name: Release packages
@@ -29,9 +30,8 @@ on:
         required: false
         type: boolean
         default: false
-  # Switched on after chris's approval of the first packages:
-  # release:
-  #   types: [published]
+  release:
+    types: [published]
 
 permissions:
   contents: read

@@ -97,7 +97,8 @@ and a GitHub pre-release, with notes in `docs/arcs/v1/release-notes/` (`docs/arc
 The installers are built by `.github/workflows/release.yml` on GitHub's machines: an AppImage and a `.deb` for Linux
 (x86-64 and ARM64), an unsigned universal `.dmg` for macOS and an `.msi` for Windows, plus `SHA256SUMS.txt`. The
 config is in `packaging/`: `packager.json` (read by [cargo-packager](https://crates.io/crates/cargo-packager) 0.11.8),
-the icons, and `prepare.py`, which takes the version from the tag. To run it by hand:
+the icons, and `prepare.py`, which takes the version from the tag. It runs by itself when a release is published,
+and attaches the packages to it. To run it by hand (say, to retry or to check a tag first):
 
 ```
 gh workflow run release.yml -f tag=v0.5.0                  # dry run: the packages are the run's artifacts

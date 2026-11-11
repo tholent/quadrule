@@ -1384,7 +1384,7 @@ impl ViewerUi {
                 );
             }
 
-            // A grid between device pixels from 8× (Q10), only where it shows.
+            // A grid between device pixels from 16× (Q10, amended 2026-11-10), only where it shows.
             if scale * ppp >= PIXEL_GRID_FROM {
                 let clip = painter.clip_rect().intersect(page_rect);
                 let stroke = Stroke::new(
