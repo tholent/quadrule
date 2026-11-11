@@ -82,7 +82,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   export canvas 90th percentile 25.5–26.1 ms (3 runs), chip canvas 41.4–42.3 ms (3 runs), against 50 ms
   (`docs/STATUS-log.md`). No flag, as chris ruled; export bytes unchanged (`crates/ui/tests/draw.rs`,
   `crates/render/tests/golden/SHA256SUMS`).
-- Rung 6a, shapes, is done, approved by chris 2026-11-11 and released as `v0.6.0` (record `docs/bbq/2026-11-10-rung-6-shapes.md`): tools
+- Rung 6a, shapes, is done, approved by chris 2026-11-11 and tagged `v0.6.0` (record `docs/bbq/2026-11-10-rung-6-shapes.md`): tools
   Rectangle R, Ellipse E, Polygon Y (Star is a tick on a polygon), drawn as in rung 5 with Shift for square, circle or
   regular polygon; fill roles Shade (204) and Block (68), estimates until the grays sheet is read, plus a custom gray;
   dash presets and custom dashes on whole device pixels; butt, round and square caps; corner radius; the Style tab's
@@ -92,6 +92,15 @@ The project's live state. Update it when work lands. Every claim cites at least 
   unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, release build, shapes page, 90th percentile:
   export canvas about 24 ms, chip canvas 45.9–48.4 ms, against 50 ms (`docs/STATUS-log.md`). Try it:
   `cargo run --release -p quadrule-app -- --shapes-page`.
+- Rung 6b, rotation, lines any way and opacity, is built and waits for chris's look (record
+  `docs/bbq/2026-11-10-rung-6-shapes.md`): a round rotate handle on a stalk above a selected line or shape, catching at
+  0, 90, 180 and 270°, Shift for 15° steps, and a Rotation field in the Arrange tab; lines drawn and pulled in every
+  direction (the up-right debt is paid); Opacity 0–100 % in the Style tab, flattened to gray on export; file format
+  0.6.0, 0.4 and 0.5 files opening with the same export bytes (`crates/render/tests/fixtures/v0.5/`). Text boxes and
+  pattern regions do not rotate yet. A new golden page per device; the existing four sums are unchanged
+  (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: export canvas about 25 ms, chip canvas
+  34.9–36.7 ms on the transforms page, against 50 ms (`docs/STATUS-log.md`). Try it: `cargo run --release -p
+  quadrule-app -- --transforms-page`.
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with the seven rules that need no calibration (`crates/lint/src/lib.rs`); `cargo xtask lint`.
@@ -99,8 +108,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/format/fuzz/fuzz_targets/open_quad.rs`).
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
-- Checks, 2026-11-10 on the Pi: `make check-all` → `TESTS scope=workspace checks=221 check_fail=0 passed=209 failed=0
-  status=ok` (after rung 6a; `grep -o 'CHECK crate=[^ ]* name=[^ ]*' target/test.log | wc -l` → 221); fmt and clippy `-D warnings` clean
+- Checks, 2026-11-10 on the Pi: `make check-all` → `TESTS scope=workspace checks=253 check_fail=0 passed=236 failed=0
+  status=ok` (after rung 6b); fmt and clippy `-D warnings` clean
   (`Makefile`). CI for rung 5: see `docs/STATUS-log.md`
   (`.github/workflows/ci.yml`).
 - Release packages: `.github/workflows/release.yml` builds an AppImage and a `.deb` (Linux x86-64 and ARM64), a
@@ -128,7 +137,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `docs/arcs/v1/README.md`, and the next lead's prompt is `docs/arcs/v1/v1-PROMPT-2026-11-10.md` (Opus 5.5 high
   leads, Sonnet 5.5 high builds). Rung 6, shapes, is planned (bbq, 8 questions, `docs/bbq/2026-11-10-rung-6-shapes.md`):
   6a all the shapes with fill (Shade and Block roles), dashes and caps; 6b rotation, lines any way, opacity. 6a is done
-  (`v0.6.0`); next: 6b's build.
+  (`v0.6.0`); **6b is built and waits for chris's look** (below).
 - Waits on chris (early, alongside rungs 6–7): the clean gray levels on both devices (the new grays sheet,
   `docs/calibration.md`), and a landscape check on a
   device plus landscape toolbar screenshots (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
@@ -174,7 +183,9 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
   6a/6b (`docs/STATUS-log.md`, `docs/bbq/2026-11-10-rung-6-shapes.md`).
 - 2026-11-10: rung 6a built (Sonnet 5.5, high): shapes, fill roles, dashes, caps, format 0.5.0; measured on the Pi;
   waits for chris's look (`docs/STATUS-log.md`).
-- 2026-11-11: rung 6a approved by chris; `v0.6.0` tagged and released (`docs/STATUS-log.md`).
+- 2026-11-11: rung 6a approved by chris; `v0.6.0` tagged; its GitHub release waits on chris (`docs/STATUS-log.md`).
+- 2026-11-11: rung 6b built (Sonnet 5.5, high): rotation, lines any way, opacity, format 0.6.0; measured on the Pi;
+  waits for chris's look (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

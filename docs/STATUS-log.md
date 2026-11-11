@@ -990,3 +990,28 @@ or release, and did not touch `STATUS.md` or the board.
 **Waits on chris:** the look at 6b (`cargo run --release -p quadrule-app -- --transforms-page`, then select a shape: drag the round
 handle, hold Shift, type an angle in the Arrange tab, resize a turned shape, draw lines up and to the right, pull a line's end past
 the other, set Opacity in the Style tab). Owed items are in `docs/STATUS-debt.md` (rung 6b line).
+
+## 2026-11-11 — rung 6b lead: judged, measured, waits for chris's look (Opus 5.5, `CLAUDE_EFFORT=high`)
+
+- Builder: Sonnet 5.5 at high effort, a subagent of this session; its entry is above ("rung 6b built"); commits
+  `fe6de66` to `6eb9345`; about 385k tokens. Ledger so far ≈ (351k + 385k + this session's context, about 150k) ÷
+  0.79M × 1.5 ≈ 1.7 points of 15.
+- Judged against the record: `make build-proof` → `BUILD head=6eb9345 dirty=no rebuilt=2`; `make check-all` →
+  `TESTS scope=workspace checks=253 check_fail=0 passed=236 failed=0 status=ok`; `git diff 0115e08 HEAD --
+  crates/render/tests/golden/SHA256SUMS` adds the two `transforms_` lines and changes none; CI 43021220344 (`32f4abb`)
+  success. `gh run view 43021220344 --log | grep -E 'name=(transforms|shapes)_golden'`: the same sha256 on Linux
+  x86-64, Windows x86-64 and macOS ARM64 for both pages (ADR-003 item 2 not triggered; the portable maths differ on
+  x86 only, 11 px and 2 px on the transforms page, 1 gray level each).
+- Speed, release build on the Pi, 150 frames, 3 runs each, 90th percentile against 50 ms (ADR-009), all `result=pass`:
+  transforms page, export canvas: drag 24.5–25.3, draw line 24.3–25.4, draw rect 23.8–25.7, rotate 24.4–25.5 ms; chip
+  canvas: drag 34.9, draw line 35.6–35.7, draw rect 36.6–36.7, rotate 34.9–35.0 ms. The 6a shapes page re-timed: drag
+  export 24.2–26.1, chip 45.9–46.1 ms (as before 6b). Commands: `./target/release/quadrule --transforms-page
+  --bench-drag 150 [--canvas chip]`, `… --bench-draw 150 --bench-tool line|rect`, `./target/release/quadrule
+  --bench-rotate 150 [--canvas chip]`.
+- The spec does not say whether text boxes and pattern regions rotate (`napkins/quadrule-spec.md` §5.2, line 276
+  lists rotation in the Arrange tab for objects in general); the builder left them unrotatable in 6b. Put to chris at
+  the look.
+- `v0.6.0` is tagged and pushed; its GitHub pre-release waits on chris (my `gh release create` was refused by the
+  permission check; `gh release view v0.6.0` → "release not found").
+- Waits on chris: the look at 6b. After his approval: bump to `0.6.1`, tag `v0.6.1`, the pre-release; then re-plan the
+  board and write the next lead's prompt.
