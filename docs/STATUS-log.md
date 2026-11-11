@@ -751,3 +751,85 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
   6b rotation, lines any way, opacity (Q1, overruled my split). Soft edges on curves (Q2). Fill roles Shade and Block
   plus Custom (Q3, overruled: Shade alone), starting at 204 and 68 (Q7). Tools R, E, Y (Q4). Rotation handle on a
   stalk (Q5). Dash presets plus custom, caps butt/round/square (Q6). Lint L01, L02, L06 on the new kinds in 6a (Q8).
+
+## 2026-11-10 — rung 6a built: shapes (Sonnet 5.5, `CLAUDE_EFFORT=high`)
+
+Kickoff from `docs/bbq/2026-11-10-rung-6-shapes.md` (6a only; 6b's rotation, lines any way and opacity are not built).
+Preconditions, all met: model Sonnet 5.5 and `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` at the start →
+`BUILD head=fdbb35c dirty=no rebuilt=0`. The tree was clean at `fdbb35c`. Size said in the record: 1–2 builder sessions;
+it took one.
+
+- **Step 1, format 0.5.0** (`4ba233b` fixtures, `46d3637` the rest): before any model change, two 0.4 files were written
+  with the old code and the sha256 of each device's export saved (`crates/render/tests/fixtures/v0.4/`: `slice.quad`,
+  `busy.quad` with a slanted line, a custom line, a grid, custom dots, ruled lines, centred text, a hidden object,
+  subdivisions and a physical-locked rhythm; `SHA256SUMS`). Then `FORMAT_VERSION` 0.5.0, a `0.4.0 → 0.5.0` step in
+  `migrate::CHAIN` (nothing to rewrite: every new field is optional), `ObjectKind::{Rect(RectShape), Ellipse(EllipseShape),
+  Polygon(PolygonShape)}` (each with the `extra` bucket and an unknown-field test), `Object.fill/dash/cap` (left out of
+  the file when default, so an old object saves as before), `Style::None`, `FillRole {Shade, Block}` and `Fill`, `DashStyle`,
+  `LineCap` (`crates/model/src/lib.rs`); `fill_roles` in both profiles, Shade 204 and Block 68, marked ESTIMATE with the
+  record's Q7 (`crates/profiles/`). Test: `crates/render/tests/migrate_v04.rs` (both files open as 0.4 → migrate →
+  export the same four hashes; saved again they are 0.5.0, write none of the new keys and export the same).
+- **Step 2, layout and rendering**: `crates/layout/src/shapes.rs` (new), `Item::StrokePath` (new; the existing variants are
+  untouched), `crates/render/src/lib.rs`, the chip canvas (`crates/app/src/chip.rs`) and the screen list
+  (`crates/ui/src/canvas.rs`) draw it the same way. An unrotated square-cornered rectangle is whole-pixel `Item::Rect`s (fill
+  under stroke, odd widths on pixel centres); ellipses, rounded corners, polygons and stars are anti-aliased
+  (`Item::Fill`, `Item::StrokePath`); dashes are cut in layout, in whole device pixels per device; caps butt, round,
+  square; a pattern starts at a line's start and at a closed shape's top-left, clockwise.
+- **Step 3, tools R, E, Y** (`crates/ui/src/tools.rs`, `draw.rs`): painted icons, Fluent names and tooltips with the shortcut,
+  drag with rung 4's snapping, click = 10 units, Shift = square, circle or regular polygon, one undo step, back to Select,
+  `keep_tool` for the double-click.
+- **Step 4, inspector** (`crates/ui/src/panels.rs`, `crates/i18n/locales/en-US/app.ftl`): Style tab gains Stroke (None, Role,
+  Custom), Fill (None, Shade, Block, Custom gray, steps of 17), Dash (with Custom lengths) and Cap; a Shape section: corner
+  radius (any unit, `u` included), sides, Star, inner radius. Every control is named for screen readers.
+- **Step 5, lint** (`crates/lint/src/lib.rs`): L01 reads the stroke of every new kind; L02 only where a straight, unrotated
+  edge exists (`shapes::has_axis_aligned_edge`: rectangles, polygons with a horizontal or vertical edge, never an ellipse);
+  L06 uses the frame. L13 stays out.
+- **Step 6, goldens**: `shapes_document()` (`crates/model/src/sample.rs`) → `shapes_<id>_WxH.png` per device, appended to
+  `crates/render/tests/golden/SHA256SUMS` (`crates/render/tests/shapes.rs`). Looked at by eye on both devices.
+- **Step 7, bench**: `--shapes-page` opens that page (the benchmarks then run over it) and `--bench-tool
+  rect|ellipse|polygon|pattern|line|text` picks the drawn tool; `make bench-drag SHAPES=1`, `make bench-draw SHAPES=1
+  TOOL=rect`. The bench's CHECK line gains `page=` and `tool=`.
+- **Step 8**: README "what works today" and DEVELOPMENT.md crate map and commands.
+- **Frozen bytes:** `shasum` of the two rung 1 lines before and after: `b6f321e9…cee` and `26e04bab…e23` (unchanged:
+  `head -2 crates/render/tests/golden/SHA256SUMS`); the stock-grid test, `export_bytes_unchanged_after_edit_undo` and the
+  four 0.4 hashes pass. No expected hash was changed. Two test edits, no expected value among them: the editor test's
+  `golden.len() == 2` became `>= 2` (the file holds the new lines too), and `calib.rs`'s exhaustive `match` on `Item` got the
+  new variant's arm.
+- **Checks:** `make check-all` → `TESTS scope=workspace checks=221 check_fail=0 passed=209 failed=0 status=ok`;
+  `grep -o 'CHECK crate=[^ ]* name=[^ ]*' target/test.log | wc -l` → 221. 27 new `CHECK` names across
+  `crates/layout/tests/shapes.rs`, `crates/render/tests/{shapes,migrate_v04}.rs`, `crates/model/tests/model.rs`,
+  `crates/profiles/tests/profiles.rs`, `crates/lint/tests/lint.rs`, `crates/ui/tests/shapes.rs`, and the app's `command_line`.
+- **Measured** (Pi, release build, shapes page, 150 frames, `p90_ms`; budget 50, ADR-009): drag export 25.2, drag chip 46.3,
+  draw rect 23.9, ellipse 24.4, polygon 24.9 (export), draw rect chip 47.9. All `result=pass`; the chip canvas is close
+  to the line (worst 50.1).
+- **Seen:** the golden pages by eye (crops of both devices): shapes, fills, dashes, caps and corners read as meant. The window
+  itself I did not click through (no pointer here beyond the headless tests).
+- **CI:** first push `46d3637`: CI 42939952956 and Coverage 42939952911 failed on one check of my own, the "portable maths
+  equal the fastest" assertion in the shapes golden test: on x86 (Linux and Windows) the portable maths differ from the
+  fastest on the shapes page, while the exported golden hashes matched on both. The assertion became a printed count
+  (`portable_diff_px`, `portable_max_diff`) in the follow-up (see below). This touches ADR-003 item 2's lever, for chris.
+
+### Things I chose that the record did not say (each vetoable)
+
+- No stroke is `Style::None` (a variant), not a flag; fill, dash and cap are three fields on the object; Dash and Cap also
+  apply to lines (a line is a stroke); pattern regions and text have neither.
+- Caps work as in SVG: a cap reaches half the width past each dash, so a gap shorter than the width closes (square caps on a
+  short gap read solid); on whole-pixel dashes the ends round half up. A closed shape's first dash reaches back half a stroke
+  so its top-left corner is square.
+- Dash start: rectangle at its top-left corner; rounded rectangle at the start of its top edge; ellipse at the point nearest
+  the top-left corner; polygon and star at the corner nearest it; all clockwise.
+- Stroke geometry: the shape's outline sits on the stroke's pixel grid (centres snapped as lines are); a hard fill covers the
+  rounded frame, under the stroke.
+- A click puts the shape's top-left at the click point (slid in to fit the page), 10 units across (unit_x), as tall as
+  makes it square, circle or regular (a hexagon is narrower than tall). Shift on a polygon keeps the polygon's own
+  proportions, the long side snapping.
+- A shape is picked and snapped by its box (a hollow shape takes a click inside it). Star inner radius is held to 0.10–0.95;
+  ticking Star sets 0.5. Custom fill gray starts from the current fill's gray on the device on screen, rounded to a step of 17.
+- Miter joins on `Item::StrokePath` (limit 4); tool names on the command line are `rect`, `ellipse`, `polygon`, …;
+  new objects are named Rectangle, Ellipse, Polygon (Fluent).
+- The shapes page lives in code (`shapes_document`), opens with `--shapes-page`, and holds the sample's dot grid so the drag
+  bench works; the Nomad's copy scales with Scale constraints.
+- README's "That opens the sample page" was untrue (the app starts empty) and now says so.
+
+**Waits on chris:** the look at 6a (`cargo run --release -p quadrule-app -- --shapes-page`, then draw with R, E, Y, Shift,
+and the Style tab). Owed items are in `docs/STATUS-debt.md` (rung 6a line).

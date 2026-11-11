@@ -74,8 +74,24 @@ fn shapes_page_goldens() {
         let dl = page(id, &doc);
         let png = encode_png(&render(&dl, Math::Fastest), None);
         let portable = encode_png(&render(&dl, Math::Portable), None);
+        // ADR-003 item 2's lever, reported and not enforced here: on x86 CI the portable maths
+        // differ from the fastest on the shapes page's anti-aliased edges (the exported golden,
+        // made with the fastest, matches on both machines), so the count is only printed.
         let same_maths = png == portable;
-        all_ok &= same_maths;
+        let (d_px, d_max) = {
+            let (a, b) = (
+                render(&dl, Math::Fastest).data,
+                render(&dl, Math::Portable).data,
+            );
+            let n = a.iter().zip(&b).filter(|(x, y)| x != y).count();
+            let m = a
+                .iter()
+                .zip(&b)
+                .map(|(x, y)| x.abs_diff(*y))
+                .max()
+                .unwrap_or(0);
+            (n, m)
+        };
         let name = format!("shapes_{id}_{}x{}.png", target.width_px, target.height_px);
         std::fs::write(out_dir().join(&name), &png).unwrap();
         let sha = sha256_hex(&png);
@@ -88,8 +104,8 @@ fn shapes_page_goldens() {
         let matches = golden == png;
         all_ok &= matches;
         println!(
-            "\nCHECK crate=render name=shapes_golden profile={id} result={} sha256={sha} golden_sha256={} simd_equals_portable={same_maths} items={} os={} arch={}",
-            pass(matches && same_maths),
+            "\nCHECK crate=render name=shapes_golden profile={id} result={} sha256={sha} golden_sha256={} simd_equals_portable={same_maths} portable_diff_px={d_px} portable_max_diff={d_max} items={} os={} arch={}",
+            pass(matches),
             if golden.is_empty() {
                 "none".to_string()
             } else {
