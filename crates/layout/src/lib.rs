@@ -23,6 +23,7 @@
 #![forbid(unsafe_code)]
 
 pub mod newpage;
+pub mod rotate;
 pub mod shapes;
 pub mod snap;
 pub mod units;
@@ -86,6 +87,93 @@ pub enum Item {
         /// How open ends are finished.
         cap: LineCap,
     },
+    /// Starts an opacity group (format 0.6, napkin §5.2): everything up to the matching
+    /// [`Item::EndAlpha`] is drawn together, as one picture, and laid over what lies beneath with
+    /// this opacity, so the export holds the flattened gray (no alpha in the PNG). Groups do not
+    /// nest.
+    BeginAlpha {
+        /// 0 (clear) to 255 (opaque).
+        alpha: u8,
+        /// A box holding everything in the group, (left, top, right, bottom) in device pixels.
+        bounds: (f64, f64, f64, f64),
+    },
+    /// Ends the opacity group begun by [`Item::BeginAlpha`].
+    EndAlpha,
+}
+
+/// The box (left, top, right, bottom) that holds every item, strokes' width included, or `None`
+/// if there are none. Used for the bounds of an opacity group.
+pub fn items_bounds(items: &[Item]) -> Option<(f64, f64, f64, f64)> {
+    let mut b: Option<(f64, f64, f64, f64)> = None;
+    let mut add = |x0: f64, y0: f64, x1: f64, y1: f64| {
+        b = Some(match b {
+            None => (x0, y0, x1, y1),
+            Some(o) => (o.0.min(x0), o.1.min(y0), o.2.max(x1), o.3.max(y1)),
+        });
+    };
+    for it in items {
+        match it {
+            Item::Rect { x0, y0, x1, y1, .. } => {
+                add(x0.min(*x1), y0.min(*y1), x0.max(*x1), y0.max(*y1))
+            }
+            Item::Stroke {
+                x0,
+                y0,
+                x1,
+                y1,
+                width,
+                ..
+            } => {
+                let h = width / 2.0;
+                add(
+                    x0.min(*x1) - h,
+                    y0.min(*y1) - h,
+                    x0.max(*x1) + h,
+                    y0.max(*y1) + h,
+                );
+            }
+            Item::Fill { path, .. } => {
+                let r = kurbo::Shape::bounding_box(path);
+                add(r.x0, r.y0, r.x1, r.y1);
+            }
+            Item::StrokePath { path, width, .. } => {
+                // A miter join reaches up to the limit (4) times half the width past the centre line.
+                let r = kurbo::Shape::bounding_box(path);
+                let h = width * 2.0;
+                add(r.x0 - h, r.y0 - h, r.x1 + h, r.y1 + h);
+            }
+            Item::BeginAlpha { .. } | Item::EndAlpha => {}
+        }
+    }
+    b
+}
+
+/// The 0 to 255 alpha of an opacity in percent.
+pub fn alpha_of_percent(pct: u8) -> u8 {
+    ((u32::from(pct.min(100)) * 255 + 50) / 100) as u8
+}
+
+/// Wraps `items[start..]` in an opacity group of `pct` percent: nothing at 100, and at 0 the items
+/// are dropped (they would not show).
+fn wrap_opacity(items: &mut Vec<Item>, start: usize, pct: u8) {
+    if pct >= 100 || start >= items.len() {
+        return;
+    }
+    if pct == 0 {
+        items.truncate(start);
+        return;
+    }
+    let Some(bounds) = items_bounds(&items[start..]) else {
+        return;
+    };
+    items.insert(
+        start,
+        Item::BeginAlpha {
+            alpha: alpha_of_percent(pct),
+            bounds,
+        },
+    );
+    items.push(Item::EndAlpha);
 }
 
 /// Everything to draw on one profile's page.
@@ -375,13 +463,22 @@ pub fn display_list(
     for layer in doc.layers.iter().filter(|l| l.visible) {
         for o in layer.objects.iter().filter(|o| o.visible) {
             let f = resolve_frame(o.frame, o.constraints, from, to);
+            let first_item = items.len();
             match &o.kind {
-                ObjectKind::Line(_) => {
+                ObjectKind::Line(line) => {
                     let Some((w, gray)) = stroke_opt(o.style, target) else {
                         continue;
                     };
-                    let (x0, y0) = (px(f.x_mm), px(f.y_mm));
-                    let (x1, y1) = (px(f.x_mm + f.w_mm), px(f.y_mm + f.h_mm));
+                    let frame_px = (
+                        px(f.x_mm),
+                        px(f.y_mm),
+                        px(f.x_mm + f.w_mm),
+                        px(f.y_mm + f.h_mm),
+                    );
+                    // The line's two ends: along the frame's diagonal it points, turned about the
+                    // frame's centre.
+                    let ((x0, y0), (x1, y1)) =
+                        rotate::rotated_line_ends(frame_px, line.direction, o.rotation());
                     if o.dash.is_solid() && o.cap.is_butt() {
                         items.push(line_item(x0, y0, x1, y1, w, gray));
                     } else {
@@ -480,6 +577,7 @@ pub fn display_list(
                     items.push(Item::Fill { path, gray });
                 }
             }
+            wrap_opacity(&mut items, first_item, o.opacity());
         }
     }
     Ok(DisplayList {
@@ -612,6 +710,20 @@ pub enum Shape {
         /// Stroke width in pixels.
         width: f64,
     },
+    /// A rotated shape's box (format 0.6): centred on (`cx`, `cy`), `hw` and `hh` the half width and
+    /// half height of the unrotated box, turned `deg` degrees clockwise about its centre.
+    Rotated {
+        /// Centre x.
+        cx: f64,
+        /// Centre y.
+        cy: f64,
+        /// Half the unrotated width.
+        hw: f64,
+        /// Half the unrotated height.
+        hh: f64,
+        /// Degrees clockwise.
+        deg: f64,
+    },
     /// A filled area: a pattern region's box, or a text box's width by its laid-out height.
     Box {
         /// Left edge.
@@ -645,6 +757,25 @@ impl Shape {
                 )
             }
             Shape::Box { x0, y0, x1, y1 } => (x0, y0, x1, y1),
+            Shape::Rotated { .. } => rotate::bounds_of(&self.corners().unwrap_or([(0.0, 0.0); 4])),
+        }
+    }
+
+    /// A rotated box's four corners (top-left, top-right, bottom-right, bottom-left of the
+    /// unrotated box, after turning); `None` for the other shapes.
+    pub fn corners(&self) -> Option<[(f64, f64); 4]> {
+        match *self {
+            Shape::Rotated {
+                cx,
+                cy,
+                hw,
+                hh,
+                deg,
+            } => Some(rotate::rotated_corners(
+                (cx - hw, cy - hh, cx + hw, cy + hh),
+                deg,
+            )),
+            _ => None,
         }
     }
 
@@ -671,6 +802,17 @@ impl Shape {
             Shape::Box { x0, y0, x1, y1 } => {
                 x >= x0 - slack && x <= x1 + slack && y >= y0 - slack && y <= y1 + slack
             }
+            Shape::Rotated {
+                cx,
+                cy,
+                hw,
+                hh,
+                deg,
+            } => {
+                // Turn the point back by the angle, then it is a plain box.
+                let (px, py) = rotate::rotate_point((x, y), (cx, cy), -deg);
+                (px - cx).abs() <= hw + slack && (py - cy).abs() <= hh + slack
+            }
         }
     }
 }
@@ -696,13 +838,30 @@ pub fn placed_objects(
                 px(f.y_mm + f.h_mm),
             );
             let shape = match &o.kind {
-                ObjectKind::Line(_) => Shape::Segment {
-                    x0,
-                    y0,
-                    x1,
-                    y1,
-                    width: stroke(o.style, target).0 as f64,
-                },
+                ObjectKind::Line(line) => {
+                    let ((x0, y0), (x1, y1)) =
+                        rotate::rotated_line_ends((x0, y0, x1, y1), line.direction, o.rotation());
+                    Shape::Segment {
+                        x0,
+                        y0,
+                        x1,
+                        y1,
+                        width: stroke(o.style, target).0 as f64,
+                    }
+                }
+                ObjectKind::Rect(_) | ObjectKind::Ellipse(_) | ObjectKind::Polygon(_)
+                    if o.rotation() != 0.0 =>
+                {
+                    let b = (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1));
+                    let (cx, cy) = rotate::centre(b);
+                    Shape::Rotated {
+                        cx,
+                        cy,
+                        hw: (b.2 - b.0) / 2.0,
+                        hh: (b.3 - b.1) / 2.0,
+                        deg: o.rotation(),
+                    }
+                }
                 ObjectKind::Pattern(_)
                 | ObjectKind::Rect(_)
                 | ObjectKind::Ellipse(_)

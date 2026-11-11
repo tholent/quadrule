@@ -22,7 +22,7 @@ use eframe::wgpu;
 use quadrule_layout::{DisplayList, Item};
 use std::time::Instant;
 use vello::kurbo::{Affine, Cap, Join, Line, Rect, Stroke};
-use vello::peniko::{Color, Fill};
+use vello::peniko::{Color, Fill, Mix};
 
 /// The texture the page is drawn into, kept while its size stays the same.
 struct Target {
@@ -186,6 +186,22 @@ fn scene(dl: &DisplayList) -> vello::Scene {
                 None,
                 path,
             ),
+            Item::BeginAlpha { alpha, bounds } => {
+                let (x0, y0, x1, y1) = *bounds;
+                s.push_layer(
+                    Fill::NonZero,
+                    Mix::Normal,
+                    f32::from(*alpha) / 255.0,
+                    id,
+                    &Rect::new(
+                        x0.floor() - 1.0,
+                        y0.floor() - 1.0,
+                        x1.ceil() + 1.0,
+                        y1.ceil() + 1.0,
+                    ),
+                )
+            }
+            Item::EndAlpha => s.pop_layer(),
         }
     }
     s

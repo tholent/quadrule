@@ -81,7 +81,7 @@ fn export(file: &QuadFile, id: &str) -> Vec<u8> {
 #[test]
 fn v04_files_open_migrate_and_export_the_same_bytes() {
     let sums = saved_sums();
-    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.5.0";
+    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.6.0";
     let mut parts = Vec::new();
     let mut matched = 0;
     for name in ["slice", "busy"] {
@@ -110,7 +110,7 @@ fn v04_files_open_migrate_and_export_the_same_bytes() {
             matched += usize::from(same);
             parts.push(format!("{name}:{id}:same={same}"));
         }
-        // Saved again, the file is 0.5.0 and exports the same, with no new field written for any
+        // Saved again, the file is the current version and exports the same, with no new field written for any
         // old object (so its bytes stay what a 0.4 build would read).
         let again = QuadFile::from_bytes(&file.to_bytes("migrate-test").unwrap()).unwrap();
         let resaved = again.manifest.format_version == FORMAT_VERSION

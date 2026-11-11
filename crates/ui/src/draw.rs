@@ -165,6 +165,8 @@ fn mm_object(
         fill: None,
         dash: DashStyle::Solid,
         cap: LineCap::Butt,
+        rotation_deg: 0.0,
+        opacity_pct: 100,
         kind,
         extra: Extra::new(),
     }

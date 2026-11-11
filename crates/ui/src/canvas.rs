@@ -157,6 +157,11 @@ pub fn screen_list(dl: &DisplayList, view: &ScreenView) -> DisplayList {
                     cap: *cap,
                 }
             }
+            Item::BeginAlpha { alpha, bounds } => Item::BeginAlpha {
+                alpha: *alpha,
+                bounds: (tx(bounds.0), ty(bounds.1), tx(bounds.2), ty(bounds.3)),
+            },
+            Item::EndAlpha => Item::EndAlpha,
         })
         .collect();
     DisplayList {

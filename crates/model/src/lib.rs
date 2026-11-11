@@ -276,11 +276,65 @@ pub struct Object {
     /// The stroke's end caps. Format 0.5; a file without it reads as butt.
     #[serde(default, skip_serializing_if = "LineCap::is_butt")]
     pub cap: LineCap,
+    /// Rotation in degrees, clockwise on the page, about the centre of the frame; the frame stays
+    /// the unrotated box (rung 6 bbq, Defaulted "6b, settled now for its builder"). Format 0.6; a
+    /// file without it reads as 0. Only lines and the shapes rotate: text boxes and pattern
+    /// regions ignore it, so use [`Object::rotation`] to read it.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub rotation_deg: f64,
+    /// How opaque the object is, 0 to 100 percent; the export is flattened onto what lies beneath
+    /// (napkin §5.2). Format 0.6; a file without it reads as 100.
+    #[serde(default = "full_opacity", skip_serializing_if = "is_full_opacity")]
+    pub opacity_pct: u8,
     /// What the object is.
     pub kind: ObjectKind,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+fn is_zero(v: &f64) -> bool {
+    *v == 0.0
+}
+
+fn full_opacity() -> u8 {
+    OPACITY_MAX
+}
+
+fn is_full_opacity(v: &u8) -> bool {
+    *v >= OPACITY_MAX
+}
+
+/// The least opaque an object can be (fully see-through, so it draws nothing).
+pub const OPACITY_MIN: u8 = 0;
+/// Fully opaque, what every object was before format 0.6.
+pub const OPACITY_MAX: u8 = 100;
+
+/// An angle in degrees brought into 0 up to (not including) 360; not-a-number and infinity give 0.
+pub fn normalize_deg(deg: f64) -> f64 {
+    if !deg.is_finite() {
+        return 0.0;
+    }
+    let d = deg.rem_euclid(360.0);
+    // `rem_euclid` can give 360.0 for a tiny negative number.
+    if d >= 360.0 { 0.0 } else { d }
+}
+
+impl Object {
+    /// The rotation that counts, in degrees from 0 up to (not including) 360: the stored one for a
+    /// line or a shape, always 0 for a text box or a pattern region, which do not rotate (rung 6b).
+    pub fn rotation(&self) -> f64 {
+        if self.kind.can_rotate() {
+            normalize_deg(self.rotation_deg)
+        } else {
+            0.0
+        }
+    }
+
+    /// The opacity that counts, 0 to 100 percent.
+    pub fn opacity(&self) -> u8 {
+        self.opacity_pct.min(OPACITY_MAX)
+    }
 }
 
 /// An axis-aligned box in mm, from the page's top-left corner, y down.
@@ -509,7 +563,8 @@ pub enum Style {
 /// rectangles, ellipses and polygons (stars included) from format 0.5.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum ObjectKind {
-    /// A straight line from the frame's top-left to its bottom-right corner.
+    /// A straight line along one diagonal of its frame (format 0.6; before, always the
+    /// top-left to bottom-right one).
     Line(Line),
     /// A paragraph text box (§7.1).
     Text(TextBox),
@@ -602,6 +657,12 @@ impl PolygonShape {
 }
 
 impl ObjectKind {
+    /// Whether the kind can rotate (format 0.6): lines and the shapes. A text box and a pattern
+    /// region cannot, in 6b (rung 6 bbq, "Things I chose" of the 6b builder).
+    pub fn can_rotate(&self) -> bool {
+        !matches!(self, ObjectKind::Text(_) | ObjectKind::Pattern(_))
+    }
+
     /// Whether this is one of the shapes (rectangle, ellipse, polygon): the kinds that have a fill
     /// and a stroke that can be switched off.
     pub fn is_shape(&self) -> bool {
@@ -612,9 +673,40 @@ impl ObjectKind {
     }
 }
 
-/// A straight line. Its geometry is the frame's diagonal, so constraints apply unchanged.
+/// Which diagonal of its frame a line runs along (format 0.6). A line is always its frame's
+/// diagonal, so constraints apply unchanged; this makes it point any way.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LineDir {
+    /// From the top-left corner to the bottom-right one (the default, and every 0.5 line).
+    #[default]
+    Down,
+    /// From the bottom-left corner to the top-right one.
+    Up,
+}
+
+impl LineDir {
+    /// Whether this is the default direction; used to leave the field out of a file when it is.
+    pub fn is_down(&self) -> bool {
+        matches!(self, LineDir::Down)
+    }
+
+    /// The other diagonal.
+    pub fn flipped(self) -> Self {
+        match self {
+            LineDir::Down => LineDir::Up,
+            LineDir::Up => LineDir::Down,
+        }
+    }
+}
+
+/// A straight line. Its geometry is the frame's diagonal (which one: `direction`), so constraints
+/// apply unchanged. Its start is its left end.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct Line {
+    /// Which diagonal. Format 0.6; a file without it reads as top-left to bottom-right. It does
+    /// not matter for a line whose frame has no width or no height.
+    #[serde(default, skip_serializing_if = "LineDir::is_down")]
+    pub direction: LineDir,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,

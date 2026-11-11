@@ -58,6 +58,8 @@ fn line(id: u128, frame: Frame, style: Style) -> Object {
         fill: None,
         dash: DashStyle::Solid,
         cap: LineCap::Butt,
+        rotation_deg: 0.0,
+        opacity_pct: 100,
         kind: ObjectKind::Line(Line::default()),
         extra: Extra::new(),
     }

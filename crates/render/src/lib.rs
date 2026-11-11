@@ -113,6 +113,26 @@ pub fn render(dl: &DisplayList, math: Math) -> Gray {
                 );
                 ctx.stroke_path(path);
             }
+            Item::BeginAlpha { alpha, bounds } => {
+                // The group is drawn alone, then laid over what is beneath with its opacity: the
+                // page is opaque, so the result is a gray, flattened (napkin §5.2).
+                let (x0, y0, x1, y1) = *bounds;
+                let clip = Rect::new(
+                    x0.floor() - 1.0,
+                    y0.floor() - 1.0,
+                    x1.ceil() + 1.0,
+                    y1.ceil() + 1.0,
+                )
+                .to_path(0.1);
+                ctx.push_layer(
+                    Some(&clip),
+                    None,
+                    Some(f32::from(*alpha) / 255.0),
+                    None,
+                    None,
+                );
+            }
+            Item::EndAlpha => ctx.pop_layer(),
         }
     }
     ctx.flush();

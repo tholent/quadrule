@@ -25,7 +25,7 @@
 //! corner (for a polygon, the corner nearest it), and runs clockwise.
 
 use crate::{Item, snap_center, stroke_opt};
-use kurbo::{Arc, BezPath, PathEl, Point, Shape};
+use kurbo::{Affine, Arc, BezPath, PathEl, Point, Shape};
 use quadrule_model::{DashStyle, Fill, LineCap, Object, ObjectKind, PolygonShape};
 use quadrule_profiles::Profile;
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
@@ -258,8 +258,20 @@ pub fn line_items(
 /// A shape's items: its fill, then its stroke on top. `frame` is (left, top, right, bottom) in
 /// device pixels, already resolved for the profile.
 pub fn shape_items(o: &Object, frame: (f64, f64, f64, f64), p: &Profile) -> Vec<Item> {
-    let (fx0, fy0) = (frame.0.min(frame.2), frame.1.min(frame.3));
-    let (fx1, fy1) = (frame.0.max(frame.2), frame.1.max(frame.3));
+    let (mut fx0, mut fy0) = (frame.0.min(frame.2), frame.1.min(frame.3));
+    let (mut fx1, mut fy1) = (frame.0.max(frame.2), frame.1.max(frame.3));
+    // Format 0.6: a rotation turns the shape about the frame's centre. A rectangle or an ellipse
+    // turned by a whole number of quarter turns is the same shape, so it is drawn as an unrotated
+    // one in the turned box (sides swapped for 90 and 270): straight edges stay pixel-exact.
+    let mut rot = o.rotation();
+    if !matches!(o.kind, ObjectKind::Polygon(_)) && crate::rotate::is_quarter_turn(rot) {
+        if rot == 90.0 || rot == 270.0 {
+            let (cx, cy) = ((fx0 + fx1) / 2.0, (fy0 + fy1) / 2.0);
+            let (hw, hh) = ((fx1 - fx0) / 2.0, (fy1 - fy0) / 2.0);
+            (fx0, fy0, fx1, fy1) = (cx - hh, cy - hw, cx + hh, cy + hw);
+        }
+        rot = 0.0;
+    }
     let stroke = stroke_opt(o.style, p);
     let fill = o.fill.map(|f: Fill| p.fill_gray(f));
     // The geometry: the frame, its edges moved onto the stroke's pixel grid.
@@ -280,7 +292,7 @@ pub fn shape_items(o: &Object, frame: (f64, f64, f64, f64), p: &Profile) -> Vec<
         }
         _ => 0.0,
     };
-    let hard = matches!(o.kind, ObjectKind::Rect(_)) && radius_px <= 0.0;
+    let hard = matches!(o.kind, ObjectKind::Rect(_)) && radius_px <= 0.0 && rot == 0.0;
 
     if hard {
         if let Some(g) = fill {
@@ -304,12 +316,16 @@ pub fn shape_items(o: &Object, frame: (f64, f64, f64, f64), p: &Profile) -> Vec<
     if gx1 <= gx0 || gy1 <= gy0 {
         return items;
     }
-    let path = match &o.kind {
+    let mut path = match &o.kind {
+        ObjectKind::Rect(_) if radius_px <= 0.0 => sharp_rect_path((gx0, gy0, gx1, gy1)),
         ObjectKind::Rect(_) => rounded_rect_path((gx0, gy0, gx1, gy1), radius_px),
         ObjectKind::Ellipse(_) => ellipse_path((gx0, gy0, gx1, gy1)),
         ObjectKind::Polygon(pg) => polygon_path((gx0, gy0, gx1, gy1), pg),
         _ => return items,
     };
+    if rot != 0.0 {
+        path.apply_affine(rotation_about(((gx0 + gx1) / 2.0, (gy0 + gy1) / 2.0), rot));
+    }
     if let Some(g) = fill {
         items.push(Item::Fill {
             path: path.clone(),
@@ -391,6 +407,31 @@ fn hard_rect_stroke(
             );
         }
     }
+}
+
+/// The affine map that turns the page clockwise by `deg` degrees about `c`; exact at quarter turns.
+pub fn rotation_about(c: (f64, f64), deg: f64) -> Affine {
+    let (cs, sn) = crate::rotate::cos_sin_deg(deg);
+    Affine::new([
+        cs,
+        sn,
+        -sn,
+        cs,
+        c.0 - cs * c.0 + sn * c.1,
+        c.1 - sn * c.0 - cs * c.1,
+    ])
+}
+
+/// A rectangle with square corners as a path (for a turned rectangle), clockwise from the
+/// top-left corner.
+pub fn sharp_rect_path((x0, y0, x1, y1): (f64, f64, f64, f64)) -> BezPath {
+    let mut path = BezPath::new();
+    path.move_to((x0, y0));
+    path.line_to((x1, y0));
+    path.line_to((x1, y1));
+    path.line_to((x0, y1));
+    path.close_path();
+    path
 }
 
 /// Kurbo's arc as path elements without its first MoveTo.
@@ -494,11 +535,16 @@ pub fn natural_ratio(pg: &PolygonShape) -> f64 {
     ((hx - lx) / (hy - ly).max(1e-9)).max(1e-9)
 }
 
-/// Whether an object has a straight edge that is not rotated or slanted (horizontal or vertical),
-/// the only kind Q2 draws pixel-exact and L02 judges: lines and patterns count (L02 treats a
-/// diagonal line on its own), a rectangle has them, an ellipse never does, and a polygon or star
-/// does when one of its edges runs along an axis.
-pub fn has_axis_aligned_edge(kind: &ObjectKind) -> bool {
+/// Whether an object has a straight edge that is not slanted (horizontal or vertical), the only
+/// kind Q2 draws pixel-exact and L02 judges: lines and patterns count (L02 treats a diagonal line
+/// on its own), a rectangle has them, an ellipse never does, and a polygon or star does when one
+/// of its edges runs along an axis. A rotation that is a multiple of 90 degrees keeps every edge
+/// where it was (horizontal edges turn vertical and back); any other angle slants them all, so
+/// none is judged (rung 6b).
+pub fn has_axis_aligned_edge(kind: &ObjectKind, rotation_deg: f64) -> bool {
+    if !crate::rotate::is_quarter_turn(rotation_deg) {
+        return false;
+    }
     match kind {
         ObjectKind::Ellipse(_) => false,
         ObjectKind::Polygon(pg) => {

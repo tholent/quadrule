@@ -29,6 +29,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.2.0", "0.3.0", v0_2_to_v0_3),
     ("0.3.0", "0.4.0", v0_3_to_v0_4),
     ("0.4.0", "0.5.0", v0_4_to_v0_5),
+    ("0.5.0", "0.6.0", v0_5_to_v0_6),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -56,6 +57,16 @@ fn v0_3_to_v0_4(_scene: &mut Value) -> Result<(), FormatError> {
 /// drew before, so there is nothing to rewrite. A 0.4 build cannot read a 0.5 file that uses the
 /// new kinds; it reports an error rather than guessing.
 fn v0_4_to_v0_5(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.6 adds three optional fields (rung 6 bbq, Defaulted "File format 0.5.0 (6a) … 6b adds rotation,
+/// line direction and opacity in format 0.6.0"): `rotation_deg` and `opacity_pct` on an object and
+/// `direction` on a line. A 0.5 object has none of them, which reads as no rotation, fully
+/// opaque and a line from the top-left to the bottom-right corner, exactly what it drew before,
+/// so there is nothing to rewrite. A 0.5 build cannot read a 0.6 file that uses them correctly (it
+/// would keep them as unknown fields and draw the object unrotated); it keeps them on a save.
+fn v0_5_to_v0_6(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

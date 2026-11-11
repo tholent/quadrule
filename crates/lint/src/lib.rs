@@ -252,6 +252,15 @@ pub fn lint_with(
         let f = resolve_frame(o.frame, o.constraints, from, to);
         let px = |mm: f64| target.mm_to_px(mm);
         let b = bounds(o, f, target, outlines);
+        let rotation = o.rotation();
+        let frame_px = (
+            px(f.x_mm).min(px(f.x_mm + f.w_mm)),
+            px(f.y_mm).min(px(f.y_mm + f.h_mm)),
+            px(f.x_mm).max(px(f.x_mm + f.w_mm)),
+            px(f.y_mm).max(px(f.y_mm + f.h_mm)),
+        );
+        let half_stroke = quadrule_layout::stroke(o.style, target).0 as f64 / 2.0;
+        let turned = rotation != 0.0 && o.kind.is_shape();
         let at = |id| Message::new(id).text("name", o.name.clone());
         let mut push = |rule, severity, message| push(rule, severity, Some(o.id), Some(b), message);
 
@@ -259,7 +268,7 @@ pub fn lint_with(
         // Q8). L02 asks only about straight, unrotated edges: a curve or a slanted edge is soft by
         // design (Q2), so a stroke width that is not whole pixels does not matter there.
         let stroked = !matches!(o.kind, ObjectKind::Text(_));
-        let hard_edges = quadrule_layout::shapes::has_axis_aligned_edge(&o.kind);
+        let hard_edges = quadrule_layout::shapes::has_axis_aligned_edge(&o.kind, o.rotation());
         if stroked && let Style::Custom { width_mm, .. } = o.style {
             let exact = px(width_mm);
             if exact < 1.0 {
@@ -282,8 +291,21 @@ pub fn lint_with(
                 );
             }
         }
-        if matches!(o.kind, ObjectKind::Line(_)) && f.w_mm != 0.0 && f.h_mm != 0.0 {
-            push("L02", Severity::Info, at("lint-l02-diagonal"));
+        // A line is diagonal when its two ends, turned as the line is, differ in both x and y.
+        if let ObjectKind::Line(line) = &o.kind {
+            let ((x0, y0), (x1, y1)) = quadrule_layout::rotate::rotated_line_ends(
+                (
+                    px(f.x_mm),
+                    px(f.y_mm),
+                    px(f.x_mm + f.w_mm),
+                    px(f.y_mm + f.h_mm),
+                ),
+                line.direction,
+                o.rotation(),
+            );
+            if (x1 - x0).abs() > 1e-6 && (y1 - y0).abs() > 1e-6 {
+                push("L02", Severity::Info, at("lint-l02-diagonal"));
+            }
         }
 
         // L10: off the page.
@@ -312,7 +334,19 @@ pub fn lint_with(
                 z.rect.2 as f64,
                 z.rect.3 as f64,
             );
-            if b.0 < zx + zw && b.2 > zx && b.1 < zy + zh && b.3 > zy {
+            // A turned shape meets a zone by its turned corners (rung 6b), not by the box round
+            // them; everything else by its box, as before.
+            let hit = if turned {
+                quadrule_layout::rotate::rotated_touches(
+                    frame_px,
+                    rotation,
+                    half_stroke,
+                    (zx, zy, zx + zw, zy + zh),
+                )
+            } else {
+                b.0 < zx + zw && b.2 > zx && b.1 < zy + zh && b.3 > zy
+            };
+            if hit {
                 if z.advisory {
                     movable.push(zone_name(&z.name))
                 } else {
@@ -399,14 +433,29 @@ fn bounds(
                 .unwrap_or(y1 - y0);
             (x0, y0, x1, y0 + h)
         }
-        _ => {
+        kind => {
             let half = quadrule_layout::stroke(o.style, target).0 as f64 / 2.0;
-            (
-                x0.min(x1) - half,
-                y0.min(y1) - half,
-                x0.max(x1) + half,
-                y0.max(y1) + half,
-            )
+            // The box round the turned corners (a line: round its two ends, which point either
+            // way); an unrotated box is just the frame.
+            let (bx0, by0, bx1, by1) = match kind {
+                ObjectKind::Line(line) => {
+                    let (a, b) = quadrule_layout::rotate::rotated_line_ends(
+                        (x0, y0, x1, y1),
+                        line.direction,
+                        o.rotation(),
+                    );
+                    quadrule_layout::rotate::bounds_of(&[a, b])
+                }
+                _ if o.rotation() != 0.0 => {
+                    let r = (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1));
+                    quadrule_layout::rotate::bounds_of(&quadrule_layout::rotate::rotated_corners(
+                        r,
+                        o.rotation(),
+                    ))
+                }
+                _ => (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1)),
+            };
+            (bx0 - half, by0 - half, bx1 + half, by1 + half)
         }
     }
 }

@@ -20,7 +20,10 @@
 //! layers panel's own controls (name, eye, lock) still work on it, so it can be unlocked. Undo
 //! and redo skip the lock check: they only return the document to a state it was already in.
 
-use crate::{Document, Frame, Layer, Metadata, Object, PageSettings, Rhythm, Unit, Uuid};
+use crate::{
+    Document, Frame, Layer, LineDir, Metadata, Object, ObjectKind, PageSettings, Rhythm, Unit,
+    Uuid, normalize_deg,
+};
 
 /// One change to a document.
 #[derive(Clone, Debug, PartialEq)]
@@ -529,6 +532,68 @@ pub fn set_frames(doc: &Document, frames: &[(Uuid, Frame)]) -> Command {
                     o.frame = frame;
                     Command::SetObject(o)
                 })
+            })
+            .collect(),
+    )
+}
+
+/// Where an object is: its frame, its rotation and, for a line, the diagonal it runs along (format
+/// 0.6). A drag changes all of them as one step.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Placement {
+    /// The unrotated box, primary mm.
+    pub frame: Frame,
+    /// Degrees clockwise, 0 up to (not including) 360.
+    pub rotation_deg: f64,
+    /// A line's diagonal; `None` for any other kind.
+    pub dir: Option<LineDir>,
+}
+
+impl Placement {
+    /// Where `o` is now.
+    pub fn of(o: &Object) -> Self {
+        Placement {
+            frame: o.frame,
+            rotation_deg: o.rotation(),
+            dir: match &o.kind {
+                ObjectKind::Line(l) => Some(l.direction),
+                _ => None,
+            },
+        }
+    }
+
+    /// A placement with only the frame given (the rotation and direction `o` has).
+    pub fn with_frame(o: &Object, frame: Frame) -> Self {
+        Placement {
+            frame,
+            ..Placement::of(o)
+        }
+    }
+
+    /// Puts `o` there. A kind that cannot rotate keeps rotation 0; a direction is for lines only.
+    pub fn apply(&self, o: &mut Object) {
+        o.frame = self.frame;
+        if o.kind.can_rotate() {
+            o.rotation_deg = normalize_deg(self.rotation_deg);
+        }
+        if let (ObjectKind::Line(l), Some(d)) = (&mut o.kind, self.dir) {
+            l.direction = d;
+        }
+    }
+}
+
+/// The command that gives objects new placements: a move, a resize or a rotation, made when the
+/// mouse is let go. Objects that are gone, or already there, are left out; the rest are one step.
+/// Refused, with nothing changed, if any object it touches is locked.
+pub fn set_placements(doc: &Document, places: &[(Uuid, Placement)]) -> Command {
+    Command::Batch(
+        places
+            .iter()
+            .filter_map(|&(id, place)| {
+                let o = doc.object(id)?;
+                let mut n = o.clone();
+                place.apply(&mut n);
+                (n != *o).then_some(Command::SetObject(n))
             })
             .collect(),
     )
