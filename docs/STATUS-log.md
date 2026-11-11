@@ -1045,3 +1045,21 @@ chris approved 6b at his look with one change, in his words: "approved, with one
 - Re-plan written on the board; the next lead's prompt is `docs/arcs/v1/rung-7-PROMPT-2026-11-11.md`.
 - Ledger at the close ≈ (351k + 407k builder tokens + this session's context, about 200k) ÷ 0.79M × 1.5 ≈ 1.8 points
   of 15. Meter start reading 50 % (chris's range, the top of it); no end reading taken.
+
+## 2026-11-11 — v0.6.0 and v0.6.1 published without packages: immutable releases (Opus 5.5, `CLAUDE_EFFORT=high`)
+
+- chris, word for word: "I have run both release commands and the pre-releases are now live on gh. you should also
+  have the permission to run the release yourself now". `gh release view v0.6.0` / `v0.6.1` → pre-release, not draft,
+  **0 assets**.
+- Release runs 43122417571 (v0.6.0) and 43122512967 (v0.6.1): the four package builds passed; "Attach to the release"
+  failed with `HTTP 422: Cannot upload assets to an immutable release`. `gh api repos/tholent/quadrule/immutable-releases`
+  → `{"enabled":true,"enforced_by_owner":false}`; both releases report `immutable=true`.
+- GitHub's docs (read 2026-11-11: docs.github.com …/immutable-releases and …/prevent-release-changes): "Only the
+  assets and tag are locked. You can still edit the title and release notes of a published immutable release";
+  "If you delete the immutable release, you can delete the tag, but you cannot reuse the same tag name"; the
+  recommended flow is "Create the release as a draft. Attach all associated assets to the draft release. Publish the
+  draft release." Workflows do not fire for draft releases' `created`, `edited` or `deleted`.
+- So `.github/workflows/release.yml` (built when the setting was off: it packages *after* `release: published`) cannot
+  work any more. The packages from both runs are kept as run artifacts until 2027-02-09 (`gh api
+  repos/tholent/quadrule/actions/runs/43122417571/artifacts`). Put to chris: what to do with the two releases, and
+  how to change the workflow.
