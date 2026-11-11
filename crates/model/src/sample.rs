@@ -541,3 +541,365 @@ pub fn shapes_document() -> Document {
     ];
     doc
 }
+
+/// Fixed ids for the transforms page's objects.
+pub mod transform_ids {
+    use crate::Uuid;
+    /// The `n`th object of the transforms page (1-based); the dot grid is [`super::ids::DOTS`].
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0008_4000_8000_0000_0000_0000 + n)
+    }
+    /// The large turned rectangle that the rotate benchmark drives.
+    pub const TURNED: Uuid = nth(1000);
+}
+
+/// The rung 6b transforms page (docs/bbq/2026-11-10-rung-6-shapes.md, 6b "Goldens"): shapes
+/// rotated by several angles (90, 180 and 270 included, which keep their straight edges), lines
+/// pointing every way (alone, turned, dashed), and opacity over fills and lines (a half-clear
+/// shape over a Block bar, a faint line across a Shade box, a clear pattern region, a shape at
+/// 0 percent that draws nothing). It holds the sample's dot grid ([`ids::DOTS`]) so the drag
+/// benchmark can run over it, and no text, so it needs no fonts. Designed on the Manta, also
+/// targeting the Nomad.
+pub fn transforms_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 6b transforms".into();
+    doc.metadata.description =
+        "The rung 6b transforms page: rotation, lines pointing every way, opacity.".into();
+    let rule = doc.layers[1].objects[1].clone();
+    let dots = doc.layers[0].objects[0].clone();
+    let structure = Style::Role(LineRole::Structure);
+    let (shade, block) = (
+        Some(Fill::Role(FillRole::Shade)),
+        Some(Fill::Role(FillRole::Block)),
+    );
+    let rect = |r: f64| {
+        ObjectKind::Rect(RectShape {
+            corner_radius_mm: r,
+            extra: Extra::new(),
+        })
+    };
+    let ellipse = || ObjectKind::Ellipse(EllipseShape::default());
+    let poly = |n: u8| ObjectKind::Polygon(PolygonShape::polygon(n));
+    let star = |n: u8| ObjectKind::Polygon(PolygonShape::star(n));
+    let line = |dir: LineDir| {
+        ObjectKind::Line(Line {
+            direction: dir,
+            ..Line::default()
+        })
+    };
+    let mut objs: Vec<Object> = Vec::new();
+    let mut n = 0u128;
+    // (name, frame, style, fill, dash, rotation, opacity, kind)
+    #[allow(clippy::too_many_arguments)]
+    let mut add = |name: &str,
+                   frame: Frame,
+                   style: Style,
+                   fill: Option<Fill>,
+                   dash: DashStyle,
+                   rotation: f64,
+                   opacity: u8,
+                   kind: ObjectKind| {
+        n += 1;
+        let mut o = rule.clone();
+        o.id = transform_ids::nth(n);
+        o.name = name.into();
+        o.frame = frame;
+        o.constraints = Constraints::default();
+        o.style = style;
+        o.fill = fill;
+        o.dash = dash;
+        o.rotation_deg = rotation;
+        o.opacity_pct = opacity;
+        o.kind = kind;
+        objs.push(o);
+    };
+    let solid = DashStyle::Solid;
+    let cell = |col: f64, row: f64, w: f64, h: f64| Frame::new(8.0 + col * 24.0, row, w, h);
+
+    // Row 1: a rectangle turned by 0, 15, 30, 45 and 90 degrees, and a rounded one at 20.
+    for (i, deg) in [0.0, 15.0, 30.0, 45.0, 90.0].iter().enumerate() {
+        add(
+            &format!("Rectangle, {deg} degrees"),
+            cell(i as f64, 32.0, 20.0, 12.0),
+            structure,
+            if i == 0 { None } else { shade },
+            solid,
+            *deg,
+            100,
+            rect(0.0),
+        );
+    }
+    add(
+        "Rounded rectangle, 20 degrees",
+        cell(5.0, 32.0, 20.0, 12.0),
+        structure,
+        shade,
+        solid,
+        20.0,
+        100,
+        rect(3.0),
+    );
+    // Row 2: other shapes turned, the quarter turns among them.
+    add(
+        "Ellipse, 30 degrees",
+        cell(0.0, 56.0, 22.0, 12.0),
+        structure,
+        shade,
+        solid,
+        30.0,
+        100,
+        ellipse(),
+    );
+    add(
+        "Ellipse, 90 degrees",
+        cell(1.0, 56.0, 22.0, 12.0),
+        structure,
+        shade,
+        solid,
+        90.0,
+        100,
+        ellipse(),
+    );
+    add(
+        "Hexagon, 90 degrees",
+        cell(2.0, 54.0, 18.0, 18.0),
+        structure,
+        shade,
+        solid,
+        90.0,
+        100,
+        poly(6),
+    );
+    add(
+        "Triangle, 180 degrees",
+        cell(3.0, 54.0, 18.0, 16.0),
+        structure,
+        shade,
+        solid,
+        180.0,
+        100,
+        poly(3),
+    );
+    add(
+        "Triangle, 270 degrees",
+        cell(4.0, 54.0, 18.0, 16.0),
+        structure,
+        None,
+        solid,
+        270.0,
+        100,
+        poly(3),
+    );
+    add(
+        "Star, 36 degrees",
+        cell(5.0, 52.0, 20.0, 20.0),
+        Style::Role(LineRole::Emphasis),
+        block,
+        solid,
+        36.0,
+        100,
+        star(5),
+    );
+    // Row 3: lines pointing every way, then turned and dashed.
+    let guide = Style::Role(LineRole::Guide);
+    let emphasis = Style::Role(LineRole::Emphasis);
+    let lines = [
+        (
+            "Line, down right",
+            Frame::new(8.0, 84.0, 24.0, 16.0),
+            LineDir::Down,
+            0.0,
+            solid,
+            structure,
+        ),
+        (
+            "Line, up right",
+            Frame::new(38.0, 84.0, 24.0, 16.0),
+            LineDir::Up,
+            0.0,
+            solid,
+            structure,
+        ),
+        (
+            "Line, steep up right",
+            Frame::new(68.0, 84.0, 10.0, 24.0),
+            LineDir::Up,
+            0.0,
+            solid,
+            emphasis,
+        ),
+        (
+            "Line, up right, dashed",
+            Frame::new(84.0, 84.0, 24.0, 16.0),
+            LineDir::Up,
+            0.0,
+            DashStyle::Dash,
+            structure,
+        ),
+        (
+            "Line, 90 degrees",
+            Frame::new(122.0, 94.0, 20.0, 0.0),
+            LineDir::Down,
+            90.0,
+            solid,
+            structure,
+        ),
+        (
+            "Line, 30 degrees",
+            Frame::new(10.0, 116.0, 30.0, 0.0),
+            LineDir::Down,
+            30.0,
+            solid,
+            guide,
+        ),
+        (
+            "Line, up right, 20 degrees",
+            Frame::new(50.0, 110.0, 20.0, 14.0),
+            LineDir::Up,
+            20.0,
+            solid,
+            structure,
+        ),
+        (
+            "Line, 45 degrees, dotted",
+            Frame::new(90.0, 116.0, 30.0, 0.0),
+            LineDir::Down,
+            45.0,
+            DashStyle::Dotted,
+            emphasis,
+        ),
+    ];
+    for (name, f, dir, deg, dash, style) in lines {
+        add(name, f, style, None, dash, deg, 100, line(dir));
+    }
+    // Row 4: opacity. A Block bar with a half-clear shape across it, a Shade box with a faint
+    // line over it, a clear pattern region over a bar, and a shape at 0 percent.
+    add(
+        "Block bar",
+        Frame::new(8.0, 138.0, 70.0, 10.0),
+        Style::None,
+        block,
+        solid,
+        0.0,
+        100,
+        rect(0.0),
+    );
+    add(
+        "Shade over the bar, 50 percent",
+        Frame::new(20.0, 133.0, 30.0, 20.0),
+        structure,
+        shade,
+        solid,
+        0.0,
+        50,
+        rect(0.0),
+    );
+    add(
+        "Circle over the bar, 25 percent",
+        Frame::new(56.0, 132.0, 22.0, 22.0),
+        emphasis,
+        shade,
+        solid,
+        0.0,
+        25,
+        ellipse(),
+    );
+    add(
+        "Shade box",
+        Frame::new(90.0, 136.0, 40.0, 16.0),
+        structure,
+        shade,
+        solid,
+        0.0,
+        100,
+        rect(0.0),
+    );
+    add(
+        "Line across the box, 40 percent",
+        Frame::new(84.0, 132.0, 52.0, 24.0),
+        emphasis,
+        None,
+        solid,
+        0.0,
+        40,
+        line(LineDir::Up),
+    );
+    add(
+        "Turned rectangle, 60 percent",
+        Frame::new(8.0, 162.0, 40.0, 14.0),
+        structure,
+        block,
+        solid,
+        20.0,
+        60,
+        rect(0.0),
+    );
+    add(
+        "Turned star, 50 percent",
+        Frame::new(56.0, 160.0, 26.0, 26.0),
+        structure,
+        shade,
+        solid,
+        15.0,
+        50,
+        star(6),
+    );
+    add(
+        "Pattern, 30 percent",
+        Frame::new(90.0, 162.0, 40.0, 16.0),
+        Style::Role(LineRole::Emphasis),
+        None,
+        solid,
+        0.0,
+        30,
+        ObjectKind::Pattern(PatternRegion {
+            pattern: Pattern::Lines,
+            extra: Extra::new(),
+        }),
+    );
+    add(
+        "Circle, 0 percent",
+        Frame::new(8.0, 188.0, 20.0, 20.0),
+        structure,
+        block,
+        solid,
+        0.0,
+        0,
+        ellipse(),
+    );
+    // The big turned rectangle the rotate benchmark drives, across the empty lower right.
+    add(
+        "Turned rectangle",
+        Frame::new(90.0, 184.0, 56.0, 28.0),
+        structure,
+        shade,
+        solid,
+        10.0,
+        100,
+        rect(0.0),
+    );
+    if let Some(o) = objs.last_mut() {
+        o.id = transform_ids::TURNED;
+    }
+
+    let mut dot_strip = dots.clone();
+    dot_strip.frame = Frame::new(8.0, 8.0, 146.0, 18.0);
+    dot_strip.constraints = Constraints::default();
+    doc.layers = vec![
+        Layer {
+            name: "Grid".into(),
+            visible: true,
+            locked: false,
+            objects: vec![dot_strip],
+            extra: Extra::new(),
+        },
+        Layer {
+            name: "Transforms".into(),
+            visible: true,
+            locked: false,
+            objects: objs,
+            extra: Extra::new(),
+        },
+    ];
+    doc
+}
