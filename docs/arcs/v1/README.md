@@ -19,8 +19,8 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 
 | Rung | What it holds | Size | State |
 |---|---|---|---|
-| 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity. Split (bbq Q1, `docs/bbq/2026-11-10-rung-6-shapes.md`): **6a** all the shapes, fill (Shade and Block roles), dashes and caps; **6b** rotation, lines any way, opacity | large: 6a + 6b | 6a done, approved by chris 2026-11-11, `v0.6.0`; 6b built 2026-11-11 (`32f4abb`), waits for chris's look |
-| 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3) | medium | — |
+| 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity. Split (bbq Q1, `docs/bbq/2026-11-10-rung-6-shapes.md`): **6a** all the shapes, fill (Shade and Block roles), dashes and caps; **6b** rotation, lines any way, opacity | large: 6a + 6b | done: 6a `v0.6.0`, 6b `v0.6.1`, both approved by chris 2026-11-11 |
+| 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3); how a group turns (6b debt) | medium | next: `docs/arcs/v1/rung-7-PROMPT-2026-11-11.md` |
 | 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (needs chris's landscape check, below) | large | — |
 | 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | — |
 | 10 | Repeat tool: linear and grid, pitch or gap, fill to bounds, alternation, Expand (§6.4) | large | — |
@@ -88,3 +88,10 @@ above (which chris approves before it counts).
 - 2026-11-10: releases ruled for v0.5.0 and every approved rung after it. v0.5.0's release was first blocked (HTTP 403);
   on a retry the token worked (what changed is not recorded) and it was published: https://github.com/tholent/quadrule/releases/tag/v0.5.0. Each
   rung's notes go in `docs/arcs/v1/release-notes/`.
+- 2026-11-11, after rung 6: rung 6 took one lead session and two builder subagents (about 0.76M builder tokens,
+  under 2 points of a 15-point share), not the "about 3 sessions" its record guessed, because the bbq record was
+  detailed enough to brief from directly. Lessons: (1) the graphics-chip canvas reaches 45.9–48.4 ms on the shapes
+  page against the 50 ms line, so rungs 9, 10 and 16 (heavier pages) must be measured on their heaviest page and say
+  before they cross it; (2) GitHub releases need chris's hand while this session's permission check refuses `gh
+  release create`; (3) rotation in groups is open and lands in rung 7's bbq. No change to the rungs is proposed; the
+  rung 7 row now names the group-turn question. Next lead's prompt: `docs/arcs/v1/rung-7-PROMPT-2026-11-11.md`.

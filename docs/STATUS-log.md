@@ -1026,3 +1026,22 @@ chris approved 6b at his look with one change, in his words: "approved, with one
 - **Multi-selection** is unchanged (an upright union box, upright squares).
 - **Tests** (`crates/ui/tests/rotate.rs`): `handles_turn_during_rotate_drag` (at six angles while the pointer is down, with the open document still unturned: the eight handles are on the preview's turned corners and edge middles, the rotate handle's base is on the top edge's middle and its tip 60 px straight out, every square is turned by the angle; and again after release), `handles_follow_turned_move_and_resize` (a turned shape moved and resized), `turned_line_outline`.
 - **Chosen:** the line outline's padding is 2 screen points, as the upright outline's; handle squares keep the 8-point size and white fill; nothing was done for Alt-duplicate drags: by reading the code (not tested), their handles are hidden while the copies are made, because the copies are in the preview and not in the open document the selection is checked against; an old behaviour, noted not changed.
+
+## 2026-11-11 — rung 6b approved; v0.6.1; rung 6 done (Opus 5.5, `CLAUDE_EFFORT=high`)
+
+- chris, word for word: "approved, with one change. When an object rotates the bounding box and handle should rotate
+  with the object". Cause found by the lead: the handles and the rotate handle read the committed document, the
+  outline read the drag's preview, so the handles stayed at the old angle until release. Built by the 6b builder
+  (`e8a49d3`, its entry above); CI 43120346354 success. Taken as approved once built, as at rung 4a (said to chris;
+  he raised no objection and asked how to publish the releases).
+- Workspace version 0.6.0 → 0.6.1 (`Cargo.toml`, `Cargo.lock`). `make check-all` after the bump → `TESTS
+  scope=workspace checks=255 check_fail=0 passed=239 failed=0 status=ok` (the builder's run counted 256 checks: the
+  summary counts only `CHECK` lines that start a row, and parallel output splits one now and then; 0 failures either
+  way). Re-timed on the Pi, release build: rotate bench export 26.3 ms ×3, chip 35.0–35.2 ms; transforms-page drag
+  export 26.9, chip 35.1 ms (90th percentile, 50 ms line); all `result=pass`.
+- Tag `v0.6.1` on the approval commit. Release notes `docs/arcs/v1/release-notes/v0.6.1.md`. The GitHub
+  pre-releases for `v0.6.0` and `v0.6.1` wait for chris (`gh release create` is refused by this session's permission
+  check); he has the commands.
+- Re-plan written on the board; the next lead's prompt is `docs/arcs/v1/rung-7-PROMPT-2026-11-11.md`.
+- Ledger at the close ≈ (351k + 407k builder tokens + this session's context, about 200k) ÷ 0.79M × 1.5 ≈ 1.8 points
+  of 15. Meter start reading 50 % (chris's range, the top of it); no end reading taken.
