@@ -495,3 +495,166 @@ impl EmptyOf for BTreeSet<&'static str> {
         !rules.iter().any(|r| self.contains(r))
     }
 }
+
+fn shape(id: u128, frame: Frame, style: Style, kind: ObjectKind, rotation: f64) -> Object {
+    let mut o = line(id, frame, style);
+    o.constraints = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+    o.kind = kind;
+    o.rotation_deg = rotation;
+    o
+}
+
+fn one_object_page(o: Object) -> Document {
+    let mut doc = slice_document();
+    doc.layers = vec![Layer {
+        name: "L".into(),
+        visible: true,
+        locked: false,
+        objects: vec![o],
+        extra: Extra::new(),
+    }];
+    doc
+}
+
+#[test]
+fn l02_reads_straight_edges_only_and_a_quarter_turn_keeps_them() {
+    // Rung 6b: a stroke of 0.45 mm (5.3 px) is not whole pixels. On a rectangle with straight
+    // edges L02 says so; turned by 30 degrees every edge is slanted and soft by design, so it does
+    // not; turned by 90, 180 or 270 the edges are straight still, so it does again.
+    let manta = builtin(MANTA_ID).unwrap();
+    let style = Style::Custom {
+        width_mm: 0.45,
+        gray: 0,
+    };
+    let rect = || ObjectKind::Rect(RectShape::default());
+    let mut parts = Vec::new();
+    let mut ok = true;
+    for (deg, want) in [
+        (0.0, true),
+        (30.0, false),
+        (90.0, true),
+        (180.0, true),
+        (270.0, true),
+        (45.0, false),
+    ] {
+        let doc = one_object_page(shape(
+            20,
+            Frame::new(40.0, 60.0, 50.0, 30.0),
+            style,
+            rect(),
+            deg,
+        ));
+        let got = rules(&run(&doc, &manta), Some(Uuid::from_u128(20))).contains("L02");
+        ok &= got == want;
+        parts.push(format!("rect_{deg}={got}"));
+    }
+    // An ellipse is never judged, turned or not; a hexagon (vertical edges) is judged at 0 and 90
+    // (its edges turn horizontal) and not at 30, where its edges are slanted.
+    let ellipse = ObjectKind::Ellipse(EllipseShape::default());
+    let hex = ObjectKind::Polygon(PolygonShape::polygon(6));
+    for (name, kind, deg, want) in [
+        ("ellipse_0", ellipse.clone(), 0.0, false),
+        ("ellipse_90", ellipse, 90.0, false),
+        ("hexagon_0", hex.clone(), 0.0, true),
+        ("hexagon_90", hex.clone(), 90.0, true),
+        ("hexagon_30", hex, 30.0, false),
+    ] {
+        let doc = one_object_page(shape(
+            21,
+            Frame::new(40.0, 60.0, 40.0, 40.0),
+            style,
+            kind,
+            deg,
+        ));
+        let got = rules(&run(&doc, &manta), Some(Uuid::from_u128(21))).contains("L02");
+        ok &= got == want;
+        parts.push(format!("{name}={got}"));
+    }
+    println!(
+        "\nCHECK crate=lint name=rotated_l02 result={} {}",
+        pass(ok),
+        parts.join(" ")
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_diagonal_line_is_judged_by_its_real_ends() {
+    // L02's "diagonal" finding: a line in a box with width and height is diagonal; turned by 90
+    // a horizontal line is vertical (no finding), and a line pointing up is as diagonal as one
+    // pointing down.
+    let manta = builtin(MANTA_ID).unwrap();
+    let mk = |frame: Frame, dir: LineDir, deg: f64| {
+        let mut o = line(30, frame, Style::Role(LineRole::Structure));
+        o.rotation_deg = deg;
+        o.kind = ObjectKind::Line(Line {
+            direction: dir,
+            ..Line::default()
+        });
+        o
+    };
+    let diag = |o: Object| {
+        let doc = one_object_page(o);
+        run(&doc, &manta)
+            .iter()
+            .any(|f| f.rule == "L02" && f.object == Some(Uuid::from_u128(30)))
+    };
+    let down = diag(mk(Frame::new(40.0, 60.0, 30.0, 20.0), LineDir::Down, 0.0));
+    let up = diag(mk(Frame::new(40.0, 60.0, 30.0, 20.0), LineDir::Up, 0.0));
+    let flat = diag(mk(Frame::new(40.0, 60.0, 30.0, 0.0), LineDir::Down, 0.0));
+    let flat_turned_90 = diag(mk(Frame::new(40.0, 60.0, 30.0, 0.0), LineDir::Down, 90.0));
+    let flat_turned_30 = diag(mk(Frame::new(40.0, 60.0, 30.0, 0.0), LineDir::Down, 30.0));
+    let ok = down && up && !flat && !flat_turned_90 && flat_turned_30;
+    println!(
+        "\nCHECK crate=lint name=rotated_line_diagonal result={} down={down} up={up} flat={flat} flat_turned_90={flat_turned_90} flat_turned_30={flat_turned_30}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn l06_and_l10_use_the_turned_corners() {
+    // A square turned 45 degrees (a diamond, half-diagonal 100 px) centred 60 px up and right of
+    // the Manta footer's top-right corner (497, 2444): the box round its corners overlaps the
+    // footer, the diamond does not. Unturned (a square 141 px across) it does.
+    let manta = builtin(MANTA_ID).unwrap();
+    let k = manta.mm_to_px(1.0);
+    let side = 100.0 * std::f64::consts::SQRT_2;
+    let (cx, cy) = (497.0 + 60.0, 2444.0 - 60.0);
+    let frame = Frame::new(
+        (cx - side / 2.0) / k,
+        (cy - side / 2.0) / k,
+        side / k,
+        side / k,
+    );
+    let style = Style::Role(LineRole::Whisper);
+    let rect = ObjectKind::Rect(RectShape::default());
+    let l06 = |deg: f64| {
+        let doc = one_object_page(shape(40, frame, style, rect.clone(), deg));
+        run(&doc, &manta)
+            .iter()
+            .any(|f| f.rule == "L06" && f.object == Some(Uuid::from_u128(40)))
+    };
+    let (flat, diamond) = (l06(0.0), l06(45.0));
+    // L10: a bar 20 px wide and 300 tall near the right edge, turned 90, lies across it and
+    // reaches past the page.
+    let bar = Frame::new(1840.0 / k, 850.0 / k, 20.0 / k, 300.0 / k);
+    let l10 = |deg: f64| {
+        let doc = one_object_page(shape(41, bar, style, rect.clone(), deg));
+        run(&doc, &manta)
+            .iter()
+            .any(|f| f.rule == "L10" && f.object == Some(Uuid::from_u128(41)))
+    };
+    let (bar_flat, bar_turned) = (l10(0.0), l10(90.0));
+    let ok = flat && !diamond && !bar_flat && bar_turned;
+    println!(
+        "\nCHECK crate=lint name=rotated_l06_l10 result={} unturned_in_footer_zone={flat} diamond_clear_of_zone={} bar_on_page={} bar_turned_runs_off={bar_turned}",
+        pass(ok),
+        !diamond,
+        !bar_flat
+    );
+    assert!(ok);
+}

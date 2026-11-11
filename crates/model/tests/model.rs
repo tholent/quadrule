@@ -222,3 +222,133 @@ fn polygon_numbers_stay_in_range() {
     );
     assert!(ok);
 }
+
+#[test]
+fn rotation_opacity_and_line_direction_are_left_out_of_the_file_at_their_defaults() {
+    // Format 0.6 (rung 6b): a plain object writes none of the three new keys, so a file that
+    // does not use them is what a 0.5 build wrote; set, they round-trip.
+    let keys = |v: &Value| -> Vec<String> {
+        let mut out = Vec::new();
+        fn walk(v: &Value, out: &mut Vec<String>) {
+            match v {
+                Value::Map(m) => {
+                    for (k, x) in m {
+                        if let Some(k) = k.as_text() {
+                            out.push(k.to_string());
+                        }
+                        walk(x, out);
+                    }
+                }
+                Value::Array(a) => a.iter().for_each(|x| walk(x, out)),
+                _ => {}
+            }
+        }
+        walk(v, &mut out);
+        out
+    };
+    let doc = shapes_document();
+    let plain_keys = keys(&to_value(&doc));
+    let plain = !plain_keys
+        .iter()
+        .any(|k| ["rotation_deg", "opacity_pct", "direction"].contains(&k.as_str()));
+    let mut turned = doc.clone();
+    turned.layers[1].objects[0].rotation_deg = 30.0;
+    turned.layers[1].objects[0].opacity_pct = 40;
+    let line = turned.layers[1]
+        .objects
+        .iter()
+        .position(|o| matches!(o.kind, ObjectKind::Line(_)))
+        .unwrap();
+    turned.layers[1].objects[line].kind = ObjectKind::Line(Line {
+        direction: LineDir::Up,
+        ..Line::default()
+    });
+    let back: Document = to_value(&turned).deserialized().unwrap();
+    let round = back == turned;
+    let set_keys = keys(&to_value(&turned));
+    let written = ["rotation_deg", "opacity_pct", "direction"]
+        .iter()
+        .all(|k| set_keys.iter().any(|x| x == k));
+    // A file with none of them reads as 0, 100 and top-left to bottom-right.
+    let o = &doc.layers[1].objects[0];
+    let defaults = o.rotation_deg == 0.0 && o.opacity_pct == 100;
+    let ok = plain && round && written && defaults;
+    println!(
+        "\nCHECK crate=model name=format_060_fields result={} defaults_left_out={plain} set_values_round_trip={round} set_values_written={written} read_as_defaults={defaults}",
+        if ok { "pass" } else { "fail" }
+    );
+    assert!(ok);
+}
+
+#[test]
+fn only_lines_and_shapes_rotate_and_angles_are_normalised() {
+    let doc = shapes_document();
+    let mut rect = doc.layers[1].objects[0].clone();
+    rect.rotation_deg = -90.0;
+    let mut text = slice_document().layers[1].objects[0].clone();
+    text.rotation_deg = 45.0;
+    let mut pattern = slice_document().layers[0].objects[0].clone();
+    pattern.rotation_deg = 45.0;
+    let norm = normalize_deg(-90.0) == 270.0
+        && normalize_deg(360.0) == 0.0
+        && normalize_deg(725.0) == 5.0
+        && normalize_deg(f64::NAN) == 0.0
+        && normalize_deg(-1e-20) == 0.0;
+    let kinds = rect.rotation() == 270.0
+        && text.rotation() == 0.0
+        && pattern.rotation() == 0.0
+        && rect.kind.can_rotate()
+        && !text.kind.can_rotate();
+    let mut see = rect.clone();
+    see.opacity_pct = 250;
+    let clamped = see.opacity() == 100;
+    let ok = norm && kinds && clamped;
+    println!(
+        "\nCHECK crate=model name=rotation_rules result={} normalised={norm} only_lines_and_shapes_turn={kinds} opacity_clamped={clamped}",
+        if ok { "pass" } else { "fail" }
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_placement_change_is_one_undoable_step() {
+    use quadrule_model::edit::{Placement, set_placements};
+    let mut doc = shapes_document();
+    let before = doc.clone();
+    let o = doc.layers[1].objects[0].clone();
+    let line_id = doc
+        .objects()
+        .find(|o| matches!(o.kind, ObjectKind::Line(_)))
+        .unwrap()
+        .id;
+    let places = vec![
+        (
+            o.id,
+            Placement {
+                rotation_deg: 33.0,
+                ..Placement::of(&o)
+            },
+        ),
+        (
+            line_id,
+            Placement {
+                dir: Some(LineDir::Up),
+                ..Placement::of(doc.object(line_id).unwrap())
+            },
+        ),
+    ];
+    let cmd = set_placements(&doc, &places);
+    let undo = doc.apply(cmd).unwrap();
+    let rotated = doc.object(o.id).unwrap().rotation_deg == 33.0;
+    let up = matches!(&doc.object(line_id).unwrap().kind, ObjectKind::Line(l) if l.direction == LineDir::Up);
+    doc.apply(undo).unwrap();
+    let undone = doc == before;
+    // Nothing changed: an empty step.
+    let same = quadrule_model::edit::is_empty(&set_placements(&doc, &[(o.id, Placement::of(&o))]));
+    let ok = rotated && up && undone && same;
+    println!(
+        "\nCHECK crate=model name=placement_command result={} rotated={rotated} line_up={up} undone={undone} no_change_is_empty={same}",
+        if ok { "pass" } else { "fail" }
+    );
+    assert!(ok);
+}
