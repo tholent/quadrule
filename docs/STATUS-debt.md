@@ -89,3 +89,13 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   selected object's values and applies to all (no "mixed" state), as before. The Style tab shows Dash and Cap for lines
   too (a line is a stroke); a pattern region and a text box have neither. The shapes page is built in code
   (`quadrule_model::sample::shapes_document`) and opened with `--shapes-page`, not as a file.
+- Rung 6b, owed (`crates/layout/src/rotate.rs`, `crates/layout/src/shapes.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/view.rs`): text
+  boxes and pattern regions do not rotate, and a stored angle on them is ignored; only one object turns at a time (a group has no
+  rotate handle and no group turn); resizing a group with turned objects stretches them approximately; a dash pattern on a rectangle
+  or ellipse turned by a quarter turn starts at the unturned top-left corner; a turned shape's fill covers the rhythm-snapped box
+  turned about its centre, which may sit a pixel off the frame's own centre used for picking; a turned shape is picked by its box
+  (as unturned ones are), not by its outline; the rotate handle's name for screen readers (`app-rotate-handle`) is in the strings
+  but the canvas is not exposed to a screen reader, so only the inspector's Rotation and Opacity fields are named; an opacity group
+  on the chip canvas is one vello layer per object (not measured with many such objects); Shift while drawing a line holds an axis,
+  not 15° steps; `--bench-rotate` is timed on one turned rectangle only; the transforms page's chip timing was taken only in the
+  window on the Pi, and chip against export pixels for opacity was compared by eye, not by a pixel test.

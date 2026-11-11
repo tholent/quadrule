@@ -866,3 +866,127 @@ and the Style tab). Owed items are in `docs/STATUS-debt.md` (rung 6a line).
 - Workspace version 0.1.0 → 0.6.0 (`Cargo.toml`, `Cargo.lock`); `make check-all` after the bump → `TESTS
   scope=workspace checks=221 check_fail=0 passed=209 failed=0 status=ok`. Release notes:
   `docs/arcs/v1/release-notes/v0.6.0.md`. Tag `v0.6.0` on the approval commit; pre-release below.
+
+## 2026-11-11 — rung 6b built: rotation, lines any way, opacity (Sonnet 5.5, `CLAUDE_EFFORT=high`)
+
+Kickoff from `docs/bbq/2026-11-10-rung-6-shapes.md` (6b only: rotation by handle and field, lines that point any way,
+opacity). Preconditions, all met: model Sonnet 5.5 and `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` at the start →
+`BUILD head=0115e08 dirty=no rebuilt=0`; the tree was clean at `0115e08` (workspace 0.6.0). I did not bump the version, tag
+or release, and did not touch `STATUS.md` or the board.
+
+- **Step 1, format 0.6.0** (`fe6de66` fixtures, `42a1111` the rest): before any model change, two 0.5 files were written with
+  the 6a code and the sha256 of each device's export saved (`crates/render/tests/fixtures/v0.5/`: `shapes.quad`, the shapes
+  page; `lines.quad`, a page of lines in every old direction (horizontal, vertical, shallow, steep and 45° down-right),
+  dashed, dotted, round and square capped, with a zero-size one; `SHA256SUMS`). Then `FORMAT_VERSION` 0.6.0, a `0.5.0 → 0.6.0`
+  step in `migrate::CHAIN` (nothing to rewrite: every new field is optional), `Object.rotation_deg` (0, left out of the file at 0),
+  `Object.opacity_pct` (100, left out at 100), `Line.direction: LineDir {Down, Up}` (Down, left out), `Object::rotation()`,
+  `ObjectKind::can_rotate()`, `normalize_deg`, `edit::Placement` and `edit::set_placements` (`crates/model/src/lib.rs`,
+  `edit.rs`). No new record, so no new `extra` bucket; `Line` already had one. Test: `crates/render/tests/migrate_v05.rs`
+  (both files open as 0.5 → migrate → export the same four hashes; saved again they are 0.6.0, write none of the three new
+  keys and export the same); `migrate_v04` still passes with its four 0.4 hashes (only its `FORMAT_VERSION == "0.5.0"` guard
+  became `"0.6.0"`).
+- **Step 2, layout and rendering** (`42a1111`): `crates/layout/src/rotate.rs` (new: exact quarter turns, clockwise angle about the
+  frame's centre, rotated corners, line ends for a direction, separating-axis test of a turned box against a rectangle),
+  `shapes::shape_items` (a turned shape is its path turned about the snapped box's centre, then stroked, so the stroke stays one
+  width; a rectangle or ellipse turned by 90, 180 or 270 is drawn as the unturned shape in the swapped box, so its straight edges
+  stay hard whole-pixel rectangles), `display_list` (a line's ends come from its direction and angle). Opacity is two new
+  `Item` variants, `BeginAlpha { alpha, bounds }` and `EndAlpha`: an object's items are drawn as one group and laid over
+  what is beneath (vello_cpu `push_layer` with an opacity in `crates/render/src/lib.rs`; vello `push_layer` in
+  `crates/app/src/chip.rs`; `screen_list` scales the bounds in `crates/ui/src/canvas.rs`), so a stroke over its own fill is not
+  mixed twice and the PNG holds the flattened gray, no alpha. At 100 % no group is made; at 0 % the items are dropped.
+  Pattern regions and text boxes take opacity but not rotation.
+- **Step 3, rotate handle, fields, lines, lint** (`66d4b7f`): the round handle on a stalk above the top edge's middle of the
+  one selected line or shape (`Viewer::rotate_handle`, `HandleHit::Rotate`; stalk 24 screen points, kept at one length on screen
+  by `Viewer::rotate_stalk_px`); it catches at 0/90/180/270 within 4° (Ctrl turns that off, as for snapping), Shift holds 15° steps
+  (`drag::turned_angle`), one undo step, the frame unchanged. The Arrange tab has a Rotation field in degrees (for lines and
+  shapes only), the Style tab an Opacity field in percent (every kind); both are named for screen readers through Fluent
+  (`app-rotation`, `app-opacity`). Selection outline, the eight handles, picking (`Shape::Rotated`), marquee, point snap, smart
+  guides and equal spacing use the turned corners; lines pick, snap and show handles on their real ends (`Other.ends`).
+  A line is drawn where the pointer goes in all four directions (Shift still holds an axis); its two end handles can be pulled
+  past each other any way, and the frame and direction follow. Lint: L01/L02/L06/L10 (`crates/lint/src/lib.rs`).
+- **Step 4, goldens** (`44f7077`): `transforms_document()` (`crates/model/src/sample.rs`) → `transforms_<id>_WxH.png` per device,
+  *appended* to `crates/render/tests/golden/SHA256SUMS` (`crates/render/tests/transforms.rs`): rectangles at 0/15/30/45/90 and a
+  rounded one at 20, an ellipse at 30 and 90, a hexagon at 90, triangles at 180 and 270, a star at 36, lines pointing every way
+  (down, up, steep up, dashed up, turned 90, 30, up turned 20, dotted at 45), a Shade box at 50 % and a circle at 25 % over a
+  Block bar, a 40 % line over a Shade box, a turned Block rectangle at 60 %, a turned star at 50 %, a pattern at 30 %, a 0 % circle
+  (draws nothing), and a big turned rectangle. Looked at by eye (the Manta page): turns, hard quarter turns, fills and grays read
+  as meant.
+- **Step 5, benches** (`1da293a`): `--transforms-page` opens that page (the benchmarks then run over it), `--bench-rotate [frames]`
+  presses the rotate handle of the big turned rectangle and swings the pointer round it (`name=rotate_bench`); the CHECK line's
+  `page=` gains `transforms`. `make bench-drag TRANSFORMS=1`, `make bench-draw TRANSFORMS=1 TOOL=line`, `make bench-rotate`.
+- **Step 6** (`32f4abb`): README "what works today", DEVELOPMENT.md (crate map, commands), Makefile; the two up-right line debts
+  removed from `docs/STATUS-debt.md` (below).
+- **Frozen bytes:** `head -2 crates/render/tests/golden/SHA256SUMS` and the 6a pair are unchanged (`git diff 0115e08 HEAD --
+  crates/render/tests/golden/SHA256SUMS` adds only the two `transforms_` lines); the stock-grid test,
+  `export_bytes_unchanged_after_edit_undo`, the four 0.4 hashes and the four 0.5 hashes pass. No expected hash was changed.
+  Test edits that are not expected hashes: `migrate_v04`'s format-version guard; `crates/layout/tests/snap.rs` and
+  `crates/lint/tests/lint.rs`, `crates/ui/tests/new.rs` literals gained the new fields (`ends: None`, `rotation_deg: 0.0`,
+  `opacity_pct: 100`); `crates/xtask/tests/calib.rs`'s exhaustive `match` got the two new `Item` arms; and
+  `crates/ui/tests/draw.rs`'s `a_line_that_would_point_up_and_right_runs_along_an_axis` was replaced by
+  `a_line_is_drawn_in_all_four_directions`, because the workaround it tested is what this step removes.
+- **Checks:** `make check-all` → `TESTS scope=workspace checks=252 check_fail=0 passed=236 failed=0 status=ok` (6a left it at 221;
+  `grep -o 'CHECK crate=[^ ]* name=[^ ]*' target/test.log | sort -u | wc -l` → 243 distinct names). New `CHECK` names:
+  `migrate_v05`, `migrate_chain_060`, `transforms_golden` ×2, `transforms_sums_listed`, `opacity_flattens`,
+  `quarter_turns_hard_edged`, `turns_about_centre`, `rotate_maths`, `line_direction`, `turned_box_overlap`, `line_up_layout`,
+  `turned_shape_placed`, `opacity_group`, `defaults_draw_as_before`, `rotate_handle`, `rotate_handle_kinds`,
+  `rotated_pick_handles_resize`, `rotated_snaps_by_turned_box`, `line_ends_any_way`, `turned_line`,
+  `window_rotation_opacity_fields`, `window_transforms_benchmarks`, `draw_line_four_directions`, `rotated_l02`,
+  `rotated_line_diagonal`, `rotated_l06_l10`, `format_060_fields`, `rotation_rules`, `placement_command`, and the app's
+  `command_line` (two more cases).
+- **CI:** push `32f4abb`: CI 43021220344, Fuzz 43021220184 and Coverage 43021220085 all success. The golden sha256 is the same on
+  macOS ARM64, Linux x86-64 and Windows x86-64 and the Pi: transforms `fa85a493…29b7` (Manta) and `f21ff25d…3bee` (Nomad); shapes
+  `8b9c24d1…5369` and `f0d6636b…fe23`'s 6a values unchanged. The portable maths differ from the fast ones on x86 only (transforms
+  page: 11 px Manta, 2 px Nomad, each 1 gray level; shapes page as in 6a), printed not enforced; no exported sha differs between systems.
+- **Measured** (Pi, release build from `32f4abb`, 150 frames, `p90_ms`, budget 50, ADR-009; the lead does the official run):
+  export canvas, transforms page: drag 24.9 / 25.0, draw line 24.2 / 25.7, rotate 25.6 / 24.6 (two runs; one run each had a single
+  slow frame, worst 52.3, 95.1 and 44.5 ms; 90th percentile is the judge). Chip canvas: drag 34.9 / 34.8, draw line 35.6 / 35.7,
+  draw rect 36.6, rotate 35.1 / 34.9; chip canvas on the 6a shapes page, drag 46.0 (was 45.9–46.0, so nothing added to its
+  per-frame work). All `result=pass`, no `chip-cpu-fallback`. The chip canvas is faster on the transforms page than on the shapes
+  page because it holds fewer objects. Per-frame work added: a turned shape is one more `Affine` on its path; an opacity group is one
+  layer per object with opacity under 100 (none on the shapes page); a turned selection's handles are 9 more points.
+- **Seen:** the transforms page golden by eye, and a `grim` screenshot of the running window on the chip canvas (`--transforms-page
+  --canvas chip`): the same page, with the opacity groups, as the export. I did not click through the window: no pointer here
+  beyond the headless tests.
+
+### Things I chose that the record did not say (each vetoable)
+
+- **Text boxes and pattern regions do not rotate in 6b.** The Rotation field and the rotate handle are hidden for them, the model
+  ignores a stored angle on them (`Object::rotation()` is 0 for those kinds), and `Placement::apply` never sets one. A pattern is
+  bound to the rhythm, which a turn would break (a clip to a turned box of a rhythm-locked pattern); a text box's height is the
+  text's, so its centre moves as it grows. Opacity applies to every kind, patterns and text included.
+- **Rotation direction and range:** positive is clockwise on the page; stored as given but read in 0 up to 360 (a field value of -90
+  reads as 270).
+- **Turned quarter turns:** a rectangle or ellipse at 90, 180 or 270 is the unturned shape in a swapped box (hard rectangles for a
+  square-cornered rectangle); a polygon or star at a quarter turn is a turned path (anti-aliased, as at 0). L02 judges the straight
+  edges of any rotation that is a multiple of 90 (as at 0) and none at other angles, including a hexagon at 30° whose edges happen
+  to run level. A dash pattern on a rectangle or ellipse at 90/180/270 starts where the unturned shape's would (the top-left
+  corner), not at the turned corner.
+- **Resizing a turned object** (single object): along its own sides. The side or corner opposite the handle stays where it is on the
+  page (the centre with Alt), the angle stays, no side goes under 1 device pixel (no flipping), Shift keeps a corner's proportions,
+  and the dragged point snaps as a point does (rhythm, margins, other objects' anchors). Several selected objects, a turned one
+  among them: the handles are the box round them; each turned object keeps its angle, its centre goes where the group's scaling puts
+  it, and its sides stretch by how much the scaling stretches their directions (a turn of 45° in a non-uniform scale is therefore
+  approximate).
+- **Snapping and picking by "rotated corners":** the box round the turned corners (what you see) is what snaps and what other
+  objects' point snap, smart guides and equal spacing see; picking, the marquee, the outline and L06 use the turned corners
+  themselves (the marquee and L06 exactly, by the separating-axis test; L06 with half the stroke added).
+- **Rotate handle:** 24 screen points above the top edge; catch 4°; Shift's 15° steps win over the catch; Ctrl turns the catch off;
+  it appears for exactly one selected, unlocked line or shape (not several, which have no rotate in 6b); it is a separate query from
+  `handles()` (so the existing handle counts are unchanged) and takes a press ahead of a nearby box handle; a rotation starts from the
+  angle where the pointer was pressed, so the object does not jump.
+- **A line's start is its left end.** For a line pointing up the start is the bottom-left; dashes start there. A line frame with no
+  width or no height has one diagonal, so its direction does not matter (and is kept as set).
+- **Pulling a line's end** sets the line as it is: the frame becomes the box round the two ends, the direction follows, and a turn is
+  folded in (rotation back to 0). Pulling a line's end to exactly level or plumb keeps its direction. A line is turned about the centre
+  of its frame (the box, not the segment's midpoint, which is the same point).
+- **Opacity** is an integer percent, `opacity_pct`, in the Style tab (Arrange holds position, size and rotation); the group opacity
+  is `round(percent × 255 / 100)`; a group's bounds are the items' with a miter allowance, and the renderers clip the layer to
+  that box grown by a pixel. A 0 % object draws nothing (and is still selectable by its frame).
+- **L10 (off the page)** reads the box round the turned corners too, since it shared the helper; no new finding text.
+- **Shift while drawing a line** still holds it to an axis (it did before); I did not make it 15° steps.
+- **The transforms page** has the sample's dot grid on top (for the drag bench), no text, and the big turned rectangle as the last
+  object; names are English strings stored as the file's data, as on the shapes page.
+
+**Waits on chris:** the look at 6b (`cargo run --release -p quadrule-app -- --transforms-page`, then select a shape: drag the round
+handle, hold Shift, type an angle in the Arrange tab, resize a turned shape, draw lines up and to the right, pull a line's end past
+the other, set Opacity in the Style tab). Owed items are in `docs/STATUS-debt.md` (rung 6b line).
