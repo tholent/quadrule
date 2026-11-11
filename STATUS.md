@@ -117,8 +117,10 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 - **Arc v1** plans the rest of the way to v1.0 (the full §16 list) as rungs 6 to 18: the board is
   `docs/arcs/v1/README.md`, and the next lead's prompt is `docs/arcs/v1/v1-PROMPT-2026-11-10.md` (Opus 5.5 high
-  leads, Sonnet 5.5 high builds). Next: rung 6, shapes, starting with a short bbq.
-- Waits on chris (early, alongside rungs 6–7): the clean gray levels on both devices, and a landscape check on a
+  leads, Sonnet 5.5 high builds). Rung 6, shapes, is planned (bbq, 8 questions, `docs/bbq/2026-11-10-rung-6-shapes.md`):
+  6a all the shapes with fill (Shade and Block roles), dashes and caps; 6b rotation, lines any way, opacity. Next: 6a's build.
+- Waits on chris (early, alongside rungs 6–7): the clean gray levels on both devices (the new grays sheet,
+  `docs/calibration.md`), and a landscape check on a
   device plus landscape toolbar screenshots (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
   (`napkins/quadrule-spec.md` §8.3 note).
 
@@ -158,6 +160,8 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-10: rungs 1–5 tagged at their approvals, `v0.1.0` to `v0.5.0` (4b is `v0.4.1`) (`docs/STATUS-log.md`).
 - 2026-11-10: v0.5.0 released on GitHub; release packages workflow built, dry run green on four systems (`docs/STATUS-log.md`).
 - 2026-11-10: v0.5.0 packages published; pixel grid now from 16× zoom, not 8× (chris) (`docs/STATUS-log.md`).
+- 2026-11-10: rung 6 kickoff: budget 15 points; grays calibration sheet added; rung 6 planned (bbq, 8 questions), split
+  6a/6b (`docs/STATUS-log.md`, `docs/bbq/2026-11-10-rung-6-shapes.md`).
 
 ## How this file is kept
 

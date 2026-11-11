@@ -19,7 +19,7 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 
 | Rung | What it holds | Size | State |
 |---|---|---|---|
-| 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity | large, likely 6a/6b | next |
+| 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity. Split (bbq Q1, `docs/bbq/2026-11-10-rung-6-shapes.md`): **6a** all the shapes, fill (Shade and Block roles), dashes and caps; **6b** rotation, lines any way, opacity | large: 6a + 6b | planned; 6a next |
 | 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3) | medium | — |
 | 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (needs chris's landscape check, below) | large | — |
 | 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | — |
@@ -41,8 +41,10 @@ looks and measurements. This estimate is a guess; each re-plan corrects it.
 What waits on chris's hands or taste. The lead adds to it and crosses items off with the date.
 
 - **Hardware, early (Q8), alongside rungs 6–7:**
-  - Clean gray levels on both devices (needed by L03, L05, L14 and the gray swatches). The rung 6 lead checks whether
-    `cargo xtask calibration-sheet` already gives a sheet for this and adds one if not.
+  - Clean gray levels on both devices (needed by L03, L05, L14, the gray swatches and rung 6's Shade and Block fill
+    roles). The grays sheet was added 2026-11-10 (`dcf5458`): run `cargo xtask calibration-sheet`, put each device's
+    `quadrule-calib_grays-*.png` on it, and report which of G1–G30 are clean and how many bands GR shows
+    (`docs/calibration.md`).
   - Landscape: put one landscape PNG on a device and say whether it expects rotated pixels or swapped sizes
     (spec §17.1 item 3); landscape toolbar screenshots for the safe zones (needed by rung 8).
   - Not needed: the Manta's pen shades. chris ruled them equal to the Nomad's (Q8).

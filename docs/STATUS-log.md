@@ -734,3 +734,20 @@ in the record: 2–3 sessions; it took one (three commits' worth of steps below)
     v0.5.0 --json assets` lists seven files: the six packages and `SHA256SUMS.txt`. The release text was replaced
     with `docs/arcs/v1/release-notes/v0.5.0.md` (`gh release edit v0.5.0 --notes-file …`).
 
+
+## 2026-11-10 — rung 6 kickoff (Opus 5.5, high)
+
+- Start: `make build-proof` → `BUILD head=cda78e0 dirty=no rebuilt=2`; `echo "$CLAUDE_EFFORT"` → `high`.
+- Budget (`budget-select`): 15 points, alone on the meter, reserve 0; meter 46 % at the start (given by chris, the
+  Saturday 14th 5 pm meter); hard stop 75 %. Reading logged with `spend-ledger.py reading 46`.
+- Grays sheet (`dcf5458`): the existing sheets tested grays only on thin lines and small dots, so nothing showed a flat
+  gray area, which fills need. Added a fifth sheet, `grays`: patches G1–G15 at 0, 17 … 238, G16–G30 halfway between,
+  and a 0–255 ramp GR (`crates/xtask/src/calib.rs`, `docs/calibration.md`). One page on the Manta, two on the Nomad.
+  `cargo test -p quadrule-xtask --test calib -- --nocapture` → `CHECK crate=xtask name=calib_gray_patches result=pass
+  patches=60 ramps=2 fails=[]`, `calib_codes … expected=292`; clippy `-D warnings` clean on the crate.
+- chris was given the hardware checklist: the grays sheet on both devices; one landscape PNG (rotated pixels or
+  swapped sizes?); landscape toolbar screenshots.
+- Rung 6 bbq, 8 questions (`docs/bbq/2026-11-10-rung-6-shapes.md`): 6a all the shapes, fill and stroke, dashes and caps;
+  6b rotation, lines any way, opacity (Q1, overruled my split). Soft edges on curves (Q2). Fill roles Shade and Block
+  plus Custom (Q3, overruled: Shade alone), starting at 204 and 68 (Q7). Tools R, E, Y (Q4). Rotation handle on a
+  stalk (Q5). Dash presets plus custom, caps butt/round/square (Q6). Lint L01, L02, L06 on the new kinds in 6a (Q8).
