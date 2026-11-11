@@ -171,6 +171,9 @@ pub struct Viewer {
     pub names: crate::draw::NewNames,
     /// A text box was just drawn: the window opens the Text tab with its text selected.
     pub focus_new_text: bool,
+    /// How far the rotate handle stands from the top edge, in device pixels: the window sets it
+    /// from the zoom so the stalk keeps one length on screen (rung 6b).
+    pub rotate_stalk_px: f64,
     pub(crate) fonts: FontRegistry,
 }
 
@@ -217,6 +220,7 @@ impl Default for Viewer {
             draw: None,
             names: crate::draw::NewNames::default(),
             focus_new_text: false,
+            rotate_stalk_px: 24.0 / 0.3,
             fonts: FontRegistry::bundled_only(),
         }
     }

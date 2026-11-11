@@ -149,6 +149,9 @@ pub struct Other {
     /// A line: its anchors are its two ends (the box's top-left and bottom-right) and its middle,
     /// not the box's other corners.
     pub line: bool,
+    /// A line's two ends when they are not the box's top-left and bottom-right corners (a line
+    /// pointing up, or turned; format 0.6).
+    pub ends: Option<((f64, f64), (f64, f64))>,
 }
 
 impl Other {
@@ -157,7 +160,8 @@ impl Other {
         let r = &self.rect;
         let (cx, cy) = ((r.x0 + r.x1) / 2.0, (r.y0 + r.y1) / 2.0);
         if self.line {
-            vec![(r.x0, r.y0), (cx, cy), (r.x1, r.y1)]
+            let (a, b) = self.ends.unwrap_or(((r.x0, r.y0), (r.x1, r.y1)));
+            vec![a, (cx, cy), b]
         } else {
             vec![
                 (r.x0, r.y0),

@@ -22,7 +22,9 @@
 use crate::canvas::{
     CanvasMode, ChipRenderer, ChipState, DragClock, Fallback, ScreenView, screen_list,
 };
-use crate::drag::{DragKind, DragMods, HANDLE_SLACK_POINTS, HandleHit, SNAP_REACH_POINTS};
+use crate::drag::{
+    DragKind, DragMods, HANDLE_SLACK_POINTS, HandleHit, ROTATE_STALK_POINTS, SNAP_REACH_POINTS,
+};
 use crate::editor::{PICK_SLACK_POINTS, Toward};
 use crate::panels::{Renaming, Tab};
 use crate::recovery::{Autosave, Recovered, Recovery};
@@ -1247,6 +1249,8 @@ impl ViewerUi {
         let Some(scale) = self.viewer.scale((avail.x, avail.y), ppp) else {
             return;
         };
+        // The rotate handle's stalk keeps one length on screen at any zoom (rung 6b).
+        self.viewer.rotate_stalk_px = ROTATE_STALK_POINTS / f64::from(scale);
         let generation = self.viewer.generation;
         let revision = self.viewer.revision;
         let selected = self.viewer.selected;
@@ -1311,11 +1315,11 @@ impl ViewerUi {
             .and_then(|f| f.area);
         // The selection's outlines: an overlay, never exported (rung 3 bbq, Defaulted
         // "Selecting").
-        let outlines: Vec<(f64, f64, f64, f64)> = page
+        let outlines: Vec<((f64, f64, f64, f64), Option<[(f64, f64); 4]>)> = page
             .placed
             .iter()
             .filter(|p| selection.contains(&p.id))
-            .map(|p| p.shape.bounds())
+            .map(|p| (p.shape.bounds(), p.shape.corners()))
             .collect();
 
         // What the drag draws, and the handles of the selection (all overlays, never exported).
@@ -1323,6 +1327,11 @@ impl ViewerUi {
             self.viewer.handles()
         } else {
             Vec::new()
+        };
+        let rotate_handle = if self.viewer.tool == Tool::Select {
+            self.viewer.rotate_handle()
+        } else {
+            None
         };
         let guides = self.viewer.drag_guides().to_vec();
         let marquee = self.viewer.drag_marquee();
@@ -1522,7 +1531,13 @@ impl ViewerUi {
             }
 
             // The selected objects.
-            for (x0, y0, x1, y1) in &outlines {
+            for ((x0, y0, x1, y1), corners) in &outlines {
+                if let Some(c) = corners {
+                    // A turned shape is outlined along its turned corners.
+                    let pts: Vec<egui::Pos2> = c.iter().map(|&(x, y)| to_screen(x, y)).collect();
+                    painter.add(egui::Shape::closed_line(pts, Stroke::new(1.5, accent)));
+                    continue;
+                }
                 let r = Rect::from_min_max(to_screen(*x0, *y0), to_screen(*x1, *y1)).expand(2.0);
                 painter.rect_stroke(
                     r,
@@ -1541,6 +1556,16 @@ impl ViewerUi {
                 )
             };
             if marquee.is_none() {
+                // The rotate handle: a round handle on a short stalk above the top edge.
+                if let Some(rh) = rotate_handle {
+                    let (a, b) = (
+                        to_screen(rh.base.0, rh.base.1),
+                        to_screen(rh.tip.0, rh.tip.1),
+                    );
+                    painter.line_segment([a, b], Stroke::new(1.5, accent));
+                    painter.circle_filled(b, 5.0, Color32::WHITE);
+                    painter.circle_stroke(b, 5.0, Stroke::new(1.5, accent));
+                }
                 for (hit, hx, hy) in &handles {
                     let c = to_screen(*hx, *hy);
                     let r = Rect::from_center_size(c, vec2(8.0, 8.0));
@@ -1935,6 +1960,7 @@ fn handle_cursor(h: HandleHit) -> CursorIcon {
         HandleHit::Box(Handle::N | Handle::S) => CursorIcon::ResizeVertical,
         HandleHit::Box(Handle::E | Handle::W) => CursorIcon::ResizeHorizontal,
         HandleHit::LineStart | HandleHit::LineEnd => CursorIcon::Crosshair,
+        HandleHit::Rotate => CursorIcon::Grab,
     }
 }
 

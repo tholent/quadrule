@@ -23,7 +23,9 @@ use quadrule_layout::newpage::NewPage;
 use quadrule_model::blank::RhythmPreset;
 use quadrule_model::edit::Command;
 use quadrule_model::sample::{MANTA_ID, NOMAD_ID};
-use quadrule_model::{HConstraint, LineRole, ObjectKind, Pattern, Style, Uuid, VConstraint};
+use quadrule_model::{
+    HConstraint, LineDir, LineRole, ObjectKind, Pattern, Style, Uuid, VConstraint,
+};
 use quadrule_ui::{DragMods, Tool, Viewer};
 
 fn pass(ok: bool) -> &'static str {
@@ -116,22 +118,67 @@ fn a_line_is_drawn_by_drag_and_by_click() {
     assert!(ok);
 }
 
+/// A line's two ends on the page shown, in device pixels, left end first.
+fn line_ends(v: &mut Viewer, id: Uuid) -> ((f64, f64), (f64, f64)) {
+    let shape = v
+        .page()
+        .unwrap()
+        .placed
+        .iter()
+        .find(|p| p.id == id)
+        .map(|p| p.shape)
+        .unwrap();
+    match shape {
+        quadrule_layout::Shape::Segment { x0, y0, x1, y1, .. } => ((x0, y0), (x1, y1)),
+        other => panic!("a line is a segment, not {other:?}"),
+    }
+}
+
 #[test]
-fn a_line_that_would_point_up_and_right_runs_along_an_axis() {
-    // The model's line is its box's top-left to bottom-right diagonal (docs/STATUS-debt.md), so a
-    // drag up and to the right cannot be drawn as it was dragged: it runs along the axis the
-    // pointer went further on.
+fn a_line_is_drawn_in_all_four_directions() {
+    // Rung 6b pays the rung 4a and 5 debt: a line goes where the pointer goes. Each drag, with
+    // snapping off, gives a line whose two ends are the two pointer points, whichever way it ran,
+    // and the frame is the box between them.
     let mut v = page();
-    let id = draw(&mut v, Tool::Line, (200.0, 800.0), (500.0, 600.0), CTRL);
-    let (x0, y0, x1, y1) = px(&v, id);
-    let horizontal = near(y0, 800.0) && near(y1, 800.0) && near(x0, 200.0) && near(x1, 500.0);
-    let id2 = draw(&mut v, Tool::Line, (200.0, 800.0), (300.0, 500.0), CTRL);
-    let (a0, b0, a1, b1) = px(&v, id2);
-    let vertical = near(a0, 200.0) && near(a1, 200.0) && near(b0, 500.0) && near(b1, 800.0);
-    let ok = horizontal && vertical;
+    let cases = [
+        ("down_right", (500.0, 800.0), (700.0, 1000.0), LineDir::Down),
+        ("up_right", (500.0, 800.0), (700.0, 600.0), LineDir::Up),
+        ("down_left", (700.0, 600.0), (500.0, 800.0), LineDir::Up),
+        ("up_left", (700.0, 1000.0), (500.0, 800.0), LineDir::Down),
+    ];
+    let mut ok = true;
+    let mut parts = Vec::new();
+    for (name, from, to, dir) in cases {
+        let id = draw(&mut v, Tool::Line, from, to, CTRL);
+        let (x0, y0, x1, y1) = px(&v, id);
+        let boxed = near(x0, from.0.min(to.0))
+            && near(x1, from.0.max(to.0))
+            && near(y0, from.1.min(to.1))
+            && near(y1, from.1.max(to.1));
+        let got = match &v.doc().unwrap().object(id).unwrap().kind {
+            ObjectKind::Line(l) => l.direction,
+            _ => LineDir::Down,
+        };
+        let (a, b) = line_ends(&mut v, id);
+        let (lo, hi) = if from.0 <= to.0 {
+            (from, to)
+        } else {
+            (to, from)
+        };
+        let ends = near(a.0, lo.0) && near(a.1, lo.1) && near(b.0, hi.0) && near(b.1, hi.1);
+        let good = boxed && got == dir && ends;
+        ok &= good;
+        parts.push(format!("{name}={good}"));
+    }
+    // Shift still holds a line to its axis.
+    let id = draw(&mut v, Tool::Line, (500.0, 800.0), (700.0, 760.0), SHIFT);
+    let (_, y0, _, y1) = px(&v, id);
+    let shift_axis = near(y0, y1);
+    ok &= shift_axis;
     println!(
-        "CHECK crate=ui name=draw_line_up_right_axis result={} wide_runs_horizontal={horizontal} tall_runs_vertical={vertical}",
-        pass(ok)
+        "\nCHECK crate=ui name=draw_line_four_directions result={} {} shift_holds_axis={shift_axis}",
+        pass(ok),
+        parts.join(" ")
     );
     assert!(ok);
 }

@@ -28,13 +28,14 @@
 //! Snapping is done on that device's pixels (Q10).
 
 use crate::viewer::Viewer;
+use quadrule_layout::rotate;
 use quadrule_layout::snap::{
     Guide, Handle, Mark, Other, PxRect, ResizeMods, SnapToggles, SnapWorld,
 };
 use quadrule_layout::units::Axis;
 use quadrule_layout::{Shape, resolve_frame, unresolve_frame};
-use quadrule_model::edit::{Command, EditError, duplicate, is_empty, set_frames};
-use quadrule_model::{Constraints, Document, Frame, Object, ObjectKind, Uuid};
+use quadrule_model::edit::{Command, EditError, Placement, duplicate, is_empty, set_placements};
+use quadrule_model::{Constraints, Document, Frame, LineDir, Object, ObjectKind, Uuid};
 use quadrule_profiles::Profile;
 
 /// A snap catches within this many screen points (rung 4 bbq, Defaulted "Snap distance"); the
@@ -50,15 +51,36 @@ pub const MIN_SIZE_PX: f64 = 1.0;
 /// A frame change smaller than this many mm is float noise from converting there and back.
 const NOISE_MM: f64 = 1e-7;
 
+/// How far the rotate handle stands from the top edge, in screen points (rung 6b, Q5).
+pub const ROTATE_STALK_POINTS: f64 = 24.0;
+
+/// The rotate handle catches at 0, 90, 180 and 270 degrees within this many degrees (rung 6b, Q5).
+pub const ROTATE_CATCH_DEG: f64 = 4.0;
+
+/// With Shift the angle is held to steps of this many degrees (rung 6b, Q5).
+pub const ROTATE_STEP_DEG: f64 = 15.0;
+
 /// A handle on the selection: one of the eight on its box, or one end of a line.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HandleHit {
     /// A handle of the selection's box.
     Box(Handle),
-    /// A line's start: the top-left of its frame.
+    /// A line's start: its left end (the top-left of its frame for a line running down).
     LineStart,
-    /// A line's end: the bottom-right of its frame.
+    /// A line's end: its right end (the bottom-right of its frame for a line running down).
     LineEnd,
+    /// The round handle on a stalk above the middle of the top edge: turns the object (rung 6b).
+    Rotate,
+}
+
+/// The rotate handle of the selected object: where its stalk starts (the middle of the top
+/// edge) and where the handle sits, in device pixels.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RotateHandle {
+    /// The middle of the top edge.
+    pub base: (f64, f64),
+    /// The round handle's centre.
+    pub tip: (f64, f64),
 }
 
 /// What a drag does.
@@ -93,6 +115,10 @@ struct Item {
     resolved: PxRect,
     /// A text box: its height is its text's, so only its position and width change.
     text: bool,
+    /// Its rotation in degrees as the drag began (always 0 for text and patterns).
+    rotation: f64,
+    /// A line's diagonal as the drag began.
+    dir: Option<LineDir>,
 }
 
 /// A drag in progress.
@@ -117,14 +143,23 @@ pub struct Drag {
     pub marks: Vec<Mark>,
     /// Marquee: the box being drawn, in device pixels.
     pub marquee: Option<PxRect>,
-    /// The frames the drag would leave the objects with (primary mm), latest first-to-last.
-    frames: Vec<(Uuid, Frame)>,
+    /// Where the drag would leave the objects (primary mm), as of the last move.
+    places: Vec<(Uuid, Placement)>,
+    /// One selected line's two ends (start, end) on the device shown, as the drag began.
+    ends: Option<((f64, f64), (f64, f64))>,
+    /// A rotation: the angle (degrees) from the object's centre to the pointer at the press.
+    grab_angle: f64,
 }
 
 fn snap_rect(s: &Shape) -> PxRect {
     match *s {
         Shape::Segment { x0, y0, x1, y1, .. } => PxRect::from_corners(x0, y0, x1, y1),
         Shape::Box { x0, y0, x1, y1 } => PxRect { x0, y0, x1, y1 },
+        // A turned shape snaps by the box round its turned corners (rung 6b).
+        Shape::Rotated { .. } => {
+            let (x0, y0, x1, y1) = s.bounds();
+            PxRect { x0, y0, x1, y1 }
+        }
     }
 }
 
@@ -137,9 +172,17 @@ pub(crate) fn others(
     placed
         .iter()
         .filter(|p| !skip.contains(&p.id))
-        .map(|p| Other {
-            rect: snap_rect(&p.shape),
-            line: matches!(doc.object(p.id).map(|o| &o.kind), Some(ObjectKind::Line(_))),
+        .map(|p| {
+            let line = matches!(doc.object(p.id).map(|o| &o.kind), Some(ObjectKind::Line(_)));
+            Other {
+                rect: snap_rect(&p.shape),
+                line,
+                // A line's anchors are its real ends, whichever way it points.
+                ends: match p.shape {
+                    Shape::Segment { x0, y0, x1, y1, .. } if line => Some(((x0, y0), (x1, y1))),
+                    _ => None,
+                },
+            }
         })
         .collect()
 }
@@ -189,6 +232,21 @@ fn map_rect(item: &Item, old: &PxRect, new: &PxRect) -> PxRect {
     let mx = |x: f64| new.x0 + (x - old.x0) * sx;
     let my = |y: f64| new.y0 + (y - old.y0) * sy;
     let r = item.resolved;
+    if item.rotation != 0.0 && !item.text {
+        // A turned object keeps its angle: its centre goes where the group's mapping puts it, and
+        // its sides grow by how much the mapping stretches their directions.
+        let (cs, sn) = rotate::cos_sin_deg(item.rotation);
+        let kw = ((sx * cs).powi(2) + (sy * sn).powi(2)).sqrt();
+        let kh = ((sx * sn).powi(2) + (sy * cs).powi(2)).sqrt();
+        let (cx, cy) = (mx((r.x0 + r.x1) / 2.0), my((r.y0 + r.y1) / 2.0));
+        let (hw, hh) = (r.w() * kw / 2.0, r.h() * kh / 2.0);
+        return PxRect {
+            x0: cx - hw,
+            y0: cy - hh,
+            x1: cx + hw,
+            y1: cy + hh,
+        };
+    }
     let y0 = my(r.y0);
     PxRect {
         x0: mx(r.x0),
@@ -203,6 +261,83 @@ fn near(a: &Frame, b: &Frame) -> bool {
         && (a.y_mm - b.y_mm).abs() < NOISE_MM
         && (a.w_mm - b.w_mm).abs() < NOISE_MM
         && (a.h_mm - b.h_mm).abs() < NOISE_MM
+}
+
+/// An angle after a turn: normalised to 0 up to 360; with `step` (Shift) held to multiples of
+/// [`ROTATE_STEP_DEG`]; otherwise, with `catch` on, pulled onto 0, 90, 180 or 270 degrees when
+/// within [`ROTATE_CATCH_DEG`] of one.
+pub fn turned_angle(deg: f64, step: bool, catch: bool) -> f64 {
+    let d = quadrule_model::normalize_deg(deg);
+    if step {
+        return quadrule_model::normalize_deg((d / ROTATE_STEP_DEG).round() * ROTATE_STEP_DEG);
+    }
+    if catch {
+        let q = (d / 90.0).round() * 90.0;
+        if (d - q).abs() <= ROTATE_CATCH_DEG {
+            return quadrule_model::normalize_deg(q);
+        }
+    }
+    d
+}
+
+/// Resizes one turned object by a handle (rung 6b): the pointer is worked out along the object's
+/// own axes, the side opposite the handle stays where it is on the page (the centre, with Alt),
+/// and the object keeps its angle. A side never goes under [`MIN_SIZE_PX`] (no flipping); Shift
+/// keeps the proportions of a corner. The dragged point snaps as a point does. Returns the new
+/// unturned box in pixels.
+fn resize_turned(
+    world: &SnapWorld,
+    item: &Item,
+    h: Handle,
+    pointer: (f64, f64),
+    mods: DragMods,
+    reach: f64,
+    toggles: SnapToggles,
+) -> (PxRect, Vec<Guide>, Vec<Mark>) {
+    let snapped = world.snap_point(pointer, reach, toggles);
+    let r = item.resolved;
+    let c = rotate::centre((r.x0, r.y0, r.x1, r.y1));
+    let (w, hgt) = (r.w(), r.h());
+    // The pointer on the object's own axes, from its old centre.
+    let p = rotate::rotate_point(snapped.at, c, -item.rotation);
+    let (px, py) = (p.0 - c.0, p.1 - c.1);
+    let (xs, ys) = (f64::from(h.x_side()), f64::from(h.y_side()));
+    // Each moving axis: the new length, and where its centre lands (on the old axes, from the old
+    // centre). A fixed side is `-side * half`; from the centre both sides move.
+    let axis = |side: f64, half: f64, pos: f64| -> (f64, f64) {
+        if side == 0.0 {
+            return (half * 2.0, 0.0);
+        }
+        if mods.alt {
+            let len = (2.0 * side * pos).max(MIN_SIZE_PX);
+            (len, 0.0)
+        } else {
+            let anchor = -side * half;
+            let len = (side * (pos - anchor)).max(MIN_SIZE_PX);
+            (len, anchor + side * len / 2.0)
+        }
+    };
+    let (mut nw, mut cxo) = axis(xs, w / 2.0, px);
+    let (mut nh, mut cyo) = axis(ys, hgt / 2.0, py);
+    if mods.shift && h.is_corner() && w > 0.0 && hgt > 0.0 {
+        let k = (nw / w).max(nh / hgt);
+        (nw, nh) = (w * k, hgt * k);
+        if !mods.alt {
+            cxo = -xs * w / 2.0 + xs * nw / 2.0;
+            cyo = -ys * hgt / 2.0 + ys * nh / 2.0;
+        }
+    }
+    let nc = rotate::rotate_point((c.0 + cxo, c.1 + cyo), c, item.rotation);
+    (
+        PxRect {
+            x0: nc.0 - nw / 2.0,
+            y0: nc.1 - nh / 2.0,
+            x1: nc.0 + nw / 2.0,
+            y1: nc.1 + nh / 2.0,
+        },
+        snapped.guides,
+        snapped.marks,
+    )
 }
 
 impl Viewer {
@@ -263,13 +398,14 @@ impl Viewer {
 
     /// The handles to draw on the selection, with their places in device pixels: the eight of the
     /// box (just left and right for text, which grows down by itself), or a line's two ends when
-    /// one line is selected. None when nothing editable is selected.
+    /// one line is selected. A single turned shape has its eight on its turned box (rung 6b). None
+    /// when nothing editable is selected. The rotate handle is apart: [`Viewer::rotate_handle`].
     pub fn handles(&mut self) -> Vec<(HandleHit, f64, f64)> {
         let ids = self.editable_selection();
         if ids.is_empty() {
             return Vec::new();
         }
-        let Some((_, _, placed)) = self.geometry() else {
+        let Some((primary, shown, placed)) = self.geometry() else {
             return Vec::new();
         };
         let Some(doc) = self.doc() else {
@@ -281,6 +417,21 @@ impl Viewer {
                 placed.iter().find(|p| p.id == id).map(|p| p.shape)
         {
             return vec![(HandleHit::LineStart, x0, y0), (HandleHit::LineEnd, x1, y1)];
+        }
+        // One turned shape: the handles of its own box, turned with it.
+        if let [id] = ids[..]
+            && let Some(o) = doc.object(id)
+            && o.rotation() != 0.0
+        {
+            let r = resolved_px(o, &primary, &shown);
+            let c = rotate::centre((r.x0, r.y0, r.x1, r.y1));
+            return Handle::ALL
+                .iter()
+                .map(|&h| {
+                    let (x, y) = rotate::rotate_point(h.at(&r), c, o.rotation());
+                    (HandleHit::Box(h), x, y)
+                })
+                .collect();
         }
         let all_text = ids
             .iter()
@@ -306,8 +457,35 @@ impl Viewer {
             .collect()
     }
 
-    /// The handle under (x, y) device pixels, within `slack` pixels; the nearest if several.
+    /// The rotate handle (Q5): a round handle on a short stalk above the middle of the top edge
+    /// of the one selected line or shape, turned with it. None for anything else (a text box, a
+    /// pattern region, several objects) or when it is locked.
+    pub fn rotate_handle(&mut self) -> Option<RotateHandle> {
+        let ids = self.editable_selection();
+        let [id] = ids[..] else {
+            return None;
+        };
+        let (primary, shown, _) = self.geometry()?;
+        let o = self.doc()?.object(id)?;
+        if !o.kind.can_rotate() {
+            return None;
+        }
+        let r = resolved_px(o, &primary, &shown);
+        let c = rotate::centre((r.x0, r.y0, r.x1, r.y1));
+        let rot = o.rotation();
+        let base = rotate::rotate_point((c.0, r.y0), c, rot);
+        let tip = rotate::rotate_point((c.0, r.y0 - self.rotate_stalk_px), c, rot);
+        Some(RotateHandle { base, tip })
+    }
+
+    /// The handle under (x, y) device pixels, within `slack` pixels; the nearest if several. The
+    /// rotate handle wins where it overlaps another.
     pub fn handle_at(&mut self, x: f64, y: f64, slack: f64) -> Option<HandleHit> {
+        if let Some(r) = self.rotate_handle()
+            && (r.tip.0 - x).hypot(r.tip.1 - y) <= slack * 1.3
+        {
+            return Some(HandleHit::Rotate);
+        }
         self.handles()
             .into_iter()
             .map(|(h, hx, hy)| {
@@ -397,7 +575,9 @@ impl Viewer {
             guides: Vec::new(),
             marks: Vec::new(),
             marquee: None,
-            frames: Vec::new(),
+            places: Vec::new(),
+            ends: None,
+            grab_angle: 0.0,
         };
         if kind == DragKind::Marquee {
             self.drag = Some(drag);
@@ -451,16 +631,40 @@ impl Viewer {
                 constraints: o.constraints,
                 resolved,
                 text: matches!(o.kind, ObjectKind::Text(_)),
+                rotation: o.rotation(),
+                dir: match &o.kind {
+                    ObjectKind::Line(l) => Some(l.direction),
+                    _ => None,
+                },
             });
         }
         if drag.items.is_empty() {
             return false;
         }
-        drag.frames = drag
+        drag.places = drag
             .items
             .iter()
-            .filter_map(|i| base_doc.object(i.id).map(|o| (i.id, o.frame)))
+            .filter_map(|i| base_doc.object(i.id).map(|o| (i.id, Placement::of(o))))
             .collect();
+        if let [item] = &drag.items[..] {
+            // One line's two ends (they may point any way), and the angle a rotation starts from.
+            drag.ends = ids.first().and_then(|id| {
+                placed
+                    .iter()
+                    .find(|p| p.id == *id)
+                    .and_then(|p| match p.shape {
+                        Shape::Segment { x0, y0, x1, y1, .. } => Some(((x0, y0), (x1, y1))),
+                        _ => None,
+                    })
+            });
+            let c = rotate::centre((
+                item.resolved.x0,
+                item.resolved.y0,
+                item.resolved.x1,
+                item.resolved.y1,
+            ));
+            drag.grab_angle = (y - c.1).atan2(x - c.0).to_degrees();
+        }
         if drag.duplicate.is_some() {
             // The copies are what moves now, and what is selected while they do.
             self.selection = targets;
@@ -502,12 +706,27 @@ impl Viewer {
         };
         let start = drag.start_box;
         let mut marks = Vec::new();
+        // Each object's angle and line direction after this move: unchanged unless it is turned,
+        // or a line's end is pulled.
+        let mut rot_dir: Vec<(f64, Option<LineDir>)> =
+            drag.items.iter().map(|i| (i.rotation, i.dir)).collect();
+        // One object's frame in pixels, when the drag decides it directly (a turn, a turned
+        // object's resize, a line's end).
+        let mut direct: Option<PxRect> = None;
+        let single_turned = matches!(&drag.items[..], [i] if i.rotation != 0.0 && !i.text);
         let (new_box, guides) = match drag.kind {
             DragKind::Move => {
                 let raw = start.moved(delta.0, delta.1);
                 let s = drag.world.snap_move(&raw, reach, toggles);
                 marks = s.marks;
                 (start.moved(delta.0 + s.dx, delta.1 + s.dy), s.guides)
+            }
+            DragKind::Handle(HandleHit::Box(h)) if single_turned => {
+                let (r, guides, m) =
+                    resize_turned(&drag.world, &drag.items[0], h, (x, y), mods, reach, toggles);
+                marks = m;
+                direct = Some(r);
+                (r, guides)
             }
             DragKind::Handle(HandleHit::Box(h)) => {
                 let all_text = drag.items.iter().all(|i| i.text);
@@ -524,28 +743,54 @@ impl Viewer {
                     MIN_SIZE_PX,
                 )
             }
+            DragKind::Handle(HandleHit::Rotate) => {
+                // The object turns about its centre by how far the pointer has gone round it;
+                // Shift holds the angle to steps, and it catches at the quarter turns.
+                let item = &drag.items[0];
+                let r = item.resolved;
+                let c = rotate::centre((r.x0, r.y0, r.x1, r.y1));
+                let angle = (y - c.1).atan2(x - c.0).to_degrees();
+                let deg = turned_angle(
+                    item.rotation + (angle - drag.grab_angle),
+                    mods.shift,
+                    !mods.snapping_off,
+                );
+                rot_dir[0].0 = deg;
+                direct = Some(r);
+                (start, Vec::new())
+            }
             DragKind::Handle(end) => {
-                // One end of a line moves; the other stays.
+                // One end of a line moves; the other stays. The ends may cross in any direction:
+                // the frame is the box round them and the line keeps whichever diagonal they make.
+                let (a, b) = drag
+                    .ends
+                    .unwrap_or(((start.x0, start.y0), (start.x1, start.y1)));
                 let (moving, fixed) = if end == HandleHit::LineStart {
-                    ((start.x0, start.y0), (start.x1, start.y1))
+                    (a, b)
                 } else {
-                    ((start.x1, start.y1), (start.x0, start.y0))
+                    (b, a)
                 };
                 let snapped =
                     drag.world
                         .snap_point((moving.0 + delta.0, moving.1 + delta.1), reach, toggles);
                 marks = snapped.marks;
-                (
-                    PxRect::from_corners(snapped.at.0, snapped.at.1, fixed.0, fixed.1),
-                    snapped.guides,
-                )
+                let (dx, dy) = (snapped.at.0 - fixed.0, snapped.at.1 - fixed.1);
+                let old = rot_dir[0].1;
+                let dir = if dx * dy < 0.0 {
+                    Some(LineDir::Up)
+                } else if dx * dy > 0.0 {
+                    Some(LineDir::Down)
+                } else {
+                    old
+                };
+                // A pulled end sets the line as it is, so a turn is folded into the frame.
+                rot_dir[0] = (0.0, dir);
+                let r = PxRect::from_corners(snapped.at.0, snapped.at.1, fixed.0, fixed.1);
+                direct = Some(r);
+                (r, snapped.guides)
             }
             DragKind::Marquee => unreachable!("handled above"),
         };
-        let line_end = matches!(
-            drag.kind,
-            DragKind::Handle(HandleHit::LineStart | HandleHit::LineEnd)
-        );
         let base_doc = drag
             .duplicate
             .as_ref()
@@ -555,12 +800,11 @@ impl Viewer {
             self.drag = Some(drag);
             return;
         };
-        let mut frames = Vec::with_capacity(drag.items.len());
-        for item in &drag.items {
-            let px = if line_end {
-                new_box
-            } else {
-                map_rect(item, &start, &new_box)
+        let mut places = Vec::with_capacity(drag.items.len());
+        for (n, item) in drag.items.iter().enumerate() {
+            let px = match direct {
+                Some(r) if drag.items.len() == 1 => r,
+                _ => map_rect(item, &start, &new_box),
             };
             let mut frame = frame_from_px(px, item.constraints, &primary, &shown);
             if let Some(o) = base_doc.object(item.id)
@@ -568,18 +812,26 @@ impl Viewer {
             {
                 frame = o.frame;
             }
-            frames.push((item.id, frame));
+            let (rotation_deg, dir) = rot_dir[n];
+            places.push((
+                item.id,
+                Placement {
+                    frame,
+                    rotation_deg,
+                    dir,
+                },
+            ));
         }
         drag.guides = guides;
         drag.marks = marks;
-        if frames != drag.frames {
+        if places != drag.places {
             let mut preview = base_doc;
-            for (id, frame) in &frames {
+            for (id, place) in &places {
                 if let Some((l, o)) = preview.find(*id) {
-                    preview.layers[l].objects[o].frame = *frame;
+                    place.apply(&mut preview.layers[l].objects[o]);
                 }
             }
-            drag.frames = frames;
+            drag.places = places;
             self.show_preview(preview);
         }
         self.drag = Some(drag);
@@ -600,7 +852,7 @@ impl Viewer {
         };
         let (cmd, copies) = match &drag.duplicate {
             Some((dup, with_copies)) => {
-                let moved = set_frames(with_copies, &drag.frames);
+                let moved = set_placements(with_copies, &drag.places);
                 if is_empty(&moved) {
                     // Nowhere to put the copies: leave things as they were.
                     self.selection = drag.selection_before;
@@ -610,7 +862,7 @@ impl Viewer {
                 let copies: Vec<Uuid> = drag.items.iter().map(|i| i.id).collect();
                 (Command::Batch(vec![dup.clone(), moved]), Some(copies))
             }
-            None => (set_frames(&doc, &drag.frames), None),
+            None => (set_placements(&doc, &drag.places), None),
         };
         if is_empty(&cmd) {
             self.bump();
@@ -667,6 +919,18 @@ impl Viewer {
                     return false;
                 }
                 match p.shape {
+                    Shape::Rotated {
+                        cx,
+                        cy,
+                        hw,
+                        hh,
+                        deg,
+                    } => rotate::rotated_touches(
+                        (cx - hw, cy - hh, cx + hw, cy + hh),
+                        deg,
+                        0.0,
+                        (r.x0, r.y0, r.x1, r.y1),
+                    ),
                     Shape::Box { x0, y0, x1, y1 } => r.touches(&PxRect { x0, y0, x1, y1 }),
                     Shape::Segment {
                         x0,

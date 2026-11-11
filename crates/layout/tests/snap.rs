@@ -578,6 +578,7 @@ fn boxed(x0: f64, y0: f64, x1: f64, y1: f64) -> Other {
     Other {
         rect: PxRect { x0, y0, x1, y1 },
         line: false,
+        ends: None,
     }
 }
 
@@ -598,6 +599,7 @@ fn snap_point_to_anchors() {
             y1: 1100.0,
         },
         line: true,
+        ends: None,
     };
     let w = world().with_others(vec![a, line]);
     let pts = only(|t| t.points = true);

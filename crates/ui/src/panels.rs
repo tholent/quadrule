@@ -709,6 +709,31 @@ impl ViewerUi {
                     }
                     ui.end_row();
                 }
+                // Rotation in degrees, clockwise, about the frame's centre (rung 6b, Q5). Lines and
+                // shapes only: a text box and a pattern region do not rotate, so no field.
+                if o.kind.can_rotate() {
+                    let label = ui.label(self.t("app-rotation"));
+                    let mut deg = o.rotation();
+                    let changed = ui
+                        .add_enabled(
+                            enabled,
+                            egui::DragValue::new(&mut deg)
+                                .range(-360.0..=360.0)
+                                .speed(1.0)
+                                .max_decimals(2)
+                                .suffix("°"),
+                        )
+                        .labelled_by(label.id)
+                        .changed();
+                    if changed {
+                        let _ = self.viewer.edit_selected(Some("arrange-rotation"), |x| {
+                            if x.kind.can_rotate() {
+                                x.rotation_deg = quadrule_model::normalize_deg(deg);
+                            }
+                        });
+                    }
+                    ui.end_row();
+                }
             });
     }
 
@@ -822,6 +847,25 @@ impl ViewerUi {
                 if stroked && o.style != Style::None {
                     self.dash_rows(ui, &o, &cx, enabled);
                 }
+
+                // Opacity, 0 to 100 percent, for every kind; the export is flattened onto what lies
+                // beneath (rung 6b).
+                let label = ui.label(self.t("app-opacity"));
+                let mut pct = o.opacity();
+                if ui
+                    .add(
+                        egui::DragValue::new(&mut pct)
+                            .range(quadrule_model::OPACITY_MIN..=quadrule_model::OPACITY_MAX)
+                            .suffix(" %"),
+                    )
+                    .labelled_by(label.id)
+                    .changed()
+                {
+                    let _ = self.viewer.edit_selected(Some("style-opacity"), |x| {
+                        x.opacity_pct = pct;
+                    });
+                }
+                ui.end_row();
 
                 if let ObjectKind::Pattern(pr) = &o.kind {
                     let label = ui.label(self.t("app-pattern"));

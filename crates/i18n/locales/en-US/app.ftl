@@ -143,6 +143,9 @@ app-x = X
 app-y = Y
 app-width = Width
 app-height = Height
+app-rotation = Rotation
+app-opacity = Opacity
+app-rotate-handle = Rotate handle
 
 app-style-kind = Look
 app-style-role = Role

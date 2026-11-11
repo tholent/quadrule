@@ -31,9 +31,9 @@ use quadrule_layout::snap::{Guide, Handle, Mark, PxRect, ResizeMods, SnapToggles
 use quadrule_model::edit::Command;
 use quadrule_model::sample::ATKINSON;
 use quadrule_model::{
-    Constraints, DashStyle, EllipseShape, Extra, Frame, HConstraint, Line, LineCap, LineRole,
-    Object, ObjectKind, Pattern, PatternRegion, PolygonShape, RectShape, Style, TextAlign, TextBox,
-    Uuid, VConstraint,
+    Constraints, DashStyle, EllipseShape, Extra, Frame, HConstraint, Line, LineCap, LineDir,
+    LineRole, Object, ObjectKind, Pattern, PatternRegion, PolygonShape, RectShape, Style,
+    TextAlign, TextBox, Uuid, VConstraint,
 };
 use quadrule_profiles::Profile;
 
@@ -131,6 +131,9 @@ pub struct Draw {
     rect: Option<PxRect>,
     /// The object being drawn.
     object: Option<Object>,
+    /// The diagonal a line being drawn runs along: up when the pointer went up and to the right
+    /// (or down and to the left) of the start.
+    line_dir: LineDir,
     /// What caught on the last move.
     pub guides: Vec<Guide>,
     /// Points to draw for the last move.
@@ -207,13 +210,14 @@ fn frame_for(
     frame_from_px(rect, constraints, primary, shown)
 }
 
-/// A new object of `kind` in `frame`.
+/// A new object of `kind` in `frame`; `dir` is the diagonal of a line.
 fn make_object(
     kind: DrawKind,
     frame: Frame,
     constraints: Constraints,
     names: &NewNames,
     id: Uuid,
+    dir: LineDir,
 ) -> Object {
     match kind {
         DrawKind::Line => mm_object(
@@ -222,7 +226,10 @@ fn make_object(
             frame,
             constraints,
             Style::Role(LineRole::Guide),
-            ObjectKind::Line(Line::default()),
+            ObjectKind::Line(Line {
+                direction: dir,
+                ..Line::default()
+            }),
         ),
         DrawKind::Text => mm_object(
             id,
@@ -359,6 +366,7 @@ impl Viewer {
             moved: false,
             rect: None,
             object: None,
+            line_dir: LineDir::Down,
             guides: Vec::new(),
             marks: Vec::new(),
             selection_before: self.selection.clone(),
@@ -399,11 +407,11 @@ impl Viewer {
         let s = draw.start;
         let (rect, guides, marks) = match draw.kind {
             DrawKind::Line => {
-                // A line cannot yet point up and to the right (it is its box's top-left to
-                // bottom-right diagonal), so such a drag, like one with Shift held, runs
-                // along whichever axis the pointer went further on.
+                // A line goes where the pointer goes, up or down, left or right (its frame is
+                // the box between the two ends and it keeps whichever diagonal they make). With
+                // Shift held it runs along whichever axis the pointer went further on.
                 let (dx, dy) = (x - s.0, y - s.1);
-                let axis = mods.shift || dx * dy < 0.0;
+                let axis = mods.shift;
                 let horizontal = dx.abs() >= dy.abs();
                 let raw = match (axis, horizontal) {
                     (true, true) => (x, s.1),
@@ -415,6 +423,11 @@ impl Viewer {
                     (true, true) => (snapped.at.0, s.1),
                     (true, false) => (s.0, snapped.at.1),
                     (false, _) => snapped.at,
+                };
+                draw.line_dir = if (end.0 - s.0) * (end.1 - s.1) < 0.0 {
+                    LineDir::Up
+                } else {
+                    LineDir::Down
                 };
                 (
                     PxRect::from_corners(s.0, s.1, end.0, end.1),
@@ -481,6 +494,7 @@ impl Viewer {
                 constraints,
                 &self.names,
                 draw.object.as_ref().map_or_else(Uuid::new_v4, |o| o.id),
+                draw.line_dir,
             );
             let mut preview = base;
             let at = preview.layers[draw.layer].objects.len();
@@ -559,6 +573,7 @@ impl Viewer {
                 constraints,
                 &self.names,
                 Uuid::new_v4(),
+                LineDir::Down,
             ));
         }
         let (rect, constraints) = match draw.kind {
@@ -606,6 +621,7 @@ impl Viewer {
             constraints,
             &self.names,
             Uuid::new_v4(),
+            LineDir::Down,
         ))
     }
 
