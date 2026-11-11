@@ -1,5 +1,5 @@
 # Release packages (napkin §15.4; arc v1 Q12): builds quadrule's installers for a release tag on
-# GitHub's machines and, when asked, attaches them to that tag's GitHub release.
+# GitHub's machines and publishes the tag's GitHub release with them attached.
 #
 #   Linux x86-64 and ARM64: .AppImage and .deb   macOS: universal .dmg (unsigned)
 #   Windows x86-64: .msi (an NSIS .exe for pre-release versions, which an .msi cannot hold)
@@ -7,42 +7,55 @@
 # The packaging config lives in packaging/ (packager.json, icons, prepare.py). A tag made before
 # that folder existed (v0.5.0) is built with main's copy laid over it; a later tag uses its own.
 #
-# Runs by itself when a release is published (chris approved the first packages, 2026-11-10:
-# "Publish now"), so each rung's release gets its packages without a hand step. It can also be
-# run from the Actions tab or with
-#   gh workflow run release.yml -f tag=v0.5.0                 # dry run: packages as run artifacts
-#   gh workflow run release.yml -f tag=v0.5.0 -f publish=true # also attach them to the release
-# A release made with the workflow's own GITHUB_TOKEN would not start it (GitHub's rule against
-# loops); one made with a person's token or `gh release create` on a signed-in machine does.
+# The repository has GitHub's immutable releases on: once a release is published no file can be
+# added, and a deleted release's tag name can never be reused. So the packages go onto a *draft*
+# first and the draft is published last (chris, 2026-11-11: "Tag push does it all"):
+#
+#   git push origin v0.7.0   # builds, drafts the release with the notes in
+#                            # docs/arcs/v1/release-notes/v0.7.0.md, attaches the files, publishes
+#
+# By hand, from the Actions tab or with
+#   gh workflow run release.yml -f tag=v0.7.0                  # dry run: packages as run artifacts
+#   gh workflow run release.yml -f tag=v0.7.0 -f publish=draft # also make the draft, do not publish
+#   gh workflow run release.yml -f tag=v0.7.0 -f publish=yes   # the whole thing, as a tag push does
+# A tag containing "-test" (v0.6.2-test.1) never runs on push, so the draft step can be tried on
+# it by hand and the draft and tag deleted after (a draft is not immutable).
+#
+# Never publish a tag's release by hand before this has run: the files could not be added after.
 #
 # Cost: the repository is public, so GitHub's standard runners are free.
 name: Release packages
 
 on:
+  push:
+    tags:
+      - "v*"
+      - "!v*-test*"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to package, e.g. v0.5.0"
+        description: "Release tag to package, e.g. v0.7.0"
         required: true
         type: string
       publish:
-        description: "Attach the packages to the tag's GitHub release (it must already exist)"
+        description: "no: packages only; draft: also a draft release with them; yes: publish it too"
         required: false
-        type: boolean
-        default: false
-  release:
-    types: [published]
+        type: choice
+        options: ["no", "draft", "yes"]
+        default: "no"
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ inputs.tag || github.event.release.tag_name }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: never
-  TAG: ${{ inputs.tag || github.event.release.tag_name }}
+  TAG: ${{ inputs.tag || github.ref_name }}
+  # push (a tag): draft and publish; by hand: what the publish input says.
+  MODE: ${{ github.event_name == 'push' && 'yes' || inputs.publish }}
   # cargo-packager's version, pinned; its AppImage and MSI steps fetch linuxdeploy and WiX 3.11.
   PACKAGER_VERSION: "0.11.8"
   # linuxdeploy is itself an AppImage; this runs it without FUSE, which the runners lack.
@@ -176,13 +189,20 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Attach to the release
+    name: Draft, attach, publish
     needs: package
-    if: ${{ inputs.publish || github.event_name == 'release' }}
+    if: ${{ github.event_name == 'push' || inputs.publish == 'draft' || inputs.publish == 'yes' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - name: Release notes (the tag)
+        uses: actions/checkout@v7
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          sparse-checkout: docs/arcs/v1/release-notes
+          path: src
+
       - uses: actions/download-artifact@v8
         with:
           pattern: packages-*
@@ -195,11 +215,45 @@ jobs:
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - name: Upload
+      - name: Draft
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null \
-            || { echo "PUBLISH tag=$TAG status=fail reason=no-release"; exit 1; }
+          notes="src/docs/arcs/v1/release-notes/$TAG.md"
+          [ -f "$notes" ] || { echo "PUBLISH tag=$TAG status=fail reason=no-notes file=$notes"; exit 1; }
+          # The title: "v0.7.0 — " and the notes' "## New in …" heading, e.g. "rung 7: groups".
+          what=$(sed -n 's/^## New in //p' "$notes" | head -1)
+          title="$TAG${what:+ — $what}"
+          # Before 1.0.0, or with a suffix such as -rc.1, it is a pre-release (arc v1 board).
+          pre=""
+          case "$TAG" in v0.*|*-*) pre="--prerelease" ;; esac
+          state=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft -q .isDraft 2>/dev/null || echo none)
+          case "$state" in
+            none)
+              gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft $pre \
+                --title "$title" --notes-file "$notes"
+              echo "DRAFT tag=$TAG title=\"$title\" made=yes" | tee -a "$GITHUB_STEP_SUMMARY" ;;
+            true)
+              echo "DRAFT tag=$TAG made=no reason=draft-exists" | tee -a "$GITHUB_STEP_SUMMARY" ;;
+            *)
+              # Published already: immutable, so nothing can be attached.
+              echo "PUBLISH tag=$TAG status=fail reason=already-published"; exit 1 ;;
+          esac
+
+      - name: Attach
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
           gh release upload "$TAG" out/* --clobber --repo "$GITHUB_REPOSITORY"
+          n=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets | length')
+          want=$(ls out | wc -l)
+          [ "$n" -eq "$want" ] || { echo "ATTACH tag=$TAG files=$n want=$want status=fail"; exit 1; }
+          echo "ATTACH tag=$TAG files=$n status=ok" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish
+        if: ${{ env.MODE == 'yes' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
           echo "PUBLISH tag=$TAG files=$(ls out | wc -l) status=ok" | tee -a "$GITHUB_STEP_SUMMARY"

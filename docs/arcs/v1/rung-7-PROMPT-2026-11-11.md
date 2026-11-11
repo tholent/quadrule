@@ -16,10 +16,14 @@
 - **Frozen export bytes are now six golden lines** in `crates/render/tests/golden/SHA256SUMS`: `slice_*` (rung 1),
   `shapes_*` (6a), `transforms_*` (6b), plus the format fixtures `crates/render/tests/fixtures/v0.4/` and `v0.5/`.
   A rung 7 change that moves any of them is a stop: ask chris (arc Q20).
-- **GitHub releases:** the lead's `gh release create` was refused by the session's permission check, so `v0.6.0` and
-  `v0.6.1` are tagged and pushed but their pre-releases wait for chris to publish them (commands in
-  `docs/STATUS-log.md`). Check with `gh release view v0.6.0` and `gh release view v0.6.1`; if they are still missing,
-  ask chris first thing.
+- **GitHub releases:** chris published `v0.6.0` and `v0.6.1` by hand on 2026-11-11, and they have **no packages**:
+  the repository has immutable releases on, so the old workflow could not attach files after publishing. chris ruled
+  "Keep, add a note" and "Tag push does it all": `.github/workflows/release.yml` now runs on a `v*` tag push, drafts
+  the release with `docs/arcs/v1/release-notes/<tag>.md`, attaches the packages and publishes (`DEVELOPMENT.md`). So
+  for `v0.7.0`: commit the notes file *before* tagging, then push the tag; **never `gh release create` by hand**, or
+  the release goes out empty and its tag name is burnt. chris said the lead now has permission to release (not tried
+  yet: the next tag push is its first real use). Watch the run (`gh run list --workflow release.yml`) and check the
+  release's files after.
 
 ## Watch items rung 6 left for later rungs
 

@@ -114,8 +114,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`Makefile`). CI for rung 5: see `docs/STATUS-log.md`
   (`.github/workflows/ci.yml`).
 - Release packages: `.github/workflows/release.yml` builds an AppImage and a `.deb` (Linux x86-64 and ARM64), a
-  universal unsigned `.dmg` and an `.msi` from a release tag with cargo-packager (`packaging/`), and attaches them
-  when a release is published (approved by chris 2026-11-10; hand runs stay possible). Tried: the `.dmg` (chris, a
+  universal unsigned `.dmg` and an `.msi` from a release tag with cargo-packager (`packaging/`). Since 2026-11-11 a
+  tag push does the whole release: draft, attach, publish (the repository's releases are immutable; chris: "Tag push
+  does it all"). `v0.6.0` and `v0.6.1` went out without packages and say so. Tried: the `.dmg` (chris, a
   Mac) and the ARM64 AppImage (the Pi). README has install steps (`docs/STATUS-log.md`, `DEVELOPMENT.md`, `README.md`).
 - A `Makefile` wraps the usual commands: `make` lists them; `make test` prints one `TESTS` line, `make check-all` is what CI
   runs, `make review` adds the build-matches-HEAD proof and the diff against `origin/main` (`Makefile`,

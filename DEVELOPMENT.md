@@ -98,13 +98,22 @@ and a GitHub pre-release, with notes in `docs/arcs/v1/release-notes/` (`docs/arc
 The installers are built by `.github/workflows/release.yml` on GitHub's machines: an AppImage and a `.deb` for Linux
 (x86-64 and ARM64), an unsigned universal `.dmg` for macOS and an `.msi` for Windows, plus `SHA256SUMS.txt`. The
 config is in `packaging/`: `packager.json` (read by [cargo-packager](https://crates.io/crates/cargo-packager) 0.11.8),
-the icons, and `prepare.py`, which takes the version from the tag. It runs by itself when a release is published,
-and attaches the packages to it. To run it by hand (say, to retry or to check a tag first):
+the icons, and `prepare.py`, which takes the version from the tag.
+
+The repository has GitHub's immutable releases on: once a release is published, no file can be added to it, and a
+deleted release's tag name can never be used again. So a release is made by **pushing its tag**, never by publishing
+it by hand first: the workflow builds the packages, makes a draft pre-release with the notes in
+`docs/arcs/v1/release-notes/<tag>.md` (which must be in the tagged commit), attaches the files, then publishes it.
 
 ```
-gh workflow run release.yml -f tag=v0.5.0                  # dry run: the packages are the run's artifacts
-gh workflow run release.yml -f tag=v0.5.0 -f publish=true  # also attach them to the release
+git tag -a v0.7.0 -m "…" && git push origin v0.7.0           # the whole release
+gh workflow run release.yml -f tag=v0.7.0                     # dry run: the packages are the run's artifacts
+gh workflow run release.yml -f tag=v0.7.0 -f publish=draft    # packages on a draft release, not published
+gh workflow run release.yml -f tag=v0.7.0 -f publish=yes      # what a tag push does
 ```
+
+A tag with `-test` in it (`v0.6.2-test.1`) never runs on push, so the draft step can be tried by hand on it; delete
+the draft and the tag afterwards.
 
 To try packaging on Linux without GitHub: `cargo install cargo-packager --version 0.11.8 --locked`, build the app
 in release mode, then `cargo packager -c packaging/packager.json -f deb,appimage --release` (packages land in
