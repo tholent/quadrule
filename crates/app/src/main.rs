@@ -23,7 +23,9 @@
 //! frame times and closes. `--bench-draw` does the same for dragging a pattern region out with
 //! the Pattern tool (rung 5; `name=draw_bench`). Rung 6a adds `--shapes-page` (open the page that holds
 //! every new kind; the benchmarks then run over it) and `--bench-tool rect|ellipse|polygon|...` (draw
-//! with that tool instead).
+//! with that tool instead). Rung 6b adds `--transforms-page` (rotated shapes, lines every way, opacity;
+//! the benchmarks then run over it) and `--bench-rotate [frames]` (turn its big rectangle with the
+//! rotate handle; `name=rotate_bench`).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -110,10 +112,14 @@ impl App {
         }
         if let Some(p) = path {
             ui.open_file(&p);
+        } else if args.transforms_page || args.bench_rotate.is_some() {
+            ui.viewer.open_transforms();
         } else if args.shapes_page {
             ui.viewer.open_shapes();
         }
-        let bench = if let Some(frames) = args.bench_drag {
+        let bench = if let Some(frames) = args.bench_rotate {
+            Some(quadrule_ui::DragBench::rotate(frames))
+        } else if let Some(frames) = args.bench_drag {
             // A timing run is not a session: it leaves no settings behind and opens no recovery.
             Some(quadrule_ui::DragBench::new(frames))
         } else {
@@ -122,7 +128,15 @@ impl App {
                     .with_tool(args.bench_tool.unwrap_or(quadrule_ui::Tool::Pattern))
             })
         };
-        ui.bench = bench.map(|b| if args.shapes_page { b.with_shapes() } else { b });
+        ui.bench = bench.map(|b| {
+            if args.transforms_page {
+                b.with_transforms()
+            } else if args.shapes_page {
+                b.with_shapes()
+            } else {
+                b
+            }
+        });
         App {
             ui,
             title: String::new(),
@@ -313,6 +327,12 @@ struct Args {
     /// Open the shapes page (every new kind) instead of the empty start (`--shapes-page`); the
     /// benchmarks then run over it.
     shapes_page: bool,
+    /// Open the transforms page (rotated shapes, lines every way, opacity) instead of the empty
+    /// start (`--transforms-page`); the benchmarks then run over it.
+    transforms_page: bool,
+    /// Turn the transforms page's big rectangle with its rotate handle this many steps and close
+    /// (`--bench-rotate [frames]`).
+    bench_rotate: Option<u32>,
     /// The tool `--bench-draw` drags out (`--bench-tool pattern|rect|ellipse|polygon|line|text`).
     bench_tool: Option<quadrule_ui::Tool>,
 }
@@ -338,8 +358,15 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
                 .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
                 .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
             out.bench_draw = Some(steps.unwrap_or(150));
+        } else if a == "--bench-rotate" {
+            let steps = args
+                .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
+                .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
+            out.bench_rotate = Some(steps.unwrap_or(150));
         } else if a == "--shapes-page" {
             out.shapes_page = true;
+        } else if a == "--transforms-page" {
+            out.transforms_page = true;
         } else if a == "--bench-tool" {
             let name = args.next().and_then(|n| n.into_string().ok());
             match name.as_deref().and_then(quadrule_ui::Tool::from_name) {
@@ -445,6 +472,28 @@ mod tests {
                     bench_draw: Some(40),
                     shapes_page: true,
                     bench_tool: Some(quadrule_ui::Tool::Rect),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&[
+                    "--transforms-page",
+                    "--bench-draw",
+                    "30",
+                    "--bench-tool",
+                    "line",
+                ]),
+                Ok(Args {
+                    bench_draw: Some(30),
+                    transforms_page: true,
+                    bench_tool: Some(quadrule_ui::Tool::Line),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--bench-rotate", "60"]),
+                Ok(Args {
+                    bench_rotate: Some(60),
                     ..Args::default()
                 }),
             ),

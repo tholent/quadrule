@@ -1103,7 +1103,9 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    if b.shapes {
+                    if b.transforms {
+                        self.viewer.open_transforms();
+                    } else if b.shapes {
                         self.viewer.open_shapes();
                     } else {
                         self.viewer.open_sample();
@@ -1116,17 +1118,31 @@ impl ViewerUi {
                 };
             }
             Phase::Begin => {
+                // The dot grid, or for the rotate run the big turned rectangle.
+                let target = if b.rotate {
+                    quadrule_model::sample::transform_ids::TURNED
+                } else {
+                    quadrule_model::sample::ids::DOTS
+                };
                 let at = self.viewer.page().and_then(|p| {
                     p.placed
                         .iter()
-                        .find(|s| s.id == quadrule_model::sample::ids::DOTS)
+                        .find(|s| s.id == target)
                         .map(|s| s.shape.bounds())
                 });
                 b.phase = match at {
                     Some((x0, y0, x1, y1)) => {
                         b.centre = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
                         let none = DragMods::default();
-                        let began = if b.draw {
+                        let began = if b.rotate {
+                            // Press on the rotate handle of the selected rectangle.
+                            self.viewer.selection = vec![target];
+                            self.viewer.rotate_stalk_px = ROTATE_STALK_POINTS / 0.3;
+                            match self.viewer.rotate_handle() {
+                                Some(h) => self.viewer.drag_begin(h.tip.0, h.tip.1, none, 4.0, 6.0),
+                                None => false,
+                            }
+                        } else if b.draw {
                             // From the page's top-left corner, out into the page.
                             b.centre = (150.0, 150.0);
                             self.viewer.set_tool(b.tool);
@@ -1143,7 +1159,11 @@ impl ViewerUi {
             Phase::Run(i) if i < b.frames => {
                 let t = f64::from(i);
                 let (cx, cy) = b.centre;
-                let (x, y) = if b.draw {
+                let (x, y) = if b.rotate {
+                    // The pointer swings round the rectangle's centre, a quarter turn each way.
+                    let a = (-90.0 + 70.0 * (0.21 * t).sin()).to_radians();
+                    (cx + 600.0 * a.cos(), cy + 600.0 * a.sin())
+                } else if b.draw {
                     // The far corner sweeps back and forth over most of the page.
                     (
                         150.0 + 900.0 + 800.0 * (0.31 * t).sin(),
@@ -1184,14 +1204,32 @@ impl ViewerUi {
                 };
                 println!(
                     "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
-                    if b.draw { "draw_bench" } else { "drag_bench" },
+                    if b.rotate {
+                        "rotate_bench"
+                    } else if b.draw {
+                        "draw_bench"
+                    } else {
+                        "drag_bench"
+                    },
                     if cfg!(debug_assertions) {
                         "debug"
                     } else {
                         "release"
                     },
-                    if b.shapes { "shapes" } else { "sample" },
-                    if b.draw { b.tool.cli_name() } else { "move" },
+                    if b.transforms {
+                        "transforms"
+                    } else if b.shapes {
+                        "shapes"
+                    } else {
+                        "sample"
+                    },
+                    if b.rotate {
+                        "rotate"
+                    } else if b.draw {
+                        b.tool.cli_name()
+                    } else {
+                        "move"
+                    },
                     c.frames,
                     c.mean_ms(),
                     c.percentile_ms(),

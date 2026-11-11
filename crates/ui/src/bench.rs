@@ -53,6 +53,12 @@ pub struct DragBench {
     pub shapes: bool,
     /// The tool the draw run drags out (`--bench-tool`); the Pattern tool unless told otherwise.
     pub tool: Tool,
+    /// Opens the rung 6b transforms page (rotated shapes, lines every way, opacity) when nothing
+    /// is open yet (`--transforms-page`).
+    pub transforms: bool,
+    /// Turns the big rotated rectangle of the transforms page with its rotate handle (rung 6b:
+    /// `--bench-rotate`), so the handle's own drag path is timed.
+    pub rotate: bool,
 }
 
 impl DragBench {
@@ -65,6 +71,8 @@ impl DragBench {
             draw: false,
             shapes: false,
             tool: Tool::Pattern,
+            transforms: false,
+            rotate: false,
         }
     }
 
@@ -73,6 +81,25 @@ impl DragBench {
         DragBench {
             shapes: true,
             ..self
+        }
+    }
+
+    /// The same benchmark over the transforms page, which holds rotated objects, lines pointing
+    /// every way and opacity (rung 6b).
+    pub fn with_transforms(self) -> Self {
+        DragBench {
+            transforms: true,
+            ..self
+        }
+    }
+
+    /// A benchmark of `frames` steps that turns the transforms page's big rotated rectangle with
+    /// its rotate handle, sweeping the pointer round it, and lets go (then undoes it).
+    pub fn rotate(frames: u32) -> Self {
+        DragBench {
+            rotate: true,
+            transforms: true,
+            ..DragBench::new(frames)
         }
     }
 

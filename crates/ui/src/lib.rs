@@ -36,7 +36,10 @@ pub mod viewer;
 
 pub use bench::DragBench;
 pub use canvas::{CanvasMode, ChipRenderer, ChipState, DragClock, Fallback};
-pub use drag::{Drag, DragKind, DragMods, HandleHit};
+pub use drag::{
+    Drag, DragKind, DragMods, HandleHit, ROTATE_CATCH_DEG, ROTATE_STEP_DEG, RotateHandle,
+    turned_angle,
+};
 pub use draw::{Draw, DrawKind, NewNames, new_polygon};
 pub use editor::{DropOn, Toward, layer_drop_place, object_drop_place};
 pub use panels::Tab;
