@@ -1063,3 +1063,17 @@ chris approved 6b at his look with one change, in his words: "approved, with one
   work any more. The packages from both runs are kept as run artifacts until 2027-02-09 (`gh api
   repos/tholent/quadrule/actions/runs/43122417571/artifacts`). Put to chris: what to do with the two releases, and
   how to change the workflow.
+- chris's rulings, word for word (answers to two questions): "Keep, add a note" (the two releases) and "Tag push does
+  it all" (the workflow). Done in `7e56b02`: `.github/workflows/release.yml` runs on a `v*` tag push (not on tags
+  containing `-test`), builds the four packages, drafts the release with `docs/arcs/v1/release-notes/<tag>.md` from
+  the tagged commit (title from its "## New in …" heading; pre-release before 1.0.0), attaches the files, checks the
+  count, then publishes; by hand `-f publish=no|draft|yes`. The `release: published` trigger is gone. `v0.6.0` and
+  `v0.6.1`'s notes now say no installers are attached (`gh release edit … --notes-file`; the text of an immutable
+  release stays editable). `DEVELOPMENT.md`, `STATUS.md` and the rung 7 prompt say so.
+- Trial with a throwaway tag `v0.6.2-test.1` on a commit outside `main` (`6fa8351`, holding only a test notes file):
+  pushing it started no run (the `-test` exclusion); `gh workflow run release.yml -f tag=v0.6.2-test.1 -f
+  publish=draft` → run 43123342877 success on all five jobs; its log: `DRAFT tag=v0.6.2-test.1 title="v0.6.2-test.1 —
+  test: the draft-first release flow" made=yes`, `ATTACH tag=v0.6.2-test.1 files=7 status=ok`; `gh release view` →
+  draft, pre-release, 7 files. Then the draft and the tag were deleted (`gh release view v0.6.2-test.1` → "release not
+  found"; `git ls-remote --tags origin` shows no test tag). Not tried: the final publish step and the tag-push trigger
+  on a real tag; `v0.7.0` is their first use.
