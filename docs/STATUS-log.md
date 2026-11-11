@@ -859,3 +859,10 @@ and the Style tab). Owed items are in `docs/STATUS-debt.md` (rung 6a line).
   draw 42.4 ms, the same as rung 5. Command: `./target/release/quadrule --shapes-page --bench-draw 150 --bench-tool
   <rect|ellipse|polygon> --canvas <export|chip>` (and `--bench-drag 150`).
 - Waits on chris: the look at 6a. After his approval: bump to `0.6.0`, tag `v0.6.0`, the pre-release, then 6b.
+
+## 2026-11-11 — rung 6a approved; v0.6.0 (Opus 5.5, `CLAUDE_EFFORT=high`)
+
+- chris, word for word: "approved". **Rung 6a is done.**
+- Workspace version 0.1.0 → 0.6.0 (`Cargo.toml`, `Cargo.lock`); `make check-all` after the bump → `TESTS
+  scope=workspace checks=221 check_fail=0 passed=209 failed=0 status=ok`. Release notes:
+  `docs/arcs/v1/release-notes/v0.6.0.md`. Tag `v0.6.0` on the approval commit; pre-release below.

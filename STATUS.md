@@ -82,7 +82,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   export canvas 90th percentile 25.5–26.1 ms (3 runs), chip canvas 41.4–42.3 ms (3 runs), against 50 ms
   (`docs/STATUS-log.md`). No flag, as chris ruled; export bytes unchanged (`crates/ui/tests/draw.rs`,
   `crates/render/tests/golden/SHA256SUMS`).
-- Rung 6a, shapes, is built and waits for chris's look (record `docs/bbq/2026-11-10-rung-6-shapes.md`): tools
+- Rung 6a, shapes, is done, approved by chris 2026-11-11 and released as `v0.6.0` (record `docs/bbq/2026-11-10-rung-6-shapes.md`): tools
   Rectangle R, Ellipse E, Polygon Y (Star is a tick on a polygon), drawn as in rung 5 with Shift for square, circle or
   regular polygon; fill roles Shade (204) and Block (68), estimates until the grays sheet is read, plus a custom gray;
   dash presets and custom dashes on whole device pixels; butt, round and square caps; corner radius; the Style tab's
@@ -127,8 +127,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
 - **Arc v1** plans the rest of the way to v1.0 (the full §16 list) as rungs 6 to 18: the board is
   `docs/arcs/v1/README.md`, and the next lead's prompt is `docs/arcs/v1/v1-PROMPT-2026-11-10.md` (Opus 5.5 high
   leads, Sonnet 5.5 high builds). Rung 6, shapes, is planned (bbq, 8 questions, `docs/bbq/2026-11-10-rung-6-shapes.md`):
-  6a all the shapes with fill (Shade and Block roles), dashes and caps; 6b rotation, lines any way, opacity. **6a is built
-  and waits for chris's look** (below); then `v0.6.0` and 6b.
+  6a all the shapes with fill (Shade and Block roles), dashes and caps; 6b rotation, lines any way, opacity. 6a is done
+  (`v0.6.0`); next: 6b's build.
 - Waits on chris (early, alongside rungs 6–7): the clean gray levels on both devices (the new grays sheet,
   `docs/calibration.md`), and a landscape check on a
   device plus landscape toolbar screenshots (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
@@ -174,6 +174,7 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
   6a/6b (`docs/STATUS-log.md`, `docs/bbq/2026-11-10-rung-6-shapes.md`).
 - 2026-11-10: rung 6a built (Sonnet 5.5, high): shapes, fill roles, dashes, caps, format 0.5.0; measured on the Pi;
   waits for chris's look (`docs/STATUS-log.md`).
+- 2026-11-11: rung 6a approved by chris; `v0.6.0` tagged and released (`docs/STATUS-log.md`).
 
 ## How this file is kept
 
