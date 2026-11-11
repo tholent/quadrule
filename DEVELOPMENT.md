@@ -39,6 +39,7 @@ command it runs, so you can always run that directly.
 | `make check` | rustfmt, clippy and tests on the default members (quick) |
 | `make check-all` | The same on the whole workspace; this is what CI runs, so run it before you push |
 | `make run` | Open the app (`FILE=page.quad` to open a file) |
+| `make bench-drag`, `make bench-draw` | Time dragging and drawing in a release build (`SHAPES=1` over the shapes page, `TOOL=rect` to draw with another tool) |
 | `make lint` | Lint a document from the command line |
 | `make fuzz` | Fuzz the `.quad` reader (needs nightly Rust and `cargo-fuzz`) |
 
@@ -65,15 +66,15 @@ numbers refer to the design spec.
 
 | Crate | What it holds |
 |---|---|
-| `model` | The document model: objects and geometry in millimetres, no graphics or UI (§5) |
-| `profiles` | Device profiles (the Manta and the Nomad) as RON data (§3) |
-| `layout` | Constraints, the rhythm, pixel snapping, the snapping rules, the display list (§10) |
+| `model` | The document model: objects (lines, text, patterns, rectangles, ellipses, polygons and stars) and geometry in millimetres, no graphics or UI (§5) |
+| `profiles` | Device profiles (the Manta and the Nomad) as RON data: line roles, fill roles, safe zones (§3) |
+| `layout` | Constraints, the rhythm, pixel snapping, the snapping rules, shapes with their dashes and caps, the display list (§10) |
 | `format` | The `.quad` file: a ZIP of CBOR entries (§12, ADR-001) |
 | `text` | Fonts and text layout in millimetres, drawn as plain outlines (§7, ADR-002) |
 | `render` | The export renderer: `vello_cpu` to an 8-bit grayscale PNG (ADR-003) |
 | `lint` | The linter: rules that recommend and explain, never block (§8.3) |
 | `i18n` | Every string on screen, through Project Fluent; English first (§14) |
-| `ui` | The egui widgets and the editor's state: canvas, panels, dragging, the tools bar and drawing (§15.1) |
+| `ui` | The egui widgets and the editor's state: canvas, panels, dragging, the tools bar and drawing, the shapes' inspector fields (§15.1) |
 | `app` | The program itself: window setup and preferences |
 | `xtask` | Maintainer tools, run as `cargo xtask` |
 

@@ -2779,12 +2779,14 @@ dependencies = [
 name = "quadrule-render"
 version = "0.1.0"
 dependencies = [
+ "ciborium",
  "png",
  "quadrule-format",
  "quadrule-layout",
  "quadrule-model",
  "quadrule-profiles",
  "quadrule-text",
+ "semver",
  "sha2",
  "tiny-skia",
  "vello_cpu 0.3.0",

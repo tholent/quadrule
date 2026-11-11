@@ -266,6 +266,16 @@ pub struct Object {
     pub locked: bool,
     /// Line role or explicit stroke and gray (§8.2).
     pub style: Style,
+    /// The fill of a shape (rectangle, ellipse, polygon); `None` for every other object. Format
+    /// 0.5; a file without it reads as no fill.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fill: Option<Fill>,
+    /// The stroke's dash. Format 0.5; a file without it reads as solid.
+    #[serde(default, skip_serializing_if = "DashStyle::is_solid")]
+    pub dash: DashStyle,
+    /// The stroke's end caps. Format 0.5; a file without it reads as butt.
+    #[serde(default, skip_serializing_if = "LineCap::is_butt")]
+    pub cap: LineCap,
     /// What the object is.
     pub kind: ObjectKind,
     /// Fields from newer versions.
@@ -381,9 +391,109 @@ impl LineRole {
     ];
 }
 
+/// A semantic fill role; each profile resolves it to a gray, and only a gray: a fill has no
+/// width (rung 6 bbq, Q3 and Defaulted "File format 0.5.0"). Format 0.5.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum FillRole {
+    /// A light tint for boxes and highlights.
+    Shade,
+    /// A dark solid, for header bars and the like.
+    Block,
+}
+
+impl FillRole {
+    /// Every fill role, in order.
+    pub const ALL: [FillRole; 2] = [FillRole::Shade, FillRole::Block];
+}
+
+/// What fills a shape. Format 0.5.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Fill {
+    /// The gray the profile gives the role.
+    Role(FillRole),
+    /// An explicit gray: 0 = black, 255 = white.
+    Gray(u8),
+}
+
+/// How a stroke is broken into dashes (rung 6 bbq, Q6). Lengths are rounded to whole device
+/// pixels on each profile, at least 1. Format 0.5.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Default)]
+pub enum DashStyle {
+    /// An unbroken stroke (the default, and what every 0.4 object is).
+    #[default]
+    Solid,
+    /// Dash and gap each as long as the stroke is wide.
+    Dotted,
+    /// 0.5 mm dash, 0.5 mm gap.
+    Short,
+    /// 1 mm dash, 0.5 mm gap.
+    Dash,
+    /// 2 mm dash, 1 mm gap.
+    Long,
+    /// Explicit lengths in mm.
+    Custom {
+        /// The dash.
+        dash_mm: f64,
+        /// The gap.
+        gap_mm: f64,
+    },
+}
+
+impl DashStyle {
+    /// Every named preset, solid first (not Custom).
+    pub const PRESETS: [DashStyle; 5] = [
+        DashStyle::Solid,
+        DashStyle::Dotted,
+        DashStyle::Short,
+        DashStyle::Dash,
+        DashStyle::Long,
+    ];
+
+    /// Whether the stroke is unbroken; used to leave the field out of a file when it is.
+    pub fn is_solid(&self) -> bool {
+        matches!(self, DashStyle::Solid)
+    }
+
+    /// The dash and gap in mm, or `None` for a solid stroke or for Dotted, which depends on the
+    /// stroke's width in pixels.
+    pub fn lengths_mm(&self) -> Option<(f64, f64)> {
+        match *self {
+            DashStyle::Solid | DashStyle::Dotted => None,
+            DashStyle::Short => Some((0.5, 0.5)),
+            DashStyle::Dash => Some((1.0, 0.5)),
+            DashStyle::Long => Some((2.0, 1.0)),
+            DashStyle::Custom { dash_mm, gap_mm } => Some((dash_mm, gap_mm)),
+        }
+    }
+}
+
+/// How the ends of a stroke (and of each dash) are finished. Format 0.5.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum LineCap {
+    /// Cut square at the end point (the default).
+    #[default]
+    Butt,
+    /// Rounded, reaching half the width past the end point.
+    Round,
+    /// Square, reaching half the width past the end point.
+    Square,
+}
+
+impl LineCap {
+    /// Every cap, the default first.
+    pub const ALL: [LineCap; 3] = [LineCap::Butt, LineCap::Round, LineCap::Square];
+
+    /// Whether this is the default cap; used to leave the field out of a file when it is.
+    pub fn is_butt(&self) -> bool {
+        matches!(self, LineCap::Butt)
+    }
+}
+
 /// An object's look (napkin §8.2).
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Style {
+    /// No stroke at all: a shape that is only a fill. Format 0.5.
+    None,
     /// Width and gray come from the profile's role values.
     Role(LineRole),
     /// Explicit values.
@@ -395,7 +505,8 @@ pub enum Style {
     },
 }
 
-/// What an object is (napkin §5.2). Rung 1 has lines, text boxes and pattern regions.
+/// What an object is (napkin §5.2). Lines, text boxes and pattern regions from the start;
+/// rectangles, ellipses and polygons (stars included) from format 0.5.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum ObjectKind {
     /// A straight line from the frame's top-left to its bottom-right corner.
@@ -404,6 +515,101 @@ pub enum ObjectKind {
     Text(TextBox),
     /// A parametric fill clipped to the frame (§5.2).
     Pattern(PatternRegion),
+    /// A rectangle with optional rounded corners, filling its frame (format 0.5).
+    Rect(RectShape),
+    /// An ellipse inscribed in its frame (format 0.5).
+    Ellipse(EllipseShape),
+    /// A regular polygon or star, stretched to its frame (format 0.5).
+    Polygon(PolygonShape),
+}
+
+/// A rectangle (format 0.5). Its geometry is the frame.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+pub struct RectShape {
+    /// Corner radius in mm; 0 is square corners. Drawn at most half the shorter side.
+    pub corner_radius_mm: f64,
+    /// Fields from newer versions.
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// An ellipse (format 0.5). Its geometry is the frame's inscribed ellipse; a circle when the
+/// frame is square.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+pub struct EllipseShape {
+    /// Fields from newer versions.
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// A regular polygon, or a star (format 0.5): the corners are placed on a circle with the first
+/// one straight up, then the whole shape is stretched to fill the frame, so constraints apply
+/// unchanged.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct PolygonShape {
+    /// Corners (or star points), [`POLYGON_SIDES_MIN`] to [`POLYGON_SIDES_MAX`].
+    pub sides: u8,
+    /// `Some(r)` makes a star: between the points the outline dips to `r` times the outer radius
+    /// (0 to 1, exclusive of both ends in practice). `None` is a plain polygon.
+    pub star: Option<f64>,
+    /// Fields from newer versions.
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// The fewest sides a polygon has.
+pub const POLYGON_SIDES_MIN: u8 = 3;
+/// The most sides a polygon has.
+pub const POLYGON_SIDES_MAX: u8 = 32;
+/// The inner radius a new star starts with, as a fraction of the outer one.
+pub const STAR_INNER_DEFAULT: f64 = 0.5;
+/// The inner radius a star can be set to, at least and at most (fractions of the outer radius).
+pub const STAR_INNER_MIN: f64 = 0.1;
+/// See [`STAR_INNER_MIN`].
+pub const STAR_INNER_MAX: f64 = 0.95;
+
+impl PolygonShape {
+    /// A new polygon of `sides`, not a star.
+    pub fn polygon(sides: u8) -> Self {
+        PolygonShape {
+            sides,
+            star: None,
+            extra: Extra::new(),
+        }
+    }
+
+    /// A new star of `points` points with the default inner radius.
+    pub fn star(points: u8) -> Self {
+        PolygonShape {
+            sides: points,
+            star: Some(STAR_INNER_DEFAULT),
+            extra: Extra::new(),
+        }
+    }
+
+    /// The side count that counts: clamped to the allowed range, so a file holding another number
+    /// still draws.
+    pub fn sides_clamped(&self) -> u8 {
+        self.sides.clamp(POLYGON_SIDES_MIN, POLYGON_SIDES_MAX)
+    }
+
+    /// The star's inner radius that counts (clamped), or `None` for a plain polygon.
+    pub fn star_clamped(&self) -> Option<f64> {
+        self.star
+            .map(|r| if r.is_finite() { r } else { STAR_INNER_DEFAULT })
+            .map(|r| r.clamp(STAR_INNER_MIN, STAR_INNER_MAX))
+    }
+}
+
+impl ObjectKind {
+    /// Whether this is one of the shapes (rectangle, ellipse, polygon): the kinds that have a fill
+    /// and a stroke that can be switched off.
+    pub fn is_shape(&self) -> bool {
+        matches!(
+            self,
+            ObjectKind::Rect(_) | ObjectKind::Ellipse(_) | ObjectKind::Polygon(_)
+        )
+    }
 }
 
 /// A straight line. Its geometry is the frame's diagonal, so constraints apply unchanged.

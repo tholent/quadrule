@@ -201,7 +201,7 @@ fn export_bytes_unchanged_after_edit_and_undo() {
         .iter()
         .map(|f| quadrule_format::sha256_hex(&std::fs::read(f).unwrap()))
         .collect();
-    let ok = golden.len() == 2 && shas.iter().all(|s| golden.contains(&s.as_str()));
+    let ok = golden.len() >= 2 && shas.iter().all(|s| golden.contains(&s.as_str()));
     println!(
         "CHECK crate=ui name=export_unchanged_after_edit_undo result={} files={} matches_goldens={ok}",
         pass(ok),

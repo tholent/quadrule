@@ -255,8 +255,11 @@ pub fn lint_with(
         let at = |id| Message::new(id).text("name", o.name.clone());
         let mut push = |rule, severity, message| push(rule, severity, Some(o.id), Some(b), message);
 
-        // L01 and L02: strokes.
+        // L01 and L02: strokes. A shape reads its own stroke the same way a line does (rung 6 bbq,
+        // Q8). L02 asks only about straight, unrotated edges: a curve or a slanted edge is soft by
+        // design (Q2), so a stroke width that is not whole pixels does not matter there.
         let stroked = !matches!(o.kind, ObjectKind::Text(_));
+        let hard_edges = quadrule_layout::shapes::has_axis_aligned_edge(&o.kind);
         if stroked && let Style::Custom { width_mm, .. } = o.style {
             let exact = px(width_mm);
             if exact < 1.0 {
@@ -269,7 +272,7 @@ pub fn lint_with(
                         3,
                     ),
                 );
-            } else if (exact - exact.round()).abs() > 1e-6 {
+            } else if hard_edges && (exact - exact.round()).abs() > 1e-6 {
                 push(
                     "L02",
                     Severity::Info,

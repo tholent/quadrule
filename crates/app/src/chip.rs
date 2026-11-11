@@ -21,7 +21,7 @@ use eframe::egui_wgpu;
 use eframe::wgpu;
 use quadrule_layout::{DisplayList, Item};
 use std::time::Instant;
-use vello::kurbo::{Affine, Cap, Line, Rect, Stroke};
+use vello::kurbo::{Affine, Cap, Join, Line, Rect, Stroke};
 use vello::peniko::{Color, Fill};
 
 /// The texture the page is drawn into, kept while its size stays the same.
@@ -172,6 +172,20 @@ fn scene(dl: &DisplayList) -> vello::Scene {
                 &Line::new((*x0, *y0), (*x1, *y1)),
             ),
             Item::Fill { path, gray: g } => s.fill(Fill::NonZero, id, gray(*g), None, path),
+            Item::StrokePath {
+                path,
+                width,
+                gray: g,
+                cap,
+            } => s.stroke(
+                &Stroke::new(*width)
+                    .with_caps(quadrule_layout::kurbo_cap(*cap))
+                    .with_join(Join::Miter),
+                id,
+                gray(*g),
+                None,
+                path,
+            ),
         }
     }
     s

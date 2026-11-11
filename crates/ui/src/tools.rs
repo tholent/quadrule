@@ -13,8 +13,8 @@
 // limitations under the License.
 
 //! The tools on the left bar (rung 5 step 2, docs/bbq/2026-11-10-rung-5-new-and-insert.md,
-//! Defaulted "The tools bar"). The bar is a list, so a later tool (rectangle, ellipse, polygon,
-//! repeat; Q12) is one more entry in [`Tool::ALL`] and one more icon.
+//! Defaulted "The tools bar"). The bar is a list, so a tool is one more entry in [`Tool::ALL`] and one
+//! more icon; rung 6a added the rectangle, ellipse and polygon (R, E, Y).
 
 use crate::draw::DrawKind;
 use crate::view::ViewerUi;
@@ -32,11 +32,25 @@ pub enum Tool {
     Text,
     /// Draw a pattern region.
     Pattern,
+    /// Draw a rectangle (rung 6a).
+    Rect,
+    /// Draw an ellipse (rung 6a).
+    Ellipse,
+    /// Draw a polygon; a star is a polygon with Star ticked (rung 6a).
+    Polygon,
 }
 
 impl Tool {
     /// Every tool, in the order of the bar.
-    pub const ALL: [Tool; 4] = [Tool::Select, Tool::Line, Tool::Text, Tool::Pattern];
+    pub const ALL: [Tool; 7] = [
+        Tool::Select,
+        Tool::Line,
+        Tool::Text,
+        Tool::Pattern,
+        Tool::Rect,
+        Tool::Ellipse,
+        Tool::Polygon,
+    ];
 
     /// The Fluent message that names it for screen readers (`crates/i18n/locales/en-US/app.ftl`).
     pub fn message_id(self) -> &'static str {
@@ -45,6 +59,9 @@ impl Tool {
             Tool::Line => "tool-line",
             Tool::Text => "tool-text",
             Tool::Pattern => "tool-pattern",
+            Tool::Rect => "tool-rect",
+            Tool::Ellipse => "tool-ellipse",
+            Tool::Polygon => "tool-polygon",
         }
     }
 
@@ -55,16 +72,43 @@ impl Tool {
             Tool::Line => "tool-line-tip",
             Tool::Text => "tool-text-tip",
             Tool::Pattern => "tool-pattern-tip",
+            Tool::Rect => "tool-rect-tip",
+            Tool::Ellipse => "tool-ellipse-tip",
+            Tool::Polygon => "tool-polygon-tip",
         }
     }
 
-    /// Its shortcut key (V, L, T, P).
+    /// The tool a command-line name picks (`--bench-tool`): `select`, `line`, `text`, `pattern`,
+    /// `rect`, `ellipse` or `polygon`.
+    pub fn from_name(name: &str) -> Option<Tool> {
+        Tool::ALL
+            .into_iter()
+            .find(|t| t.cli_name() == name.to_ascii_lowercase())
+    }
+
+    /// The name [`Tool::from_name`] reads.
+    pub fn cli_name(self) -> &'static str {
+        match self {
+            Tool::Select => "select",
+            Tool::Line => "line",
+            Tool::Text => "text",
+            Tool::Pattern => "pattern",
+            Tool::Rect => "rect",
+            Tool::Ellipse => "ellipse",
+            Tool::Polygon => "polygon",
+        }
+    }
+
+    /// Its shortcut key (V, L, T, P, R, E, Y).
     pub fn key(self) -> Key {
         match self {
             Tool::Select => Key::V,
             Tool::Line => Key::L,
             Tool::Text => Key::T,
             Tool::Pattern => Key::P,
+            Tool::Rect => Key::R,
+            Tool::Ellipse => Key::E,
+            Tool::Polygon => Key::Y,
         }
     }
 
@@ -75,6 +119,9 @@ impl Tool {
             Tool::Line => Some(DrawKind::Line),
             Tool::Text => Some(DrawKind::Text),
             Tool::Pattern => Some(DrawKind::Pattern),
+            Tool::Rect => Some(DrawKind::Rect),
+            Tool::Ellipse => Some(DrawKind::Ellipse),
+            Tool::Polygon => Some(DrawKind::Polygon),
         }
     }
 }
@@ -117,6 +164,24 @@ fn paint_icon(painter: &egui::Painter, tool: Tool, c: Pos2, color: Color32) {
             for y in [-3.0, 3.0] {
                 painter.line_segment([at(-9.0, y), at(9.0, y)], stroke);
             }
+        }
+        Tool::Rect => {
+            // A box with softly rounded corners.
+            let r = egui::Rect::from_center_size(c, vec2(20.0, 16.0));
+            painter.rect_stroke(r, 3.0, stroke, egui::StrokeKind::Middle);
+        }
+        Tool::Ellipse => {
+            painter.add(Shape::ellipse_stroke(c, vec2(10.0, 8.0), stroke));
+        }
+        Tool::Polygon => {
+            // A hexagon, point up.
+            let pts = (0..6)
+                .map(|k| {
+                    let a = -std::f32::consts::FRAC_PI_2 + k as f32 * std::f32::consts::TAU / 6.0;
+                    at(9.5 * a.cos(), 9.5 * a.sin())
+                })
+                .collect();
+            painter.add(Shape::closed_line(pts, stroke));
         }
     }
 }

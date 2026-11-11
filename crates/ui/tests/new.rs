@@ -21,8 +21,8 @@ use quadrule_model::blank::{RhythmPreset, rfc3339_utc};
 use quadrule_model::edit::Command;
 use quadrule_model::sample::{MANTA_ID, NOMAD_ID};
 use quadrule_model::{
-    Constraints, Extra, Frame, HConstraint, LineRole, Object, ObjectKind, Pattern, PatternRegion,
-    Style, Uuid, VConstraint,
+    Constraints, DashStyle, Extra, Frame, HConstraint, LineCap, LineRole, Object, ObjectKind,
+    Pattern, PatternRegion, Style, Uuid, VConstraint,
 };
 use quadrule_profiles::builtin;
 use quadrule_ui::{Source, Viewer};
@@ -56,6 +56,9 @@ fn fill_region(doc: &quadrule_model::Document) -> Object {
         visible: true,
         locked: false,
         style: Style::Role(LineRole::Guide),
+        fill: None,
+        dash: DashStyle::Solid,
+        cap: LineCap::Butt,
         kind: ObjectKind::Pattern(PatternRegion {
             pattern: Pattern::Lines,
             extra: Extra::new(),

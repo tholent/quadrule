@@ -171,7 +171,22 @@ fn slice_end_to_end() {
         );
     }
     if bless {
-        std::fs::write(golden_dir().join("SHA256SUMS"), &sums).unwrap();
+        // Other tests' lines (the shapes page, rung 6a) stay where they are; only this test's own
+        // two are replaced.
+        let path = golden_dir().join("SHA256SUMS");
+        let old = std::fs::read_to_string(&path).unwrap_or_default();
+        let mut merged = String::new();
+        for line in old.lines() {
+            let is_mine = line
+                .split_whitespace()
+                .nth(1)
+                .is_some_and(|n| n.starts_with("slice_"));
+            if !is_mine {
+                merged.push_str(line);
+                merged.push('\n');
+            }
+        }
+        std::fs::write(&path, sums + &merged).unwrap();
     }
     assert!(
         all_ok,

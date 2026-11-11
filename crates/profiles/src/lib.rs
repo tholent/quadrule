@@ -17,7 +17,7 @@
 
 #![forbid(unsafe_code)]
 
-use quadrule_model::{LineRole, MM_PER_IN, Margins};
+use quadrule_model::{Fill, FillRole, LineRole, MM_PER_IN, Margins};
 use serde::{Deserialize, Serialize};
 
 /// One target screen (napkin §3.2).
@@ -52,6 +52,8 @@ pub struct Profile {
     pub orientations: Vec<Orientation>,
     /// Width and gray per line role (§8.2).
     pub line_roles: LineRoles,
+    /// The gray of each fill role (rung 6, format 0.5).
+    pub fill_roles: FillRoles,
     /// Where the preset values came from.
     pub calibration_meta: CalibrationMeta,
     /// Where to copy files on the device; shown as instructions only.
@@ -108,6 +110,16 @@ pub struct LineRoles {
     pub label_gray: u8,
 }
 
+/// Each fill role's gray on this profile (rung 6 bbq, Q3 and Q7). A fill has no width, so a role
+/// is a gray only.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FillRoles {
+    /// The Shade role: a light tint. 0 = black, 255 = white.
+    pub shade: u8,
+    /// The Block role: a dark solid.
+    pub block: u8,
+}
+
 /// Provenance of the preset values (napkin §3.2, §8.4).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct CalibrationMeta {
@@ -122,6 +134,22 @@ pub struct CalibrationMeta {
 }
 
 impl Profile {
+    /// The gray a fill role resolves to on this profile.
+    pub fn fill_role_gray(&self, role: FillRole) -> u8 {
+        match role {
+            FillRole::Shade => self.fill_roles.shade,
+            FillRole::Block => self.fill_roles.block,
+        }
+    }
+
+    /// The gray of a fill: a role resolved on this profile, or the custom gray itself.
+    pub fn fill_gray(&self, fill: Fill) -> u8 {
+        match fill {
+            Fill::Role(r) => self.fill_role_gray(r),
+            Fill::Gray(g) => g,
+        }
+    }
+
     /// Millimetres to device pixels (not rounded).
     pub fn mm_to_px(&self, mm: f64) -> f64 {
         mm * self.ppi / MM_PER_IN

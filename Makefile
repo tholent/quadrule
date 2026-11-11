@@ -17,10 +17,13 @@ export CARGO_BUILD_JOBS := $(JOBS)
 
 LOG := target/test.log
 
-# For `run`, `lint`: FILE=path/to/page.quad. For `bench-drag`: FRAMES=150. For `calibration-sheet` and
+# For `run`, `lint`: FILE=path/to/page.quad. For `bench-drag`: FRAMES=150; SHAPES=1 runs it over the shapes page (every
+# new kind); `bench-draw` also takes TOOL=rect|ellipse|polygon|pattern|line|text. For `calibration-sheet` and
 # `safe-zones`: PROFILE=supernote.a6x2 (default all). For `fuzz`: SECS=60.
 FILE ?=
 FRAMES ?= 150
+SHAPES ?=
+TOOL ?=
 PROFILE ?= all
 OUT ?= calib
 SECS ?= 60
@@ -99,11 +102,11 @@ run: ## Open the viewer/editor (FILE=page.quad, or the sample page)
 run-release: ## The same, as a release build (what the speed numbers use)
 	cargo run --release -p quadrule-app -- $(FILE)
 
-bench-drag: ## Drag-speed bench on the sample page, release build (FRAMES=150); the 90th percentile is the judge
-	cargo run --release -p quadrule-app -- --bench-drag $(FRAMES)
+bench-drag: ## Drag-speed bench on the sample page, release build (FRAMES=150, SHAPES=1 for the shapes page); the 90th percentile is the judge
+	cargo run --release -p quadrule-app -- --bench-drag $(FRAMES) $(if $(SHAPES),--shapes-page)
 
-bench-draw: ## Drawing-speed bench: drags a pattern region out over the sample page, release build (FRAMES=150)
-	cargo run --release -p quadrule-app -- --bench-draw $(FRAMES)
+bench-draw: ## Drawing-speed bench: drags a pattern region out over the sample page, release build (FRAMES=150, SHAPES=1, TOOL=rect|ellipse|polygon)
+	cargo run --release -p quadrule-app -- --bench-draw $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TOOL),--bench-tool $(TOOL))
 
 # ---- maintainer tasks ----------------------------------------------------------------------------------------
 

@@ -142,6 +142,21 @@ pub fn screen_list(dl: &DisplayList, view: &ScreenView) -> DisplayList {
                     gray: *gray,
                 }
             }
+            Item::StrokePath {
+                path,
+                width,
+                gray,
+                cap,
+            } => {
+                let mut p: BezPath = path.clone();
+                p.apply_affine(affine);
+                Item::StrokePath {
+                    path: p,
+                    width: width * s,
+                    gray: *gray,
+                    cap: *cap,
+                }
+            }
         })
         .collect();
     DisplayList {

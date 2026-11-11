@@ -55,6 +55,9 @@ fn line(id: u128, frame: Frame, style: Style) -> Object {
         visible: true,
         locked: false,
         style,
+        fill: None,
+        dash: DashStyle::Solid,
+        cap: LineCap::Butt,
         kind: ObjectKind::Line(Line::default()),
         extra: Extra::new(),
     }
@@ -415,4 +418,78 @@ fn findings_about_objects_have_areas() {
         f.iter().filter(|x| x.area.is_some()).count()
     );
     assert!(ok);
+}
+
+#[test]
+fn shape_stroke_rules() {
+    // Rung 6 bbq, Q8: L01 and L02 read each stroke of the new kinds; L02 only where a straight,
+    // unrotated edge is (a rectangle, a triangle's base), never on an ellipse or a slanted-only
+    // polygon; L06 uses the shape's frame; a shape with no stroke has nothing to lint.
+    let fractional = Style::Custom {
+        width_mm: 0.12,
+        gray: 0,
+    };
+    let thin = Style::Custom {
+        width_mm: 0.05,
+        gray: 0,
+    };
+    let shape = |id: u128, style: Style, kind: ObjectKind| {
+        let mut o = line(id, Frame::new(30.0, 60.0, 30.0, 20.0), style);
+        o.kind = kind;
+        o
+    };
+    let rect = || ObjectKind::Rect(RectShape::default());
+    let ellipse = || ObjectKind::Ellipse(EllipseShape::default());
+    let poly = |n| ObjectKind::Polygon(PolygonShape::polygon(n));
+    let mut doc = slice_document();
+    doc.layers[0].objects = vec![
+        shape(20, thin, rect()),
+        shape(21, thin, ellipse()),
+        shape(22, thin, poly(5)),
+        shape(23, fractional, rect()),
+        shape(24, fractional, ellipse()),
+        shape(25, fractional, poly(5)),
+        // Eight sides, a point up: every edge is slanted.
+        shape(26, fractional, poly(8)),
+        shape(27, Style::None, rect()),
+        shape(28, Style::Role(LineRole::Structure), rect()),
+        // On the left toolbar's strip, and beyond the page's right edge.
+        {
+            let mut o = shape(29, Style::Role(LineRole::Structure), ellipse());
+            o.frame = Frame::new(1.0, 100.0, 20.0, 20.0);
+            o
+        },
+    ];
+    let f = run(&doc, &builtin(MANTA_ID).unwrap());
+    let r = |id| rules(&f, Some(Uuid::from_u128(id)));
+    let ok = ["L01"]
+        .iter()
+        .all(|x| r(20).contains(x) && r(21).contains(x) && r(22).contains(x))
+        && r(23).contains("L02")
+        && !r(24).contains("L02")
+        && r(25).contains("L02")
+        && !r(26).contains("L02")
+        && r(27).is_empty_of(&["L01", "L02"])
+        && r(28).is_empty_of(&["L01", "L02"])
+        && r(29).contains("L06");
+    println!(
+        "\nCHECK crate=lint name=shape_stroke_rules result={} rect_thin={:?} ellipse_frac={:?} pentagon_frac={:?} octagon_frac={:?} ellipse_in_toolbar={:?}",
+        pass(ok),
+        r(20),
+        r(24),
+        r(25),
+        r(26),
+        r(29)
+    );
+    assert!(ok);
+}
+
+trait EmptyOf {
+    fn is_empty_of(&self, rules: &[&str]) -> bool;
+}
+
+impl EmptyOf for BTreeSet<&'static str> {
+    fn is_empty_of(&self, rules: &[&str]) -> bool {
+        !rules.iter().any(|r| self.contains(r))
+    }
 }

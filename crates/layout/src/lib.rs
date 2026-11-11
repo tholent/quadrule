@@ -23,14 +23,15 @@
 #![forbid(unsafe_code)]
 
 pub mod newpage;
+pub mod shapes;
 pub mod snap;
 pub mod units;
 
 use kurbo::{BezPath, Point};
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{
-    Constraints, Document, Frame, HConstraint, ObjectKind, Pattern, RhythmOrigin, RhythmResolution,
-    Style, Uuid, VConstraint,
+    Constraints, Document, Frame, HConstraint, LineCap, ObjectKind, Pattern, RhythmOrigin,
+    RhythmResolution, Style, Uuid, VConstraint,
 };
 use quadrule_profiles::Profile;
 use quadrule_text::{FontRegistry, Laid, TextError, TextRequest};
@@ -66,12 +67,24 @@ pub enum Item {
         /// 0 = black, 255 = white.
         gray: u8,
     },
-    /// An anti-aliased filled path, non-zero rule: text.
+    /// An anti-aliased filled path, non-zero rule: text, and the fill of a curved or slanted shape.
     Fill {
         /// The outline, in device pixels.
         path: BezPath,
         /// 0 = black, 255 = white.
         gray: u8,
+    },
+    /// An anti-aliased stroked path with mitre joins: the outline of a curved or slanted shape, and
+    /// its dashes (rung 6, format 0.5). Every subpath is stroked with `cap` at its open ends.
+    StrokePath {
+        /// The centre line, in device pixels.
+        path: BezPath,
+        /// Width in pixels.
+        width: f64,
+        /// 0 = black, 255 = white.
+        gray: u8,
+        /// How open ends are finished.
+        cap: LineCap,
     },
 }
 
@@ -219,15 +232,31 @@ pub fn snap_center(pos: f64, width_px: u32) -> f64 {
     }
 }
 
-/// A style's stroke on a profile: (width in whole pixels, at least 1; gray).
+/// The renderers' cap for the display list's (one kurbo is shared by vello_cpu and vello).
+pub fn kurbo_cap(c: LineCap) -> kurbo::Cap {
+    match c {
+        LineCap::Butt => kurbo::Cap::Butt,
+        LineCap::Round => kurbo::Cap::Round,
+        LineCap::Square => kurbo::Cap::Square,
+    }
+}
+
+/// A style's stroke on a profile: (width in whole pixels, at least 1; gray). [`Style::None`] gives
+/// width 0 (and white): use [`stroke_opt`] to tell a missing stroke from a drawn one.
 pub fn stroke(style: Style, p: &Profile) -> (u32, u8) {
-    match style {
+    stroke_opt(style, p).unwrap_or((0, 255))
+}
+
+/// A style's stroke on a profile, or `None` for [`Style::None`].
+pub fn stroke_opt(style: Style, p: &Profile) -> Option<(u32, u8)> {
+    Some(match style {
+        Style::None => return None,
         Style::Role(r) => {
             let s = p.role(r);
             (s.width_px.max(1), s.gray)
         }
         Style::Custom { width_mm, gray } => ((p.mm_to_px(width_mm).round() as u32).max(1), gray),
-    }
+    })
 }
 
 /// The rhythm resolved to one profile's pixels (napkin §6.3).
@@ -348,18 +377,33 @@ pub fn display_list(
             let f = resolve_frame(o.frame, o.constraints, from, to);
             match &o.kind {
                 ObjectKind::Line(_) => {
-                    let (w, gray) = stroke(o.style, target);
-                    items.push(line_item(
-                        px(f.x_mm),
-                        px(f.y_mm),
-                        px(f.x_mm + f.w_mm),
-                        px(f.y_mm + f.h_mm),
-                        w,
-                        gray,
-                    ));
+                    let Some((w, gray)) = stroke_opt(o.style, target) else {
+                        continue;
+                    };
+                    let (x0, y0) = (px(f.x_mm), px(f.y_mm));
+                    let (x1, y1) = (px(f.x_mm + f.w_mm), px(f.y_mm + f.h_mm));
+                    if o.dash.is_solid() && o.cap.is_butt() {
+                        items.push(line_item(x0, y0, x1, y1, w, gray));
+                    } else {
+                        items.extend(shapes::line_items(
+                            (x0, y0, x1, y1),
+                            w,
+                            gray,
+                            o.dash,
+                            o.cap,
+                            target,
+                        ));
+                    }
+                }
+                ObjectKind::Rect(_) | ObjectKind::Ellipse(_) | ObjectKind::Polygon(_) => {
+                    let (x0, y0) = (px(f.x_mm), px(f.y_mm));
+                    let (x1, y1) = (px(f.x_mm + f.w_mm), px(f.y_mm + f.h_mm));
+                    items.extend(shapes::shape_items(o, (x0, y0, x1, y1), target));
                 }
                 ObjectKind::Pattern(pr) => {
-                    let (w, gray) = stroke(o.style, target);
+                    let Some((w, gray)) = stroke_opt(o.style, target) else {
+                        continue;
+                    };
                     let (x0, y0) = (px(f.x_mm).round(), px(f.y_mm).round());
                     let (x1, y1) = (px(f.x_mm + f.w_mm).round(), px(f.y_mm + f.h_mm).round());
                     let ys = RhythmPx::positions(rhythm.origin_y, rhythm.unit_y, y0, y1);
@@ -423,7 +467,9 @@ pub fn display_list(
                 }
                 ObjectKind::Text(_) => {
                     let text = outlines.text(o.id).ok_or(LayoutError::MissingText(o.id))?;
-                    let (_, gray) = stroke(o.style, target);
+                    let Some((_, gray)) = stroke_opt(o.style, target) else {
+                        continue;
+                    };
                     let origin = Point::new(px(f.x_mm).round(), px(f.y_mm).round());
                     let path = text_path(
                         outlines,
@@ -657,7 +703,10 @@ pub fn placed_objects(
                     y1,
                     width: stroke(o.style, target).0 as f64,
                 },
-                ObjectKind::Pattern(_) => Shape::Box {
+                ObjectKind::Pattern(_)
+                | ObjectKind::Rect(_)
+                | ObjectKind::Ellipse(_)
+                | ObjectKind::Polygon(_) => Shape::Box {
                     x0: x0.min(x1),
                     y0: y0.min(y1),
                     x1: x0.max(x1),

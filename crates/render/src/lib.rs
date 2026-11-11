@@ -24,7 +24,7 @@
 use quadrule_layout::{DisplayList, Item};
 use sha2::{Digest, Sha256};
 use vello_cpu::color::{AlphaColor, Srgb};
-use vello_cpu::kurbo::{Cap, Line, Rect, Shape, Stroke};
+use vello_cpu::kurbo::{Cap, Join, Line, Rect, Shape, Stroke};
 use vello_cpu::{Level, Pixmap, RenderContext, RenderSettings, Resources};
 
 /// An 8-bit grayscale image: 0 = black, 255 = white, row by row, no alpha.
@@ -98,6 +98,20 @@ pub fn render(dl: &DisplayList, math: Math) -> Gray {
             Item::Fill { path, gray: g } => {
                 ctx.set_paint(gray(*g));
                 ctx.fill_path(path);
+            }
+            Item::StrokePath {
+                path,
+                width,
+                gray: g,
+                cap,
+            } => {
+                ctx.set_paint(gray(*g));
+                ctx.set_stroke(
+                    Stroke::new(*width)
+                        .with_caps(quadrule_layout::kurbo_cap(*cap))
+                        .with_join(Join::Miter),
+                );
+                ctx.stroke_path(path);
             }
         }
     }

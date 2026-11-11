@@ -21,7 +21,9 @@
 //! `--bench-drag` opens the sample page, replays a drag of its dot grid through the real window
 //! (150 steps unless told otherwise), prints one `CHECK crate=ui name=drag_bench` line with the
 //! frame times and closes. `--bench-draw` does the same for dragging a pattern region out with
-//! the Pattern tool (rung 5; `name=draw_bench`).
+//! the Pattern tool (rung 5; `name=draw_bench`). Rung 6a adds `--shapes-page` (open the page that holds
+//! every new kind; the benchmarks then run over it) and `--bench-tool rect|ellipse|polygon|...` (draw
+//! with that tool instead).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -108,13 +110,19 @@ impl App {
         }
         if let Some(p) = path {
             ui.open_file(&p);
+        } else if args.shapes_page {
+            ui.viewer.open_shapes();
         }
-        if let Some(frames) = args.bench_drag {
+        let bench = if let Some(frames) = args.bench_drag {
             // A timing run is not a session: it leaves no settings behind and opens no recovery.
-            ui.bench = Some(quadrule_ui::DragBench::new(frames));
-        } else if let Some(frames) = args.bench_draw {
-            ui.bench = Some(quadrule_ui::DragBench::draw(frames));
-        }
+            Some(quadrule_ui::DragBench::new(frames))
+        } else {
+            args.bench_draw.map(|frames| {
+                quadrule_ui::DragBench::draw(frames)
+                    .with_tool(args.bench_tool.unwrap_or(quadrule_ui::Tool::Pattern))
+            })
+        };
+        ui.bench = bench.map(|b| if args.shapes_page { b.with_shapes() } else { b });
         App {
             ui,
             title: String::new(),
@@ -302,6 +310,11 @@ struct Args {
     bench_drag: Option<u32>,
     /// Replay drawing a pattern region this many steps and close (`--bench-draw [frames]`).
     bench_draw: Option<u32>,
+    /// Open the shapes page (every new kind) instead of the empty start (`--shapes-page`); the
+    /// benchmarks then run over it.
+    shapes_page: bool,
+    /// The tool `--bench-draw` drags out (`--bench-tool pattern|rect|ellipse|polygon|line|text`).
+    bench_tool: Option<quadrule_ui::Tool>,
 }
 
 fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, String> {
@@ -325,6 +338,18 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
                 .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
                 .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
             out.bench_draw = Some(steps.unwrap_or(150));
+        } else if a == "--shapes-page" {
+            out.shapes_page = true;
+        } else if a == "--bench-tool" {
+            let name = args.next().and_then(|n| n.into_string().ok());
+            match name.as_deref().and_then(quadrule_ui::Tool::from_name) {
+                Some(t) if t != quadrule_ui::Tool::Select => out.bench_tool = Some(t),
+                _ => {
+                    return Err(
+                        "--bench-tool takes line, text, pattern, rect, ellipse or polygon".into(),
+                    );
+                }
+            }
         } else {
             out.path = Some(PathBuf::from(a));
         }
@@ -408,9 +433,35 @@ mod tests {
                     ..Args::default()
                 }),
             ),
+            (
+                p(&[
+                    "--shapes-page",
+                    "--bench-draw",
+                    "40",
+                    "--bench-tool",
+                    "Rect",
+                ]),
+                Ok(Args {
+                    bench_draw: Some(40),
+                    shapes_page: true,
+                    bench_tool: Some(quadrule_ui::Tool::Rect),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--shapes-page", "--bench-drag"]),
+                Ok(Args {
+                    bench_drag: Some(150),
+                    shapes_page: true,
+                    ..Args::default()
+                }),
+            ),
         ];
         let good = cases.iter().all(|(got, want)| got == want);
-        let bad = p(&["--canvas", "gpu"]).is_err() && p(&["--canvas"]).is_err();
+        let bad = p(&["--canvas", "gpu"]).is_err()
+            && p(&["--canvas"]).is_err()
+            && p(&["--bench-tool", "blob"]).is_err()
+            && p(&["--bench-tool"]).is_err();
         let ok = good && bad;
         println!(
             "CHECK crate=app name=command_line result={} cases={} bad_refused={bad}",

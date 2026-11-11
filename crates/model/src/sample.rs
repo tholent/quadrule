@@ -63,6 +63,9 @@ fn object(
         visible: true,
         locked: false,
         style,
+        fill: None,
+        dash: DashStyle::Solid,
+        cap: LineCap::Butt,
         kind,
         extra: Extra::new(),
     }
@@ -186,4 +189,353 @@ pub fn slice_document() -> Document {
         ],
         extra: Extra::new(),
     }
+}
+
+/// Fixed ids for the shapes page's objects.
+pub mod shape_ids {
+    use crate::Uuid;
+    /// The `n`th object of the shapes page (1-based); the dot grid is [`super::ids::DOTS`].
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0006_4000_8000_0000_0000_0000 + n)
+    }
+}
+
+/// The shapes page (rung 6a, docs/bbq/2026-11-10-rung-6-shapes.md, Defaulted "Goldens"): every
+/// new kind (rectangle square and rounded, ellipse, circle, polygons of several sides, stars), both
+/// fill roles, a custom fill, a shape with no stroke, each dash preset and a custom one on lines
+/// and on closed shapes, and each cap. It holds the sample's dot grid ([`ids::DOTS`]) too, so
+/// the drag benchmark can run over it. Designed on the Manta, also targeting the Nomad, with no
+/// text, so it needs no fonts.
+pub fn shapes_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 6a shapes".into();
+    doc.metadata.description = "The rung 6a shapes page: every shape, fill, dash and cap.".into();
+    let rule = doc.layers[1].objects[1].clone();
+    let dots = doc.layers[0].objects[0].clone();
+    let mk = |n: u128, name: &str, frame: Frame, style: Style, kind: ObjectKind| {
+        let mut o = rule.clone();
+        o.id = shape_ids::nth(n);
+        o.name = name.into();
+        o.frame = frame;
+        o.constraints = Constraints::default();
+        o.style = style;
+        o.kind = kind;
+        o
+    };
+    let structure = Style::Role(LineRole::Structure);
+    let rect = |r: f64| {
+        ObjectKind::Rect(RectShape {
+            corner_radius_mm: r,
+            extra: Extra::new(),
+        })
+    };
+    let ellipse = || ObjectKind::Ellipse(EllipseShape::default());
+    let poly = |n: u8| ObjectKind::Polygon(PolygonShape::polygon(n));
+    let star = |n: u8, inner: f64| {
+        ObjectKind::Polygon(PolygonShape {
+            sides: n,
+            star: Some(inner),
+            extra: Extra::new(),
+        })
+    };
+    let mut objs: Vec<Object> = Vec::new();
+    let mut n = 0u128;
+    let mut add = |name: &str,
+                   frame: Frame,
+                   style: Style,
+                   fill: Option<Fill>,
+                   dash: DashStyle,
+                   cap: LineCap,
+                   kind: ObjectKind| {
+        n += 1;
+        let mut o = mk(n, name, frame, style, kind);
+        o.fill = fill;
+        o.dash = dash;
+        o.cap = cap;
+        objs.push(o);
+    };
+    let (shade, block) = (
+        Some(Fill::Role(FillRole::Shade)),
+        Some(Fill::Role(FillRole::Block)),
+    );
+    let (solid, butt) = (DashStyle::Solid, LineCap::Butt);
+    let cell = |col: f64, row: f64, w: f64, h: f64| Frame::new(8.0 + col * 24.0, row, w, h);
+
+    // Row 1: the kinds, fills and no stroke.
+    add(
+        "Rectangle",
+        cell(0.0, 32.0, 20.0, 20.0),
+        structure,
+        None,
+        solid,
+        butt,
+        rect(0.0),
+    );
+    add(
+        "Rounded rectangle, Shade",
+        cell(1.0, 32.0, 20.0, 20.0),
+        structure,
+        shade,
+        solid,
+        butt,
+        rect(4.0),
+    );
+    add(
+        "Rectangle, Block, no stroke",
+        cell(2.0, 32.0, 20.0, 20.0),
+        Style::None,
+        block,
+        solid,
+        butt,
+        rect(0.0),
+    );
+    add(
+        "Ellipse, custom fill",
+        cell(3.0, 32.0, 20.0, 14.0),
+        structure,
+        Some(Fill::Gray(153)),
+        solid,
+        butt,
+        ellipse(),
+    );
+    add(
+        "Hexagon, Shade",
+        cell(4.0, 32.0, 20.0, 20.0),
+        structure,
+        shade,
+        solid,
+        butt,
+        poly(6),
+    );
+    add(
+        "Star, Block",
+        cell(5.0, 32.0, 20.0, 20.0),
+        Style::Role(LineRole::Emphasis),
+        block,
+        solid,
+        butt,
+        star(5, 0.5),
+    );
+    // Row 2: other strokes, sides and stars.
+    add(
+        "Rectangle, Emphasis, Shade",
+        cell(0.0, 58.0, 20.0, 14.0),
+        Style::Role(LineRole::Emphasis),
+        shade,
+        solid,
+        butt,
+        rect(0.0),
+    );
+    add(
+        "Circle",
+        cell(1.0, 58.0, 14.0, 14.0),
+        structure,
+        None,
+        solid,
+        butt,
+        ellipse(),
+    );
+    add(
+        "Triangle",
+        cell(2.0, 58.0, 20.0, 18.0),
+        Style::Role(LineRole::Guide),
+        None,
+        solid,
+        butt,
+        poly(3),
+    );
+    add(
+        "Heptagon, custom stroke",
+        cell(3.0, 58.0, 20.0, 20.0),
+        Style::Custom {
+            width_mm: 0.6,
+            gray: 0,
+        },
+        None,
+        solid,
+        butt,
+        poly(7),
+    );
+    add(
+        "Octagon, Block",
+        cell(4.0, 58.0, 20.0, 20.0),
+        Style::None,
+        block,
+        solid,
+        butt,
+        poly(8),
+    );
+    add(
+        "Star, 8 points",
+        cell(5.0, 58.0, 20.0, 20.0),
+        structure,
+        shade,
+        solid,
+        butt,
+        star(8, 0.3),
+    );
+    // Rows 3-4: each dash preset on a line (Structure, 2 px).
+    let presets = [
+        ("Solid", DashStyle::Solid),
+        ("Dotted", DashStyle::Dotted),
+        ("Short dash", DashStyle::Short),
+        ("Dash", DashStyle::Dash),
+        ("Long dash", DashStyle::Long),
+        (
+            "Custom dash",
+            DashStyle::Custom {
+                dash_mm: 1.5,
+                gap_mm: 1.0,
+            },
+        ),
+    ];
+    for (i, (name, d)) in presets.iter().enumerate() {
+        add(
+            &format!("Line, {name}"),
+            Frame::new(8.0, 86.0 + 6.0 * i as f64, 70.0, 0.0),
+            structure,
+            None,
+            *d,
+            butt,
+            ObjectKind::Line(Line::default()),
+        );
+    }
+    // Each cap on a thick dashed line. The gap is longer than the stroke is wide, so the caps show
+    // (a cap reaches half the width into the gap at each end of every dash).
+    let thick = Style::Custom {
+        width_mm: 1.0,
+        gray: 51,
+    };
+    let spaced = DashStyle::Custom {
+        dash_mm: 2.0,
+        gap_mm: 3.0,
+    };
+    for (i, cap) in LineCap::ALL.iter().enumerate() {
+        add(
+            &format!("Line, {cap:?} cap"),
+            Frame::new(86.0, 88.0 + 8.0 * i as f64, 66.0, 0.0),
+            thick,
+            None,
+            spaced,
+            *cap,
+            ObjectKind::Line(Line::default()),
+        );
+    }
+    // A slanted dashed line, and a vertical one with square caps.
+    add(
+        "Slanted line, Dash",
+        Frame::new(86.0, 114.0, 30.0, 20.0),
+        structure,
+        None,
+        DashStyle::Dash,
+        butt,
+        ObjectKind::Line(Line::default()),
+    );
+    add(
+        "Vertical line, Short dash, square caps",
+        Frame::new(124.0, 114.0, 0.0, 20.0),
+        structure,
+        None,
+        DashStyle::Short,
+        LineCap::Square,
+        ObjectKind::Line(Line::default()),
+    );
+    // Row 5: dashed closed shapes, each cap.
+    for (i, cap) in LineCap::ALL.iter().enumerate() {
+        add(
+            &format!("Dashed rectangle, {cap:?}"),
+            cell(i as f64, 142.0, 20.0, 16.0),
+            structure,
+            None,
+            DashStyle::Dash,
+            *cap,
+            rect(0.0),
+        );
+    }
+    add(
+        "Dashed rounded rectangle",
+        cell(3.0, 142.0, 20.0, 16.0),
+        structure,
+        shade,
+        DashStyle::Short,
+        butt,
+        rect(5.0),
+    );
+    add(
+        "Dotted ellipse",
+        cell(4.0, 142.0, 20.0, 16.0),
+        structure,
+        None,
+        DashStyle::Dotted,
+        butt,
+        ellipse(),
+    );
+    add(
+        "Dashed star",
+        cell(5.0, 142.0, 20.0, 20.0),
+        structure,
+        None,
+        DashStyle::Dash,
+        LineCap::Round,
+        star(5, 0.5),
+    );
+    // Row 6: dashed polygons and a thick rectangle, filled.
+    add(
+        "Dashed hexagon, round caps",
+        cell(0.0, 168.0, 20.0, 20.0),
+        thick,
+        None,
+        DashStyle::Long,
+        LineCap::Round,
+        poly(6),
+    );
+    add(
+        "Dashed triangle, square caps",
+        cell(1.0, 168.0, 20.0, 18.0),
+        Style::Role(LineRole::Emphasis),
+        shade,
+        DashStyle::Dash,
+        LineCap::Square,
+        poly(3),
+    );
+    add(
+        "Thick rectangle, Block fill",
+        cell(2.0, 168.0, 20.0, 18.0),
+        thick,
+        block,
+        solid,
+        butt,
+        rect(0.0),
+    );
+    add(
+        "Thick rounded rectangle",
+        cell(3.0, 168.0, 20.0, 18.0),
+        thick,
+        shade,
+        solid,
+        butt,
+        rect(8.0),
+    );
+
+    let mut dot_strip = dots.clone();
+    dot_strip.frame = Frame::new(8.0, 8.0, 146.0, 18.0);
+    // Scales with the page like everything else on it, so no shape lands on the dots.
+    dot_strip.constraints = Constraints::default();
+    doc.layers = vec![
+        Layer {
+            name: "Grid".into(),
+            visible: true,
+            locked: false,
+            objects: vec![dot_strip],
+            extra: Extra::new(),
+        },
+        Layer {
+            name: "Shapes".into(),
+            visible: true,
+            locked: false,
+            objects: objs,
+            extra: Extra::new(),
+        },
+    ];
+    doc
 }

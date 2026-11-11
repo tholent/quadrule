@@ -248,7 +248,7 @@ fn sheets_keep_clear_of_docked_toolbars_and_footer() {
             for item in &page.dl.items {
                 let (x0, y0, x1, y1) = match item {
                     Item::Rect { x0, y0, x1, y1, .. } => (*x0, *y0, *x1, *y1),
-                    Item::Fill { path, .. } => {
+                    Item::Fill { path, .. } | Item::StrokePath { path, .. } => {
                         let b = kurbo::Shape::bounding_box(path);
                         (b.x0, b.y0, b.x1, b.y1)
                     }

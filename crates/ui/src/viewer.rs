@@ -229,6 +229,13 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 6a shapes page: every new kind, fill, dash and cap, and the sample's dot
+    /// grid (for the drag benchmark). Like the sample, it has no file.
+    pub fn open_shapes(&mut self) {
+        let doc = quadrule_model::sample::shapes_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens a new blank document from the New dialog's choices (rung 5): the chosen device is
     /// the one shown. It has no file until Save, and no unsaved changes until it is edited.
     pub fn open_new(&mut self, spec: &quadrule_layout::newpage::NewPage) -> Result<(), String> {

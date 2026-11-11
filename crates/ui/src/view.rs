@@ -195,6 +195,9 @@ impl ViewerUi {
             line: strings.get("new-name-line"),
             text: strings.get("new-name-text"),
             pattern: strings.get("new-name-pattern"),
+            rect: strings.get("new-name-rect"),
+            ellipse: strings.get("new-name-ellipse"),
+            polygon: strings.get("new-name-polygon"),
             text_content: strings.get("new-text-content"),
         };
         ViewerUi {
@@ -1098,7 +1101,11 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    self.viewer.open_sample();
+                    if b.shapes {
+                        self.viewer.open_shapes();
+                    } else {
+                        self.viewer.open_sample();
+                    }
                 }
                 b.phase = if n >= crate::bench::WARM_FRAMES {
                     Phase::Begin
@@ -1120,7 +1127,7 @@ impl ViewerUi {
                         let began = if b.draw {
                             // From the page's top-left corner, out into the page.
                             b.centre = (150.0, 150.0);
-                            self.viewer.set_tool(Tool::Pattern);
+                            self.viewer.set_tool(b.tool);
                             self.viewer.draw_begin(150.0, 150.0, none, 6.0)
                         } else {
                             self.viewer
@@ -1174,13 +1181,15 @@ impl ViewerUi {
                     "fail"
                 };
                 println!(
-                    "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
+                    "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
                     if b.draw { "draw_bench" } else { "drag_bench" },
                     if cfg!(debug_assertions) {
                         "debug"
                     } else {
                         "release"
                     },
+                    if b.shapes { "shapes" } else { "sample" },
+                    if b.draw { b.tool.cli_name() } else { "move" },
                     c.frames,
                     c.mean_ms(),
                     c.percentile_ms(),

@@ -45,14 +45,19 @@ and error.
 - Start a blank page (New…, Ctrl+N): pick the device (Manta or Nomad), a rhythm (handwriting 6 mm, narrow, college
   or wide ruled, a 5 mm or 1/4 in grid) and a title. The margins clear the tablet's docked toolbars and footers.
 - Open a `.quad` file (Quadrule's own format) or the built-in sample page, and save changes.
-- Draw with the tools bar on the left: a line (L), a text box (T) or a pattern region (P); V goes back to Select.
-  Drag to draw (sizes snap to whole rhythm units), or click for a default size; double-click a tool to keep it on.
+- Draw with the tools bar on the left: a line (L), a text box (T), a pattern region (P), a rectangle (R), an ellipse
+  (E) or a polygon (Y); V goes back to Select. Drag to draw (sizes snap to whole rhythm units), or click for a default
+  size; Shift draws a square, a circle or a regular polygon; double-click a tool to keep it on.
+- Shapes have a stroke (a role, custom values, or none), a fill (Shade, Block or a gray of your own), a dash (dotted,
+  short dash, dash, long dash or your own lengths) and a cap (butt, round or square), set in the inspector's Style tab.
+  A rectangle has a corner radius (in any unit, rhythm units included); a polygon has 3 to 32 sides and can be a star
+  with an inner radius. Curves and slanted edges are smooth; straight edges stay sharp on whole pixels.
 - Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock and reorder layers;
   unlimited undo and redo; autosave with recovery after a crash.
 - Export a PNG for the Manta or the Nomad, named like `{title}_{manta|nomad}_{w}x{h}.png`.
 - Check a page with the linter (seven rules so far).
 
-Not yet: shapes other than lines, text boxes and pattern regions, the starter gallery and wallpapers. The plan is in the design spec,
+Not yet: rotation, lines that point up and to the right, opacity, the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).
 
 ## Download
@@ -78,7 +83,8 @@ installs it for you). Then, from a clone of this repository:
 cargo run --release -p quadrule-app
 ```
 
-That opens the sample page. To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
+`-- --shapes-page`. To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

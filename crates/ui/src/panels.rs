@@ -27,8 +27,9 @@ use quadrule_layout::units::{Axis, UnitContext, format_length, parse_length, tri
 use quadrule_lint::Severity;
 use quadrule_model::edit::Command;
 use quadrule_model::{
-    Document, HConstraint, LineRole, Object, ObjectKind, Pattern, RhythmOrigin, RhythmResolution,
-    Style, TextAlign, Unit, Uuid, VConstraint,
+    DashStyle, Document, Fill, FillRole, HConstraint, LineCap, LineRole, Object, ObjectKind,
+    POLYGON_SIDES_MAX, POLYGON_SIDES_MIN, Pattern, RhythmOrigin, RhythmResolution,
+    STAR_INNER_DEFAULT, STAR_INNER_MAX, STAR_INNER_MIN, Style, TextAlign, Unit, Uuid, VConstraint,
 };
 
 /// The inspector's tabs.
@@ -719,38 +720,57 @@ impl ViewerUi {
             return;
         };
         let enabled = !self.viewer.editable_selection().is_empty();
+        let shape = o.kind.is_shape();
+        // Dash and cap are for anything drawn as a stroke: lines and the shapes.
+        let stroked = shape || matches!(o.kind, ObjectKind::Line(_));
         ui.add_enabled_ui(enabled, |ui| {
             egui::Grid::new("style-grid").num_columns(2).show(ui, |ui| {
-                let label = ui.label(self.t("app-style-kind"));
-                let custom = matches!(o.style, Style::Custom { .. });
-                let mut want_custom = custom;
+                // Stroke: None (shapes only), a role or custom values.
+                let label = ui.label(self.t(if shape {
+                    "app-style-stroke"
+                } else {
+                    "app-style-kind"
+                }));
+                let was = StrokeChoice::of(o.style);
+                let mut want = was;
                 ui.horizontal(|ui| {
-                    ui.radio_value(&mut want_custom, false, self.t("app-style-role"));
-                    ui.radio_value(&mut want_custom, true, self.t("app-style-custom"));
+                    if shape {
+                        ui.radio_value(&mut want, StrokeChoice::None, self.t("app-stroke-none"));
+                    }
+                    ui.radio_value(&mut want, StrokeChoice::Role, self.t("app-style-role"));
+                    ui.radio_value(&mut want, StrokeChoice::Custom, self.t("app-style-custom"));
                 })
                 .response
                 .labelled_by(label.id);
-                if want_custom != custom {
+                if want != was {
+                    let device = quadrule_profiles::builtin(&self.viewer.profile_id).ok();
                     // Start from what the role draws on the device on screen.
-                    let style = match (want_custom, o.style) {
-                        (true, Style::Role(r)) => {
-                            let p = quadrule_profiles::builtin(&self.viewer.profile_id).ok();
-                            let (w, g) = p.map_or((1, 0), |p| {
-                                let s = p.role(r);
-                                (s.width_px.max(1), s.gray)
-                            });
-                            Style::Custom {
-                                width_mm: w as f64 / cx.px_per_mm,
-                                gray: g,
-                            }
+                    let from_role = |r: LineRole| {
+                        let (w, g) = device.as_ref().map_or((1, 0), |p| {
+                            let s = p.role(r);
+                            (s.width_px.max(1), s.gray)
+                        });
+                        Style::Custom {
+                            width_mm: w as f64 / cx.px_per_mm,
+                            gray: g,
                         }
-                        _ => Style::Role(default_role(&o)),
                     };
-                    let _ = self.viewer.edit_selected(None, |x| x.style = style);
+                    let style = match (want, o.style) {
+                        (StrokeChoice::None, _) => Style::None,
+                        (StrokeChoice::Custom, Style::Role(r)) => from_role(r),
+                        (StrokeChoice::Custom, _) => from_role(default_role(&o)),
+                        (StrokeChoice::Role, _) => Style::Role(default_role(&o)),
+                    };
+                    let _ = self.viewer.edit_selected(None, |x| {
+                        if style != Style::None || x.kind.is_shape() {
+                            x.style = style;
+                        }
+                    });
                 }
                 ui.end_row();
 
                 match o.style {
+                    Style::None => {}
                     Style::Role(role) => {
                         let label = ui.label(self.t("app-style-role"));
                         let mut r = role;
@@ -795,6 +815,14 @@ impl ViewerUi {
                     }
                 }
 
+                if shape {
+                    self.fill_rows(ui, &o, enabled);
+                }
+
+                if stroked && o.style != Style::None {
+                    self.dash_rows(ui, &o, &cx, enabled);
+                }
+
                 if let ObjectKind::Pattern(pr) = &o.kind {
                     let label = ui.label(self.t("app-pattern"));
                     let mut p = pr.pattern;
@@ -814,7 +842,211 @@ impl ViewerUi {
                     ui.end_row();
                 }
             });
+            if shape {
+                ui.add_space(6.0);
+                ui.strong(self.t("app-shape"));
+                self.shape_rows(ui, &o, &cx, enabled);
+            }
         });
+    }
+
+    /// The fill: none, a role (each device gives it a gray) or a gray of its own.
+    fn fill_rows(&mut self, ui: &mut egui::Ui, o: &Object, _enabled: bool) {
+        let label = ui.label(self.t("app-fill"));
+        let was = FillChoice::of(o.fill);
+        let mut want = was;
+        let options = [
+            (FillChoice::None, "app-fill-none"),
+            (FillChoice::Shade, "app-fill-shade"),
+            (FillChoice::Block, "app-fill-block"),
+            (FillChoice::Custom, "app-fill-custom"),
+        ];
+        self.combo(ui, "fill", label.id, &mut want, &options);
+        if want != was {
+            // A custom fill starts from the gray the role gave on the device on screen.
+            let device = quadrule_profiles::builtin(&self.viewer.profile_id).ok();
+            let start = match (o.fill, &device) {
+                (Some(f), Some(p)) => p.fill_gray(f),
+                _ => 204,
+            };
+            let fill = match want {
+                FillChoice::None => None,
+                FillChoice::Shade => Some(Fill::Role(FillRole::Shade)),
+                FillChoice::Block => Some(Fill::Role(FillRole::Block)),
+                FillChoice::Custom => Some(Fill::Gray(snap_gray(start))),
+            };
+            let _ = self.viewer.edit_selected(None, |x| {
+                if x.kind.is_shape() {
+                    x.fill = fill;
+                }
+            });
+        }
+        ui.end_row();
+        if let Some(Fill::Gray(gray)) = o.fill {
+            let label = ui.label(self.t("app-fill-gray"));
+            let mut g = gray;
+            // Steps of 17 (the sixteen levels 0, 17 ... 255) until the clean grays are measured.
+            if ui
+                .add(egui::Slider::new(&mut g, 0..=255).step_by(f64::from(GRAY_STEP)))
+                .labelled_by(label.id)
+                .changed()
+            {
+                let _ = self.viewer.edit_selected(Some("fill-gray"), |x| {
+                    if x.kind.is_shape() {
+                        x.fill = Some(Fill::Gray(g));
+                    }
+                });
+            }
+            ui.end_row();
+        }
+    }
+
+    /// The dash and the cap.
+    fn dash_rows(&mut self, ui: &mut egui::Ui, o: &Object, cx: &UnitContext, enabled: bool) {
+        let label = ui.label(self.t("app-dash"));
+        let was = DashChoice::of(o.dash);
+        let mut want = was;
+        let options = [
+            (DashChoice::Solid, "app-dash-solid"),
+            (DashChoice::Dotted, "app-dash-dotted"),
+            (DashChoice::Short, "app-dash-short"),
+            (DashChoice::Dash, "app-dash-dash"),
+            (DashChoice::Long, "app-dash-long"),
+            (DashChoice::Custom, "app-dash-custom"),
+        ];
+        self.combo(ui, "dash", label.id, &mut want, &options);
+        if want != was {
+            // A custom dash starts from the preset's own lengths.
+            let (dash_mm, gap_mm) = o.dash.lengths_mm().unwrap_or((1.0, 0.5));
+            let style = match want {
+                DashChoice::Solid => DashStyle::Solid,
+                DashChoice::Dotted => DashStyle::Dotted,
+                DashChoice::Short => DashStyle::Short,
+                DashChoice::Dash => DashStyle::Dash,
+                DashChoice::Long => DashStyle::Long,
+                DashChoice::Custom => DashStyle::Custom { dash_mm, gap_mm },
+            };
+            let _ = self.viewer.edit_selected(None, |x| {
+                if x.kind.is_shape() || matches!(x.kind, ObjectKind::Line(_)) {
+                    x.dash = style;
+                }
+            });
+        }
+        ui.end_row();
+        if let DashStyle::Custom { dash_mm, gap_mm } = o.dash {
+            if let Some(mm) =
+                self.length_row(ui, "dash-length", "app-dash-length", dash_mm, cx, enabled)
+            {
+                let _ = self.viewer.edit_selected(Some("dash-length"), |x| {
+                    if let DashStyle::Custom { dash_mm, .. } = &mut x.dash {
+                        *dash_mm = mm.max(0.0);
+                    }
+                });
+            }
+            ui.end_row();
+            if let Some(mm) =
+                self.length_row(ui, "gap-length", "app-gap-length", gap_mm, cx, enabled)
+            {
+                let _ = self.viewer.edit_selected(Some("gap-length"), |x| {
+                    if let DashStyle::Custom { gap_mm, .. } = &mut x.dash {
+                        *gap_mm = mm.max(0.0);
+                    }
+                });
+            }
+            ui.end_row();
+        }
+        let label = ui.label(self.t("app-cap"));
+        let mut cap = o.cap;
+        let options = [
+            (LineCap::Butt, "app-cap-butt"),
+            (LineCap::Round, "app-cap-round"),
+            (LineCap::Square, "app-cap-square"),
+        ];
+        self.combo(ui, "cap", label.id, &mut cap, &options);
+        if cap != o.cap {
+            let _ = self.viewer.edit_selected(None, |x| {
+                if x.kind.is_shape() || matches!(x.kind, ObjectKind::Line(_)) {
+                    x.cap = cap;
+                }
+            });
+        }
+        ui.end_row();
+    }
+
+    /// The Shape section: a rectangle's corner radius; a polygon's sides, star and inner radius.
+    fn shape_rows(&mut self, ui: &mut egui::Ui, o: &Object, cx: &UnitContext, enabled: bool) {
+        egui::Grid::new("shape-grid")
+            .num_columns(2)
+            .show(ui, |ui| match &o.kind {
+                ObjectKind::Rect(r) => {
+                    if let Some(mm) = self.length_row(
+                        ui,
+                        "shape-radius",
+                        "app-corner-radius",
+                        r.corner_radius_mm,
+                        cx,
+                        enabled,
+                    ) {
+                        let _ = self.viewer.edit_selected(Some("shape-radius"), |x| {
+                            if let ObjectKind::Rect(r) = &mut x.kind {
+                                r.corner_radius_mm = mm.max(0.0);
+                            }
+                        });
+                    }
+                    ui.end_row();
+                }
+                ObjectKind::Polygon(pg) => {
+                    let label = ui.label(self.t("app-sides"));
+                    let mut sides = pg.sides_clamped();
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut sides)
+                                .range(POLYGON_SIDES_MIN..=POLYGON_SIDES_MAX),
+                        )
+                        .labelled_by(label.id)
+                        .changed()
+                    {
+                        let _ = self.viewer.edit_selected(Some("shape-sides"), |x| {
+                            if let ObjectKind::Polygon(pg) = &mut x.kind {
+                                pg.sides = sides;
+                            }
+                        });
+                    }
+                    ui.end_row();
+                    let label = ui.label(self.t("app-star"));
+                    let mut star = pg.star.is_some();
+                    if ui.checkbox(&mut star, "").labelled_by(label.id).changed() {
+                        let _ = self.viewer.edit_selected(None, |x| {
+                            if let ObjectKind::Polygon(pg) = &mut x.kind {
+                                pg.star = star.then_some(STAR_INNER_DEFAULT);
+                            }
+                        });
+                    }
+                    ui.end_row();
+                    if let Some(inner) = pg.star_clamped() {
+                        let label = ui.label(self.t("app-star-inner"));
+                        let mut r = inner;
+                        if ui
+                            .add(
+                                egui::DragValue::new(&mut r)
+                                    .range(STAR_INNER_MIN..=STAR_INNER_MAX)
+                                    .speed(0.01)
+                                    .fixed_decimals(2),
+                            )
+                            .labelled_by(label.id)
+                            .changed()
+                        {
+                            let _ = self.viewer.edit_selected(Some("shape-inner"), |x| {
+                                if let ObjectKind::Polygon(pg) = &mut x.kind {
+                                    pg.star = Some(r);
+                                }
+                            });
+                        }
+                        ui.end_row();
+                    }
+                }
+                _ => {}
+            });
     }
 
     fn text_tab(&mut self, ui: &mut egui::Ui) {
@@ -1105,6 +1337,77 @@ impl ViewerUi {
     }
 }
 
+/// What the stroke of a shape is set to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StrokeChoice {
+    None,
+    Role,
+    Custom,
+}
+
+impl StrokeChoice {
+    fn of(style: Style) -> Self {
+        match style {
+            Style::None => StrokeChoice::None,
+            Style::Role(_) => StrokeChoice::Role,
+            Style::Custom { .. } => StrokeChoice::Custom,
+        }
+    }
+}
+
+/// What the fill is set to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FillChoice {
+    None,
+    Shade,
+    Block,
+    Custom,
+}
+
+impl FillChoice {
+    fn of(fill: Option<Fill>) -> Self {
+        match fill {
+            None => FillChoice::None,
+            Some(Fill::Role(FillRole::Shade)) => FillChoice::Shade,
+            Some(Fill::Role(FillRole::Block)) => FillChoice::Block,
+            Some(Fill::Gray(_)) => FillChoice::Custom,
+        }
+    }
+}
+
+/// What the dash is set to: the presets and Custom, which carries its two lengths.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DashChoice {
+    Solid,
+    Dotted,
+    Short,
+    Dash,
+    Long,
+    Custom,
+}
+
+impl DashChoice {
+    fn of(d: DashStyle) -> Self {
+        match d {
+            DashStyle::Solid => DashChoice::Solid,
+            DashStyle::Dotted => DashChoice::Dotted,
+            DashStyle::Short => DashChoice::Short,
+            DashStyle::Dash => DashChoice::Dash,
+            DashStyle::Long => DashChoice::Long,
+            DashStyle::Custom { .. } => DashChoice::Custom,
+        }
+    }
+}
+
+/// The step of a custom fill gray: the sixteen levels 0, 17 ... 255 (rung 6 bbq, Defaulted
+/// "Inspector"), until the clean grays are measured.
+pub const GRAY_STEP: u8 = 17;
+
+/// The step of 17 nearest `g`.
+fn snap_gray(g: u8) -> u8 {
+    (u16::from(g) + u16::from(GRAY_STEP) / 2) as u8 / GRAY_STEP * GRAY_STEP
+}
+
 /// What happened to a row's name.
 enum NameEvent {
     Click,
@@ -1121,11 +1424,14 @@ fn unit_symbol(u: Unit) -> &'static str {
 }
 
 /// The role an object goes back to when Custom is switched off: Text for text, Guide for lines,
-/// Dot grid for a dot pattern.
+/// Dot grid for a dot pattern, Structure for a shape.
 fn default_role(o: &Object) -> LineRole {
     match &o.kind {
         ObjectKind::Text(_) => LineRole::Text,
         ObjectKind::Pattern(p) if p.pattern == Pattern::Dots => LineRole::DotGrid,
+        ObjectKind::Rect(_) | ObjectKind::Ellipse(_) | ObjectKind::Polygon(_) => {
+            LineRole::Structure
+        }
         _ => LineRole::Guide,
     }
 }

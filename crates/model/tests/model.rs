@@ -96,6 +96,15 @@ fn unknown_fields_survive_per_record_type() {
         ("Line", unknown_field_survives(&Line::default())),
         ("TextBox", unknown_field_survives(&tb)),
         ("PatternRegion", unknown_field_survives(&pr)),
+        ("RectShape", unknown_field_survives(&RectShape::default())),
+        (
+            "EllipseShape",
+            unknown_field_survives(&EllipseShape::default()),
+        ),
+        (
+            "PolygonShape",
+            unknown_field_survives(&PolygonShape::star(5)),
+        ),
         ("ProfileOutlines", unknown_field_survives(&outlines)),
         ("GlyphTable", unknown_field_survives(&table)),
         ("TextOutlines", unknown_field_survives(&text)),
@@ -144,6 +153,71 @@ fn glyph_shape_well_formed() {
     let ok = good.is_well_formed() && !short.is_well_formed() && !bad_verb.is_well_formed();
     println!(
         "CHECK crate=model name=glyph_shape_well_formed result={} cases=3",
+        if ok { "pass" } else { "fail" }
+    );
+    assert!(ok);
+}
+
+#[test]
+fn new_object_fields_stay_out_of_old_objects() {
+    // Format 0.5 (rung 6a): an object with no fill, a solid stroke and butt caps writes none of the
+    // new fields, so a 0.4 object saves exactly as before; one that has them keeps them.
+    let doc = slice_document();
+    let keys = |o: &Object| -> Vec<String> {
+        let Value::Map(m) = to_value(o) else {
+            return vec![];
+        };
+        m.iter()
+            .filter_map(|(k, _)| k.as_text().map(String::from))
+            .collect()
+    };
+    let plain = doc.layers[1].objects[1].clone();
+    let plain_keys = keys(&plain);
+    let mut shaped = plain.clone();
+    shaped.fill = Some(Fill::Role(FillRole::Shade));
+    shaped.dash = DashStyle::Custom {
+        dash_mm: 1.5,
+        gap_mm: 1.0,
+    };
+    shaped.cap = LineCap::Round;
+    shaped.style = Style::None;
+    let back: Object = to_value(&shaped).deserialized().unwrap();
+    let ok = !plain_keys
+        .iter()
+        .any(|k| ["fill", "dash", "cap"].contains(&k.as_str()))
+        && back == shaped
+        && keys(&shaped)
+            .iter()
+            .filter(|k| ["fill", "dash", "cap"].contains(&k.as_str()))
+            .count()
+            == 3;
+    println!(
+        "\nCHECK crate=model name=new_fields_default_out result={} plain_keys={} shaped_roundtrips={}",
+        if ok { "pass" } else { "fail" },
+        plain_keys.len(),
+        back == shaped
+    );
+    assert!(ok);
+}
+
+#[test]
+fn polygon_numbers_stay_in_range() {
+    // A file holding 2 sides, 200 sides or a wild star still draws: the numbers are clamped.
+    let p = |sides, star| PolygonShape {
+        sides,
+        star,
+        extra: Extra::new(),
+    };
+    let ok = p(2, None).sides_clamped() == POLYGON_SIDES_MIN
+        && p(200, None).sides_clamped() == POLYGON_SIDES_MAX
+        && p(5, Some(7.0)).star_clamped() == Some(STAR_INNER_MAX)
+        && p(5, Some(-1.0)).star_clamped() == Some(STAR_INNER_MIN)
+        && p(5, Some(f64::NAN)).star_clamped() == Some(STAR_INNER_DEFAULT)
+        && p(5, None).star_clamped().is_none()
+        && PolygonShape::star(5).star == Some(0.5)
+        && PolygonShape::polygon(6).sides == 6;
+    println!(
+        "\nCHECK crate=model name=polygon_ranges result={}",
         if ok { "pass" } else { "fail" }
     );
     assert!(ok);

@@ -81,3 +81,14 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   (macOS Gatekeeper and Windows SmartScreen will warn). chris confirmed the dry run's `.dmg` works on a Mac
   (2026-11-10); nobody has opened the `.msi` or the x86-64 Linux packages yet, and the rc testers (arc Q14) are their
   first check. A pre-release version (`1.0.0-rc.1`) builds an NSIS `.exe` instead of an `.msi`, untried.
+- Rung 6a shapes, owed (`crates/layout/src/shapes.rs`, `crates/ui/src/panels.rs`): picking a shape is by its box, so a
+  hollow rectangle or ellipse takes a click anywhere inside it (as a pattern region does), and a shape drawn over text
+  hides it from the pointer; picking by outline when there is no fill, and a shape's real outline for the marquee, are
+  not built. A custom fill steps by 17 (the sixteen levels) until the clean grays are measured; Shade 204 and Block 68
+  are estimates (chris's grays sheet readings replace them in `crates/profiles/data/*.ron`, rung 14 has the swatches).
+  Caps reach half the stroke past each dash, as in SVG, so a dash gap shorter than the stroke width closes (a square
+  cap on Long dash at 1 mm reads solid): the inspector does not warn. A polygon is picked and snapped by its frame, not by
+  its corners. L13 (large dark fills) stays in rung 14 although Block makes it likelier. The inspector edits the first
+  selected object's values and applies to all (no "mixed" state), as before. The Style tab shows Dash and Cap for lines
+  too (a line is a stroke); a pattern region and a text box have neither. The shapes page is built in code
+  (`quadrule_model::sample::shapes_document`) and opened with `--shapes-page`, not as a file.

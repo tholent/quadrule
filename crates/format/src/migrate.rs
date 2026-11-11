@@ -28,6 +28,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.1.0", "0.2.0", v0_1_to_v0_2),
     ("0.2.0", "0.3.0", v0_2_to_v0_3),
     ("0.3.0", "0.4.0", v0_3_to_v0_4),
+    ("0.4.0", "0.5.0", v0_4_to_v0_5),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -46,6 +47,15 @@ fn v0_2_to_v0_3(_scene: &mut Value) -> Result<(), FormatError> {
 /// 0.4 adds `rhythm.subdivisions`, an optional field (rung 4 bbq, Defaulted "Subdivisions in the
 /// file"): a 0.3 scene without it reads as subdivisions off, so there is nothing to rewrite.
 fn v0_3_to_v0_4(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.5 adds the rectangle, ellipse and polygon kinds, the `Style::None` choice, and three optional
+/// fields on an object (`fill`, `dash`, `cap`; rung 6 bbq, Defaulted "File format 0.5.0"). A 0.4
+/// object has none of them, which reads as no fill, a solid stroke and butt caps, exactly what it
+/// drew before, so there is nothing to rewrite. A 0.4 build cannot read a 0.5 file that uses the
+/// new kinds; it reports an error rather than guessing.
+fn v0_4_to_v0_5(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

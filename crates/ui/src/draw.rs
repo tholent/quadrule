@@ -31,8 +31,9 @@ use quadrule_layout::snap::{Guide, Handle, Mark, PxRect, ResizeMods, SnapToggles
 use quadrule_model::edit::Command;
 use quadrule_model::sample::ATKINSON;
 use quadrule_model::{
-    Constraints, Extra, Frame, HConstraint, Line, LineRole, Object, ObjectKind, Pattern,
-    PatternRegion, Style, TextAlign, TextBox, Uuid, VConstraint,
+    Constraints, DashStyle, EllipseShape, Extra, Frame, HConstraint, Line, LineCap, LineRole,
+    Object, ObjectKind, Pattern, PatternRegion, PolygonShape, RectShape, Style, TextAlign, TextBox,
+    Uuid, VConstraint,
 };
 use quadrule_profiles::Profile;
 
@@ -48,6 +49,35 @@ pub enum DrawKind {
     Text,
     /// A pattern region of ruled lines, role Guide, spacing bound to the rhythm.
     Pattern,
+    /// A rectangle, stroke role Structure, no fill, square corners (rung 6a).
+    Rect,
+    /// An ellipse, stroke role Structure, no fill (rung 6a).
+    Ellipse,
+    /// A six-sided polygon, point up, stroke role Structure, no fill (rung 6a).
+    Polygon,
+}
+
+impl DrawKind {
+    /// A rectangle, ellipse or polygon: the kinds that draw from a corner to a corner and that
+    /// Shift keeps regular.
+    pub fn is_shape(self) -> bool {
+        matches!(self, DrawKind::Rect | DrawKind::Ellipse | DrawKind::Polygon)
+    }
+
+    /// The width over the height Shift keeps: 1 for a square or circle, the regular polygon's own
+    /// shape for a polygon (a regular hexagon is narrower than it is tall).
+    pub fn regular_ratio(self) -> f64 {
+        match self {
+            DrawKind::Polygon => quadrule_layout::shapes::natural_ratio(&new_polygon()),
+            _ => 1.0,
+        }
+    }
+}
+
+/// What a new polygon is: six sides, a regular polygon with a point up (rung 6 bbq, Defaulted
+/// "Polygon geometry").
+pub fn new_polygon() -> PolygonShape {
+    PolygonShape::polygon(6)
 }
 
 /// The names a new object gets, and a new text box's text, in the words on screen (the window
@@ -60,6 +90,12 @@ pub struct NewNames {
     pub text: String,
     /// A pattern region's name.
     pub pattern: String,
+    /// A rectangle's name.
+    pub rect: String,
+    /// An ellipse's name.
+    pub ellipse: String,
+    /// A polygon's name.
+    pub polygon: String,
     /// What a new text box says.
     pub text_content: String,
 }
@@ -70,6 +106,9 @@ impl Default for NewNames {
             line: "Line".into(),
             text: "Text".into(),
             pattern: "Pattern".into(),
+            rect: "Rectangle".into(),
+            ellipse: "Ellipse".into(),
+            polygon: "Polygon".into(),
             text_content: "Text".into(),
         }
     }
@@ -123,8 +162,25 @@ fn mm_object(
         visible: true,
         locked: false,
         style,
+        fill: None,
+        dash: DashStyle::Solid,
+        cap: LineCap::Butt,
         kind,
         extra: Extra::new(),
+    }
+}
+
+/// A box snapped on its dominant side, made regular again: `ratio` wide for every 1 tall, from the
+/// corner `from` (or about it, with `centred`), going the way the pointer went (`delta`).
+fn regularise(r: PxRect, from: (f64, f64), delta: (f64, f64), ratio: f64, centred: bool) -> PxRect {
+    let w = r.w().max(r.h() * ratio);
+    let h = w / ratio;
+    let (sx, sy) = (delta.0.signum(), delta.1.signum());
+    if centred {
+        let (cx, cy) = ((r.x0 + r.x1) / 2.0, (r.y0 + r.y1) / 2.0);
+        PxRect::from_corners(cx - w / 2.0, cy - h / 2.0, cx + w / 2.0, cy + h / 2.0)
+    } else {
+        PxRect::from_corners(from.0, from.1, from.0 + sx * w, from.1 + sy * h)
     }
 }
 
@@ -193,6 +249,30 @@ fn make_object(
                 pattern: Pattern::Lines,
                 extra: Extra::new(),
             }),
+        ),
+        DrawKind::Rect => mm_object(
+            id,
+            &names.rect,
+            frame,
+            constraints,
+            Style::Role(LineRole::Structure),
+            ObjectKind::Rect(RectShape::default()),
+        ),
+        DrawKind::Ellipse => mm_object(
+            id,
+            &names.ellipse,
+            frame,
+            constraints,
+            Style::Role(LineRole::Structure),
+            ObjectKind::Ellipse(EllipseShape::default()),
+        ),
+        DrawKind::Polygon => mm_object(
+            id,
+            &names.polygon,
+            frame,
+            constraints,
+            Style::Role(LineRole::Structure),
+            ObjectKind::Polygon(new_polygon()),
         ),
     }
 }
@@ -340,8 +420,20 @@ impl Viewer {
                     snapped.marks,
                 )
             }
-            DrawKind::Text | DrawKind::Pattern => {
-                let (dx, dy) = (x - s.0, y - s.1);
+            DrawKind::Text
+            | DrawKind::Pattern
+            | DrawKind::Rect
+            | DrawKind::Ellipse
+            | DrawKind::Polygon => {
+                let (mut dx, mut dy) = (x - s.0, y - s.1);
+                // Shift on a shape: a square, a circle or a regular polygon, whichever way the
+                // pointer went (the dominant side wins), then snapped along it.
+                let ratio = draw.kind.regular_ratio();
+                let regular = mods.shift && draw.kind.is_shape();
+                if regular {
+                    let w = dx.abs().max(dy.abs() * ratio);
+                    (dx, dy) = (w.copysign(dx), (w / ratio).copysign(dy));
+                }
                 // The handle on the side the pointer went to; a text box only has width.
                 let handle = match (draw.kind, dx >= 0.0, dy >= 0.0) {
                     (DrawKind::Text, true, _) => Handle::E,
@@ -357,7 +449,7 @@ impl Viewer {
                     x1: s.0,
                     y1: s.1,
                 };
-                let (r, guides) = draw.world.snap_resize(
+                let (mut r, guides) = draw.world.snap_resize(
                     &point,
                     handle,
                     (dx, dy),
@@ -369,6 +461,9 @@ impl Viewer {
                     toggles,
                     MIN_SIZE_PX,
                 );
+                if regular {
+                    r = regularise(r, s, (dx, dy), ratio, mods.alt);
+                }
                 (r, guides, Vec::new())
             }
         };
@@ -409,7 +504,9 @@ impl Viewer {
         let degenerate = draw.rect.is_none_or(|r| match draw.kind {
             DrawKind::Line => r.w() < MIN_SIZE_PX && r.h() < MIN_SIZE_PX,
             DrawKind::Text => r.w() < MIN_SIZE_PX,
-            DrawKind::Pattern => r.w() < MIN_SIZE_PX || r.h() < MIN_SIZE_PX,
+            DrawKind::Pattern | DrawKind::Rect | DrawKind::Ellipse | DrawKind::Polygon => {
+                r.w() < MIN_SIZE_PX || r.h() < MIN_SIZE_PX
+            }
         });
         let object = if draw.moved && !degenerate {
             draw.object.clone()?
@@ -463,6 +560,26 @@ impl Viewer {
             ));
         }
         let (rect, constraints) = match draw.kind {
+            DrawKind::Rect | DrawKind::Ellipse | DrawKind::Polygon => {
+                // 10 rhythm units across, as tall as the shape is regular (a square, a circle;
+                // a polygon in its own proportions), from the click point, slid to fit the page.
+                let (w_px, h_px) = {
+                    let side = DEFAULT_UNITS * r.unit_x;
+                    (side, side / draw.kind.regular_ratio())
+                };
+                let h = f64::from(shown.height_px);
+                let x0 = s.0.min((w - w_px).max(0.0));
+                let y0 = s.1.min((h - h_px).max(0.0));
+                (
+                    PxRect {
+                        x0,
+                        y0,
+                        x1: (x0 + w_px).min(w),
+                        y1: (y0 + h_px).min(h),
+                    },
+                    Constraints::default(),
+                )
+            }
             DrawKind::Line | DrawKind::Text => {
                 let len = DEFAULT_UNITS * r.unit_x;
                 // Slide left to fit; a page too narrow for it takes what there is.
