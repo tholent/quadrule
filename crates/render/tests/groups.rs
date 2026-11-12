@@ -17,7 +17,9 @@
 //! children overlap, a group whose child is pinned to the top and right, and a heavy group,
 //! exported on both devices and compared with golden images in `tests/golden/`, whose sums sit
 //! after rung 1's two, 6a's two and 6b's two in `SHA256SUMS`. Then pixel checks on what groups
-//! promise: grouping moves nothing, a group fades as one, a turned group is its children turned.
+//! promise (Q3 as amended at the look: groups are see-through to constraints): grouping moves
+//! nothing on either device, with every kind of constraint; a group fades as one; a turned group
+//! is its children turned.
 //! Each step prints one `CHECK` line (run with `-- --nocapture`).
 //!
 //! To accept new output as golden (after a deliberate change, reviewed by eye):
@@ -180,8 +182,7 @@ fn grouping_moves_nothing() {
                     v.push(o.clone());
                 }
             }
-            // Only the nested group; the others change the picture on purpose (turn, opacity, a
-            // pinned child that is pinned to its group, not the page).
+            // Only the nested group; the others change the picture on purpose (turn, opacity).
             if o.id == group_ids::NESTED {
                 walk(o, &mut v);
             } else {
@@ -191,20 +192,13 @@ fn grouping_moves_nothing() {
         })
         .collect();
     flat.layers[1].objects = leaves;
-    // On the design's own device the pixels are the same. On the other the same positions come
-    // out of a different order of float arithmetic (a child's offset in its group, scaled, plus
-    // the group's), so an edge can land on the next pixel: a handful of pixels, reported.
+    // On both devices: a child resolves against the page, so grouping changes no pixel.
     let mut same = true;
     let mut parts = Vec::new();
-    for (n, id) in grouped.profile_ids().into_iter().enumerate() {
+    for id in grouped.profile_ids() {
         let (a, b) = (render_doc(id, &grouped), render_doc(id, &flat));
         let diff = a.data.iter().zip(&b.data).filter(|(x, y)| x != y).count();
-        let good = if n == 0 {
-            diff == 0
-        } else {
-            diff * 1000 < a.data.len()
-        };
-        same &= good;
+        same &= diff == 0;
         parts.push(format!("{id}:differing_px={diff}"));
     }
     println!(
@@ -213,6 +207,108 @@ fn grouping_moves_nothing() {
         parts.join(" ")
     );
     assert!(same);
+}
+
+/// Rectangles in a 5 x 5 grid on the page, each with one of the five horizontal rules and one of
+/// the five vertical ones (every pair of kinds meets), with different grays.
+fn constraint_grid() -> Vec<Object> {
+    use HConstraint as H;
+    use VConstraint as V;
+    let hs = [H::Left, H::Right, H::LeftRight, H::Center, H::Scale];
+    let vs = [V::Top, V::Bottom, V::TopBottom, V::Center, V::Scale];
+    let mut out = Vec::new();
+    for (row, v) in vs.iter().enumerate() {
+        for (col, h) in hs.iter().enumerate() {
+            let mut o = groups_document().layers[1].objects[0].children()[0].clone();
+            o.id = Uuid::from_u128(0x8000 + (row * 5 + col) as u128);
+            o.name = format!("cell {row} {col}");
+            o.frame = Frame::new(
+                8.0 + col as f64 * 27.0,
+                12.0 + row as f64 * 40.0,
+                20.0 + col as f64,
+                22.0 + row as f64,
+            );
+            o.constraints = Constraints { h: *h, v: *v };
+            o.style = Style::Role(LineRole::Structure);
+            o.fill = Some(Fill::Gray(((row * 5 + col) * 9) as u8));
+            o.rotation_deg = 0.0;
+            o.opacity_pct = 100;
+            o.visible = true;
+            o.locked = false;
+            o.kind = if (row + col) % 2 == 0 {
+                ObjectKind::Rect(RectShape::default())
+            } else {
+                ObjectKind::Ellipse(EllipseShape::default())
+            };
+            out.push(o);
+        }
+    }
+    out
+}
+
+#[test]
+fn grouping_and_ungrouping_with_every_constraint_changes_no_pixel() {
+    use quadrule_model::edit::{group, ungroup};
+    let flat = page_of(constraint_grid());
+    let ids: Vec<Uuid> = flat.layers[0].objects.iter().map(|o| o.id).collect();
+    // All twenty-five in one group; in two groups of fifteen and ten; one group inside another;
+    // and the one group dissolved again.
+    let mut one = flat.clone();
+    one.apply(group(&flat, &ids, Uuid::from_u128(0x9001), "All").unwrap())
+        .unwrap();
+    let dissolved = {
+        let mut d = one.clone();
+        d.apply(ungroup(&one, Uuid::from_u128(0x9001)).unwrap())
+            .unwrap();
+        d
+    };
+    let two = {
+        let mut d = flat.clone();
+        d.apply(group(&d.clone(), &ids[..15], Uuid::from_u128(0x9002), "A").unwrap())
+            .unwrap();
+        let rest: Vec<Uuid> = d.layers[0].objects.iter().map(|o| o.id).collect();
+        d.apply(group(&d.clone(), &rest[..2], Uuid::from_u128(0x9003), "B").unwrap())
+            .unwrap();
+        d
+    };
+    let nested = {
+        let mut d = flat.clone();
+        d.apply(group(&d.clone(), &ids[..10], Uuid::from_u128(0x9004), "In").unwrap())
+            .unwrap();
+        let top: Vec<Uuid> = d.layers[0].objects.iter().map(|o| o.id).collect();
+        d.apply(group(&d.clone(), &top[..8], Uuid::from_u128(0x9005), "Out").unwrap())
+            .unwrap();
+        d
+    };
+    let made = one
+        .object(Uuid::from_u128(0x9001))
+        .is_some_and(|g| g.children().len() == 25)
+        && nested.objects().filter(|o| o.is_group()).count() == 2;
+    let mut ok = made;
+    let mut parts = Vec::new();
+    for id in flat.profile_ids() {
+        let base = render_doc(id, &flat);
+        let diff = |d: &Document| {
+            render_doc(id, d)
+                .data
+                .iter()
+                .zip(&base.data)
+                .filter(|(x, y)| x != y)
+                .count()
+        };
+        let (d1, d2, d3, d4) = (diff(&one), diff(&dissolved), diff(&two), diff(&nested));
+        ok &= d1 == 0 && d2 == 0 && d3 == 0 && d4 == 0;
+        parts.push(format!(
+            "{id}:grouped_px={d1}:ungrouped_px={d2}:two_groups_px={d3}:nested_px={d4}"
+        ));
+    }
+    println!(
+        "\nCHECK crate=render name=grouping_every_constraint_moves_no_pixel result={} made={made} objects={} {}",
+        pass(ok),
+        ids.len(),
+        parts.join(" ")
+    );
+    assert!(ok);
 }
 
 #[test]
@@ -342,10 +438,8 @@ fn text_inside_a_group_draws_saves_and_reopens() {
         let db = display_list(&grouped, &primary, &target, &b.outlines).unwrap();
         let (ra, rb) = (render(&da, Math::Fastest), render(&db, Math::Fastest));
         let diff = ra.data.iter().zip(&rb.data).filter(|(x, y)| x != y).count();
-        // Exact on the design's own device. On the other the children follow the group's box (it
-        // scales with the page) instead of the page, so the picture may differ on purpose: reported.
-        let same = !parts.is_empty() || diff == 0;
-        ok &= same;
+        // Exact on both devices: the children resolve against the page, group or not.
+        ok &= diff == 0;
         parts.push(format!("{id}:differing_px={diff}"));
         outlines.push(b.outlines);
     }
