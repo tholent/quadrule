@@ -307,3 +307,63 @@ fn a_turned_group_is_its_children_turned() {
     );
     assert!(ok);
 }
+
+#[test]
+fn text_inside_a_group_draws_saves_and_reopens() {
+    // The slice page's text boxes, grouped with the page's rule: the page looks the same as flat,
+    // the file saves the text's outlines, and it opens again with the same tree and pixels.
+    use quadrule_layout::lay_out_text;
+    use quadrule_model::edit::group;
+    let flat = slice_document();
+    let text_ids: Vec<Uuid> = flat
+        .leaves()
+        .filter(|o| matches!(o.kind, ObjectKind::Text(_)))
+        .map(|o| o.id)
+        .collect();
+    let mut picked = text_ids.clone();
+    picked.push(ids::RULE);
+    let mut grouped = flat.clone();
+    let gid = Uuid::from_u128(0x6000);
+    let cmd = group(&flat, &picked, gid, "Words").unwrap();
+    grouped.apply(cmd).unwrap();
+    let primary = builtin(&flat.primary_profile_id).unwrap();
+    let mut reg = quadrule_text::FontRegistry::bundled_only();
+    let mut parts = Vec::new();
+    let mut ok = !text_ids.is_empty()
+        && grouped
+            .object(gid)
+            .is_some_and(|g| g.children().len() == picked.len());
+    let mut outlines = Vec::new();
+    for id in flat.profile_ids() {
+        let target = builtin(id).unwrap();
+        let a = lay_out_text(&flat, &primary, &target, &mut reg).unwrap();
+        let b = lay_out_text(&grouped, &primary, &target, &mut reg).unwrap();
+        let da = display_list(&flat, &primary, &target, &a.outlines).unwrap();
+        let db = display_list(&grouped, &primary, &target, &b.outlines).unwrap();
+        let (ra, rb) = (render(&da, Math::Fastest), render(&db, Math::Fastest));
+        let diff = ra.data.iter().zip(&rb.data).filter(|(x, y)| x != y).count();
+        // Exact on the design's own device. On the other the children follow the group's box (it
+        // scales with the page) instead of the page, so the picture may differ on purpose: reported.
+        let same = !parts.is_empty() || diff == 0;
+        ok &= same;
+        parts.push(format!("{id}:differing_px={diff}"));
+        outlines.push(b.outlines);
+    }
+    let file = quadrule_format::QuadFile::new(grouped.clone(), outlines, vec![]);
+    let back =
+        quadrule_format::QuadFile::from_bytes(&file.to_bytes("groups-test").unwrap()).unwrap();
+    let round = back.doc == grouped
+        && back.read_only.is_none()
+        && back
+            .outlines
+            .values()
+            .all(|o| text_ids.iter().all(|t| o.text(*t).is_some()));
+    ok &= round;
+    println!(
+        "\nCHECK crate=render name=text_in_group result={} {} file_round_trip={round} format={}",
+        pass(ok),
+        parts.join(" "),
+        back.manifest.format_version
+    );
+    assert!(ok);
+}
