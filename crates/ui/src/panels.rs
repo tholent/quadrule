@@ -921,7 +921,17 @@ impl ViewerUi {
             .show(ui, |ui| {
                 type Set = fn(&mut Object, f64);
                 type OnDevice = fn(Frame, f64) -> Frame;
-                let rows: [(&str, &str, f64, bool, &UnitContext, Set, OnDevice, bool); 4] = [
+                #[allow(clippy::type_complexity)]
+                let rows: [(
+                    &str,
+                    &str,
+                    f64,
+                    bool,
+                    &UnitContext,
+                    Set,
+                    OnDevice,
+                    bool,
+                ); 4] = [
                     // A group's contents follow its frame (`reframe`).
                     (
                         "arrange-x",

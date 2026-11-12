@@ -55,7 +55,7 @@ and error.
 - Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock and reorder layers;
   unlimited undo and redo; autosave with recovery after a crash.
 - Export a PNG for the Manta or the Nomad, named like `{title}_{manta|nomad}_{w}x{h}.png`.
-- Check a page with the linter (seven rules so far).
+- Check a page with the linter (eight rules so far).
 - Turn a line or a shape with the round handle above its top edge (it catches at 0, 90, 180 and 270 degrees; Shift
   holds 15-degree steps) or type an angle in the Arrange tab; a turned shape resizes along its own sides. Lines point any
   way (draw one up and to the right, or drag its ends past each other). Opacity, 0 to 100 percent, is in the Style tab;
@@ -78,8 +78,21 @@ and error.
   any leftover pixel going to the first gaps); with it off they are exact millimetres. Each is one undo step. When
   several objects are selected and their position, size or rotation differ, the Arrange field reads "mixed"; typing a
   value sets it on all of them.
+- Several devices on one page. The design is made on the primary device (the first one); the other follows it through
+  each object's constraints. With a secondary device on screen, **position, size, font size and the eye** become
+  *overrides* for that device only (a drag, the arrow keys, align and distribute, the Arrange and Text fields, the
+  layers eye); every other edit (style, fill, text, rotation, constraints) still changes the design on all devices, and
+  the status bar says so. A group moved or resized on a secondary device gets one override, its box there; what is in
+  it is scaled into that box. A small dot marks a changed value and a changed layer row, and an **Overrides** tab lists
+  what differs on the device on screen, with a Reset for each and "Reset all on this device". A **previews strip** along
+  the bottom of the canvas shows each device's page (the one on screen outlined, with how many objects are changed on
+  it); click a picture to put that device on screen, or fold the strip shut. The Page tab lists the devices: tick them
+  in and out (taking one out asks first if it has changes), and **Make primary** makes a device's layout the design
+  without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
+  top of another object or squeezed thin on a secondary device. Files are saved as format 0.8.0; older files open
+  unchanged.
 
-Not yet: the starter gallery and wallpapers. The plan is in the design spec,
+Not yet: landscape pages, the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).
 
 ## Download
