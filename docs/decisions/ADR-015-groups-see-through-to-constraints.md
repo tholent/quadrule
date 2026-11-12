@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: drafted 2026-11-12 from chris's ruling at the rung 7a look and the rung 7 record (goforit); awaiting ratification
+status: accepted
+status-note: "ratified by chris 2026-11-12 (Ratify, asked: Ratify ADR-015 as written?)"
+ratified-by: chris
+ratified-on: "2026-11-12"
 owner: chris
 kind: design
 built: landed
@@ -77,3 +79,6 @@ live.
 
 - 2026-11-12: drafted by the rung 7 lead with makeadr (goforit: every part cited, no rounds), after chris's ruling at
   the rung 7a look. Record `docs/bbq/2026-11-12-adr-groups.md`.
+- 2026-11-12: ratified by chris (Ratify, asked: "Ratify ADR-015 as written?"). Earlier header values, word for word:
+  `status: proposed`; `status-note: drafted 2026-11-12 from chris's ruling at the rung 7a look and the rung 7 record
+  (goforit); awaiting ratification`.

@@ -12,7 +12,7 @@
 - **chris changed a ruled answer at the look.** Q3 said a group is a constraint container; chris ruled, word for word, "I
   approve the build, but would like to change question #1 to reflect what figma does". So groups are **see-through to
   constraints**, as in Figma: every object keeps its own constraints against the page, `%` inside a group is of the
-  page, and resizing a group by hand scales what is inside (record, Q3 amendment; spec §5.2 amendment note). Rung 8's
+  page, and resizing a group by hand scales what is inside (record, Q3 amendment; spec §5.2 amendment note; ADR-015, ratified by chris 2026-11-12). Rung 8's
   per-device work builds on this rule: a group's box on each device is its children's resolved outer box.
 - How it ran: one lead session; three Sonnet 5.5 high subagents (7a 0.49M tokens, its look change 0.21M, 7b 0.21M), on
   `main`. The weekly meter moved **9 points** (55 → 64 %, chris's readings) for a 10-point share: more per builder token
@@ -44,8 +44,6 @@
 
 - chris's hardware queue (board): the grays sheet on both devices (Shade 204 and Block 68 are estimates until then); a
   landscape PNG check and landscape toolbar screenshots (rung 8 needs them).
-- ADR-015 (groups see-through to constraints, `docs/decisions/ADR-015-groups-see-through-to-constraints.md`) was
-  drafted 2026-11-12 and is proposed: if chris has not ratified it, ask "Ratify ADR-015 as written?".
 - Still parked: "Scale vs pixel-locked rhythm on A5 X" (v1.1, arc Q16); the Label gray (v1.1); text and pattern
   rotation (v1.1, chris 2026-11-12: "Not in v1").
 

@@ -1253,3 +1253,4 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - chris: "makeadr" (goforit, no rounds). ADR-015 drafted, proposed: groups are see-through to constraints, as in Figma
   (`docs/decisions/ADR-015-groups-see-through-to-constraints.md`, record `docs/bbq/2026-11-12-adr-groups.md`);
   `adr-check.py` → `15 ADRs, 0 failure(s)`. The rung 8 prompt now asks for its ratification.
+- chris ratified ADR-015 ("Ratify").
