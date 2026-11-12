@@ -25,10 +25,11 @@ use quadrule_layout::lay_out_text;
 use quadrule_layout::units::{Axis, UnitContext};
 use quadrule_model::clipboard;
 use quadrule_model::edit::{
-    Command, EditError, LayerProps, Place, duplicate, group, is_empty, paste, remove, reorder_into,
-    ungroup,
+    Command, EditError, LayerProps, OverrideField, Place, duplicate, group, is_empty, paste,
+    remove, reorder_into, reset_override, set_font_size_override, set_frame_override,
+    set_position_override, set_visible_override, ungroup_with,
 };
-use quadrule_model::{Document, Extra, Object, ObjectKind, Uuid};
+use quadrule_model::{Document, Extra, Frame, Object, ObjectKind, Uuid};
 use quadrule_profiles::{Profile, builtin};
 use quadrule_text::BundledFont;
 use std::path::Path;
@@ -354,7 +355,30 @@ impl Viewer {
         if cmds.is_empty() {
             return Ok(());
         }
-        self.edit(Command::Batch(cmds), merge)
+        self.edit(Command::Batch(cmds), merge)?;
+        self.say_shared();
+        Ok(())
+    }
+
+    /// Says in the status bar that an edit just made changed the design on every device, when it
+    /// was made with a secondary device on screen (rung 8 bbq, Q3).
+    pub(crate) fn say_shared(&mut self) {
+        if let Some(dev) = self.override_device() {
+            let name = crate::viewer::device_label(&dev);
+            self.notice = Some(crate::viewer::Notice {
+                message: Message::new("notice-shared-edit").text("device", name),
+                error: false,
+            });
+        }
+    }
+
+    /// The device whose overrides an edit writes: the one on screen, when it is not the primary
+    /// one (rung 8 bbq, Q3). `None` when the primary device is on screen: edits are the design's.
+    pub fn override_device(&self) -> Option<String> {
+        let doc = self.doc()?;
+        (self.profile_id != doc.primary_profile_id
+            && doc.profile_ids().contains(&self.profile_id.as_str()))
+        .then(|| self.profile_id.clone())
     }
 
     /// Moves the selection by `dx`, `dy` device pixels of the device on screen (arrow keys), or,
@@ -377,6 +401,10 @@ impl Viewer {
         };
         self.locked_notice_if_none_editable();
         let ids = self.editable_selection();
+        if let Some(dev) = self.override_device() {
+            // A secondary device: the step is a position override there (rung 8 bbq, Q3).
+            return self.nudge_on_device(&dev, &ids, (dx * sx, dy * sy));
+        }
         // Inside a turned group the page's down and right are not the group's: carry the step back
         // through the turns round the object.
         let degs: Vec<f64> = match self.page() {
@@ -409,6 +437,215 @@ impl Viewer {
             return Ok(());
         }
         self.edit(Command::Batch(cmds), None)
+    }
+
+    /// The layout of `ids` on the device shown, for working out overrides: each object with its
+    /// place in the space it is in.
+    fn nodes_shown(&mut self, ids: &[Uuid]) -> Vec<quadrule_layout::tree::Node> {
+        let Some(page) = self.page() else {
+            return Vec::new();
+        };
+        ids.iter()
+            .filter_map(|id| page.placed.iter().find(|p| p.id == *id).map(|p| p.node))
+            .collect()
+    }
+
+    /// Moves each of `ids` by `step` mm of the device `dev` on screen (as the page sees it), as a
+    /// position override there.
+    fn nudge_on_device(
+        &mut self,
+        dev: &str,
+        ids: &[Uuid],
+        step: (f64, f64),
+    ) -> Result<(), EditError> {
+        let nodes = self.nodes_shown(ids);
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        let cmds: Vec<Command> = nodes
+            .iter()
+            .filter_map(|n| {
+                let mut o = doc.object(n.id)?.clone();
+                // Inside a turned group the page's down and right are not the group's.
+                let (mx, my) =
+                    quadrule_layout::rotate::rotate_point(step, (0.0, 0.0), -n.ctx.xf.deg);
+                let moved = Frame {
+                    x_mm: n.local.x_mm + mx,
+                    y_mm: n.local.y_mm + my,
+                    ..n.local
+                };
+                let unfit = n
+                    .ctx
+                    .unfit(moved, o.rotation(), matches!(o.kind, ObjectKind::Text(_)));
+                set_position_override(&mut o, dev, n.base, unfit.x_mm, unfit.y_mm);
+                Some(Command::SetObject(o))
+            })
+            .collect();
+        if cmds.is_empty() {
+            return Ok(());
+        }
+        self.edit(Command::Batch(cmds), None)
+    }
+
+    /// Sets the place and size of every editable selected object on the secondary device on screen
+    /// (the Arrange tab's X, Y, width and height there): `f` gets each object's frame as that
+    /// device shows it and gives the one to show. An override for each part that differs from what
+    /// the constraints give; the design is untouched (rung 8 bbq, Q3). Does nothing on the primary
+    /// device.
+    pub fn edit_frames_on_device(
+        &mut self,
+        merge: Option<&str>,
+        f: impl Fn(Frame) -> Frame,
+    ) -> Result<(), EditError> {
+        let Some(dev) = self.override_device() else {
+            return Ok(());
+        };
+        let ids = self.editable_selection();
+        let nodes = self.nodes_shown(&ids);
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        let cmds: Vec<Command> = nodes
+            .iter()
+            .filter_map(|n| {
+                let mut o = doc.object(n.id)?.clone();
+                let text = matches!(o.kind, ObjectKind::Text(_));
+                let unfit = n.ctx.unfit(f(n.local), o.rotation(), text);
+                set_frame_override(&mut o, &dev, n.base, unfit);
+                (o != *doc.object(n.id)?).then_some(Command::SetObject(o))
+            })
+            .collect();
+        if cmds.is_empty() {
+            return Ok(());
+        }
+        self.edit(Command::Batch(cmds), merge)
+    }
+
+    /// Sets the font size, in points, of the editable selected text boxes on the secondary device
+    /// on screen (an override there; the design's size is untouched).
+    pub fn set_font_size_on_device(
+        &mut self,
+        merge: Option<&str>,
+        pt: f64,
+    ) -> Result<(), EditError> {
+        let Some(dev) = self.override_device() else {
+            return Ok(());
+        };
+        self.edit_selected_raw(merge, |o| set_font_size_override(o, &dev, pt))
+    }
+
+    /// Shows or hides `id` on the secondary device on screen: an override of the eye there (the
+    /// layers panel's eye). Allowed on locked objects, as the eye is.
+    pub fn set_visible_on_device(&mut self, id: Uuid, shown: bool) -> Result<(), EditError> {
+        let Some(dev) = self.override_device() else {
+            return Ok(());
+        };
+        let Some(o) = self.doc().and_then(|d| d.object(id)) else {
+            return Ok(());
+        };
+        let mut o = o.clone();
+        set_visible_override(&mut o, &dev, shown);
+        self.edit(Command::SetObject(o), None)
+    }
+
+    /// Like [`Viewer::edit_selected`] without the note that the design changed everywhere.
+    fn edit_selected_raw(
+        &mut self,
+        merge: Option<&str>,
+        f: impl Fn(&mut Object),
+    ) -> Result<(), EditError> {
+        let ids = self.editable_selection();
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        let cmds: Vec<Command> = ids
+            .iter()
+            .filter_map(|id| doc.object(*id))
+            .filter_map(|o| {
+                let mut n = o.clone();
+                f(&mut n);
+                (n != *o).then_some(Command::SetObject(n))
+            })
+            .collect();
+        if cmds.is_empty() {
+            return Ok(());
+        }
+        self.edit(Command::Batch(cmds), merge)
+    }
+
+    /// Takes the parts `fields` (or every part) of the override on the device on screen off each
+    /// of `ids`: Reset in the Overrides tab. One undo step.
+    pub fn reset_overrides(
+        &mut self,
+        ids: &[Uuid],
+        fields: Option<&[OverrideField]>,
+    ) -> Result<(), EditError> {
+        let Some(dev) = self.override_device() else {
+            return Ok(());
+        };
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        let fields = fields.unwrap_or(&OverrideField::ALL);
+        let cmds: Vec<Command> = ids
+            .iter()
+            .filter_map(|id| doc.object(*id))
+            .filter_map(|o| {
+                let mut n = o.clone();
+                reset_override(&mut n, &dev, fields);
+                (n != *o).then_some(Command::SetObject(n))
+            })
+            .collect();
+        if cmds.is_empty() {
+            return Ok(());
+        }
+        self.edit(Command::Batch(cmds), None)
+    }
+
+    /// Makes `id` the document's primary device (the Page tab): its layout, overrides included,
+    /// becomes the design, and the other devices get the overrides that keep what they show (rung 8
+    /// bbq, Defaulted "Switching the primary device"). One undo step.
+    pub fn make_primary(&mut self, id: &str) -> Result<(), EditError> {
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        match quadrule_layout::device::make_primary(doc, id) {
+            Ok(cmd) => self.edit(cmd, None),
+            Err(e) => {
+                self.notice = Some(crate::viewer::Notice {
+                    message: Message::new("notice-edit-failed").text("error", e.to_string()),
+                    error: true,
+                });
+                Ok(())
+            }
+        }
+    }
+
+    /// Makes the document target exactly the devices `ids` (the Page tab's ticks); a device taken
+    /// out loses its overrides, and undo brings them back. If the device on screen goes, the
+    /// primary one is shown.
+    pub fn set_targets(&mut self, ids: &[&str]) -> Result<(), EditError> {
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        let cmd = match quadrule_layout::device::set_targets(doc, ids) {
+            Ok(c) => c,
+            Err(e) => {
+                self.notice = Some(crate::viewer::Notice {
+                    message: Message::new("notice-edit-failed").text("error", e.to_string()),
+                    error: true,
+                });
+                return Ok(());
+            }
+        };
+        self.edit(cmd, None)?;
+        if let Some(doc) = self.doc()
+            && !doc.profile_ids().contains(&self.profile_id.as_str())
+        {
+            let primary = doc.primary_profile_id.clone();
+            self.set_profile(&primary);
+        }
+        Ok(())
     }
 
     /// Deletes the editable selected objects (the Delete key).
@@ -664,8 +901,13 @@ impl Viewer {
         }
         let mut cmds = Vec::new();
         let mut freed = Vec::new();
+        let Some((primary, _)) = self.profiles() else {
+            return Ok(());
+        };
         for id in &ids {
-            cmds.push(ungroup(doc, *id)?);
+            // What the group's overrides did to the children on each device is baked in.
+            let baked = quadrule_layout::device::ungroup_overrides(doc, &primary, *id);
+            cmds.push(ungroup_with(doc, *id, &baked)?);
             freed.extend(
                 doc.object(*id)
                     .map(|g| g.children().iter().map(|c| c.id).collect::<Vec<_>>())

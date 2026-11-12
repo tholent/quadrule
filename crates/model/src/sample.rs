@@ -1426,7 +1426,7 @@ pub fn devices_document() -> Document {
             extra: Extra::new(),
         },
         Layer {
-            name: "Overrides".into(),
+            name: "Examples".into(),
             visible: true,
             locked: false,
             objects: vec![moved, sized, hidden, small, group, off],

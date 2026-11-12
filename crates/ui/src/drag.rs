@@ -23,9 +23,10 @@
 //! ([`Viewer::drag_cancel`]) drops the preview.
 //!
 //! Locked objects, and objects in locked layers, do not drag. Frames are stored in the primary
-//! profile's mm, so on a secondary device the new frame is the inverse of the constraints
-//! ([`unresolve_frame`]): a drag lands where the pointer put the object on the device shown.
-//! Snapping is done on that device's pixels (Q10).
+//! profile's mm. On a secondary device a drag writes the device's override for the object (rung 8
+//! bbq, Q3 and Q4): its place, and its size if that changed; a group gets one override, its box,
+//! and what is in it follows. The stored design is not touched. Snapping is done on that device's
+//! pixels (Q10).
 
 use crate::viewer::Viewer;
 use quadrule_layout::rotate;
@@ -123,6 +124,11 @@ struct Item {
     local: Frame,
     /// Its own angle, apart from the groups' (what is stored).
     own_rotation: f64,
+    /// The box its constraints give on the device shown, in mm (for a group, the box round its
+    /// children): what an override of it is measured against.
+    base: Frame,
+    /// Where it is before the overrides of the groups round it, as the drag began, in mm.
+    unfit: Frame,
     /// Its frame on the device shown, in pixels, as the drag began, where it falls on the page.
     resolved: PxRect,
     /// A text box: its height is its text's, so only its position and width change.
@@ -237,7 +243,13 @@ impl Item {
     /// the unturned space it is in (mm on the device shown). A group has no constraints, so its
     /// stored frame is only a stand-in: the box round its children, which follow
     /// ([`Placement::map`]), is what it is refitted to.
-    fn stored(&self, r: PxRect, total_deg: f64, shown: &Profile) -> (Frame, f64, Frame) {
+    fn stored(
+        &self,
+        r: PxRect,
+        total_deg: f64,
+        shown: &Profile,
+        on_device: bool,
+    ) -> (Frame, f64, Frame) {
         let per_mm = shown.mm_to_px(1.0);
         let placed = Frame::new(
             r.x0 / per_mm,
@@ -251,6 +263,10 @@ impl Item {
         } else {
             normalize_deg(rot)
         };
+        if on_device {
+            // A secondary device: where the object is there, before the groups' overrides.
+            return (self.ctx.unfit(local, rot, self.text), rot, local);
+        }
         let c = if self.group {
             Constraints::default()
         } else {
@@ -793,6 +809,8 @@ impl Viewer {
                 ctx: node.node.ctx,
                 local: node.node.local,
                 own_rotation: o.rotation(),
+                base: node.node.base,
+                unfit: node.node.unfit,
                 resolved,
                 text: matches!(o.kind, ObjectKind::Text(_)),
                 group: o.is_group(),
@@ -865,10 +883,12 @@ impl Viewer {
             self.drag = Some(drag);
             return;
         }
-        let Some((_, shown)) = self.profiles() else {
+        let Some((primary, shown)) = self.profiles() else {
             self.drag = Some(drag);
             return;
         };
+        // On a secondary device the drag writes overrides there (rung 8 bbq, Q3).
+        let on_device = primary.id != shown.id;
         let start = drag.start_box;
         let mut marks = Vec::new();
         // Each object's angle and line direction after this move: unchanged unless it is turned,
@@ -980,7 +1000,24 @@ impl Viewer {
                 _ => map_rect(item, &start, &new_box),
             };
             let (total, dir) = rot_dir[n];
-            let (mut frame, rotation_deg, local) = item.stored(px, total, &shown);
+            let (mut frame, rotation_deg, local) = item.stored(px, total, &shown, on_device);
+            if on_device {
+                if near(&item.unfit, &frame) {
+                    frame = item.unfit;
+                }
+                places.push((
+                    item.id,
+                    Placement {
+                        frame,
+                        rotation_deg,
+                        dir,
+                        map: None,
+                        device: None,
+                    }
+                    .on_device(&shown.id, item.base),
+                ));
+                continue;
+            }
             if let Some(o) = base_doc.object(item.id)
                 && near(&o.frame, &frame)
             {
@@ -999,6 +1036,7 @@ impl Viewer {
                     rotation_deg,
                     dir,
                     map,
+                    device: None,
                 },
             ));
         }

@@ -27,7 +27,7 @@ use quadrule_layout::RhythmPx;
 use quadrule_layout::align::AlignTo;
 use quadrule_layout::units::{Axis, UnitContext, format_length, parse_length, trim_number};
 use quadrule_lint::Severity;
-use quadrule_model::edit::{Command, Place, reframe};
+use quadrule_model::edit::{Command, OverrideField, Place, reframe};
 use quadrule_model::{
     DashStyle, Document, Fill, FillRole, Frame, HConstraint, LineCap, LineRole, Object, ObjectKind,
     POLYGON_SIDES_MAX, POLYGON_SIDES_MIN, Pattern, RhythmOrigin, RhythmResolution,
@@ -47,6 +47,8 @@ pub enum Tab {
     Text,
     /// How the object follows other devices' pages (napkin §5.4).
     Constraints,
+    /// What differs on the secondary device on screen (rung 8a, spec §6.1).
+    Overrides,
     /// Lint findings on the device on screen.
     Lint,
 }
@@ -218,11 +220,27 @@ impl ViewerUi {
                 } else {
                     ui.add_space(20.0);
                 }
-                if let Some(v) = self.eye_and_lock(ui, &o.name, o.visible, o.locked) {
-                    let _ = self.viewer.set_object_panel(o.id, |obj| {
-                        obj.visible = v.0;
-                        obj.locked = v.1;
-                    });
+                // On a secondary device the eye is that device's (an override), and a dot marks an
+                // object changed there (rung 8a, Defaulted "Badges").
+                let device = self.viewer.override_device();
+                let shown = device.as_deref().map_or(o.visible, |d| o.visible_on(d));
+                if let Some(v) = self.eye_and_lock(ui, &o.name, shown, o.locked) {
+                    if device.is_some() && v.0 != shown {
+                        let _ = self.viewer.set_visible_on_device(o.id, v.0);
+                    } else {
+                        let _ = self.viewer.set_object_panel(o.id, |obj| {
+                            if device.is_none() {
+                                obj.visible = v.0;
+                            }
+                            obj.locked = v.1;
+                        });
+                    }
+                }
+                if device
+                    .as_deref()
+                    .is_some_and(|d| o.override_on(d).is_some_and(|x| !x.is_empty()))
+                {
+                    self.paint_badge(ui);
                 }
                 let selected = self.viewer.selection.contains(&o.id);
                 if let Some(ev) = self.name_cell(
@@ -464,6 +482,10 @@ impl ViewerUi {
         if self.constraints_subject().is_some() {
             tabs.push((Tab::Constraints, self.t("app-tab-constraints")));
         }
+        // A secondary device on screen: what differs there, with Reset (rung 8a).
+        if has_selection && self.viewer.override_device().is_some() {
+            tabs.push((Tab::Overrides, self.t("app-tab-overrides")));
+        }
         let count = self.lint_count();
         tabs.push((
             Tab::Lint,
@@ -514,6 +536,7 @@ impl ViewerUi {
                 Tab::Style => self.style_tab(ui),
                 Tab::Text => self.text_tab(ui),
                 Tab::Constraints => self.constraints_tab(ui),
+                Tab::Overrides => self.overrides_tab(ui),
                 Tab::Lint => self.lint_tab(ui),
             });
     }
@@ -524,10 +547,9 @@ impl ViewerUi {
             .map_or_else(String::new, |d| d.primary_profile_id.clone())
     }
 
+    /// A device's short name (`Nomad`) for what is said about it in the inspector and the strip.
     pub(crate) fn device_name(&self, id: &str) -> String {
-        quadrule_profiles::builtin(id)
-            .map(|p| p.display_name)
-            .unwrap_or_else(|_| id.to_string())
+        crate::viewer::device_label(id)
     }
 
     /// The first selected object that has constraints: anything but a group.
@@ -606,6 +628,8 @@ impl ViewerUi {
             }
             ui.end_row();
         });
+
+        self.devices_section(ui, &doc);
 
         // Margins, linked by default.
         ui.add_space(6.0);
@@ -780,6 +804,90 @@ impl ViewerUi {
         self.snap_toggles(ui);
     }
 
+    /// The devices this page targets (rung 8a, Defaulted "Which devices a document targets" and
+    /// "Switching the primary device"): a tick for each device the app has a profile for, the
+    /// primary marked and fixed, and Make primary on the others.
+    fn devices_section(&mut self, ui: &mut egui::Ui, doc: &Document) {
+        ui.add_space(6.0);
+        ui.strong(self.t("app-page-devices"));
+        ui.label(RichText::new(self.t("app-device-primary-tip")).small());
+        let have: Vec<String> = doc.profile_ids().into_iter().map(String::from).collect();
+        let all: Vec<String> = quadrule_profiles::builtin_ids().map(String::from).collect();
+        for id in &all {
+            let name = self.device_name(id);
+            let is_primary = *id == doc.primary_profile_id;
+            let mut on = have.contains(id);
+            ui.horizontal(|ui| {
+                let label = self
+                    .strings
+                    .format(&Message::new("app-device-target").text("device", name.clone()));
+                let tick = ui.add_enabled(!is_primary, egui::Checkbox::new(&mut on, label.clone()));
+                tick.widget_info(|| WidgetInfo::selected(Role::CheckBox, !is_primary, on, &label));
+                if tick.changed() {
+                    if on {
+                        let mut ids: Vec<&str> = have.iter().map(String::as_str).collect();
+                        ids.push(id);
+                        let _ = self.viewer.set_targets(&ids);
+                    } else if doc.has_overrides_on(id) {
+                        // Ask first: taking the device out drops what is changed on it.
+                        self.take_out = Some(id.clone());
+                    } else {
+                        let ids: Vec<&str> = have
+                            .iter()
+                            .map(String::as_str)
+                            .filter(|h| *h != id)
+                            .collect();
+                        let _ = self.viewer.set_targets(&ids);
+                    }
+                }
+                if is_primary {
+                    ui.label(RichText::new(self.t("app-device-primary")).small());
+                } else if on {
+                    let make = self.strings.format(
+                        &Message::new("app-device-make-primary-name").text("device", name.clone()),
+                    );
+                    let btn = ui.button(self.t("app-device-make-primary"));
+                    btn.widget_info(|| WidgetInfo::labeled(Role::Button, true, &make));
+                    if btn.on_hover_text(make).clicked() {
+                        let _ = self.viewer.make_primary(id);
+                    }
+                }
+            });
+        }
+        if let Some(id) = self.take_out.clone() {
+            let name = self.device_name(&id);
+            let count = doc.overridden_count(&id);
+            ui.group(|ui| {
+                ui.label(
+                    self.strings
+                        .format(&Message::new("app-device-take-out").text("device", name.clone())),
+                );
+                ui.label(
+                    self.strings
+                        .format(&Message::new("app-device-take-out-lose").num(
+                            "count",
+                            count as f64,
+                            0,
+                        )),
+                );
+                ui.horizontal(|ui| {
+                    if ui.button(self.t("app-device-take-out-yes")).clicked() {
+                        let ids: Vec<&str> = have
+                            .iter()
+                            .map(String::as_str)
+                            .filter(|h| *h != id)
+                            .collect();
+                        let _ = self.viewer.set_targets(&ids);
+                        self.take_out = None;
+                    }
+                    if ui.button(self.t("app-device-take-out-no")).clicked() {
+                        self.take_out = None;
+                    }
+                });
+            });
+        }
+    }
+
     fn arrange_tab(&mut self, ui: &mut egui::Ui) {
         let Some(o) = self.first_selected() else {
             return;
@@ -792,44 +900,110 @@ impl ViewerUi {
         };
         let enabled = !self.viewer.editable_selection().is_empty();
         let mixed = self.viewer.arrange_mixed();
-        let f = o.frame;
+        // The values are those of the device on screen; typing on a secondary one sets an override
+        // there (rung 8a, Defaulted "The inspector on a secondary").
+        let device = self.viewer.override_device();
+        let selection = self.viewer.selection.clone();
+        let f = self
+            .viewer
+            .shown_frames(&selection)
+            .first()
+            .map_or(o.frame, |(_, f)| *f);
+        let ovr = device
+            .as_deref()
+            .and_then(|d| o.override_on(d))
+            .cloned()
+            .unwrap_or_default();
         ui.horizontal(|ui| self.group_buttons(ui));
         self.align_section(ui);
         egui::Grid::new("arrange-grid")
             .num_columns(2)
             .show(ui, |ui| {
                 type Set = fn(&mut Object, f64);
-                let rows: [(&str, &str, f64, bool, &UnitContext, Set); 4] = [
+                type OnDevice = fn(Frame, f64) -> Frame;
+                let rows: [(&str, &str, f64, bool, &UnitContext, Set, OnDevice, bool); 4] = [
                     // A group's contents follow its frame (`reframe`).
-                    ("arrange-x", "app-x", f.x_mm, mixed.x, &cx, |o, v| {
-                        reframe(o, Frame { x_mm: v, ..o.frame })
-                    }),
-                    ("arrange-y", "app-y", f.y_mm, mixed.y, &cy, |o, v| {
-                        reframe(o, Frame { y_mm: v, ..o.frame })
-                    }),
-                    ("arrange-w", "app-width", f.w_mm, mixed.w, &cx, |o, v| {
-                        reframe(
-                            o,
-                            Frame {
-                                w_mm: v.max(0.0),
-                                ..o.frame
-                            },
-                        )
-                    }),
-                    ("arrange-h", "app-height", f.h_mm, mixed.h, &cy, |o, v| {
-                        reframe(
-                            o,
-                            Frame {
-                                h_mm: v.max(0.0),
-                                ..o.frame
-                            },
-                        )
-                    }),
+                    (
+                        "arrange-x",
+                        "app-x",
+                        f.x_mm,
+                        mixed.x,
+                        &cx,
+                        |o, v| reframe(o, Frame { x_mm: v, ..o.frame }),
+                        |fr, v| Frame { x_mm: v, ..fr },
+                        ovr.position.is_some(),
+                    ),
+                    (
+                        "arrange-y",
+                        "app-y",
+                        f.y_mm,
+                        mixed.y,
+                        &cy,
+                        |o, v| reframe(o, Frame { y_mm: v, ..o.frame }),
+                        |fr, v| Frame { y_mm: v, ..fr },
+                        ovr.position.is_some(),
+                    ),
+                    (
+                        "arrange-w",
+                        "app-width",
+                        f.w_mm,
+                        mixed.w,
+                        &cx,
+                        |o, v| {
+                            reframe(
+                                o,
+                                Frame {
+                                    w_mm: v.max(0.0),
+                                    ..o.frame
+                                },
+                            )
+                        },
+                        |fr, v| Frame {
+                            w_mm: v.max(0.0),
+                            ..fr
+                        },
+                        ovr.size.is_some(),
+                    ),
+                    (
+                        "arrange-h",
+                        "app-height",
+                        f.h_mm,
+                        mixed.h,
+                        &cy,
+                        |o, v| {
+                            reframe(
+                                o,
+                                Frame {
+                                    h_mm: v.max(0.0),
+                                    ..o.frame
+                                },
+                            )
+                        },
+                        |fr, v| Frame {
+                            h_mm: v.max(0.0),
+                            ..fr
+                        },
+                        ovr.size.is_some(),
+                    ),
                 ];
-                for (key, id, v, is_mixed, ctx, set) in rows {
-                    if let Some(mm) = self.length_row_mixed(ui, key, id, v, ctx, enabled, is_mixed)
-                    {
-                        let _ = self.viewer.edit_selected(Some(key), |o| set(o, mm));
+                for (key, id, v, is_mixed, ctx, set, set_here, badge) in rows {
+                    if let Some(mm) = self.length_row_badged(
+                        ui,
+                        key,
+                        id,
+                        v,
+                        ctx,
+                        enabled,
+                        is_mixed,
+                        badge && device.is_some(),
+                    ) {
+                        if device.is_some() {
+                            let _ = self
+                                .viewer
+                                .edit_frames_on_device(Some(key), |fr| set_here(fr, mm));
+                        } else {
+                            let _ = self.viewer.edit_selected(Some(key), |o| set(o, mm));
+                        }
                     }
                     ui.end_row();
                 }
@@ -967,11 +1141,38 @@ impl ViewerUi {
             return;
         };
         let enabled = !self.viewer.editable_selection().is_empty();
+        if self.viewer.override_device().is_some() {
+            ui.label(RichText::new(self.t("app-style-shared")).small());
+        }
+        // Which parts differ across the objects picked: those fields read "mixed" (rung 6a/7b debt).
+        let picked: Vec<Object> = self
+            .viewer
+            .selection
+            .iter()
+            .filter_map(|id| self.viewer.doc().and_then(|d| d.object(*id)))
+            .cloned()
+            .collect();
+        let any_differs =
+            |same: &dyn Fn(&Object, &Object) -> bool| picked.iter().any(|x| !same(x, &o));
+        let kind_mixed =
+            any_differs(&|a, b| StrokeChoice::of(a.style) == StrokeChoice::of(b.style));
+        let role_mixed = any_differs(
+            &|a, b| matches!((a.style, b.style), (Style::Role(x), Style::Role(y)) if x == y),
+        );
+        let width_mixed = any_differs(&|a, b| {
+            matches!((a.style, b.style),
+                (Style::Custom { width_mm: x, .. }, Style::Custom { width_mm: y, .. }) if (x - y).abs() < 1e-9)
+        });
+        let gray_mixed = any_differs(&|a, b| {
+            matches!((a.style, b.style),
+                (Style::Custom { gray: x, .. }, Style::Custom { gray: y, .. }) if x == y)
+        });
+        let opacity_mixed = any_differs(&|a, b| a.opacity() == b.opacity());
         // A group has opacity and nothing else: its stroke and fill are its children's (rung 7a).
         if o.is_group() {
             ui.add_enabled_ui(enabled, |ui| {
                 egui::Grid::new("style-grid").num_columns(2).show(ui, |ui| {
-                    self.opacity_row(ui, &o);
+                    self.opacity_row(ui, &o, opacity_mixed);
                 });
             });
             return;
@@ -995,6 +1196,9 @@ impl ViewerUi {
                     }
                     ui.radio_value(&mut want, StrokeChoice::Role, self.t("app-style-role"));
                     ui.radio_value(&mut want, StrokeChoice::Custom, self.t("app-style-custom"));
+                    if kind_mixed {
+                        ui.label(RichText::new(self.t("app-mixed")).small());
+                    }
                 })
                 .response
                 .labelled_by(label.id);
@@ -1030,7 +1234,7 @@ impl ViewerUi {
                     Style::Role(role) => {
                         let label = ui.label(self.t("app-style-role"));
                         let mut r = role;
-                        self.combo(ui, "role", label.id, &mut r, &ROLES);
+                        self.combo_mixed(ui, "role", label.id, &mut r, &ROLES, role_mixed);
                         if r != role {
                             let _ = self
                                 .viewer
@@ -1039,13 +1243,14 @@ impl ViewerUi {
                         ui.end_row();
                     }
                     Style::Custom { width_mm, gray } => {
-                        if let Some(mm) = self.length_row(
+                        if let Some(mm) = self.length_row_mixed(
                             ui,
                             "style-width",
                             "app-stroke-width",
                             width_mm,
                             &cx,
                             enabled,
+                            width_mixed,
                         ) {
                             let _ = self.viewer.edit_selected(Some("style-width"), |x| {
                                 if let Style::Custom { width_mm, .. } = &mut x.style {
@@ -1056,11 +1261,20 @@ impl ViewerUi {
                         ui.end_row();
                         let label = ui.label(self.t("app-stroke-gray"));
                         let mut g = gray;
-                        if ui
-                            .add(egui::DragValue::new(&mut g).range(0..=255))
-                            .labelled_by(label.id)
-                            .changed()
-                        {
+                        let mut gray_drag = egui::DragValue::new(&mut g).range(0..=255);
+                        if gray_mixed {
+                            let word = self.t("app-mixed");
+                            gray_drag = gray_drag
+                                .custom_formatter(move |_, _| word.clone())
+                                .custom_parser(|t| {
+                                    t.trim()
+                                        .trim_start_matches(|c: char| c.is_alphabetic())
+                                        .trim()
+                                        .parse()
+                                        .ok()
+                                });
+                        }
+                        if ui.add(gray_drag).labelled_by(label.id).changed() {
                             let _ = self.viewer.edit_selected(Some("style-gray"), |x| {
                                 if let Style::Custom { gray, .. } = &mut x.style {
                                     *gray = g;
@@ -1079,7 +1293,7 @@ impl ViewerUi {
                     self.dash_rows(ui, &o, &cx, enabled);
                 }
 
-                self.opacity_row(ui, &o);
+                self.opacity_row(ui, &o, opacity_mixed);
 
                 if let ObjectKind::Pattern(pr) = &o.kind {
                     let label = ui.label(self.t("app-pattern"));
@@ -1111,18 +1325,28 @@ impl ViewerUi {
     /// The fill: none, a role (each device gives it a gray) or a gray of its own.
     /// The Opacity row: 0 to 100 percent, for every kind; the export is flattened onto what lies
     /// beneath (rung 6b). A group fades as one (rung 7a bbq, Q7).
-    fn opacity_row(&mut self, ui: &mut egui::Ui, o: &Object) {
+    fn opacity_row(&mut self, ui: &mut egui::Ui, o: &Object, mixed: bool) {
         let label = ui.label(self.t("app-opacity"));
         let mut pct = o.opacity();
-        if ui
-            .add(
-                egui::DragValue::new(&mut pct)
-                    .range(quadrule_model::OPACITY_MIN..=quadrule_model::OPACITY_MAX)
-                    .suffix(" %"),
-            )
-            .labelled_by(label.id)
-            .changed()
-        {
+        let mut drag = egui::DragValue::new(&mut pct)
+            .range(quadrule_model::OPACITY_MIN..=quadrule_model::OPACITY_MAX);
+        if mixed {
+            // The word stands in for the number (rung 8a: "mixed" where the picked objects differ).
+            let word = self.t("app-mixed");
+            drag = drag
+                .custom_formatter(move |_, _| word.clone())
+                .custom_parser(|t| {
+                    t.trim()
+                        .trim_start_matches(|c: char| c.is_alphabetic())
+                        .trim_end_matches('%')
+                        .trim()
+                        .parse()
+                        .ok()
+                });
+        } else {
+            drag = drag.suffix(" %");
+        }
+        if ui.add(drag).labelled_by(label.id).changed() {
             let _ = self.viewer.edit_selected(Some("style-opacity"), |x| {
                 x.opacity_pct = pct;
             });
@@ -1417,13 +1641,31 @@ impl ViewerUi {
                     display: Unit::Pt,
                     ..cx
                 };
-                let size_mm = quadrule_model::pt_to_mm(t.size_pt);
-                if let Some(mm) =
-                    self.length_row(ui, "text-size", "app-size", size_mm, &pt, enabled)
-                    && mm > 0.0
+                // On a secondary device the size shown is that device's, and typing one sets an
+                // override there (rung 8a, Q3).
+                let device = self.viewer.override_device();
+                let font_override = device
+                    .as_deref()
+                    .and_then(|d| o.override_on(d))
+                    .and_then(|x| x.font_size_pt);
+                let size_mm = quadrule_model::pt_to_mm(font_override.unwrap_or(t.size_pt));
+                if let Some(mm) = self.length_row_badged(
+                    ui,
+                    "text-size",
+                    "app-size",
+                    size_mm,
+                    &pt,
+                    enabled,
+                    false,
+                    font_override.is_some(),
+                ) && mm > 0.0
                 {
                     let size = mm / quadrule_model::pt_to_mm(1.0);
-                    edit_text(&mut self.viewer, "text-size", &|t| t.size_pt = size);
+                    if device.is_some() {
+                        let _ = self.viewer.set_font_size_on_device(Some("text-size"), size);
+                    } else {
+                        edit_text(&mut self.viewer, "text-size", &|t| t.size_pt = size);
+                    }
                 }
                 ui.end_row();
 
@@ -1572,6 +1814,23 @@ impl ViewerUi {
         enabled: bool,
         mixed: bool,
     ) -> Option<f64> {
+        self.length_row_badged(ui, key, label_id, mm, ctx, enabled, mixed, false)
+    }
+
+    /// [`ViewerUi::length_row_mixed`], and with `badge` a small dot after the field says the value
+    /// is changed on the secondary device on screen (rung 8a, Defaulted "Badges").
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn length_row_badged(
+        &mut self,
+        ui: &mut egui::Ui,
+        key: &str,
+        label_id: &str,
+        mm: f64,
+        ctx: &UnitContext,
+        enabled: bool,
+        mixed: bool,
+        badge: bool,
+    ) -> Option<f64> {
         let label = ui.label(self.t(label_id));
         let id = ui.make_persistent_id(("length", key));
         let focused = ui.memory(|m| m.has_focus(id));
@@ -1592,7 +1851,15 @@ impl ViewerUi {
         if bad {
             edit = edit.background_color(ui.visuals().error_fg_color.gamma_multiply(0.25));
         }
-        let resp = ui.add_enabled(enabled, edit).labelled_by(label.id);
+        let resp = ui
+            .horizontal(|ui| {
+                let resp = ui.add_enabled(enabled, edit).labelled_by(label.id);
+                if badge {
+                    self.paint_badge(ui);
+                }
+                resp
+            })
+            .inner;
         let resp = if bad {
             resp.on_hover_text(self.t("app-field-invalid"))
         } else {
@@ -1612,6 +1879,151 @@ impl ViewerUi {
         None
     }
 
+    /// The small filled dot that marks a value changed on the secondary device on screen, with the
+    /// tooltip "Changed on Nomad" (and the same words for screen readers).
+    pub(crate) fn paint_badge(&self, ui: &mut egui::Ui) {
+        let device = self.device_name(&self.viewer.profile_id.clone());
+        let tip = self
+            .strings
+            .format(&Message::new("app-override-badge").text("device", device));
+        let (rect, resp) = ui.allocate_exact_size(egui::vec2(10.0, 10.0), Sense::hover());
+        ui.painter()
+            .circle_filled(rect.center(), 3.5, ui.visuals().selection.stroke.color);
+        resp.widget_info(|| WidgetInfo::labeled(Role::Image, true, &tip));
+        resp.on_hover_text(tip);
+    }
+
+    /// The Overrides tab (spec §6.1; rung 8a Defaulted "The Overrides tab"): with a secondary device
+    /// on screen and one object picked, each part of it changed on that device with its value
+    /// there and in the design, and a Reset beside each; Reset all on this device for everything
+    /// picked.
+    fn overrides_tab(&mut self, ui: &mut egui::Ui) {
+        let Some(dev) = self.viewer.override_device() else {
+            return;
+        };
+        let name = self.device_name(&dev);
+        ui.label(
+            self.strings
+                .format(&Message::new("app-overrides-intro").text("device", name.clone())),
+        );
+        let selection = self.viewer.editable_selection();
+        let all = self.viewer.selection.clone();
+        let (Some(cx), Some(cy)) = (
+            self.viewer.unit_context(Axis::X),
+            self.viewer.unit_context(Axis::Y),
+        ) else {
+            return;
+        };
+        if let [id] = all[..] {
+            let Some(o) = self.viewer.doc().and_then(|d| d.object(id)).cloned() else {
+                return;
+            };
+            let base = self
+                .viewer
+                .page()
+                .and_then(|p| p.placed.iter().find(|q| q.id == id).map(|q| q.node));
+            let here = |sel: &mut Self,
+                        field: OverrideField,
+                        what: String,
+                        a: String,
+                        b: String,
+                        ui: &mut egui::Ui| {
+                ui.horizontal(|ui| {
+                    ui.strong(what.clone());
+                });
+                ui.label(
+                    sel.strings
+                        .format(&Message::new("app-override-here").text("value", a)),
+                );
+                ui.label(
+                    sel.strings
+                        .format(&Message::new("app-override-linked").text("value", b)),
+                );
+                let reset = sel.strings.format(
+                    &Message::new("app-override-reset-name")
+                        .text("what", what)
+                        .text("device", name.clone()),
+                );
+                let btn = ui.button(sel.t("app-override-reset"));
+                btn.widget_info(|| WidgetInfo::labeled(Role::Button, true, &reset));
+                if btn.on_hover_text(reset).clicked() {
+                    let _ = sel.viewer.reset_overrides(&[id], Some(&[field]));
+                }
+                ui.separator();
+            };
+            let ov = o.override_on(&dev).cloned().unwrap_or_default();
+            if ov.is_empty() {
+                ui.label(
+                    self.strings
+                        .format(&Message::new("app-overrides-none").text("device", name.clone())),
+                );
+            }
+            let len = |mm: f64, c: &UnitContext| format_length(mm, c);
+            if let Some(p) = ov.position {
+                let linked = base.map_or((0.0, 0.0), |n| (n.base.x_mm, n.base.y_mm));
+                here(
+                    self,
+                    OverrideField::Position,
+                    self.t("app-override-position"),
+                    format!("{}, {}", len(p.x_mm, &cx), len(p.y_mm, &cy)),
+                    format!("{}, {}", len(linked.0, &cx), len(linked.1, &cy)),
+                    ui,
+                );
+            }
+            if let Some(sz) = ov.size {
+                let linked = base.map_or((0.0, 0.0), |n| (n.base.w_mm, n.base.h_mm));
+                here(
+                    self,
+                    OverrideField::Size,
+                    self.t("app-override-size"),
+                    format!("{} × {}", len(sz.w_mm, &cx), len(sz.h_mm, &cy)),
+                    format!("{} × {}", len(linked.0, &cx), len(linked.1, &cy)),
+                    ui,
+                );
+            }
+            if let (Some(pt), ObjectKind::Text(t)) = (ov.font_size_pt, &o.kind) {
+                here(
+                    self,
+                    OverrideField::FontSize,
+                    self.t("app-override-font"),
+                    format!("{} pt", trim_number(pt, 1)),
+                    format!("{} pt", trim_number(t.size_pt, 1)),
+                    ui,
+                );
+            }
+            if let Some(v) = ov.visible {
+                let word = |sel: &Self, v: bool| {
+                    sel.t(if v {
+                        "app-override-yes"
+                    } else {
+                        "app-override-no"
+                    })
+                };
+                here(
+                    self,
+                    OverrideField::Visible,
+                    self.t("app-override-eye"),
+                    word(self, v),
+                    word(self, o.visible),
+                    ui,
+                );
+            }
+        } else {
+            ui.label(self.t("app-overrides-many"));
+        }
+        let reset_all = self
+            .strings
+            .format(&Message::new("app-override-reset-all-name").text("device", name));
+        let btn = ui.add_enabled(
+            !selection.is_empty(),
+            egui::Button::new(self.t("app-override-reset-all")),
+        );
+        btn.widget_info(|| WidgetInfo::labeled(Role::Button, !selection.is_empty(), &reset_all));
+        if btn.on_hover_text(reset_all).clicked() {
+            let _ = self.viewer.reset_overrides(&selection, None);
+        }
+    }
+
     /// A labelled choice from `options` (value, message id).
     fn combo<T: Copy + PartialEq>(
         &self,
@@ -1621,11 +2033,29 @@ impl ViewerUi {
         value: &mut T,
         options: &[(T, &str)],
     ) {
-        let shown = options
-            .iter()
-            .find(|(v, _)| v == value)
-            .map(|(_, id)| self.t(id))
-            .unwrap_or_default();
+        self.combo_mixed(ui, salt, label, value, options, false);
+    }
+
+    /// [`ViewerUi::combo`], reading "mixed" while the picked objects differ (rung 8a, Defaulted
+    /// "Debt paid in code the rung touches").
+    fn combo_mixed<T: Copy + PartialEq>(
+        &self,
+        ui: &mut egui::Ui,
+        salt: &str,
+        label: egui::Id,
+        value: &mut T,
+        options: &[(T, &str)],
+        mixed: bool,
+    ) {
+        let shown = if mixed {
+            self.t("app-mixed")
+        } else {
+            options
+                .iter()
+                .find(|(v, _)| v == value)
+                .map(|(_, id)| self.t(id))
+                .unwrap_or_default()
+        };
         egui::ComboBox::from_id_salt(salt)
             .selected_text(shown)
             .show_ui(ui, |ui| {

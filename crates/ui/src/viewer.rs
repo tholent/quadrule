@@ -162,6 +162,9 @@ pub struct Viewer {
     pub(crate) paste_run: Option<(String, u32)>,
     /// Whether the rhythm is drawn faintly over the page (rung 4 bbq Q9); never exported.
     pub show_rhythm: bool,
+    /// Whether the device previews strip is open (rung 8a, Q5); folded, only its header shows. An
+    /// app setting, kept between runs, not saved in the `.quad` file.
+    pub show_strip: bool,
     /// The drag in progress, if any (rung 4).
     pub drag: Option<crate::drag::Drag>,
     /// The tool on (rung 5): Select, or one that draws.
@@ -223,6 +226,7 @@ impl Default for Viewer {
             snap: SnapToggles::default(),
             paste_run: None,
             show_rhythm: false,
+            show_strip: true,
             drag: None,
             tool: crate::tools::Tool::Select,
             tool_kept: false,
@@ -263,6 +267,14 @@ impl Viewer {
     /// benchmark). Like the sample, it has no file.
     pub fn open_groups(&mut self) {
         let doc = quadrule_model::sample::groups_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
+    /// Opens the rung 8a overrides page: a box moved on the Nomad, an ellipse sized there, a star
+    /// hidden there, smaller text, a group with an override, and a box that runs off the Nomad's
+    /// page, and the sample's dot grid (for the benchmarks). Like the sample, it has no file.
+    pub fn open_devices(&mut self) {
+        let doc = quadrule_model::sample::devices_document();
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
@@ -574,6 +586,20 @@ pub(crate) fn active_zone_rects(p: &Profile) -> Vec<quadrule_layout::snap::PxRec
             }
         })
         .collect()
+}
+
+/// A device's short name for the words about overrides, the strip and the Page tab's list: its
+/// short name with a capital (`Manta`, `Nomad`); its id when the build has no such profile.
+pub fn device_label(id: &str) -> String {
+    match builtin(id) {
+        Ok(p) => {
+            let mut c = p.short_name.chars();
+            c.next()
+                .map(|f| f.to_uppercase().collect::<String>() + c.as_str())
+                .unwrap_or_else(|| id.to_string())
+        }
+        Err(_) => id.to_string(),
+    }
 }
 
 /// A device's name in file names: its profile's short name, made safe (`manta`, `nomad`).

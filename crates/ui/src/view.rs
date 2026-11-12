@@ -166,6 +166,14 @@ pub struct ViewerUi {
     cursor_px: Option<(f32, f32)>,
     canvas_size: Option<egui::Vec2>,
     pub(crate) selected_layer: Option<usize>,
+    /// A device whose removal from the page waits on the user's answer (it has changes that would
+    /// be lost; rung 8a).
+    pub(crate) take_out: Option<String>,
+    /// Ctrl + scroll just zoomed: the screen point of the pointer and the device pixel under it, so
+    /// the next frame can scroll that pixel back under the pointer (rung 2 debt, paid in 8a).
+    zoom_anchor: Option<(egui::Pos2, f32, f32)>,
+    /// The previews strip's pictures, by device (rung 8a).
+    pub(crate) strip_pics: HashMap<String, crate::strip::StripPic>,
     /// Put the cursor in the Text tab's text field, with its text selected, on the next frame
     /// that shows it (a text box was just drawn).
     pub(crate) focus_text_content: bool,
@@ -228,6 +236,9 @@ impl ViewerUi {
             cursor_px: None,
             canvas_size: None,
             selected_layer: None,
+            take_out: None,
+            zoom_anchor: None,
+            strip_pics: HashMap::new(),
             focus_text_content: false,
             renaming: None,
             folded: std::collections::HashSet::new(),
@@ -287,6 +298,13 @@ impl ViewerUi {
                         .frame(egui::Frame::NONE)
                         .show(ui, |ui| self.inspector(ui));
                 });
+        }
+        // The device previews strip, along the bottom of the canvas (rung 8a, Q5).
+        if self.viewer.open.is_some() {
+            self.refresh_strip(&ctx);
+            egui::Panel::bottom("strip")
+                .resizable(false)
+                .show(ui, |ui| self.strip(ui));
         }
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(backdrop(ui.visuals())))
@@ -1117,7 +1135,9 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    if b.groups {
+                    if b.devices {
+                        self.viewer.open_devices();
+                    } else if b.groups {
                         self.viewer.open_groups();
                     } else if b.transforms {
                         self.viewer.open_transforms();
@@ -1125,6 +1145,14 @@ impl ViewerUi {
                         self.viewer.open_shapes();
                     } else {
                         self.viewer.open_sample();
+                    }
+                }
+                // The strip is open in a bench unless asked otherwise, whatever the settings say.
+                self.viewer.show_strip = !b.no_strip;
+                if n == 0 && b.secondary {
+                    let ids = self.viewer.profile_ids();
+                    if let Some(second) = ids.get(1) {
+                        self.viewer.set_profile(second);
                     }
                 }
                 b.phase = if n >= crate::bench::WARM_FRAMES {
@@ -1222,7 +1250,7 @@ impl ViewerUi {
                     "fail"
                 };
                 println!(
-                    "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
+                    "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} device={} strip={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
                     if b.rotate {
                         "rotate_bench"
                     } else if b.draw {
@@ -1235,7 +1263,9 @@ impl ViewerUi {
                     } else {
                         "release"
                     },
-                    if b.groups {
+                    if b.devices {
+                        "devices"
+                    } else if b.groups {
                         "groups"
                     } else if b.transforms {
                         "transforms"
@@ -1244,6 +1274,12 @@ impl ViewerUi {
                     } else {
                         "sample"
                     },
+                    if self.viewer.override_device().is_some() {
+                        "secondary"
+                    } else {
+                        "primary"
+                    },
+                    if self.viewer.show_strip { "on" } else { "off" },
                     if b.rotate {
                         "rotate"
                     } else if b.draw {
@@ -1457,6 +1493,15 @@ impl ViewerUi {
             let painter = ui.painter_at(rect);
             let to_screen =
                 |x: f64, y: f64| pos2(min.x + x as f32 * scale, min.y + y as f32 * scale);
+            // A Ctrl + scroll zoom a frame ago: scroll the page so the pixel that was under the
+            // pointer is under it again.
+            if let Some((p, x, y)) = self.zoom_anchor.take() {
+                let d = p - to_screen(f64::from(x), f64::from(y));
+                if d.length() >= 0.5 {
+                    ui.scroll_with_delta_animation(d, egui::style::ScrollAnimation::none());
+                    ctx.request_repaint();
+                }
+            }
 
             painter.rect_stroke(
                 page_rect.expand(1.0),
@@ -1883,6 +1928,11 @@ impl ViewerUi {
             // Ctrl + scroll (or a pinch) zooms by one step.
             if response.hovered() {
                 let z = ui.input(|i| i.zoom_delta());
+                if z != 1.0
+                    && let Some(p) = ui.input(|i| i.pointer.hover_pos())
+                {
+                    self.zoom_anchor = Some((p, (p.x - min.x) / scale, (p.y - min.y) / scale));
+                }
                 if z > 1.0 {
                     self.viewer.zoom_step(scale * ppp, 1);
                 } else if z < 1.0 {

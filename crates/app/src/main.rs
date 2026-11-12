@@ -26,7 +26,10 @@
 //! with that tool instead). Rung 6b adds `--transforms-page` (rotated shapes, lines every way, opacity;
 //! the benchmarks then run over it) and `--bench-rotate [frames]` (turn its big rectangle with the
 //! rotate handle; `name=rotate_bench`). Rung 7a adds `--groups-page` (nested, turned and faded groups and
-//! a heavy group; the benchmarks then run over it and the drag moves the heavy group).
+//! a heavy group; the benchmarks then run over it and the drag moves the heavy group). Rung 8a adds
+//! `--devices-page` (the overrides page), `--bench-secondary` (run on the Nomad, where a drag writes
+//! overrides) and `--no-strip` (fold the device previews strip shut; it is open in a bench
+//! otherwise).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -58,6 +61,8 @@ const KEY_NEW_DEVICE: &str = "new_device";
 /// What Align to was last set to, for one object picked and for several (rung 7b, Q5).
 const KEY_ALIGN_SINGLE: &str = "align_to_single";
 const KEY_ALIGN_MULTI: &str = "align_to_multi";
+/// Whether the device previews strip is open (rung 8a, Q5).
+const KEY_STRIP: &str = "show_strip";
 
 struct App {
     ui: ViewerUi,
@@ -99,6 +104,8 @@ impl App {
                 eframe::get_value::<String>(storage, key)
                     .and_then(|k| quadrule_layout::align::AlignTo::from_key(&k))
             };
+            ui.viewer.show_strip =
+                eframe::get_value(storage, KEY_STRIP).unwrap_or(ui.viewer.show_strip);
             ui.viewer.align_single = kept(KEY_ALIGN_SINGLE).unwrap_or(ui.viewer.align_single);
             ui.viewer.align_multi = kept(KEY_ALIGN_MULTI).unwrap_or(ui.viewer.align_multi);
             if let Some(id) = eframe::get_value::<String>(storage, KEY_NEW_DEVICE) {
@@ -122,6 +129,8 @@ impl App {
         }
         if let Some(p) = path {
             ui.open_file(&p);
+        } else if args.devices_page {
+            ui.viewer.open_devices();
         } else if args.groups_page {
             ui.viewer.open_groups();
         } else if args.transforms_page || args.bench_rotate.is_some() {
@@ -141,7 +150,15 @@ impl App {
             })
         };
         ui.bench = bench.map(|b| {
-            if args.groups_page {
+            let b = if args.bench_secondary {
+                b.on_secondary()
+            } else {
+                b
+            };
+            let b = if args.no_strip { b.without_strip() } else { b };
+            if args.devices_page {
+                b.with_devices()
+            } else if args.groups_page {
                 b.with_groups()
             } else if args.transforms_page {
                 b.with_transforms()
@@ -247,6 +264,7 @@ impl eframe::App for App {
         eframe::set_value(storage, KEY_SNAP_SMART, &v.snap.smart_guides);
         eframe::set_value(storage, KEY_SNAP_EQUAL, &v.snap.equal_spacing);
         eframe::set_value(storage, KEY_RHYTHM_OVERLAY, &v.show_rhythm);
+        eframe::set_value(storage, KEY_STRIP, &v.show_strip);
         eframe::set_value(storage, KEY_ALIGN_SINGLE, &v.align_single.key().to_string());
         eframe::set_value(storage, KEY_ALIGN_MULTI, &v.align_multi.key().to_string());
         eframe::set_value(storage, KEY_NEW_DEVICE, &self.ui.new_device().to_string());
@@ -349,6 +367,15 @@ struct Args {
     /// Open the groups page (nested, turned and faded groups, a heavy group) instead of the empty
     /// start (`--groups-page`); the benchmarks then run over it, and the drag moves the heavy group.
     groups_page: bool,
+    /// Open the rung 8a overrides page instead of the empty start (`--devices-page`); the
+    /// benchmarks then run over it.
+    devices_page: bool,
+    /// Run the benchmark on the first secondary device, so a drag writes overrides
+    /// (`--bench-secondary`).
+    bench_secondary: bool,
+    /// Fold the previews strip shut for the benchmark (`--no-strip`); it is open in a bench
+    /// otherwise.
+    no_strip: bool,
     /// Turn the transforms page's big rectangle with its rotate handle this many steps and close
     /// (`--bench-rotate [frames]`).
     bench_rotate: Option<u32>,
@@ -388,6 +415,12 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.transforms_page = true;
         } else if a == "--groups-page" {
             out.groups_page = true;
+        } else if a == "--devices-page" {
+            out.devices_page = true;
+        } else if a == "--bench-secondary" {
+            out.bench_secondary = true;
+        } else if a == "--no-strip" {
+            out.no_strip = true;
         } else if a == "--bench-tool" {
             let name = args.next().and_then(|n| n.into_string().ok());
             match name.as_deref().and_then(quadrule_ui::Tool::from_name) {

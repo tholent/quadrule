@@ -17,18 +17,20 @@
 //!
 //! Built so far, the rules that need no calibration values:
 //! L01 stroke thinner than 1 px, L02 stroke not pixel-aligned, L06 content in a safe zone,
-//! L10 off the page, L16 position off the rhythm, L18 rhythm fits the margins unevenly, L19 uneven
-//! physical-locked spacing. The gray, ink, text-size and handwriting rules (L03, L04, L05, L07,
-//! L09, L13, L14) wait for calibrated profile values; L08, L11, L12, L15 and L17 wait for the
+//! L10 off the page, L15 constraints cause trouble on a secondary device (rung 8a), L16 position
+//! off the rhythm, L18 rhythm fits the margins unevenly, L19 uneven physical-locked spacing. The gray, ink, text-size and handwriting rules (L03, L04, L05, L07,
+//! L09, L13, L14) wait for calibrated profile values; L08, L11, L12 and L17 wait for the
 //! features they check.
 
 #![forbid(unsafe_code)]
 
 use quadrule_i18n::{Arg, Message};
+use quadrule_layout::tree::{Node, resolve_nodes};
 use quadrule_layout::{RhythmPx, Shape, placed_objects};
 use quadrule_model::outlines::ProfileOutlines;
-use quadrule_model::{Document, ObjectKind, RhythmResolution, Style, Uuid};
+use quadrule_model::{Document, Frame, ObjectKind, RhythmResolution, Style, Uuid};
 use quadrule_profiles::Profile;
+use std::collections::HashMap;
 
 /// How much a finding matters (napkin §8.3).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -244,7 +246,18 @@ pub fn lint_with(
     // Every leaf object at its resolved, turned place (rung 7a bbq, Defaulted "Lint"): a group has
     // no rules of its own, and what it holds is judged where it falls on the page. The places come
     // from layout, the one copy of the maths.
-    for placed in placed_objects(doc, primary, target, outlines) {
+    // L15 compares with the primary page (rung 8a, Q7): the stored design, laid out against itself.
+    let on_secondary = target.id != primary.id;
+    let primary_nodes: HashMap<Uuid, Node> = if on_secondary {
+        resolve_nodes(doc, primary.page_mm(), primary.page_mm())
+            .into_iter()
+            .map(|n| (n.id, n))
+            .collect()
+    } else {
+        HashMap::new()
+    };
+    let placed_all = placed_objects(doc, primary, target, outlines);
+    for (index, placed) in placed_all.iter().enumerate() {
         let node = placed.node;
         let Some(o) = doc.object(placed.id) else {
             continue;
@@ -322,6 +335,110 @@ pub fn lint_with(
             push("L10", Severity::Info, at("lint-l10-gone"));
         } else if !inside {
             push("L10", Severity::Info, at("lint-l10-partly"));
+        }
+
+        // L15: where the constraints, and nothing the person set by hand on this device, put the
+        // object badly (Q7): off the page there while it is on the primary one, newly on top of
+        // something it does not touch on the primary, or a side squeezed under one device pixel.
+        if on_secondary
+            && !frame_overridden(doc, o, &target.id)
+            && let Some(pn) = primary_nodes.get(&o.id)
+            && !pn.hidden
+        {
+            let line = matches!(o.kind, ObjectKind::Line(_));
+            let outer_of = |n: &Node| {
+                if n.angle == 0.0 && !line {
+                    n.frame
+                } else {
+                    let dir = match &o.kind {
+                        ObjectKind::Line(l) => Some(l.direction),
+                        _ => None,
+                    };
+                    n.frame.turned_bounds(n.angle, dir)
+                }
+            };
+            let (p_box, t_box) = (outer_of(pn), outer_of(&node));
+            let (pp, tp) = (primary.page_mm(), target.page_mm());
+            let on_page = |f: &Frame, page: (f64, f64)| {
+                f.x_mm >= -EPS_MM
+                    && f.y_mm >= -EPS_MM
+                    && f.right() <= page.0 + EPS_MM
+                    && f.bottom() <= page.1 + EPS_MM
+            };
+            let short = |p: &Profile| {
+                let mut c = p.short_name.chars();
+                c.next()
+                    .map(|f| f.to_uppercase().collect::<String>() + c.as_str())
+                    .unwrap_or_default()
+            };
+            let device = Arg::Text(short(target));
+            let primary_name = Arg::Text(short(primary));
+            let l15 = |id: &'static str| {
+                at(id)
+                    .arg("device", device.clone())
+                    .arg("primary", primary_name.clone())
+            };
+            if on_page(&p_box, pp) && !on_page(&t_box, tp) {
+                push("L15", Severity::Info, l15("lint-l15-off"));
+            }
+            // A side squeezed below one device pixel here that was a pixel or more on the primary
+            // (a line has no thickness to lose).
+            for (p_len, t_len, p_px, t_px, id) in [
+                (
+                    pn.frame.w_mm,
+                    f.w_mm,
+                    primary.mm_to_px(pn.frame.w_mm),
+                    target.mm_to_px(f.w_mm),
+                    "lint-l15-narrow",
+                ),
+                (
+                    pn.frame.h_mm,
+                    f.h_mm,
+                    primary.mm_to_px(pn.frame.h_mm),
+                    target.mm_to_px(f.h_mm),
+                    "lint-l15-short",
+                ),
+            ] {
+                if p_len > 0.0 && p_px >= 1.0 && t_len >= 0.0 && t_px < 1.0 {
+                    push("L15", Severity::Info, l15(id).num("px", t_px, 2));
+                }
+            }
+            // Newly on top of an object it does not touch on the primary. Each pair is said once,
+            // about the lower of the two.
+            for other in placed_all.iter().skip(index + 1) {
+                let on = other.node;
+                if on.group || on.hidden || on.framed {
+                    continue;
+                }
+                let Some(q) = doc.object(other.id) else {
+                    continue;
+                };
+                if frame_overridden(doc, q, &target.id) {
+                    continue;
+                }
+                let Some(pq) = primary_nodes.get(&q.id).filter(|n| !n.hidden) else {
+                    continue;
+                };
+                let q_line = match &q.kind {
+                    ObjectKind::Line(l) => Some(l.direction),
+                    _ => None,
+                };
+                let q_outer = |n: &Node| {
+                    if n.angle == 0.0 && q_line.is_none() {
+                        n.frame
+                    } else {
+                        n.frame.turned_bounds(n.angle, q_line)
+                    }
+                };
+                let touch_primary = boxes_touch(&p_box, &q_outer(pq));
+                if !touch_primary && overlaps(&t_box, &q_outer(&on)) {
+                    push(
+                        "L15",
+                        Severity::Info,
+                        l15("lint-l15-overlap").text("other", q.name.clone()),
+                    );
+                }
+            }
         }
 
         // L06: safe zones, one finding per object for the fixed zones and one for the movable.
@@ -403,6 +520,40 @@ pub fn lint_with(
         }
     }
     out
+}
+
+/// Boxes closer than this many mm are touching (float noise, not a gap).
+const EPS_MM: f64 = 1e-6;
+
+/// Whether the object, or a group round it, has a place or size override on `device`: it is then
+/// where the person put it there, and L15 leaves it alone.
+fn frame_overridden(doc: &Document, o: &quadrule_model::Object, device: &str) -> bool {
+    let has = |x: &quadrule_model::Object| {
+        x.override_on(device)
+            .is_some_and(quadrule_model::Override::has_frame)
+    };
+    has(o)
+        || doc
+            .ancestors(o.id)
+            .iter()
+            .filter_map(|a| doc.object(*a))
+            .any(has)
+}
+
+/// Whether two boxes meet: overlap, or share an edge or a corner.
+fn boxes_touch(a: &Frame, b: &Frame) -> bool {
+    a.x_mm <= b.right() + EPS_MM
+        && b.x_mm <= a.right() + EPS_MM
+        && a.y_mm <= b.bottom() + EPS_MM
+        && b.y_mm <= a.bottom() + EPS_MM
+}
+
+/// Whether two boxes share some area, not only an edge.
+fn overlaps(a: &Frame, b: &Frame) -> bool {
+    a.x_mm < b.right() - EPS_MM
+        && b.x_mm < a.right() - EPS_MM
+        && a.y_mm < b.bottom() - EPS_MM
+        && b.y_mm < a.bottom() - EPS_MM
 }
 
 /// A safe zone's name, as a message. A zone the strings do not name yet shows its profile name.

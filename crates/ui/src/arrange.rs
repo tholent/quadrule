@@ -14,13 +14,14 @@
 
 //! Align and distribute, and "mixed" (rung 7b, docs/bbq/2026-11-11-rung-7-groups-and-align.md,
 //! Q5, Q6 and Defaulted "7b pays the rung 3 debt"). The maths is in `quadrule_layout::align`; this
-//! turns it into one undo step on the open document. Like the Arrange fields, it works on the
-//! stored design, on the primary profile's page, whichever device is on screen.
+//! turns it into one undo step on the open document. It works on the boxes as the device on screen
+//! shows them. On the primary device it changes the stored design; on a secondary device it writes
+//! position overrides there (rung 8 bbq, Defaulted "Align and distribute on a secondary").
 
 use crate::viewer::Viewer;
 use egui::{Color32, Pos2, Stroke, pos2};
 use quadrule_layout::align::{
-    AlignTo, Boxed, Edge, Grid, Spread, align_deltas, boxes_of, distribute_deltas, target_box,
+    AlignTo, Boxed, Edge, Grid, Spread, align_deltas, boxes_on, distribute_deltas, target_box,
     union_of,
 };
 use quadrule_layout::units::Axis;
@@ -147,20 +148,21 @@ impl Viewer {
             self.locked_notice_if_none_editable();
             return Ok(());
         }
-        let Some((primary, _)) = self.profiles() else {
+        let Some((primary, shown)) = self.profiles() else {
             return Ok(());
         };
         let to = self.align_to();
-        let grid = Grid::for_profile(&primary, self.snap.pixel_grid);
+        // The device on screen: its page, its pixels, its overrides.
+        let grid = Grid::for_profile(&shown, self.snap.pixel_grid);
+        let device = self.override_device();
         let Some(doc) = self.doc() else {
             return Ok(());
         };
-        let boxed = boxes_of(doc, &primary, &ids);
+        let boxed = boxes_on(doc, &primary, &shown, &ids);
         let frames: Vec<Frame> = boxed.iter().map(|b| b.outer).collect();
         let steps: Vec<f64> = match op {
             ArrangeOp::Align(axis, edge) => {
-                let Some(target) = target_box(doc, &primary, to).or_else(|| union_of(&frames))
-                else {
+                let Some(target) = target_box(doc, &shown, to).or_else(|| union_of(&frames)) else {
                     return Ok(());
                 };
                 align_deltas(&frames, axis, edge, target, grid)
@@ -170,33 +172,60 @@ impl Viewer {
         let axis = match op {
             ArrangeOp::Align(a, _) | ArrangeOp::Distribute(a, _) => a,
         };
-        let cmd = move_command(doc, &boxed, axis, &steps);
+        let cmd = move_command(doc, &boxed, axis, &steps, device.as_deref());
         match cmd {
             Some(cmd) => self.edit(cmd, None),
             None => Ok(()),
         }
     }
 
+    /// The boxes of `ids` as the device on screen shows them, in the mm of its page and the space
+    /// they are in: the stored frame on the primary device, where the constraints and overrides put
+    /// the object on a secondary one (the Arrange tab's X, Y, width and height; rung 8 bbq).
+    pub fn shown_frames(
+        &mut self,
+        ids: &[quadrule_model::Uuid],
+    ) -> Vec<(quadrule_model::Uuid, Frame)> {
+        if self.override_device().is_none() {
+            let Some(doc) = self.doc() else {
+                return Vec::new();
+            };
+            return ids
+                .iter()
+                .filter_map(|id| doc.object(*id).map(|o| (*id, o.frame)))
+                .collect();
+        }
+        let Some(page) = self.page() else {
+            return Vec::new();
+        };
+        ids.iter()
+            .filter_map(|id| {
+                page.placed
+                    .iter()
+                    .find(|p| p.id == *id)
+                    .map(|p| (*id, p.node.local))
+            })
+            .collect()
+    }
+
     /// Which Arrange fields differ across the selected objects (Defaulted "7b pays the rung 3
-    /// debt"). One object is never mixed.
-    pub fn arrange_mixed(&self) -> Mixed {
+    /// debt"). One object is never mixed. Values are those the device on screen shows.
+    pub fn arrange_mixed(&mut self) -> Mixed {
+        let selection = self.selection.clone();
+        let frames = self.shown_frames(&selection);
         let Some(doc) = self.doc() else {
             return Mixed::default();
         };
-        let objects: Vec<_> = self
-            .selection
-            .iter()
-            .filter_map(|id| doc.object(*id))
-            .collect();
+        let objects: Vec<_> = selection.iter().filter_map(|id| doc.object(*id)).collect();
         let mut m = Mixed::default();
-        let Some(first) = objects.first() else {
+        let Some((_, first)) = frames.first() else {
             return m;
         };
-        for o in &objects[1..] {
-            m.x |= !same(o.frame.x_mm, first.frame.x_mm);
-            m.y |= !same(o.frame.y_mm, first.frame.y_mm);
-            m.w |= !same(o.frame.w_mm, first.frame.w_mm);
-            m.h |= !same(o.frame.h_mm, first.frame.h_mm);
+        for (_, f) in &frames[1..] {
+            m.x |= !same(f.x_mm, first.x_mm);
+            m.y |= !same(f.y_mm, first.y_mm);
+            m.w |= !same(f.w_mm, first.w_mm);
+            m.h |= !same(f.h_mm, first.h_mm);
         }
         let mut turning = objects.iter().filter(|o| o.kind.can_rotate());
         if let Some(a) = turning.next() {
@@ -213,6 +242,7 @@ fn move_command(
     boxed: &[Boxed],
     axis: Axis,
     steps: &[f64],
+    device: Option<&str>,
 ) -> Option<Command> {
     let cmds: Vec<Command> = boxed
         .iter()
@@ -225,7 +255,23 @@ fn move_command(
             };
             let (sx, sy) = b.stored_step(dx, dy);
             let mut o = doc.object(b.id)?.clone();
-            o.translate(sx, sy);
+            match device {
+                None => o.translate(sx, sy),
+                Some(dev) => {
+                    // A secondary device: a position override there.
+                    let n = &b.node;
+                    let moved = Frame {
+                        x_mm: n.local.x_mm + sx,
+                        y_mm: n.local.y_mm + sy,
+                        ..n.local
+                    };
+                    let text = matches!(o.kind, quadrule_model::ObjectKind::Text(_));
+                    let unfit = n.ctx.unfit(moved, o.rotation(), text);
+                    quadrule_model::edit::set_position_override(
+                        &mut o, dev, n.base, unfit.x_mm, unfit.y_mm,
+                    );
+                }
+            }
             Some(Command::SetObject(o))
         })
         .collect();

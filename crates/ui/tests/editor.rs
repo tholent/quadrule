@@ -88,12 +88,15 @@ fn nudge_moves_by_a_device_pixel_or_a_rhythm_unit() {
     v.nudge(-1.0, 0.0, true).unwrap();
     let unit =
         ((x_of(&v, ids::RULE) - x0) - (MM_PER_IN / 300.0 - 71.0 * MM_PER_IN / 300.0)).abs() < 1e-9;
-    // On the Nomad the pixel is the Nomad's.
+    // On the Nomad the pixel is the Nomad's, and the step is an override there (rung 8a, Q3): the
+    // design does not move.
     let nomad_ppi = quadrule_profiles::builtin(NOMAD_ID).unwrap().ppi;
     v.set_profile(NOMAD_ID);
     let before = x_of(&v, ids::RULE);
     v.nudge(1.0, 0.0, false).unwrap();
-    let nomad_px = ((x_of(&v, ids::RULE) - before) - MM_PER_IN / nomad_ppi).abs() < 1e-9;
+    let placed = v.doc().unwrap().object(ids::RULE).unwrap().overrides[NOMAD_ID].position;
+    let nomad_px = x_of(&v, ids::RULE) == before
+        && placed.is_some_and(|p| ((p.x_mm - before) - MM_PER_IN / nomad_ppi).abs() < 1e-9);
     // Three steps, three undos.
     let three = v.undo() && v.undo() && v.undo() && x_of(&v, ids::RULE) == x0;
     // Locked: refused, with a notice.

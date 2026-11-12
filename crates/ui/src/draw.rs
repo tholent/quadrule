@@ -173,6 +173,7 @@ fn mm_object(
         cap: LineCap::Butt,
         rotation_deg: 0.0,
         opacity_pct: 100,
+        overrides: Default::default(),
         kind,
         extra: Extra::new(),
     }

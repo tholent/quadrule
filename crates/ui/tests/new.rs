@@ -61,6 +61,7 @@ fn fill_region(doc: &quadrule_model::Document) -> Object {
         cap: LineCap::Butt,
         rotation_deg: 0.0,
         opacity_pct: 100,
+        overrides: Default::default(),
         kind: ObjectKind::Pattern(PatternRegion {
             pattern: Pattern::Lines,
             extra: Extra::new(),

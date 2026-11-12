@@ -62,6 +62,14 @@ pub struct DragBench {
     /// Turns the big rotated rectangle of the transforms page with its rotate handle (rung 6b:
     /// `--bench-rotate`), so the handle's own drag path is timed.
     pub rotate: bool,
+    /// Opens the rung 8a overrides page when nothing is open yet (`--devices-page`).
+    pub devices: bool,
+    /// Runs on the document's first secondary device, not the primary one (`--bench-secondary`), so
+    /// a drag writes overrides (rung 8a).
+    pub secondary: bool,
+    /// Folds the previews strip shut for the run (`--no-strip`); it is open otherwise, in a bench
+    /// whatever the settings say (rung 8a, Defaulted "Speed").
+    pub no_strip: bool,
 }
 
 impl DragBench {
@@ -77,6 +85,33 @@ impl DragBench {
             transforms: false,
             groups: false,
             rotate: false,
+            devices: false,
+            secondary: false,
+            no_strip: false,
+        }
+    }
+
+    /// The same benchmark over the rung 8a overrides page.
+    pub fn with_devices(self) -> Self {
+        DragBench {
+            devices: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark on the first secondary device: a drag then writes overrides there.
+    pub fn on_secondary(self) -> Self {
+        DragBench {
+            secondary: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark with the previews strip folded shut.
+    pub fn without_strip(self) -> Self {
+        DragBench {
+            no_strip: true,
+            ..self
         }
     }
 

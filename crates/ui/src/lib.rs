@@ -31,6 +31,7 @@ pub mod draw;
 pub mod editor;
 pub mod panels;
 pub mod recovery;
+pub mod strip;
 pub mod tools;
 pub mod view;
 pub mod viewer;

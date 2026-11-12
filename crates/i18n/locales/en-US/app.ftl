@@ -93,7 +93,7 @@ app-tab-arrange = Arrange
 app-tab-style = Style
 app-tab-text = Text
 app-tab-constraints = Constraints
-app-every-device = Edits change the design for every device; { $device } shows how it adapts.
+app-every-device = On { $device }, position, size, font size and the eye change this device only. Everything else changes the design for every device.
 app-selected-count = { $count ->
     [one] 1 object selected
    *[other] { $count } objects selected
@@ -294,3 +294,50 @@ app-distribute-h-centres = Distribute horizontally by centres
 app-distribute-v-spacing = Distribute vertically by spacing
 app-distribute-v-centres = Distribute vertically by centres
 app-mixed = mixed
+
+# Several devices (rung 8a, docs/bbq/2026-11-12-rung-8-several-devices.md).
+notice-shared-edit = That change applies to every device, not only { $device }.
+app-style-shared = Style changes apply to every device.
+app-tab-overrides = Overrides
+app-override-badge = Changed on { $device }
+app-overrides-intro = What differs on { $device } from the design.
+app-overrides-none = Nothing differs on { $device }.
+app-overrides-many = With several objects picked, Reset all applies to every one of them.
+app-override-position = Position
+app-override-size = Size
+app-override-font = Font size
+app-override-eye = Shown
+app-override-here = Here: { $value }
+app-override-linked = In the design: { $value }
+app-override-yes = shown
+app-override-no = hidden
+app-override-reset = Reset
+app-override-reset-name = Reset { $what } on { $device }
+app-override-reset-all = Reset all on this device
+app-override-reset-all-name = Reset all changes on { $device }
+
+# The Page tab's devices.
+app-page-devices = Devices
+app-device-target = Target { $device }
+app-device-primary = primary
+app-device-make-primary = Make primary
+app-device-make-primary-name = Make { $device } the primary device
+app-device-primary-tip = Designs are made on the primary device; the others follow it.
+app-device-take-out = Take { $device } out of this page?
+app-device-take-out-lose = { $count ->
+    [one] One object has a change on it that will be lost. Undo brings it back.
+   *[other] { $count } objects have changes on it that will be lost. Undo brings them back.
+}
+app-device-take-out-yes = Take out
+app-device-take-out-no = Keep it
+
+# The previews strip (Q5).
+app-strip = Devices
+app-strip-fold = Hide the device previews
+app-strip-unfold = Show the device previews
+app-strip-device = Show { $device }
+app-strip-count = { $count ->
+    [one] 1 change
+   *[other] { $count } changes
+}
+app-strip-on-screen = on screen
