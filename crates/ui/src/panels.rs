@@ -457,7 +457,9 @@ impl ViewerUi {
         if text_selected {
             tabs.push((Tab::Text, self.t("app-tab-text")));
         }
-        if has_selection {
+        // A group has no constraints of its own: what is in it follows the page by its own (rung 7a
+        // look change, Q3 as amended).
+        if self.constraints_subject().is_some() {
             tabs.push((Tab::Constraints, self.t("app-tab-constraints")));
         }
         let count = self.lint_count();
@@ -524,6 +526,17 @@ impl ViewerUi {
         quadrule_profiles::builtin(id)
             .map(|p| p.display_name)
             .unwrap_or_else(|_| id.to_string())
+    }
+
+    /// The first selected object that has constraints: anything but a group.
+    fn constraints_subject(&self) -> Option<Object> {
+        let doc = self.viewer.doc()?;
+        self.viewer
+            .selection
+            .iter()
+            .filter_map(|id| doc.object(*id))
+            .find(|o| !o.is_group())
+            .cloned()
     }
 
     fn first_selected(&self) -> Option<Object> {
@@ -1366,24 +1379,10 @@ impl ViewerUi {
     }
 
     fn constraints_tab(&mut self, ui: &mut egui::Ui) {
-        let Some(o) = self.first_selected() else {
+        let Some(o) = self.constraints_subject() else {
             return;
         };
         let enabled = !self.viewer.editable_selection().is_empty();
-        // Inside a group the rules work against the group's box, not the page (rung 7a bbq).
-        if let Some(g) = self
-            .viewer
-            .doc()
-            .and_then(|d| d.parent_of(o.id).and_then(|g| d.object(g)))
-        {
-            ui.label(
-                RichText::new(
-                    self.strings
-                        .format(&Message::new("app-against-group").text("name", &g.name)),
-                )
-                .small(),
-            );
-        }
         ui.add_enabled_ui(enabled, |ui| {
             egui::Grid::new("constraints-grid")
                 .num_columns(2)

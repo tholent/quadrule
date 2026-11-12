@@ -35,7 +35,10 @@ use quadrule_layout::snap::{
 use quadrule_layout::tree::Ctx;
 use quadrule_layout::units::Axis;
 use quadrule_layout::{Placed, Shape, unresolve_frame};
-use quadrule_model::edit::{Command, EditError, Placement, duplicate, is_empty, set_placements};
+use quadrule_model::edit::{
+    Command, EditError, GroupMap, Placement, duplicate, is_empty, set_placements,
+};
+use quadrule_model::geom::map_frame;
 use quadrule_model::{Constraints, Document, Frame, LineDir, ObjectKind, Uuid, normalize_deg};
 use quadrule_profiles::Profile;
 
@@ -112,8 +115,12 @@ struct Item {
     /// The object whose frame changes (the copy, when duplicating).
     id: Uuid,
     constraints: Constraints,
-    /// What it sits in: its group's box and turns, or the page (rung 7a).
+    /// What it sits in: the page it resolves against and the turns of the groups round it (a group
+    /// is see-through to constraints, rung 7a look change).
     ctx: Ctx,
+    /// Where it falls in the unturned space it is in on the device shown, in mm, as the drag began
+    /// (for a group: the box round its children).
+    local: Frame,
     /// Its own angle, apart from the groups' (what is stored).
     own_rotation: f64,
     /// Its frame on the device shown, in pixels, as the drag began, where it falls on the page.
@@ -225,9 +232,12 @@ fn placed_px(p: &Placed, shown: &Profile) -> PxRect {
 
 impl Item {
     /// The stored frame and own angle that put the object on the page at `r` (pixels, unturned
-    /// box) turned `total_deg` in all: back through the groups' turns and against the box it
-    /// is in (rung 7a). On the page itself this is [`frame_from_px`].
-    fn stored(&self, r: PxRect, total_deg: f64, shown: &Profile) -> (Frame, f64) {
+    /// box) turned `total_deg` in all: back through the groups' turns and against the page. On the
+    /// page itself, with no groups, this is [`frame_from_px`]. Also the box it then falls in, in
+    /// the unturned space it is in (mm on the device shown). A group has no constraints, so its
+    /// stored frame is only a stand-in: the box round its children, which follow
+    /// ([`Placement::map`]), is what it is refitted to.
+    fn stored(&self, r: PxRect, total_deg: f64, shown: &Profile) -> (Frame, f64, Frame) {
         let per_mm = shown.mm_to_px(1.0);
         let placed = Frame::new(
             r.x0 / per_mm,
@@ -241,7 +251,12 @@ impl Item {
         } else {
             normalize_deg(rot)
         };
-        (self.ctx.holder.unresolve(local, self.constraints), rot)
+        let c = if self.group {
+            Constraints::default()
+        } else {
+            self.constraints
+        };
+        (self.ctx.holder.unresolve(local, c), rot, local)
     }
 }
 
@@ -262,43 +277,23 @@ pub(crate) fn frame_from_px(
     unresolve_frame(resolved, c, primary.page_mm(), shown.page_mm())
 }
 
-/// Where `item` goes when the group's box `old` becomes `new`: moved, and scaled about the box.
+/// Where `item` goes when the selection's box `old` becomes `new`: moved, and scaled about the box
+/// ([`map_frame`], also what the contents of a group follow).
 /// A text box keeps its height; a box with no width (or height) is moved along that axis only.
 fn map_rect(item: &Item, old: &PxRect, new: &PxRect) -> PxRect {
-    let sx = if old.w() > 0.0 {
-        new.w() / old.w()
-    } else {
-        1.0
-    };
-    let sy = if old.h() > 0.0 {
-        new.h() / old.h()
-    } else {
-        1.0
-    };
-    let mx = |x: f64| new.x0 + (x - old.x0) * sx;
-    let my = |y: f64| new.y0 + (y - old.y0) * sy;
-    let r = item.resolved;
-    if item.rotation != 0.0 && !item.text {
-        // A turned object keeps its angle: its centre goes where the group's mapping puts it, and
-        // its sides grow by how much the mapping stretches their directions.
-        let (cs, sn) = rotate::cos_sin_deg(item.rotation);
-        let kw = ((sx * cs).powi(2) + (sy * sn).powi(2)).sqrt();
-        let kh = ((sx * sn).powi(2) + (sy * cs).powi(2)).sqrt();
-        let (cx, cy) = (mx((r.x0 + r.x1) / 2.0), my((r.y0 + r.y1) / 2.0));
-        let (hw, hh) = (r.w() * kw / 2.0, r.h() * kh / 2.0);
-        return PxRect {
-            x0: cx - hw,
-            y0: cy - hh,
-            x1: cx + hw,
-            y1: cy + hh,
-        };
-    }
-    let y0 = my(r.y0);
+    let frame = |r: &PxRect| Frame::new(r.x0, r.y0, r.w(), r.h());
+    let f = map_frame(
+        frame(&item.resolved),
+        item.rotation,
+        item.text,
+        &frame(old),
+        &frame(new),
+    );
     PxRect {
-        x0: mx(r.x0),
-        y0,
-        x1: mx(r.x1),
-        y1: if item.text { y0 + r.h() } else { my(r.y1) },
+        x0: f.x_mm,
+        y0: f.y_mm,
+        x1: f.x_mm + f.w_mm,
+        y1: f.y_mm + f.h_mm,
     }
 }
 
@@ -796,6 +791,7 @@ impl Viewer {
                 id: *target,
                 constraints: o.constraints,
                 ctx: node.node.ctx,
+                local: node.node.local,
                 own_rotation: o.rotation(),
                 resolved,
                 text: matches!(o.kind, ObjectKind::Text(_)),
@@ -984,18 +980,25 @@ impl Viewer {
                 _ => map_rect(item, &start, &new_box),
             };
             let (total, dir) = rot_dir[n];
-            let (mut frame, rotation_deg) = item.stored(px, total, &shown);
+            let (mut frame, rotation_deg, local) = item.stored(px, total, &shown);
             if let Some(o) = base_doc.object(item.id)
                 && near(&o.frame, &frame)
             {
                 frame = o.frame;
             }
+            // A group's contents follow its box: moved and stretched as a loose selection's are.
+            let map = item.group.then_some(GroupMap {
+                holder: Some(item.ctx.holder),
+                old: item.local,
+                new: local,
+            });
             places.push((
                 item.id,
                 Placement {
                     frame,
                     rotation_deg,
                     dir,
+                    map,
                 },
             ));
         }
@@ -1004,8 +1007,8 @@ impl Viewer {
         if places != drag.places {
             let mut preview = base_doc;
             for (id, place) in &places {
-                if let Some((l, o)) = preview.find(*id) {
-                    place.apply(&mut preview.layers[l].objects[o]);
+                if let Some(o) = preview.object_mut(*id) {
+                    place.apply(o);
                 }
             }
             drag.places = places;

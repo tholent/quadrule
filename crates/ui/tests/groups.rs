@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Rung 7a: groups in the editor (docs/bbq/2026-11-11-rung-7-groups-and-align.md, Q2, Q3, Q4, Q7).
+//! Rung 7a: groups in the editor (docs/bbq/2026-11-11-rung-7-groups-and-align.md, Q2, Q3 as
+//! amended at the look, Q4, Q7).
 //! Headless. Each test prints one structured `CHECK` line starting with a newline (run with
 //! `-- --nocapture`).
 //!
@@ -189,7 +190,7 @@ fn dragging_a_group_moves_everything_in_it_as_one_undo_step() {
             let n = v.doc().unwrap().object(o.id).unwrap();
             (n.frame.x_mm - o.frame.x_mm - dx).abs() < 1e-6
                 && (n.frame.y_mm - o.frame.y_mm - dy).abs() < 1e-6
-                && n.frame.w_mm == o.frame.w_mm
+                && (n.frame.w_mm - o.frame.w_mm).abs() < 1e-6
         });
     let one_step = steps(&v) == steps0 + 1;
     v.undo();
@@ -211,7 +212,7 @@ fn handle_at(v: &mut Viewer, h: Handle) -> (f64, f64) {
 }
 
 #[test]
-fn resizing_a_group_resolves_each_child_by_its_constraints() {
+fn resizing_a_group_stretches_everything_in_it_and_the_box_refits() {
     let mut v = open();
     let before = v.doc().unwrap().clone();
     v.selection = vec![group_ids::PINNED];
@@ -225,24 +226,133 @@ fn resizing_a_group_resolves_each_child_by_its_constraints() {
     let g0 = before.object(group_ids::PINNED).unwrap().frame;
     let g1 = frame(&v, group_ids::PINNED);
     let grew = (g1.w_mm - g0.w_mm - 20.0).abs() < 1e-6 && (g1.h_mm - g0.h_mm - 10.0).abs() < 1e-6;
-    // The child pinned right and top keeps its size and its gap to the top and right edges.
-    let (p0, p1) = (
-        before.object(group_ids::PINNED_CHILD).unwrap().frame,
-        frame(&v, group_ids::PINNED_CHILD),
-    );
-    let pinned = (p1.w_mm - p0.w_mm).abs() < 1e-6
-        && (p1.h_mm - p0.h_mm).abs() < 1e-6
-        && ((g1.right() - p1.right()) - (g0.right() - p0.right())).abs() < 1e-6
-        && ((p1.y_mm - g1.y_mm) - (p0.y_mm - g0.y_mm)).abs() < 1e-6;
-    // The child that scales grows by the same ratio as the group.
-    let (s0, s1) = (
-        before.object(group_ids::nth(43)).unwrap().frame,
-        frame(&v, group_ids::nth(43)),
-    );
-    let scaled = (s1.w_mm / s0.w_mm - g1.w_mm / g0.w_mm).abs() < 1e-6;
-    let ok = kind == Some(DragKind::Handle(HandleHit::Box(Handle::SE))) && grew && pinned && scaled;
+    // Every child is stretched with the box about its top-left corner, whatever its constraints (a
+    // group is see-through to them): the one pinned right and top as well.
+    let (sx, sy) = (g1.w_mm / g0.w_mm, g1.h_mm / g0.h_mm);
+    let mut all = true;
+    for id in [
+        group_ids::PINNED_CHILD,
+        group_ids::nth(42),
+        group_ids::nth(43),
+    ] {
+        let (a, b) = (before.object(id).unwrap().frame, frame(&v, id));
+        all &= (b.x_mm - (g1.x_mm + (a.x_mm - g0.x_mm) * sx)).abs() < 1e-6
+            && (b.y_mm - (g1.y_mm + (a.y_mm - g0.y_mm) * sy)).abs() < 1e-6
+            && (b.w_mm - a.w_mm * sx).abs() < 1e-6
+            && (b.h_mm - a.h_mm * sy).abs() < 1e-6;
+    }
+    // The box is the children's outer box, with nothing left over.
+    let round = v
+        .doc()
+        .unwrap()
+        .object(group_ids::PINNED)
+        .unwrap()
+        .children()
+        .iter()
+        .map(|c| c.outer_box())
+        .reduce(|a, b| a.union(&b))
+        .unwrap();
+    let refit = round.near(&g1);
+    let one_step = steps(&v) == 1;
+    v.undo();
+    let undone = *v.doc().unwrap() == before;
+    let ok = kind == Some(DragKind::Handle(HandleHit::Box(Handle::SE)))
+        && grew
+        && all
+        && refit
+        && one_step
+        && undone;
     println!(
-        "\nCHECK crate=ui name=group_resize result={} group_grew={grew} pinned_child_keeps_size_and_edges={pinned} scaled_child_scales={scaled}",
+        "\nCHECK crate=ui name=group_resize result={} group_grew={grew} every_child_stretched={all} box_is_children_box={refit} one_undo_step={one_step} undo_exact={undone}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn resizing_a_turned_group_with_a_turned_child_keeps_angles_and_refits() {
+    // The turned group holds a child turned by 15 of its own: pulled wider, everything keeps its
+    // angle (the child stretches approximately), the box is round the children again, and it is
+    // one undo step.
+    let mut v = open();
+    let before = v.doc().unwrap().clone();
+    v.selection = vec![group_ids::TURNED];
+    let e = handle_at(&mut v, Handle::E);
+    assert!(v.drag_begin(e.0, e.1, FREE, 4.0, 6.0));
+    v.drag_update(e.0 + 40.0, e.1, FREE, REACH);
+    v.drag_end().unwrap();
+    let doc = v.doc().unwrap();
+    let g = doc.object(group_ids::TURNED).unwrap();
+    let wider = g.frame.w_mm > before.object(group_ids::TURNED).unwrap().frame.w_mm + 1.0;
+    let angles =
+        g.rotation_deg == 25.0 && doc.object(group_ids::nth(21)).unwrap().rotation_deg == 15.0;
+    let round = g
+        .children()
+        .iter()
+        .map(|c| c.outer_box())
+        .reduce(|a, b| a.union(&b))
+        .unwrap();
+    let refit = round.near(&g.frame);
+    let one_step = steps(&v) == 1;
+    v.undo();
+    let undone = *v.doc().unwrap() == before;
+    let ok = wider && angles && refit && one_step && undone;
+    println!(
+        "\nCHECK crate=ui name=turned_group_resize result={} wider={wider} angles_kept={angles} box_is_children_box={refit} one_undo_step={one_step} undo_exact={undone}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn dragging_a_group_on_the_other_device_moves_what_the_pointer_moves() {
+    // The group is dragged and resized on the Nomad: each child follows by its own constraints
+    // against the page, as a loose selection does, so the box on the Nomad moves by the pointer.
+    let mut v = open();
+    v.profile_id = NOMAD_ID.into();
+    let nomad = quadrule_profiles::builtin(NOMAD_ID).unwrap();
+    let k = nomad.mm_to_px(1.0);
+    let box_on = |v: &mut Viewer| {
+        v.page()
+            .unwrap()
+            .placed
+            .iter()
+            .find(|p| p.id == group_ids::PINNED)
+            .unwrap()
+            .node
+            .frame
+    };
+    let g0 = box_on(&mut v);
+    v.selection = vec![group_ids::PINNED];
+    let c = {
+        let b = v
+            .page()
+            .unwrap()
+            .placed
+            .iter()
+            .find(|p| p.id == group_ids::PINNED)
+            .unwrap()
+            .shape
+            .bounds();
+        ((b.0 + b.2) / 2.0, (b.1 + b.3) / 2.0)
+    };
+    assert!(v.drag_begin(c.0, c.1, FREE, 4.0, 6.0));
+    v.drag_update(c.0 + 30.0 * k, c.1 + 17.0 * k, FREE, REACH);
+    v.drag_end().unwrap();
+    let g1 = box_on(&mut v);
+    let moved = (g1.x_mm - g0.x_mm - 30.0).abs() < 1e-6
+        && (g1.y_mm - g0.y_mm - 17.0).abs() < 1e-6
+        && (g1.w_mm - g0.w_mm).abs() < 1e-6;
+    // A resize from the SE handle grows the box on the Nomad by the pointer's step.
+    let se = handle_at(&mut v, Handle::SE);
+    assert!(v.drag_begin(se.0, se.1, FREE, 4.0, 6.0));
+    v.drag_update(se.0 + 12.0 * k, se.1 + 8.0 * k, FREE, REACH);
+    v.drag_end().unwrap();
+    let g2 = box_on(&mut v);
+    let grew = (g2.w_mm - g1.w_mm - 12.0).abs() < 1e-6 && (g2.h_mm - g1.h_mm - 8.0).abs() < 1e-6;
+    let ok = moved && grew;
+    println!(
+        "\nCHECK crate=ui name=group_drag_other_device result={} moved_by_pointer={moved} grew_by_pointer={grew}",
         pass(ok)
     );
     assert!(ok);
@@ -551,7 +661,9 @@ fn the_inspector_for_a_group_and_the_new_controls_are_named() {
     let rotation = h.query_by_label("Rotation").is_some();
     let buttons =
         h.query_all_by_label("Group").count() >= 2 && h.query_all_by_label("Ungroup").count() >= 2;
-    // Constraints inside a group read "against the group".
+    // A group has no Constraints tab; its child has the normal one, against the page, with no note
+    // about the group (groups are see-through to constraints).
+    let no_tab = h.query_by_label("Constraints").is_none();
     {
         let v = &mut h.state_mut().ui.viewer;
         v.selection = vec![group_ids::PINNED_CHILD];
@@ -559,12 +671,12 @@ fn the_inspector_for_a_group_and_the_new_controls_are_named() {
     h.state_mut().ui.tab = Tab::Constraints;
     h.run();
     h.run();
-    let against = h
-        .query_by_label_contains("work against the group \"Pinned group\"")
-        .is_some();
-    let ok = opacity_only && rotation && buttons && against;
+    let child_tab =
+        h.query_by_label("Constraints").is_some() && h.query_by_label("Horizontal").is_some();
+    let no_note = h.query_by_label_contains("work against").is_none();
+    let ok = opacity_only && rotation && buttons && no_tab && child_tab && no_note;
     println!(
-        "\nCHECK crate=ui name=group_inspector result={} style_is_opacity_only={opacity_only} rotation_field={rotation} group_and_ungroup_buttons_named={buttons} constraints_say_against_the_group={against}",
+        "\nCHECK crate=ui name=group_inspector result={} style_is_opacity_only={opacity_only} rotation_field={rotation} group_and_ungroup_buttons_named={buttons} group_has_no_constraints_tab={no_tab} child_has_constraints_tab={child_tab} no_against_group_note={no_note}",
         pass(ok)
     );
     assert!(ok);

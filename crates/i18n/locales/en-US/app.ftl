@@ -276,4 +276,3 @@ app-group = Group
 app-ungroup = Ungroup
 app-fold-item = Show what is inside { $name }
 app-rotation-note = A group with a text box or a pattern region in it cannot turn.
-app-against-group = These rules work against the group "{ $name }", not the page.

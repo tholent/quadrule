@@ -148,20 +148,7 @@ impl Viewer {
     pub fn unit_context(&self, axis: Axis) -> Option<UnitContext> {
         let (primary, shown) = self.profiles()?;
         let doc = self.doc()?;
-        let cx = UnitContext::new(doc, &primary, &shown, axis);
-        // Inside a group, `%` is of the group's box, not the page (rung 7a bbq, "Layout (7a)").
-        let group = self
-            .selection
-            .first()
-            .and_then(|id| doc.parent_of(*id))
-            .and_then(|g| doc.object(g));
-        Some(match group {
-            Some(g) => cx.with_percent_of(match axis {
-                Axis::X => g.frame.w_mm,
-                Axis::Y => g.frame.h_mm,
-            }),
-            None => cx,
-        })
+        Some(UnitContext::new(doc, &primary, &shown, axis))
     }
 
     /// The innermost object under (x, y) on the device on screen, in device pixels, within `slack`
