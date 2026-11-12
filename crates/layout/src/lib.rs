@@ -22,6 +22,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod align;
 pub mod newpage;
 pub mod rotate;
 pub mod shapes;
