@@ -28,8 +28,9 @@
 ## Watch items
 
 - **Budget:** rung 8 is "large" on the board. At rung 7's rate it is likely 15–20 points. The weekly meter resets
-  Saturday 14th, 5 pm; at 64 % it had about 11–16 points left before its hard stop (75 % beyond 48 h, 80 % at 24–48 h).
-  Start rung 8 after the reset, or split it 8a/8b so the first part fits; say which at kickoff.
+  Saturday 14th, 5 pm. **Until that reset the hard stop is 90 %** (chris, 2026-11-12: "let's move the hard stop to 90%",
+  then "This week only"); after it, back to 75 / 80 / 85 / 93 %. At 67 % (2026-11-12 21:39 UTC) that leaves 23 points
+  this week, so rung 8 (or 8a) can start before the reset; a share bigger than what is left must split or wait.
 - **The graphics-chip canvas** sits at 40–42 ms (90th percentile) on the groups page against the 50 ms line (ADR-009);
   the shapes page was 45.9–48.4 ms in rung 6. The device previews strip draws more pages per frame: measure dragging
   with the strip showing, on the heaviest page, the chip canvas included, and say before anything crosses 50 ms.

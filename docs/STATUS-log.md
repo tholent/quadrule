@@ -1288,3 +1288,6 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   screenshots: 79 px against 59 px in portrait (× 4/3). Answer: rotated pixels; landscape mode zooms. Recorded as a note
   under spec §17.1 item 3, on the board, in STATUS and in the rung 8 prompt. Not tested on the Manta.
 - The Manta ruled the same as the Nomad for landscape, not tested (chris: "Same as the Nomad").
+- Hard stop, chris word for word: "let's move the hard stop to 90%"; asked how it applies: "This week only". So 90 % until
+  the Saturday 14th 5 pm reset, then back to 75 / 80 / 85 / 93 %. Meter 67 % (21:39 UTC): 23 points of room this week.
+  Written into the rung 8 prompt's Budget watch item and `docs/budget-calibration.md`.

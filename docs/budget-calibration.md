@@ -36,3 +36,5 @@ points on work chris asked for after the rung closed (ADR-015, looseends, the gr
 screenshots and test): **12 points in all against the 10-point share**, the 2 over all on chris's own requests, with no
 builder started after 7b. Room left this week before the hard stop: 8 points (75 %) until 48 h before Saturday's 5 pm
 reset, then 13 (80 %).
+Hard stop for this week: 90 % (chris, 2026-11-12: "let's move the hard stop to 90%", "This week only"), so the room left
+is 23 points until Saturday's reset; the normal stops return after it.
