@@ -10,7 +10,10 @@
     ppi: 300.0,
     diagonal_in: 7.8,
     panel: "to verify",
-    // ESTIMATE: 16 evenly spaced levels, not measured.
+    // Measured 2026-11-12 on the grays sheet (chris; docs/device-measurements/supernote.a6x2/calibration.md):
+    // all 16 even steps are clean (flat, no speckle), and so are the grays between them. On a flat area 0-68 all
+    // look black and 238-255 white (229 already does); the middle 85-221 are 9 distinct grays, each between-step
+    // gray looking like one of its neighbours.
     gray_levels: [0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255],
     // Measured 2026-11-09 from docs/device-measurements/supernote.a6x2/nomad-pen-shades.png (chris):
     // the gray each pen color writes, black, dark grey, light grey, white. Checked by
@@ -45,17 +48,16 @@
         text_gray: 51,                        // TD2, TL2 (9 pt reads comfortably)
         label_gray: 153,                      // TD4, TL4
     ),
-    // The gray each fill role resolves to (rung 6 bbq, Q3 and Q7). ESTIMATE: Shade 204 and Block 68
-    // are starting values until chris's readings of the grays sheet (`cargo xtask calibration-sheet`,
-    // patches G1-G30) replace them; 204 and 68 are both on the clean levels of `gray_levels`.
+    // The gray each fill role resolves to (rung 6 bbq, Q3 and Q7), from the grays sheet, 2026-11-12 (chris): Block
+    // 68 looked black, so it moved to "A lighter dark gray" (102, G7); Shade 204 (G13) is clean and visible, kept.
     fill_roles: (
-        shade: 204,   // ESTIMATE, Q7
-        block: 68,    // ESTIMATE, Q7
+        shade: 204,
+        block: 102,
     ),
     calibration_meta: (
         date: Some("2026-11-09"),
         firmware: None,
-        method: "Calibration sheets (cargo xtask calibration-sheet) judged by eye on the device by chris; docs/device-measurements/supernote.a6x2/calibration.md. Gray levels and ink values are not measured yet.",
+        method: "Calibration sheets (cargo xtask calibration-sheet) judged by eye on the device by chris; docs/device-measurements/supernote.a6x2/calibration.md. Gray levels measured on the grays sheet 2026-11-12; ink values are not measured yet.",
         verified: true,
     ),
     // Napkin §11.3.

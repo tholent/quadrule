@@ -142,7 +142,8 @@ fn short_names_are_file_safe_and_unique() {
 
 #[test]
 fn fill_roles_resolve_per_device() {
-    // Rung 6 bbq Q3 and Q7: Shade 204 and Block 68 on both devices (estimates, on the clean levels);
+    // Rung 6 bbq Q3 and Q7: Shade 204 and Block 102 on both devices (grays sheet, 2026-11-12: Block
+    // moved from 68, which looked black; both on the clean levels);
     // a custom gray is itself.
     use quadrule_model::{Fill, FillRole};
     let mut parts = Vec::new();
@@ -155,7 +156,7 @@ fn fill_roles_resolve_per_device() {
         );
         let clean = p.gray_levels.contains(&shade) && p.gray_levels.contains(&block);
         let custom = p.fill_gray(Fill::Gray(119)) == 119;
-        ok &= shade == 204 && block == 68 && clean && custom && shade > block;
+        ok &= shade == 204 && block == 102 && clean && custom && shade > block;
         parts.push(format!("{id}:shade={shade}:block={block}"));
     }
     println!(

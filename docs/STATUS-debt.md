@@ -7,9 +7,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   font now match byte for byte there (CI run 42660403429); system fonts are not loaded yet (`crates/text/src/lib.rs`).
 - Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; the build-folder instruction the render worker
   reports (`spikes/render/FINDINGS.md`). (Canvas fallback to vello_cpu on weak GPUs: ruled yes, 2026-11-09.)
-- Calibration, still to measure: the clean gray levels on both devices (the profiles keep 16 evenly spaced
-  estimates), which the gray lint rules need (`crates/profiles/data/`, `docs/device-measurements/README.md`). The
-  Manta's pen shades are not owed: chris ruled them equal to the Nomad's (2026-11-10, arc v1 bbq Q8).
+- Calibration: the Manta's gray levels are ruled equal to the Nomad's, not measured (chris, 2026-11-12: "Same as the
+  Nomad"; `docs/device-measurements/supernote.a5x2/calibration.md`); the Manta's pen shades likewise (arc v1 bbq Q8).
 - The `gh` token expires 90 days after it was made (chris, 2026-11-09); if made 2026-11-09, that is about 2027-02-07.
   Renew it before then, or `gh` stops opening PRs and reading CI (rung 1 record, Defaulted "Repository").
 - The `gh` fine-grained token cannot read check summaries (`gh pr checks` fails: GitHub offers no `checks:read` for
@@ -79,8 +78,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Rung 6a shapes, owed (`crates/layout/src/shapes.rs`, `crates/ui/src/panels.rs`): picking a shape is by its box, so a
   hollow rectangle or ellipse takes a click anywhere inside it (as a pattern region does), and a shape drawn over text
   hides it from the pointer; picking by outline when there is no fill, and a shape's real outline for the marquee, are
-  not built. A custom fill steps by 17 (the sixteen levels) until the clean grays are measured; Shade 204 and Block 68
-  are estimates (chris's grays sheet readings replace them in `crates/profiles/data/*.ron`, rung 14 has the swatches).
+  not built. A custom fill steps by 17 (the sixteen levels, all measured clean 2026-11-12, though 0–68 all look black and
+  238–255 white); Shade 204 and Block 102 come from the grays sheet (rung 14 has the swatches).
   Caps reach half the stroke past each dash, as in SVG, so a dash gap shorter than the stroke width closes (a square
   cap on Long dash at 1 mm reads solid): the inspector does not warn. A polygon is picked and snapped by its frame, not by
   its corners. L13 (large dark fills) stays in rung 14 although Block makes it likelier. The inspector edits the first

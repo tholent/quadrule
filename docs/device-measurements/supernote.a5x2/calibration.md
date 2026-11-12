@@ -27,3 +27,11 @@ square dots speckle from gray 170; lines do not speckle; every text sample legib
 
 Not recorded separately for the Manta: per-code results (last visible gray per row, and so on). If the two screens
 turn out to differ, run the sheets again and record them here.
+
+## Grays — ruled equal to the Nomad, 2026-11-12
+
+Not measured on the Manta. chris, asked whether to read the Manta's grays sheet or treat it as the Nomad: "Same as
+the Nomad". So the Manta's profile (`crates/profiles/data/supernote.a5x2.ron`) takes the Nomad's reading
+(`docs/device-measurements/supernote.a6x2/calibration.md`, "Grays sheet — 2026-11-12"): all sixteen even steps clean,
+0–68 black and 238–255 white on a flat area, nine distinct middle grays 85–221; Shade 204, Block 102. If the screens
+turn out to differ, run the grays sheet here and record it.

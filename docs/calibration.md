@@ -52,5 +52,6 @@ W1 competes with the fine pen. Clean: G1–G15; G16 and up speckle; ramp shows a
 ## Not on the sheets yet
 
 Ink-competition thresholds per pen color are not measured by these sheets; safe zones come from screenshots instead
-(`docs/device-measurements/README.md`). The device's real clean gray levels are unknown until the grays sheet is judged (added 2026-11-10), so the
-other sheets use evenly spaced steps of 17.
+(`docs/device-measurements/README.md`). The grays sheet was judged on the Nomad on 2026-11-12 (the Manta ruled the same): all sixteen even steps are clean,
+but 0–68 look black and 238–255 white on a flat area (`docs/device-measurements/supernote.a6x2/calibration.md`). The
+other sheets still use evenly spaced steps of 17.

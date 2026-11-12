@@ -204,3 +204,15 @@ What it says, in grays:
 So on a flat area every gray from 0 to 68 shows as black, and every gray from 229 up as white. Not said yet: whether the
 between-step patches in the middle (G20–G28) can be told from the even steps beside them, which decides how many
 distinct middle levels there are.
+
+Asked next (2026-11-12), chris's answers word for word:
+1. Can each between-step patch be told from the even steps beside it? → "Each matches a neighbour". So the middle has
+   the nine even steps 85, 102 … 221 as its distinct grays; G20 (76) is not black, so it matches 85.
+2. Block, 68, shows as plain black: what should it be? → "A lighter dark gray" (about 102, G7). Block is now 102 on
+   both devices; Shade stays 204 (G13: clean, visible, not white).
+3. The Manta: read its own sheet, or the same as the Nomad? → "Same as the Nomad".
+
+In the profile (`crates/profiles/data/supernote.a6x2.ron`): `gray_levels` keeps all sixteen even steps, now measured
+(each is clean: flat, no speckle), with a note that 0–68 look black and 238–255 white on a flat area; `fill_roles`
+Shade 204, Block 102. The ramp's "about 16 steps" is more than the eleven distinct grays the patches show (black, the
+nine middle steps, white); a ramp is hard to count by eye, so the patches are taken as the reading.

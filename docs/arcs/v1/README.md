@@ -41,8 +41,9 @@ looks and measurements. This estimate is a guess; each re-plan corrects it.
 What waits on chris's hands or taste. The lead adds to it and crosses items off with the date.
 
 - **Hardware, early (Q8), alongside rungs 6–7:**
-  - Clean gray levels on both devices (needed by L03, L05, L14, the gray swatches and rung 6's Shade and Block fill
-    roles). The grays sheet was added 2026-11-10 (`dcf5458`): run `cargo xtask calibration-sheet`, put each device's
+  - ~~Clean gray levels on both devices~~ done 2026-11-12: the Nomad read, the Manta ruled the same; Block 68 → 102
+    (`docs/device-measurements/supernote.a6x2/calibration.md`). (Needed by L03, L05, L14, the gray swatches and rung
+    6's Shade and Block fill roles.) The grays sheet was added 2026-11-10 (`dcf5458`): run `cargo xtask calibration-sheet`, put each device's
     `quadrule-calib_grays-*.png` on it, and report which of G1–G30 are clean and how many bands GR shows
     (`docs/calibration.md`).
   - Landscape: put one landscape PNG on a device and say whether it expects rotated pixels or swapped sizes

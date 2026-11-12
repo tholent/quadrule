@@ -10,7 +10,9 @@
     ppi: 300.0,
     diagonal_in: 10.7,
     panel: "to verify",
-    // ESTIMATE: 16 evenly spaced levels, not measured.
+    // RULED EQUAL to the Nomad, not measured (chris, 2026-11-12: "Same as the Nomad"): all 16 even steps clean; on a
+    // flat area 0-68 look black and 238-255 white; the middle 85-221 are 9 distinct grays
+    // (docs/device-measurements/supernote.a6x2/calibration.md).
     gray_levels: [0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255],
     // ASSUMED from the Nomad (docs/device-measurements/supernote.a6x2/nomad-pen-shades.png,
     // 2026-11-09): pen colors are set by the firmware, and chris finds the two screens alike. Not
@@ -45,17 +47,16 @@
         text_gray: 51,                        // TD2, TL2
         label_gray: 153,                      // TD4, TL4
     ),
-    // The gray each fill role resolves to (rung 6 bbq, Q3 and Q7). ESTIMATE: Shade 204 and Block 68
-    // are starting values until chris's readings of the grays sheet (`cargo xtask calibration-sheet`,
-    // patches G1-G30) replace them; 204 and 68 are both on the clean levels of `gray_levels`.
+    // The gray each fill role resolves to (rung 6 bbq, Q3 and Q7), ruled equal to the Nomad (chris, 2026-11-12): Block
+    // 102 ("A lighter dark gray"), Shade 204.
     fill_roles: (
-        shade: 204,   // ESTIMATE, Q7
-        block: 68,    // ESTIMATE, Q7
+        shade: 204,
+        block: 102,
     ),
     calibration_meta: (
         date: Some("2026-11-09"),
         firmware: None,
-        method: "Calibration sheets (cargo xtask calibration-sheet) judged by eye on the device by chris, who found the Nomad's preferences and findings hold for the Manta; docs/device-measurements/supernote.a5x2/calibration.md. Gray levels and ink values are not measured yet.",
+        method: "Calibration sheets (cargo xtask calibration-sheet) judged by eye on the device by chris, who found the Nomad's preferences and findings hold for the Manta; docs/device-measurements/supernote.a5x2/calibration.md. Gray levels ruled equal to the Nomad's grays-sheet reading, 2026-11-12 (not measured here); ink values are not measured yet.",
         verified: true,
     ),
     // Napkin §11.3.

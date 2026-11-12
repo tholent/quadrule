@@ -84,7 +84,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `crates/render/tests/golden/SHA256SUMS`).
 - Rung 6a, shapes, is done, approved by chris 2026-11-11 and tagged `v0.6.0` (record `docs/bbq/2026-11-10-rung-6-shapes.md`): tools
   Rectangle R, Ellipse E, Polygon Y (Star is a tick on a polygon), drawn as in rung 5 with Shift for square, circle or
-  regular polygon; fill roles Shade (204) and Block (68), estimates until the grays sheet is read, plus a custom gray;
+  regular polygon; fill roles Shade (204) and Block (68 then; 102 since the grays sheet, 2026-11-12), plus a custom gray;
   dash presets and custom dashes on whole device pixels; butt, round and square caps; corner radius; the Style tab's
   Stroke, Fill, Dash and Cap and a Shape section; lint L01, L02, L06 on the new kinds; file format 0.5.0, every 0.4 file
   opening with the same export bytes (`crates/model/src/lib.rs`, `crates/layout/src/shapes.rs`, `crates/ui/src/draw.rs`,
@@ -120,6 +120,11 @@ The project's live state. Update it when work lands. Every claim cites at least 
   Width, Height and Rotation read "mixed" where they differ (`crates/layout/src/align.rs`, `crates/ui/src/arrange.rs`,
   `crates/ui/src/panels.rs`). No export change: all eight golden sums unchanged
   (`crates/render/tests/golden/SHA256SUMS`).
+- The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
+  flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
+  (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
+  only where Block is (every changed pixel lighter, by at most 34) (`crates/profiles/data/`,
+  `docs/device-measurements/supernote.a6x2/calibration.md`, `crates/render/tests/golden/SHA256SUMS`).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with the seven rules that need no calibration (`crates/lint/src/lib.rs`); `cargo xtask lint`.
@@ -161,16 +166,14 @@ The project's live state. Update it when work lands. Every claim cites at least 
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). Next: rung 8, several devices; the next lead's prompt is
   `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`.
-- Waits on chris (early, alongside rungs 6–7): the clean gray levels on both devices (the new grays sheet,
-  `docs/calibration.md`), and a landscape check on a
+- Waits on chris: a landscape check on a
   device plus landscape toolbar screenshots (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
   (`napkins/quadrule-spec.md` §8.3 note).
 
 ## Known debt
 
 Full debt list: `docs/STATUS-debt.md`.
-- Clean gray levels are not measured on either device; the Manta's pen shades are ruled equal to the Nomad's
-  (`docs/STATUS-debt.md`).
+- The Manta's gray levels and pen shades are ruled equal to the Nomad's, not measured (`docs/STATUS-debt.md`).
 - ADR parts not built yet: font signature, fuzzing, hinting flag, system-font fallback and substitution, canvas
   (`docs/STATUS-debt.md`).
 

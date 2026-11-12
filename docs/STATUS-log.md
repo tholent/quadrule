@@ -1259,3 +1259,20 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   (`v0.7.1`); Fuzz `success` on all of them but `b80b218`, which shows no Fuzz run; docs-only pushes start no CI. The budget
   row re-measured for the whole session; the rung 7 record's Defaulted calls marked settled by chris's approvals. Record
   `docs/looseends/2026-11-12-rung-7-session.md`.
+
+## 2026-11-12 — grays sheet read on the Nomad; Block 68 → 102 (lead: Opus 5.5, `CLAUDE_EFFORT=high`)
+
+- `cargo xtask calibration-sheet` run on the Pi (chris: "yes, please run step 1"); the grays pages:
+  `calib/supernote-a5x2/quadrule-calib_grays-1_…png`, `calib/supernote-a6x2/quadrule-calib_grays-{1,2}_…png`.
+- chris's Nomad reading, word for word, and his three follow-up answers ("Each matches a neighbour", "A lighter dark
+  gray", "Same as the Nomad") are in `docs/device-measurements/supernote.a6x2/calibration.md` (`3ccfd16` and this
+  commit); the Manta's ruling in `docs/device-measurements/supernote.a5x2/calibration.md`.
+- Both profiles: Block 68 → 102, Shade 204 kept; `gray_levels` keeps the sixteen even steps, now measured clean, noted
+  that 0–68 look black and 238–255 white on a flat area (`crates/profiles/data/`).
+- Goldens re-blessed (`QUADRULE_BLESS=1 cargo test -p quadrule-render --test shapes|transforms|groups`), shown to chris
+  as a before/after picture of the Nomad shapes page first: six lines changed (shapes, transforms, groups × 2); slice
+  unchanged. Every changed pixel is lighter, by at most 34 (= 102 − 68): e.g. shapes Manta 164,283 px changed, 162,497
+  of them exactly 68 → 102, the rest Block's smoothed edges and faded areas. The v0.5 and v0.6 fixtures' `.quad` files
+  are unchanged; their expected sums for shapes and transforms follow the new goldens.
+- `make check-all` → `TESTS scope=workspace checks=312 check_fail=0 passed=292 failed=0 status=ok`. chris: "yes, commit
+  and push".

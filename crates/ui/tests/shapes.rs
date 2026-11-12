@@ -337,8 +337,8 @@ fn shapes_resolve_on_both_devices_and_export_differs_from_the_empty_page() {
     let manta = v.page_for(MANTA_ID).unwrap().image.clone();
     let nomad = v.page_for(NOMAD_ID).unwrap().image.clone();
     let drew = manta != before && nomad != before_nomad;
-    // The Block fill's gray (68) is in the Manta's image.
-    let has_block = manta.data.contains(&68);
+    // The Block fill's gray (102; it was 68 until the grays sheet, 2026-11-12) is in the Manta's image.
+    let has_block = manta.data.contains(&102);
     let picked = v
         .page_for(NOMAD_ID)
         .unwrap()
@@ -350,7 +350,7 @@ fn shapes_resolve_on_both_devices_and_export_differs_from_the_empty_page() {
         && v.page_for(NOMAD_ID).unwrap().image == before_nomad;
     let ok = drew && has_block && picked && same;
     println!(
-        "\nCHECK crate=ui name=shapes_both_devices result={} changes_both_pages={drew} block_gray_68_drawn={has_block} pickable_on_nomad={picked} undo_restores_bytes={same}",
+        "\nCHECK crate=ui name=shapes_both_devices result={} changes_both_pages={drew} block_gray_102_drawn={has_block} pickable_on_nomad={picked} undo_restores_bytes={same}",
         pass(ok)
     );
     assert!(ok);
