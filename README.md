@@ -69,6 +69,15 @@ and error.
   one level in (Escape or a click outside steps back out), and Ctrl+click picks the object inside at once. The Layers
   panel is a tree with fold arrows, and rows can be dragged into and out of groups. A group with a text box or a pattern
   region in it cannot turn.
+- Align and distribute, in the Arrange tab: six align buttons (left edges, horizontal centres, right edges, tops,
+  vertical middles, bottoms) and four distribute buttons (horizontally and vertically, by spacing or by centres; three
+  or more objects). "Align to" is the selection when two or more objects are picked and the page when one is, switching by
+  itself; pick Page, Margins or Selection and it remembers your pick for one object and for several. A turned object
+  lines up by the box round its turned corners, a group as one object, and a locked object stays where it is and is left out
+  of the selection's box. With the pixel grid snap on, results land on whole device pixels (the gaps equal to the pixel,
+  any leftover pixel going to the first gaps); with it off they are exact millimetres. Each is one undo step. When
+  several objects are selected and their position, size or rotation differ, the Arrange field reads "mixed"; typing a
+  value sets it on all of them.
 
 Not yet: the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).

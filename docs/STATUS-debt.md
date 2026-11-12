@@ -37,7 +37,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   Q7). It redraws the visible area on every scroll step.
 - Rung 3 editor, owed (`crates/ui/src/editor.rs`, `crates/ui/src/panels.rs`, `crates/ui/src/view.rs`): Save does not
   update `metadata.modified`. When a font is missing here, Save keeps the file's saved outlines for that device even
-  if the text changed. A multiple selection shows the first object's values, not "mixed". "Don't save" followed by
+  if the text changed. "Don't save" followed by
   cancelling the Open dialog leaves the document unsaved with its recovery file deleted (the next autosave writes
   it again). Only one recovery file is restored per start.
 - `CHECK` lines can share a line with the test runner's output under `--nocapture`, so `grep '^CHECK'` (used in
@@ -84,7 +84,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   Caps reach half the stroke past each dash, as in SVG, so a dash gap shorter than the stroke width closes (a square
   cap on Long dash at 1 mm reads solid): the inspector does not warn. A polygon is picked and snapped by its frame, not by
   its corners. L13 (large dark fills) stays in rung 14 although Block makes it likelier. The inspector edits the first
-  selected object's values and applies to all (no "mixed" state), as before. The Style tab shows Dash and Cap for lines
+  selected object's values and applies to all, as before (the Arrange tab's X, Y, W, H and Rotation read "mixed" since 7b; the
+  Style fields do not). The Style tab shows Dash and Cap for lines
   too (a line is a stroke); a pattern region and a text box have neither. The shapes page is built in code
   (`quadrule_model::sample::shapes_document`) and opened with `--shapes-page`, not as a file.
 - Rung 6b, owed (`crates/layout/src/rotate.rs`, `crates/layout/src/shapes.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/view.rs`): text
@@ -113,4 +114,18 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   only from one place (the layers, or one group).
   Shift-picking a group and something inside it in the layers panel keeps only the last of the two. Group opacity on the
   chip canvas is one vello layer per opacity group, nested ones nested (not measured with many). A loose multiple
-  selection still resizes turned objects approximately. 7b (align and distribute, "mixed" fields) is not started.
+  selection still resizes turned objects approximately.
+- Rung 7b, owed (`crates/layout/src/align.rs`, `crates/ui/src/arrange.rs`, `crates/ui/src/panels.rs`): align and distribute work
+  on the stored design on the primary page, as the Arrange fields do, whichever device is on screen (a child pinned to an
+  edge that the other device resolves differently is not aligned there). A text box aligns by its stored frame, not by the
+  height of its laid-out text. Aligning or distributing objects inside a turned group moves them in the group's own space and
+  the group's box is refitted after, so its pivot may shift and the others with it by a little; this is the same for a drag or
+  a nudge there. On a pixel grid an object's extent counts as its width rounded to a pixel (how the export draws it), the
+  aligned edge lands on a pixel, a centre align puts the left or top edge on a pixel (the centre within half a pixel), and
+  distribute by centres rounds each place, with no leftover-pixel spreading (spacing has it). Distribute by spacing
+  takes the object with the leftmost (topmost) edge and the one with the rightmost (bottommost) edge as the ends, and
+  puts them on the pixel grid too (up to half a pixel). A pick of Selection with one object picked does nothing. Only
+  X, Y, width, height and rotation read "mixed"; the Style tab's fields still show the first object's value. The align
+  buttons' icons are drawn by hand and not yet seen by chris; no keyboard shortcuts (rung 17); the dragging and drawing
+  speed is unchanged and was not re-measured for 7b; the Align-to choice is tested through
+  `Viewer::align_to` and `Viewer::set_align_to`, not by opening the dropdown in the window.

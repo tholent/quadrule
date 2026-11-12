@@ -68,13 +68,13 @@ numbers refer to the design spec.
 |---|---|
 | `model` | The document model: objects (lines, text, patterns, rectangles, ellipses, polygons and stars, each with an angle and an opacity; a line's diagonal; groups, which hold other objects, to any depth) and geometry in millimetres, with the constraint maths and the editing commands, no graphics or UI (§5) |
 | `profiles` | Device profiles (the Manta and the Nomad) as RON data: line roles, fill roles, safe zones (§3) |
-| `layout` | Constraints, the rhythm, pixel snapping, the snapping rules, shapes with their dashes and caps, rotation and line direction (`rotate`), the tree of groups laid out (`tree`: every object resolves against the page by its own constraints, a group's box is round its children), the display list with its opacity groups (§10) |
+| `layout` | Constraints, the rhythm, pixel snapping, the snapping rules, shapes with their dashes and caps, rotation and line direction (`rotate`), the tree of groups laid out (`tree`: every object resolves against the page by its own constraints, a group's box is round its children), align and distribute (`align`: the maths on the objects' turned boxes, on the pixel grid or in millimetres), the display list with its opacity groups (§10) |
 | `format` | The `.quad` file: a ZIP of CBOR entries (§12, ADR-001) |
 | `text` | Fonts and text layout in millimetres, drawn as plain outlines (§7, ADR-002) |
 | `render` | The export renderer: `vello_cpu` to an 8-bit grayscale PNG (ADR-003) |
 | `lint` | The linter: rules that recommend and explain, never block (§8.3) |
 | `i18n` | Every string on screen, through Project Fluent; English first (§14) |
-| `ui` | The egui widgets and the editor's state: canvas, panels, dragging, the tools bar and drawing, the shapes' inspector fields (§15.1) |
+| `ui` | The egui widgets and the editor's state: canvas, panels, dragging, the tools bar and drawing, the shapes' inspector fields, the Arrange tab's align and distribute commands (`arrange`) (§15.1) |
 | `app` | The program itself: window setup and preferences |
 | `xtask` | Maintainer tools, run as `cargo xtask` |
 

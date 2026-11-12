@@ -1202,3 +1202,35 @@ the record's Q3 is amended). Built on `main`, not pushed, version unchanged (0.6
   export `p90_ms=27.5`, both `result=pass`.
 - chris, after seeing the window again: "approved". Workspace bumped to `0.7.0`; release notes
   `docs/arcs/v1/release-notes/v0.7.0.md`; tag `v0.7.0` pushed, so the release workflow drafts, attaches and publishes.
+
+## 2026-11-12 — rung 7b built: align and distribute, "mixed" fields (builder: Sonnet 5.5)
+
+Built on `main`, not pushed, not tagged, version unchanged (0.7.0). Record: `docs/bbq/2026-11-11-rung-7-groups-and-align.md` (Q5, Q6,
+Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
+
+- **Maths** (`crates/layout/src/align.rs`, new): `align_deltas` and `distribute_deltas` over boxes in primary mm, on a `Grid`
+  (exact mm, or the primary profile's device pixels); `boxes_of` gives each object's box on the primary page from the laid-out
+  tree (`tree::resolve_nodes`), so a turned object, a line and a group all align by the box round their turned corners, and a
+  group's step is turned back by the groups above it; `target_box` is the page or the margins; `AlignTo` with `key`/`from_key`.
+  On a pixel grid an object's extent is its width rounded to a pixel (as the export draws it); the aligned edge lands on a
+  pixel; distribute by spacing puts the ends on the pixel grid, makes every gap a whole number of pixels and gives the
+  leftover pixels one each to the first gaps; distribute by centres rounds each place.
+- **Editor** (`crates/ui/src/arrange.rs`, new): `Viewer::arrange(ArrangeOp)` is one `Batch` of `SetObject` (one undo step; no step
+  when nothing moves; the locked notice when nothing can be edited), over `editable_selection`, so a locked object or an object
+  on a locked layer stays put and is left out of the selection's box. `Viewer::align_to` / `set_align_to` keep two choices, one
+  for a single object picked (Page until the user picks) and one for several (Selection until the user picks), so it switches by
+  itself and each case remembers its own pick; the app keeps both between runs (`crates/app/src/main.rs`). `Viewer::arrange_mixed`
+  says which of X, Y, W, H, Rotation differ.
+- **Arrange tab** (`crates/ui/src/panels.rs`): a heading, the Align to drop-down, six align and four distribute icon buttons
+  (painted by hand, each named for screen readers and in a tooltip, greyed when they would do nothing: align needs two
+  editable objects for Selection and one for Page and Margins, distribute needs three). The X, Y, Width, Height fields read
+  "mixed" (the word is the field's text until it is focused, then it is empty with "mixed" as a hint) and the Rotation drag value
+  reads "mixed", when the selected objects differ; a value typed applies to all, as before. Rotation now shows for a selection
+  when any selected object can turn (first such gives the value). New strings in `app.ftl` (`app-align-heading`, `app-align-to*`,
+  `app-arrange-align-*`, `app-distribute-*`, `app-mixed`); the existing `app-align-left` / `-right` (text alignment) are untouched.
+- **Tests**: `crates/layout/tests/align.rs` (4 `CHECK` lines) and `crates/ui/tests/align.rs` (10): every command against
+  Selection, Page and Margins; four distributes both ways; whole pixels on both devices and exact mm with the snap off; a
+  turned object (90 and 45 degrees); a group as one, also turned; locked objects and a locked layer; inside an entered group;
+  the Align-to switching; "mixed" fields in the window (typing applies to all); the ten buttons named and clicking one.
+- **Not touched**: every export byte. `git diff 57f2896 -- crates/render/tests/golden/SHA256SUMS crates/render/tests/fixtures/`
+  is empty (7b only moves objects). Debt: the new "Rung 7b, owed" line; the rung 3 "mixed" item is paid and removed.
