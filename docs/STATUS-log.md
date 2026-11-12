@@ -1161,3 +1161,31 @@ buttons). Owed items are in `docs/STATUS-debt.md` (rung 7a line).
   `result=pass` against 50 ms.
 - Put to chris at the look: the builder's choice (1), the box left as dragged after a group's own resize, and (7), grouping
   changes the other device's picture because children follow the group's box (Q3 as ruled).
+
+## 2026-11-12 — rung 7a look change: groups are see-through to constraints (builder: Sonnet 5.5)
+
+chris approved 7a with one change ("I approve the build, but would like to change question #1 to reflect what figma does";
+the record's Q3 is amended). Built on `main`, not pushed, version unchanged (0.6.1; the file format is still the unreleased 0.7.0).
+
+- **Layout** (`crates/layout/src/tree.rs`, `lib.rs`): every object that is not a group resolves against the page by its own
+  constraints, in or out of a group; a group's box is the box round its children's turned boxes (`tree::local_frame`,
+  `tree::group_box`), the same rule on every device, then the group's angle turns the resolved children about that box's centre
+  (angles still add). A group's stored `constraints` are ignored (doc comment on `Object::constraints` and `GroupShape` says so; the
+  field stays on every object for the file's shape). `Ctx::child` no longer takes a stored box.
+- **Editor resize** (`crates/model/src/geom.rs` `map_frame`, `edit.rs` `GroupMap`, `map_contents`, `reframe`, `Placement::map`;
+  `crates/ui/src/drag.rs`): the mapping of a loose selection's resize moved into the model (`map_frame`) and `drag.rs`'s `map_rect`
+  now calls it; a group's contents are mapped by it from the group's old box to its new one, on the device shown (each leaf's
+  stored frame goes through its own rules to the page shown and back), then the box of the group and of every group in it is set
+  round its children. Turned children stretch approximately (the 6b debt, written back into `docs/STATUS-debt.md`); a group's
+  resize still stops at one pixel instead of flipping. The "box left as dragged" departure is gone. Also: a drag preview now works for
+  objects at any depth (it looked objects up on the layers only); `SetObject` of a group refits it and the groups in it.
+- **Inspector**: no Constraints tab for a group (it shows for a selection with anything else in it, on the first non-group); a
+  child's tab is the normal one; `app-against-group` removed from `app.ftl`; `UnitContext::with_percent_of` removed, `%` is of the
+  page everywhere (note in `units.rs` reworded).
+- **Goldens**: `groups_supernote.a5x2_…` unchanged (`70ec1bf7…`); `groups_supernote.a6x2_…` is now `e364516f…` (the pinned child
+  resolves against the page). The other six lines and every fixture are untouched.
+- **Tests**: render `text_inside_a_group_draws_saves_and_reopens` and `grouping_moves_nothing` now require 0 differing pixels on both
+  devices (the first tolerated 48,319 on the Nomad); new `grouping_and_ungrouping_with_every_constraint_changes_no_pixel` (25 objects,
+  every H and V rule, grouped, ungrouped, in two groups, nested: 0 px on both devices). Layout, model and ui group tests changed to
+  the new rule (not deleted); new ui tests: a group dragged and resized with the Nomad on screen, a turned group with a turned child resized.
+- **Docs**: `README.md` and `DEVELOPMENT.md` describe the new rule; the Rung 7a debt line rewritten.

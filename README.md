@@ -62,8 +62,10 @@ and error.
   the export is flattened to gray, with no transparency. A turned edge is smooth; a quarter turn keeps sharp edges.
   Text boxes and pattern regions do not turn yet.
 - Group objects (Ctrl+G, or the Group button; Ctrl+Shift+G or Ungroup breaks it up). A group moves, turns, resizes and
-  fades as one: its children keep their own constraints against the group's box, so a child pinned to the top and right
-  keeps its size when the group grows. Groups nest as deep as you like. A click picks the whole group; double-click goes
+  fades as one. Grouping never changes how a page looks on either device: as in Figma, a group is see-through to
+  constraints, so each child keeps its own constraints against the page (a group has none, and no Constraints tab), and
+  the group's box is always the box round its children. Resizing a group stretches everything in it, as resizing a
+  loose selection does. Groups nest as deep as you like. A click picks the whole group; double-click goes
   one level in (Escape or a click outside steps back out), and Ctrl+click picks the object inside at once. The Layers
   panel is a tree with fold arrows, and rows can be dragged into and out of groups. A group with a text box or a pattern
   region in it cannot turn.

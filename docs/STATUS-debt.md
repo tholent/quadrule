@@ -100,11 +100,17 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Rung 7a, owed (`crates/model/src/edit.rs`, `crates/layout/src/tree.rs`, `crates/ui/src/editor.rs`, `crates/ui/src/drag.rs`,
   `crates/ui/src/panels.rs`, `crates/ui/src/view.rs`): a double-click into a group is tested through `Viewer::enter_at`
   (`egui_kittest` cannot make one), so chris's look is the first real check of it, of Ctrl+click and of the dashed outline
-  round the entered group. A group's box is refitted after an edit inside it, and left as dragged after a resize of the
-  group itself, so it can be bigger than its children until the next edit inside (the record's veto "a stored box that
-  does not refit" is open for that case). The drawing tools put a new object on a layer, never inside the group entered.
-  Dragging a row of the layers tree across the edge of a turned group is refused with a note (the object would move on
-  the page; Group and Ungroup are the way), and objects can be grouped only from one place (the layers, or one group).
+  round the entered group. Look change of 2026-11-12 (Q3 amended: groups are see-through to constraints): a group's box
+  is always its children's outer box, hidden children included (it does not change when one is hidden), and a group
+  with no children keeps its stored box. Resizing a group stretches turned things inside it approximately, as a loose
+  selection does (the 6b debt returns for groups: a turned child keeps its angle and its sides grow by how much the
+  stretch lengthens their directions, so a turned child is not sheared; a group inside a turned group stretches the
+  same way). A group dragged or resized while the other device is on screen moves each child's resolved box on that
+  device and unresolves it by the child's own rules, as a loose selection does, so a child pinned to an edge may
+  come out of a drag with a different stored position than the pointer step suggests. The drawing tools put a new
+  object on a layer, never inside the group entered. Dragging a row of the layers tree across the edge of a turned group
+  is refused with a note (the object would move on the page; Group and Ungroup are the way), and objects can be grouped
+  only from one place (the layers, or one group).
   Shift-picking a group and something inside it in the layers panel keeps only the last of the two. Group opacity on the
   chip canvas is one vello layer per opacity group, nested ones nested (not measured with many). A loose multiple
   selection still resizes turned objects approximately. 7b (align and distribute, "mixed" fields) is not started.
