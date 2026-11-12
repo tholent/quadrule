@@ -170,6 +170,8 @@ pub struct ViewerUi {
     /// that shows it (a text box was just drawn).
     pub(crate) focus_text_content: bool,
     pub(crate) renaming: Option<Renaming>,
+    /// Groups folded shut in the layers tree (rung 7a).
+    pub(crate) folded: std::collections::HashSet<quadrule_model::Uuid>,
     /// What is typed in a length field while it has focus, by field key.
     pub(crate) field_text: HashMap<String, String>,
     pub(crate) link_margins: bool,
@@ -201,6 +203,7 @@ impl ViewerUi {
             ellipse: strings.get("new-name-ellipse"),
             polygon: strings.get("new-name-polygon"),
             text_content: strings.get("new-text-content"),
+            group: strings.get("new-name-group"),
         };
         ViewerUi {
             viewer,
@@ -227,6 +230,7 @@ impl ViewerUi {
             selected_layer: None,
             focus_text_content: false,
             renaming: None,
+            folded: std::collections::HashSet::new(),
             field_text: HashMap::new(),
             link_margins: true,
             link_rhythm: true,
@@ -362,6 +366,12 @@ impl ViewerUi {
         if key(cmd, Key::D) {
             let _ = self.viewer.duplicate_selection();
         }
+        // Group and ungroup (rung 7a bbq, "Making and breaking"); the more specific first.
+        if key(shift_cmd, Key::G) {
+            let _ = self.viewer.ungroup_selection();
+        } else if key(cmd, Key::G) {
+            let _ = self.viewer.group_selection();
+        }
         // Copy, cut and paste arrive as events (egui turns Ctrl+C, Ctrl+X and Ctrl+V, Cmd on
         // macOS, into them), and paste brings the clipboard's text (rung 4b).
         let (copy, cut, pasted) = ctx.input_mut(|i| {
@@ -401,7 +411,11 @@ impl ViewerUi {
             self.move_selected(Toward::Back);
         }
         // Escape ends a tool that is on first; with Select on, it clears the selection.
-        if key(Modifiers::NONE, Key::Escape) && !self.viewer.end_tool() {
+        // Inside a group, Escape first steps out of it (rung 7a bbq, Q4).
+        if key(Modifiers::NONE, Key::Escape)
+            && !self.viewer.end_tool()
+            && !self.viewer.leave_group()
+        {
             self.viewer.selection.clear();
             self.selected_layer = None;
         }
@@ -1103,7 +1117,9 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    if b.transforms {
+                    if b.groups {
+                        self.viewer.open_groups();
+                    } else if b.transforms {
                         self.viewer.open_transforms();
                     } else if b.shapes {
                         self.viewer.open_shapes();
@@ -1121,6 +1137,9 @@ impl ViewerUi {
                 // The dot grid, or for the rotate run the big turned rectangle.
                 let target = if b.rotate {
                     quadrule_model::sample::transform_ids::TURNED
+                } else if b.groups {
+                    // A cell of the heavy group: the press picks the group it is in.
+                    quadrule_model::sample::group_ids::nth(120)
                 } else {
                     quadrule_model::sample::ids::DOTS
                 };
@@ -1216,7 +1235,9 @@ impl ViewerUi {
                     } else {
                         "release"
                     },
-                    if b.transforms {
+                    if b.groups {
+                        "groups"
+                    } else if b.transforms {
                         "transforms"
                     } else if b.shapes {
                         "shapes"
@@ -1243,6 +1264,11 @@ impl ViewerUi {
             Phase::Done => {}
         }
         self.bench = Some(b);
+    }
+
+    /// Whether the layers tree shows group `id` folded shut (rung 7a).
+    pub fn is_folded(&self, id: quadrule_model::Uuid) -> bool {
+        self.folded.contains(&id)
     }
 
     /// The screen point of device pixel (x, y) of the page on the last frame, for tests that press
@@ -1293,6 +1319,7 @@ impl ViewerUi {
         let revision = self.viewer.revision;
         let selected = self.viewer.selected;
         let selection = self.viewer.selection.clone();
+        let entered = self.viewer.entered.clone();
         let Some(page) = self.viewer.page() else {
             return;
         };
@@ -1358,6 +1385,12 @@ impl ViewerUi {
             .iter()
             .filter(|p| selection.contains(&p.id))
             .map(|p| (p.id, (p.shape.bounds(), p.shape.corners())))
+            .collect();
+        // The groups entered get a faint dashed outline (rung 7a bbq, Q4).
+        let entered_outlines: Vec<Outline> = entered
+            .iter()
+            .filter_map(|g| page.placed.iter().find(|p| p.id == *g))
+            .map(|p| (p.shape.bounds(), p.shape.corners()))
             .collect();
         // A turned line is outlined along its turned frame, like a turned shape (the page's own
         // shape for a line is its segment).
@@ -1575,6 +1608,26 @@ impl ViewerUi {
                     ui.scroll_to_rect(r, Some(egui::Align::Center));
                     self.scroll_to_selected = false;
                 }
+            }
+
+            // The groups entered: a faint dashed box.
+            for ((x0, y0, x1, y1), corners) in &entered_outlines {
+                let mut pts: Vec<egui::Pos2> = match corners {
+                    Some(c) => c.iter().map(|&(x, y)| to_screen(x, y)).collect(),
+                    None => vec![
+                        to_screen(*x0, *y0),
+                        to_screen(*x1, *y0),
+                        to_screen(*x1, *y1),
+                        to_screen(*x0, *y1),
+                    ],
+                };
+                pts.push(pts[0]);
+                painter.extend(egui::Shape::dashed_line(
+                    &pts,
+                    Stroke::new(1.0, accent.gamma_multiply(0.7)),
+                    6.0,
+                    4.0,
+                ));
             }
 
             // The selected objects.
@@ -1806,8 +1859,16 @@ impl ViewerUi {
                 let (x, y) = to_dev(p);
                 if drawing_tool {
                     let _ = self.viewer.place_click(x, y, mods, reach);
+                } else if response.double_clicked() {
+                    // A double-click goes one level into a group (rung 7a bbq, Q4); on anything
+                    // else it is the click it was.
+                    if !self.viewer.enter_at(x, y, slack) {
+                        self.viewer
+                            .click_with(x, y, slack, mods.shift, mods.snapping_off);
+                    }
                 } else {
-                    self.viewer.click(x, y, slack, mods.shift);
+                    self.viewer
+                        .click_with(x, y, slack, mods.shift, mods.snapping_off);
                 }
                 self.selected_layer = None;
             }

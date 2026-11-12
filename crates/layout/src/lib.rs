@@ -89,8 +89,9 @@ pub enum Item {
     },
     /// Starts an opacity group (format 0.6, napkin §5.2): everything up to the matching
     /// [`Item::EndAlpha`] is drawn together, as one picture, and laid over what lies beneath with
-    /// this opacity, so the export holds the flattened gray (no alpha in the PNG). Groups do not
-    /// nest.
+    /// this opacity, so the export holds the flattened gray (no alpha in the PNG). Groups nest (rung
+    /// 7a: a group of objects that are themselves faded): each is composited on its own, inside the
+    /// one round it.
     BeginAlpha {
         /// 0 (clear) to 255 (opaque).
         alpha: u8,

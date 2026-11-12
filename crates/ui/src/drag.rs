@@ -32,10 +32,11 @@ use quadrule_layout::rotate;
 use quadrule_layout::snap::{
     Guide, Handle, Mark, Other, PxRect, ResizeMods, SnapToggles, SnapWorld,
 };
+use quadrule_layout::tree::Ctx;
 use quadrule_layout::units::Axis;
-use quadrule_layout::{Shape, resolve_frame, unresolve_frame};
+use quadrule_layout::{Placed, Shape, unresolve_frame};
 use quadrule_model::edit::{Command, EditError, Placement, duplicate, is_empty, set_placements};
-use quadrule_model::{Constraints, Document, Frame, LineDir, Object, ObjectKind, Uuid};
+use quadrule_model::{Constraints, Document, Frame, LineDir, ObjectKind, Uuid, normalize_deg};
 use quadrule_profiles::Profile;
 
 /// A snap catches within this many screen points (rung 4 bbq, Defaulted "Snap distance"); the
@@ -111,11 +112,18 @@ struct Item {
     /// The object whose frame changes (the copy, when duplicating).
     id: Uuid,
     constraints: Constraints,
-    /// Its frame on the device shown, in pixels, as the drag began.
+    /// What it sits in: its group's box and turns, or the page (rung 7a).
+    ctx: Ctx,
+    /// Its own angle, apart from the groups' (what is stored).
+    own_rotation: f64,
+    /// Its frame on the device shown, in pixels, as the drag began, where it falls on the page.
     resolved: PxRect,
     /// A text box: its height is its text's, so only its position and width change.
     text: bool,
-    /// Its rotation in degrees as the drag began (always 0 for text and patterns).
+    /// A group: resizing it stops at zero size instead of flipping it (rung 7a).
+    group: bool,
+    /// Its angle on the page in degrees as the drag began, the groups' turns included (always 0
+    /// for text and patterns).
     rotation: f64,
     /// A line's diagonal as the drag began.
     dir: Option<LineDir>,
@@ -169,9 +177,24 @@ pub(crate) fn others(
     placed: &[quadrule_layout::Placed],
     skip: &[Uuid],
 ) -> Vec<Other> {
+    others_at(doc, placed, skip, &[])
+}
+
+/// [`others`] with the groups `entered`: a group is one object to snap to, and inside an entered
+/// group its children count too, as do the objects outside it (rung 7a bbq, "Picking, dragging,
+/// snapping"). What is being dragged, and what is inside it, is left out, and so is an entered
+/// group (the box its own children are in).
+pub(crate) fn others_at(
+    doc: &Document,
+    placed: &[quadrule_layout::Placed],
+    skip: &[Uuid],
+    entered: &[Uuid],
+) -> Vec<Other> {
     placed
         .iter()
-        .filter(|p| !skip.contains(&p.id))
+        .filter(|p| !skip.contains(&p.id) && !entered.contains(&p.id))
+        .filter(|p| p.node.parent.is_none_or(|g| entered.contains(&g)))
+        .filter(|p| !doc.ancestors(p.id).iter().any(|a| skip.contains(a)))
         .map(|p| {
             let line = matches!(doc.object(p.id).map(|o| &o.kind), Some(ObjectKind::Line(_)));
             Other {
@@ -187,15 +210,38 @@ pub(crate) fn others(
         .collect()
 }
 
-/// An object's frame on `shown`, in pixels.
-fn resolved_px(o: &Object, primary: &Profile, shown: &Profile) -> PxRect {
-    let f = resolve_frame(o.frame, o.constraints, primary.page_mm(), shown.page_mm());
+/// Where an object falls on `shown`, in pixels: its unturned box on the page, the turns of the
+/// groups round it already in the place of its centre.
+fn placed_px(p: &Placed, shown: &Profile) -> PxRect {
+    let f = p.node.frame;
     let px = |mm: f64| shown.mm_to_px(mm);
     PxRect {
         x0: px(f.x_mm),
         y0: px(f.y_mm),
         x1: px(f.x_mm + f.w_mm),
         y1: px(f.y_mm + f.h_mm),
+    }
+}
+
+impl Item {
+    /// The stored frame and own angle that put the object on the page at `r` (pixels, unturned
+    /// box) turned `total_deg` in all: back through the groups' turns and against the box it
+    /// is in (rung 7a). On the page itself this is [`frame_from_px`].
+    fn stored(&self, r: PxRect, total_deg: f64, shown: &Profile) -> (Frame, f64) {
+        let per_mm = shown.mm_to_px(1.0);
+        let placed = Frame::new(
+            r.x0 / per_mm,
+            r.y0 / per_mm,
+            (r.x1 - r.x0) / per_mm,
+            (r.y1 - r.y0) / per_mm,
+        );
+        let (local, rot) = self.ctx.unplace(placed, total_deg);
+        let rot = if total_deg == self.rotation {
+            self.own_rotation
+        } else {
+            normalize_deg(rot)
+        };
+        (self.ctx.holder.unresolve(local, self.constraints), rot)
     }
 }
 
@@ -254,6 +300,39 @@ fn map_rect(item: &Item, old: &PxRect, new: &PxRect) -> PxRect {
         x1: mx(r.x1),
         y1: if item.text { y0 + r.h() } else { my(r.y1) },
     }
+}
+
+/// `r`, a resize of `start` by handle `h`, made not to cross the side opposite the handle: it
+/// stops at [`MIN_SIZE_PX`] across instead of mirroring.
+fn not_past(start: &PxRect, h: Handle, r: PxRect) -> PxRect {
+    let mut out = r;
+    match h.x_side() {
+        1 => {
+            let e = if r.x0 < start.x0 - 1e-9 { r.x0 } else { r.x1 };
+            out.x0 = start.x0;
+            out.x1 = e.max(start.x0 + MIN_SIZE_PX);
+        }
+        -1 => {
+            let e = if r.x1 > start.x1 + 1e-9 { r.x1 } else { r.x0 };
+            out.x1 = start.x1;
+            out.x0 = e.min(start.x1 - MIN_SIZE_PX);
+        }
+        _ => {}
+    }
+    match h.y_side() {
+        1 => {
+            let e = if r.y0 < start.y0 - 1e-9 { r.y0 } else { r.y1 };
+            out.y0 = start.y0;
+            out.y1 = e.max(start.y0 + MIN_SIZE_PX);
+        }
+        -1 => {
+            let e = if r.y1 > start.y1 + 1e-9 { r.y1 } else { r.y0 };
+            out.y1 = start.y1;
+            out.y0 = e.min(start.y1 - MIN_SIZE_PX);
+        }
+        _ => {}
+    }
+    out
 }
 
 fn near(a: &Frame, b: &Frame) -> bool {
@@ -378,6 +457,31 @@ impl Viewer {
         self.drag.as_ref().and_then(|d| d.marquee)
     }
 
+    /// What a press at (x, y) picks: as a click does, or with `deep` (Ctrl) the innermost object,
+    /// entering the groups round it (rung 7a bbq, Q4).
+    pub(crate) fn pick_for_press(
+        &mut self,
+        x: f64,
+        y: f64,
+        slack: f64,
+        deep: bool,
+    ) -> Option<Uuid> {
+        if !deep {
+            return self.pick(x, y, slack);
+        }
+        let leaf = self.pick_leaf(x, y, slack)?;
+        // Something already selected that holds or is the object under the pointer is what is
+        // dragged: Ctrl then only turns snapping off.
+        let doc = self.doc()?;
+        let mut chain = doc.ancestors(leaf);
+        chain.push(leaf);
+        if let Some(sel) = chain.iter().find(|c| self.selection.contains(c)) {
+            return Some(*sel);
+        }
+        self.entered = doc.ancestors(leaf);
+        Some(leaf)
+    }
+
     /// The primary profile, the profile on screen, and the shapes on the page.
     pub(crate) fn geometry(&mut self) -> Option<(Profile, Profile, Vec<quadrule_layout::Placed>)> {
         let (primary, shown) = self.profiles()?;
@@ -405,7 +509,7 @@ impl Viewer {
         if ids.is_empty() {
             return Vec::new();
         }
-        let Some((primary, shown, placed)) = self.geometry() else {
+        let Some((_, shown, placed)) = self.geometry() else {
             return Vec::new();
         };
         // What is drawn: during a drag, the preview, so the handles turn and move with the object.
@@ -419,17 +523,18 @@ impl Viewer {
         {
             return vec![(HandleHit::LineStart, x0, y0), (HandleHit::LineEnd, x1, y1)];
         }
-        // One turned shape: the handles of its own box, turned with it.
+        // One turned shape, or a group that is turned or inside a turned group: the handles of its
+        // own box, turned with it.
         if let [id] = ids[..]
-            && let Some(o) = doc.object(id)
-            && o.rotation() != 0.0
+            && let Some(p) = placed.iter().find(|p| p.id == id)
+            && p.node.angle != 0.0
         {
-            let r = resolved_px(o, &primary, &shown);
+            let r = placed_px(p, &shown);
             let c = rotate::centre((r.x0, r.y0, r.x1, r.y1));
             return Handle::ALL
                 .iter()
                 .map(|&h| {
-                    let (x, y) = rotate::rotate_point(h.at(&r), c, o.rotation());
+                    let (x, y) = rotate::rotate_point(h.at(&r), c, p.node.angle);
                     (HandleHit::Box(h), x, y)
                 })
                 .collect();
@@ -469,8 +574,16 @@ impl Viewer {
     /// now, so during a turn it follows the pointer), 0 for none or for several (rung 6b).
     pub fn selection_angle(&self) -> f64 {
         let ids = self.editable_selection();
-        match (&ids[..], self.shown_doc()) {
-            ([id], Some(doc)) => doc.object(*id).map_or(0.0, Object::rotation),
+        let page = self
+            .open
+            .as_ref()
+            .and_then(|o| o.pages.get(&self.profile_id));
+        match (&ids[..], page) {
+            ([id], Some(page)) => page
+                .placed
+                .iter()
+                .find(|p| p.id == *id)
+                .map_or(0.0, |p| p.node.angle),
             _ => 0.0,
         }
     }
@@ -494,15 +607,16 @@ impl Viewer {
     /// The outline of a turned line: its frame turned with it, grown by `pad` pixels, so a turned
     /// line is outlined like a turned shape. None for a line that is not turned, or not a line.
     pub fn turned_line_outline(&mut self, id: Uuid, pad: f64) -> Option<[(f64, f64); 4]> {
-        let (primary, shown, _) = self.geometry()?;
+        let (_, shown, placed) = self.geometry()?;
         let o = self.shown_doc()?.object(id)?;
-        if !matches!(o.kind, ObjectKind::Line(_)) || o.rotation() == 0.0 {
+        let p = placed.iter().find(|p| p.id == id)?;
+        if !matches!(o.kind, ObjectKind::Line(_)) || p.node.angle == 0.0 {
             return None;
         }
-        let r = resolved_px(o, &primary, &shown);
+        let r = placed_px(p, &shown);
         Some(rotate::rotated_corners(
             (r.x0 - pad, r.y0 - pad, r.x1 + pad, r.y1 + pad),
-            o.rotation(),
+            p.node.angle,
         ))
     }
 
@@ -514,14 +628,15 @@ impl Viewer {
         let [id] = ids[..] else {
             return None;
         };
-        let (primary, shown, _) = self.geometry()?;
+        let (_, shown, placed) = self.geometry()?;
         let o = self.shown_doc()?.object(id)?;
         if !o.kind.can_rotate() {
             return None;
         }
-        let r = resolved_px(o, &primary, &shown);
+        let p = placed.iter().find(|p| p.id == id)?;
+        let r = placed_px(p, &shown);
         let c = rotate::centre((r.x0, r.y0, r.x1, r.y1));
-        let rot = o.rotation();
+        let rot = p.node.angle;
         let base = rotate::rotate_point((c.0, r.y0), c, rot);
         let tip = rotate::rotate_point((c.0, r.y0 - self.rotate_stalk_px), c, rot);
         Some(RotateHandle { base, tip })
@@ -565,7 +680,7 @@ impl Viewer {
         if self.open.is_none() || self.drag.is_some() {
             return false;
         }
-        let Some((primary, shown, placed)) = self.geometry() else {
+        let Some((_, shown, placed)) = self.geometry() else {
             return false;
         };
         let before_press = self.selection.clone();
@@ -573,7 +688,7 @@ impl Viewer {
         let hit = self.handle_at(x, y, handle_slack);
         let kind = if let Some(h) = hit {
             DragKind::Handle(h)
-        } else if let Some(id) = self.pick(x, y, slack) {
+        } else if let Some(id) = self.pick_for_press(x, y, slack, mods.snapping_off) {
             if !self.selection.contains(&id) {
                 if mods.shift {
                     self.selection.push(id);
@@ -651,7 +766,9 @@ impl Viewer {
         } else {
             &ids
         };
-        drag.world = drag.world.with_others(others(&doc, &placed, leave_out));
+        drag.world = drag
+            .world
+            .with_others(others_at(&doc, &placed, leave_out, &self.entered));
         if kind == DragKind::Move && mods.alt {
             let (cmd, copies) = duplicate(&doc, &ids, Uuid::new_v4);
             if copies.len() == ids.len()
@@ -665,11 +782,11 @@ impl Viewer {
             let Some(o) = base_doc.object(*target) else {
                 continue;
             };
-            let shape = placed
-                .iter()
-                .find(|p| p.id == *id)
-                .map(|p| snap_rect(&p.shape));
-            let resolved = resolved_px(o, &primary, &shown);
+            let node = placed.iter().find(|p| p.id == *id);
+            let shape = node.map(|p| snap_rect(&p.shape));
+            let (Some(node), Some(resolved)) = (node, node.map(|p| placed_px(p, &shown))) else {
+                continue;
+            };
             drag.start_box = match (drag.items.is_empty(), shape) {
                 (true, Some(s)) => s,
                 (false, Some(s)) => drag.start_box.union(&s),
@@ -678,9 +795,12 @@ impl Viewer {
             drag.items.push(Item {
                 id: *target,
                 constraints: o.constraints,
+                ctx: node.node.ctx,
+                own_rotation: o.rotation(),
                 resolved,
                 text: matches!(o.kind, ObjectKind::Text(_)),
-                rotation: o.rotation(),
+                group: o.is_group(),
+                rotation: node.node.angle,
                 dir: match &o.kind {
                     ObjectKind::Line(l) => Some(l.direction),
                     _ => None,
@@ -749,7 +869,7 @@ impl Viewer {
             self.drag = Some(drag);
             return;
         }
-        let Some((primary, shown)) = self.profiles() else {
+        let Some((_, shown)) = self.profiles() else {
             self.drag = Some(drag);
             return;
         };
@@ -779,7 +899,8 @@ impl Viewer {
             }
             DragKind::Handle(HandleHit::Box(h)) => {
                 let all_text = drag.items.iter().all(|i| i.text);
-                drag.world.snap_resize(
+                let has_group = drag.items.iter().any(|i| i.group);
+                let (r, guides) = drag.world.snap_resize(
                     &start,
                     h,
                     delta,
@@ -790,7 +911,14 @@ impl Viewer {
                     reach,
                     toggles,
                     MIN_SIZE_PX,
-                )
+                );
+                // A resize that holds a group stops at the least size instead of flipping the box
+                // (its contents would not be mirrored; rung 4a debt, rung 7a).
+                if has_group && !mods.alt {
+                    (not_past(&start, h, r), guides)
+                } else {
+                    (r, guides)
+                }
             }
             DragKind::Handle(HandleHit::Rotate) => {
                 // The object turns about its centre by how far the pointer has gone round it;
@@ -855,13 +983,13 @@ impl Viewer {
                 Some(r) if drag.items.len() == 1 => r,
                 _ => map_rect(item, &start, &new_box),
             };
-            let mut frame = frame_from_px(px, item.constraints, &primary, &shown);
+            let (total, dir) = rot_dir[n];
+            let (mut frame, rotation_deg) = item.stored(px, total, &shown);
             if let Some(o) = base_doc.object(item.id)
                 && near(&o.frame, &frame)
             {
                 frame = o.frame;
             }
-            let (rotation_deg, dir) = rot_dir[n];
             places.push((
                 item.id,
                 Placement {
@@ -949,22 +1077,17 @@ impl Viewer {
     }
 
     /// Objects a marquee box touches: visible, unlocked, in unlocked layers (what a click could
-    /// pick), bottom first.
+    /// pick), bottom first; a group once, where any of its children is touched.
     fn marquee_hits(&mut self, r: &PxRect) -> Vec<Uuid> {
         let Some((_, _, placed)) = self.geometry() else {
             return Vec::new();
         };
-        let Some(doc) = self.doc() else {
-            return Vec::new();
-        };
-        placed
+        // What it touches, leaf by leaf; a leaf in a group is stood for by that group, at the level
+        // entered (rung 7a bbq, Q4), once.
+        let leaves: Vec<Uuid> = placed
             .iter()
             .filter(|p| {
-                let layer = &doc.layers[p.layer];
-                let Some(o) = doc.object(p.id) else {
-                    return false;
-                };
-                if !(layer.visible && !layer.locked && o.visible && !o.locked) {
+                if p.node.group || p.node.hidden || p.node.locked {
                     return false;
                 }
                 match p.shape {
@@ -1000,7 +1123,17 @@ impl Viewer {
                 }
             })
             .map(|p| p.id)
-            .collect()
+            .collect();
+        let entered = self.entered.clone();
+        let mut out: Vec<Uuid> = Vec::new();
+        for leaf in leaves {
+            if let Some(t) = self.target_of(leaf, &entered)
+                && !out.contains(&t)
+            {
+                out.push(t);
+            }
+        }
+        out
     }
 
     /// Shows `doc` instead of the open document until the preview is hidden.

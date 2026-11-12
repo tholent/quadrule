@@ -25,7 +25,8 @@
 //! every new kind; the benchmarks then run over it) and `--bench-tool rect|ellipse|polygon|...` (draw
 //! with that tool instead). Rung 6b adds `--transforms-page` (rotated shapes, lines every way, opacity;
 //! the benchmarks then run over it) and `--bench-rotate [frames]` (turn its big rectangle with the
-//! rotate handle; `name=rotate_bench`).
+//! rotate handle; `name=rotate_bench`). Rung 7a adds `--groups-page` (nested, turned and faded groups and
+//! a heavy group; the benchmarks then run over it and the drag moves the heavy group).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -112,6 +113,8 @@ impl App {
         }
         if let Some(p) = path {
             ui.open_file(&p);
+        } else if args.groups_page {
+            ui.viewer.open_groups();
         } else if args.transforms_page || args.bench_rotate.is_some() {
             ui.viewer.open_transforms();
         } else if args.shapes_page {
@@ -129,7 +132,9 @@ impl App {
             })
         };
         ui.bench = bench.map(|b| {
-            if args.transforms_page {
+            if args.groups_page {
+                b.with_groups()
+            } else if args.transforms_page {
                 b.with_transforms()
             } else if args.shapes_page {
                 b.with_shapes()
@@ -330,6 +335,9 @@ struct Args {
     /// Open the transforms page (rotated shapes, lines every way, opacity) instead of the empty
     /// start (`--transforms-page`); the benchmarks then run over it.
     transforms_page: bool,
+    /// Open the groups page (nested, turned and faded groups, a heavy group) instead of the empty
+    /// start (`--groups-page`); the benchmarks then run over it, and the drag moves the heavy group.
+    groups_page: bool,
     /// Turn the transforms page's big rectangle with its rotate handle this many steps and close
     /// (`--bench-rotate [frames]`).
     bench_rotate: Option<u32>,
@@ -367,6 +375,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.shapes_page = true;
         } else if a == "--transforms-page" {
             out.transforms_page = true;
+        } else if a == "--groups-page" {
+            out.groups_page = true;
         } else if a == "--bench-tool" {
             let name = args.next().and_then(|n| n.into_string().ok());
             match name.as_deref().and_then(quadrule_ui::Tool::from_name) {
@@ -472,6 +482,14 @@ mod tests {
                     bench_draw: Some(40),
                     shapes_page: true,
                     bench_tool: Some(quadrule_ui::Tool::Rect),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--groups-page", "--bench-drag", "30"]),
+                Ok(Args {
+                    bench_drag: Some(30),
+                    groups_page: true,
                     ..Args::default()
                 }),
             ),

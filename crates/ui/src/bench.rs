@@ -56,6 +56,9 @@ pub struct DragBench {
     /// Opens the rung 6b transforms page (rotated shapes, lines every way, opacity) when nothing
     /// is open yet (`--transforms-page`).
     pub transforms: bool,
+    /// Opens the rung 7a groups page (nested, turned and faded groups, a heavy group of dozens of
+    /// shapes) when nothing is open yet (`--groups-page`); the drag then moves the heavy group.
+    pub groups: bool,
     /// Turns the big rotated rectangle of the transforms page with its rotate handle (rung 6b:
     /// `--bench-rotate`), so the handle's own drag path is timed.
     pub rotate: bool,
@@ -72,6 +75,7 @@ impl DragBench {
             shapes: false,
             tool: Tool::Pattern,
             transforms: false,
+            groups: false,
             rotate: false,
         }
     }
@@ -89,6 +93,14 @@ impl DragBench {
     pub fn with_transforms(self) -> Self {
         DragBench {
             transforms: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark over the groups page (rung 7a): the drag moves its heavy group.
+    pub fn with_groups(self) -> Self {
+        DragBench {
+            groups: true,
             ..self
         }
     }

@@ -98,6 +98,8 @@ pub struct NewNames {
     pub polygon: String,
     /// What a new text box says.
     pub text_content: String,
+    /// A new group's name (rung 7a).
+    pub group: String,
 }
 
 impl Default for NewNames {
@@ -110,6 +112,7 @@ impl Default for NewNames {
             ellipse: "Ellipse".into(),
             polygon: "Polygon".into(),
             text_content: "Text".into(),
+            group: "Group".into(),
         }
     }
 }
@@ -319,10 +322,7 @@ impl Viewer {
     /// unlocked one. `None`, with a notice, when that layer is locked or every layer is.
     fn draw_layer(&mut self) -> Option<usize> {
         let doc = self.doc()?;
-        let from_selection = self
-            .selection
-            .iter()
-            .find_map(|id| doc.find(*id).map(|(l, _)| l));
+        let from_selection = self.selection.iter().find_map(|id| doc.layer_of(*id));
         let layer = from_selection.or_else(|| doc.layers.iter().rposition(|l| !l.locked));
         if layer.is_none_or(|l| doc.layers[l].locked) {
             self.notice = Some(Notice {

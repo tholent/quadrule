@@ -264,3 +264,16 @@ new-name-rect = Rectangle
 new-name-ellipse = Ellipse
 new-name-polygon = Polygon
 new-text-content = Text
+
+# Groups (rung 7a).
+new-name-group = Group
+notice-turned-group = The group "{ $name }" is turned, and text boxes and pattern regions do not turn, so they cannot go into it.
+notice-group-mixed = Those objects are in different groups. Pick objects from one place to group them.
+notice-group-few = Pick two or more objects to group them.
+notice-ungroup-none = Pick a group to ungroup it.
+notice-turned-move = A turned group has a space of its own. Use Group and Ungroup to move objects across its edge.
+app-group = Group
+app-ungroup = Ungroup
+app-fold-item = Show what is inside { $name }
+app-rotation-note = A group with a text box or a pattern region in it cannot turn.
+app-against-group = These rules work against the group "{ $name }", not the page.

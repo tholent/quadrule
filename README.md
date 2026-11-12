@@ -61,6 +61,12 @@ and error.
   way (draw one up and to the right, or drag its ends past each other). Opacity, 0 to 100 percent, is in the Style tab;
   the export is flattened to gray, with no transparency. A turned edge is smooth; a quarter turn keeps sharp edges.
   Text boxes and pattern regions do not turn yet.
+- Group objects (Ctrl+G, or the Group button; Ctrl+Shift+G or Ungroup breaks it up). A group moves, turns, resizes and
+  fades as one: its children keep their own constraints against the group's box, so a child pinned to the top and right
+  keeps its size when the group grows. Groups nest as deep as you like. A click picks the whole group; double-click goes
+  one level in (Escape or a click outside steps back out), and Ctrl+click picks the object inside at once. The Layers
+  panel is a tree with fold arrows, and rows can be dragged into and out of groups. A group with a text box or a pattern
+  region in it cannot turn.
 
 Not yet: the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).

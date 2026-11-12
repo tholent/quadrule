@@ -137,6 +137,9 @@ pub struct Viewer {
     pub revision: u64,
     /// The selected objects, in the order they were picked (rung 3 bbq Q9).
     pub selection: Vec<Uuid>,
+    /// The groups entered with a double-click, outermost first (rung 7a bbq, Q4): a click picks
+    /// among the children of the innermost one. Empty: a click picks the outermost group.
+    pub entered: Vec<Uuid>,
     /// The device on screen.
     pub profile_id: String,
     /// How big the page shows.
@@ -204,6 +207,7 @@ impl Default for Viewer {
             generation: 0,
             revision: 0,
             selection: Vec::new(),
+            entered: Vec::new(),
             profile_id: quadrule_model::sample::MANTA_ID.to_string(),
             zoom: Zoom::Fit,
             selected: None,
@@ -244,6 +248,14 @@ impl Viewer {
     /// and the sample's dot grid (for the drag benchmark). Like the sample, it has no file.
     pub fn open_transforms(&mut self) {
         let doc = quadrule_model::sample::transforms_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
+    /// Opens the rung 7a groups page: groups nested three deep, a turned group, a group at 50
+    /// percent, a pinned child and a heavy group, and the sample's dot grid (for the drag
+    /// benchmark). Like the sample, it has no file.
+    pub fn open_groups(&mut self) {
+        let doc = quadrule_model::sample::groups_document();
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
@@ -320,6 +332,7 @@ impl Viewer {
         self.generation += 1;
         self.revision += 1;
         self.selection.clear();
+        self.entered.clear();
         self.selected = None;
         self.notice = None;
         self.zoom = Zoom::Fit;

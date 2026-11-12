@@ -39,16 +39,14 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   update `metadata.modified`. When a font is missing here, Save keeps the file's saved outlines for that device even
   if the text changed. A multiple selection shows the first object's values, not "mixed". "Don't save" followed by
   cancelling the Open dialog leaves the document unsaved with its recovery file deleted (the next autosave writes
-  it again). Only one recovery file is restored per start. Lint keeps its own copy of the object-bounds maths
-  that `quadrule_layout::placed_objects` now has (`crates/lint/src/lib.rs`).
+  it again). Only one recovery file is restored per start.
 - `CHECK` lines can share a line with the test runner's output under `--nocapture`, so `grep '^CHECK'` (used in
   `.github/workflows/ci.yml`'s Structured results step and in past log entries) can miss one. Turn it into
   something a test enforces: print each line starting with a newline, or count with `grep -o` (`docs/STATUS-log.md`,
   2026-11-10). Rung 4's new checks print the newline; the older ones do not, and nothing enforces it yet.
 - Rung 4a, owed (`crates/ui/src/drag.rs`, `crates/layout/src/snap.rs`, `crates/ui/src/view.rs`): drag speed is measured
   only on the sample page at Fit zoom (export canvas: one 60.1 ms frame in 1,595; chip canvas: none over 34 ms); not
-  zoomed in, not on a text-heavy page, not on a desktop card. No autoscroll when a drag reaches the canvas edge. A
-  group resized past its opposite side flips as a box but its contents are not mirrored. Several objects selected on
+  zoomed in, not on a text-heavy page, not on a desktop card. No autoscroll when a drag reaches the canvas edge. Several objects selected on
   different layers are dragged together but a locked one among them stays put without saying so. The layers panel's
   drag-and-drop has no pointer test. Alt-drag may be taken by the window manager on the Pi. The status bar's snap
   switches may not fit in a narrow window.
@@ -99,3 +97,14 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   on the chip canvas is one vello layer per object (not measured with many such objects); Shift while drawing a line holds an axis,
   not 15° steps; `--bench-rotate` is timed on one turned rectangle only; the transforms page's chip timing was taken only in the
   window on the Pi, and chip against export pixels for opacity was compared by eye, not by a pixel test.
+- Rung 7a, owed (`crates/model/src/edit.rs`, `crates/layout/src/tree.rs`, `crates/ui/src/editor.rs`, `crates/ui/src/drag.rs`,
+  `crates/ui/src/panels.rs`, `crates/ui/src/view.rs`): a double-click into a group is tested through `Viewer::enter_at`
+  (`egui_kittest` cannot make one), so chris's look is the first real check of it, of Ctrl+click and of the dashed outline
+  round the entered group. A group's box is refitted after an edit inside it, and left as dragged after a resize of the
+  group itself, so it can be bigger than its children until the next edit inside (the record's veto "a stored box that
+  does not refit" is open for that case). The drawing tools put a new object on a layer, never inside the group entered.
+  Dragging a row of the layers tree across the edge of a turned group is refused with a note (the object would move on
+  the page; Group and Ungroup are the way), and objects can be grouped only from one place (the layers, or one group).
+  Shift-picking a group and something inside it in the layers panel keeps only the last of the two. Group opacity on the
+  chip canvas is one vello layer per opacity group, nested ones nested (not measured with many). A loose multiple
+  selection still resizes turned objects approximately. 7b (align and distribute, "mixed" fields) is not started.

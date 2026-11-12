@@ -18,16 +18,16 @@
 //! moved the layers there from the left on 2026-11-10, keeping the left side for a future tools
 //! bar.
 
-use crate::editor::{DropOn, Toward, layer_drop_place, object_drop_place};
+use crate::editor::{DropOn, RowZone, Toward, layer_drop_place, object_drop_place, row_drop_place};
 use crate::view::ViewerUi;
 use egui::{RichText, Role, ScrollArea, Sense, WidgetInfo};
 use quadrule_i18n::Message;
 use quadrule_layout::RhythmPx;
 use quadrule_layout::units::{Axis, UnitContext, format_length, parse_length, trim_number};
 use quadrule_lint::Severity;
-use quadrule_model::edit::Command;
+use quadrule_model::edit::{Command, Place, reframe};
 use quadrule_model::{
-    DashStyle, Document, Fill, FillRole, HConstraint, LineCap, LineRole, Object, ObjectKind,
+    DashStyle, Document, Fill, FillRole, Frame, HConstraint, LineCap, LineRole, Object, ObjectKind,
     POLYGON_SIDES_MAX, POLYGON_SIDES_MIN, Pattern, RhythmOrigin, RhythmResolution,
     STAR_INNER_DEFAULT, STAR_INNER_MAX, STAR_INNER_MIN, Style, TextAlign, Unit, Uuid, VConstraint,
 };
@@ -71,8 +71,8 @@ const ROLES: [(LineRole, &str); 7] = [
 enum Drop {
     /// A layer's row, by index.
     Layer(usize),
-    /// An object's row: its layer and its index in it.
-    Object(usize, usize),
+    /// An object's row, at any depth in the tree (rung 7a).
+    Row(Uuid),
 }
 
 /// What a row of the layers panel carries while it is dragged (rung 4 bbq Q6).
@@ -101,6 +101,7 @@ impl ViewerUi {
                     self.move_selected(Toward::Back);
                 }
             });
+            self.group_buttons(ui);
         });
         ui.separator();
         let Some(doc) = self.viewer.doc().cloned() else {
@@ -144,42 +145,110 @@ impl ViewerUi {
                         }
                     });
                     self.row_drop(ui, &row.response, &doc, Drop::Layer(li));
-                    for (oi, o) in layer.objects.iter().enumerate().rev() {
-                        let row = ui.horizontal(|ui| {
-                            ui.add_space(18.0);
-                            if let Some(v) = self.eye_and_lock(ui, &o.name, o.visible, o.locked) {
-                                let _ = self.viewer.set_object_panel(o.id, |obj| {
-                                    obj.visible = v.0;
-                                    obj.locked = v.1;
-                                });
-                            }
-                            let selected = self.viewer.selection.contains(&o.id);
-                            if let Some(ev) = self.name_cell(
-                                ui,
-                                Renaming::Object(o.id, String::new()),
-                                &o.name,
-                                selected,
-                                false,
-                                Some(LayerDrag::Object(o.id)),
-                            ) {
-                                match ev {
-                                    NameEvent::Click if add => self.viewer.toggle(o.id),
-                                    NameEvent::Click => {
-                                        self.viewer.selection = vec![o.id];
-                                        self.selected_layer = Some(li);
-                                    }
-                                    NameEvent::Renamed(n) => {
-                                        let _ = self
-                                            .viewer
-                                            .set_object_panel(o.id, |obj| obj.name.clone_from(&n));
-                                    }
-                                }
-                            }
-                        });
-                        self.row_drop(ui, &row.response, &doc, Drop::Object(li, oi));
+                    self.object_rows(ui, &doc, &layer.objects, li, 0, add);
+                }
+            });
+    }
+
+    /// The Group and Ungroup buttons (Ctrl+G, Ctrl+Shift+G), here and in the Arrange tab (rung 7a
+    /// bbq, "Making and breaking").
+    pub(crate) fn group_buttons(&mut self, ui: &mut egui::Ui) {
+        let editable = self.viewer.editable_selection();
+        let any_group = editable.iter().any(|id| {
+            self.viewer
+                .doc()
+                .and_then(|d| d.object(*id))
+                .is_some_and(Object::is_group)
+        });
+        if ui
+            .add_enabled(editable.len() >= 2, egui::Button::new(self.t("app-group")))
+            .clicked()
+        {
+            let _ = self.viewer.group_selection();
+        }
+        if ui
+            .add_enabled(any_group, egui::Button::new(self.t("app-ungroup")))
+            .clicked()
+        {
+            let _ = self.viewer.ungroup_selection();
+        }
+    }
+
+    /// The rows of one list of objects, top of the stack first; a group's row has a fold arrow
+    /// and, unless folded, its children under it, one step in (rung 7a bbq, "Layers tree").
+    fn object_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        doc: &Document,
+        objs: &[Object],
+        li: usize,
+        depth: usize,
+        add: bool,
+    ) {
+        for o in objs.iter().rev() {
+            let row = ui.horizontal(|ui| {
+                ui.add_space(18.0 + 14.0 * depth as f32);
+                if o.is_group() {
+                    let folded = self.folded.contains(&o.id);
+                    let name = self
+                        .strings
+                        .format(&Message::new("app-fold-item").text("name", &o.name));
+                    // The fold arrow: a triangle that points right when folded, down when open.
+                    let arrow = ui.add(
+                        egui::Button::new("")
+                            .min_size(egui::vec2(16.0, 16.0))
+                            .frame(false),
+                    );
+                    arrow
+                        .widget_info(|| WidgetInfo::selected(Role::CheckBox, true, !folded, &name));
+                    egui::collapsing_header::paint_default_icon(
+                        ui,
+                        if folded { 0.0 } else { 1.0 },
+                        &arrow,
+                    );
+                    if arrow.on_hover_text(&name).clicked() {
+                        if folded {
+                            self.folded.remove(&o.id);
+                        } else {
+                            self.folded.insert(o.id);
+                        }
+                    }
+                } else {
+                    ui.add_space(20.0);
+                }
+                if let Some(v) = self.eye_and_lock(ui, &o.name, o.visible, o.locked) {
+                    let _ = self.viewer.set_object_panel(o.id, |obj| {
+                        obj.visible = v.0;
+                        obj.locked = v.1;
+                    });
+                }
+                let selected = self.viewer.selection.contains(&o.id);
+                if let Some(ev) = self.name_cell(
+                    ui,
+                    Renaming::Object(o.id, String::new()),
+                    &o.name,
+                    selected,
+                    o.is_group(),
+                    Some(LayerDrag::Object(o.id)),
+                ) {
+                    match ev {
+                        NameEvent::Click => {
+                            self.viewer.select_row(o.id, add);
+                            self.selected_layer = Some(li);
+                        }
+                        NameEvent::Renamed(n) => {
+                            let _ = self
+                                .viewer
+                                .set_object_panel(o.id, |obj| obj.name.clone_from(&n));
+                        }
                     }
                 }
             });
+            self.row_drop(ui, &row.response, doc, Drop::Row(o.id));
+            if o.is_group() && !self.folded.contains(&o.id) {
+                self.object_rows(ui, doc, o.children(), li, depth + 1, add);
+            }
+        }
     }
 
     /// A row of the layers panel as a place to drop: draws where the dragged row would land and,
@@ -189,37 +258,56 @@ impl ViewerUi {
         let Some(payload) = row.dnd_hover_payload::<LayerDrag>() else {
             return;
         };
-        let above = ui
+        let frac = ui
             .input(|i| i.pointer.latest_pos())
-            .is_some_and(|p| p.y < row.rect.center().y);
+            .map_or(0.0, |p| (p.y - row.rect.top()) / row.rect.height().max(1.0));
+        let above = frac < 0.5;
+        // On a group's row the middle is "inside it"; the edges are above and below.
+        let group_row = matches!(at, Drop::Row(id) if doc.object(id).is_some_and(Object::is_group));
+        let zone = if group_row && (0.25..0.75).contains(&frac) {
+            RowZone::Inside
+        } else if above {
+            RowZone::Above
+        } else {
+            RowZone::Below
+        };
         // Where it would go: None when the row is no place for this payload.
         enum Plan {
-            Object(Uuid, usize, usize),
+            Object(Uuid, Place, usize),
             Layer(usize, usize),
         }
         let plan = match (*payload, at) {
-            (LayerDrag::Object(id), Drop::Object(layer, index)) => {
-                object_drop_place(doc, id, DropOn::Object { layer, index }, above)
-                    .map(|(l, i)| Plan::Object(id, l, i))
+            (LayerDrag::Object(id), Drop::Row(row_id)) => {
+                row_drop_place(doc, id, row_id, zone).map(|(p, i)| Plan::Object(id, p, i))
             }
             (LayerDrag::Object(id), Drop::Layer(layer)) => {
                 object_drop_place(doc, id, DropOn::LayerTop(layer), above)
-                    .map(|(l, i)| Plan::Object(id, l, i))
+                    .map(|(l, i)| Plan::Object(id, Place::Layer(l), i))
+                    .or_else(|| {
+                        // From inside a group to the top of a layer.
+                        let n = doc.layers.get(layer)?.objects.len();
+                        doc.locate(id)?;
+                        Some(Plan::Object(id, Place::Layer(layer), n))
+                    })
             }
             (LayerDrag::Layer(from), Drop::Layer(target)) => {
                 Some(Plan::Layer(from, layer_drop_place(from, target, above)))
             }
-            (LayerDrag::Layer(_), Drop::Object(..)) => None,
+            (LayerDrag::Layer(_), Drop::Row(_)) => None,
         };
         if plan.is_none() {
             return;
         }
         // The line where it lands: the row's top edge for above, bottom for below; a drop on a
-        // layer's own row goes inside it, so that row is boxed instead.
+        // layer's own row, or the middle of a group's, goes inside it, so that row is boxed.
         let accent = ui.visuals().selection.stroke.color;
         let stroke = egui::Stroke::new(2.0, accent);
         match (*payload, at) {
             (LayerDrag::Object(_), Drop::Layer(_)) => {
+                ui.painter()
+                    .rect_stroke(row.rect, 2.0, stroke, egui::StrokeKind::Inside);
+            }
+            (LayerDrag::Object(_), Drop::Row(_)) if zone == RowZone::Inside => {
                 ui.painter()
                     .rect_stroke(row.rect, 2.0, stroke, egui::StrokeKind::Inside);
             }
@@ -234,8 +322,8 @@ impl ViewerUi {
         }
         if row.dnd_release_payload::<LayerDrag>().is_some() {
             match plan {
-                Some(Plan::Object(id, layer, index)) => {
-                    let _ = self.viewer.move_object_to(id, layer, index);
+                Some(Plan::Object(id, place, index)) => {
+                    let _ = self.viewer.move_object_into(id, &place, index);
                 }
                 Some(Plan::Layer(from, to)) => {
                     // The selected layer goes with its row.
@@ -689,18 +777,36 @@ impl ViewerUi {
         };
         let enabled = !self.viewer.editable_selection().is_empty();
         let f = o.frame;
+        ui.horizontal(|ui| self.group_buttons(ui));
         egui::Grid::new("arrange-grid")
             .num_columns(2)
             .show(ui, |ui| {
                 type Set = fn(&mut Object, f64);
                 let rows: [(&str, &str, f64, &UnitContext, Set); 4] = [
-                    ("arrange-x", "app-x", f.x_mm, &cx, |o, v| o.frame.x_mm = v),
-                    ("arrange-y", "app-y", f.y_mm, &cy, |o, v| o.frame.y_mm = v),
+                    // A group's contents follow its frame (`reframe`).
+                    ("arrange-x", "app-x", f.x_mm, &cx, |o, v| {
+                        reframe(o, Frame { x_mm: v, ..o.frame })
+                    }),
+                    ("arrange-y", "app-y", f.y_mm, &cy, |o, v| {
+                        reframe(o, Frame { y_mm: v, ..o.frame })
+                    }),
                     ("arrange-w", "app-width", f.w_mm, &cx, |o, v| {
-                        o.frame.w_mm = v.max(0.0)
+                        reframe(
+                            o,
+                            Frame {
+                                w_mm: v.max(0.0),
+                                ..o.frame
+                            },
+                        )
                     }),
                     ("arrange-h", "app-height", f.h_mm, &cy, |o, v| {
-                        o.frame.h_mm = v.max(0.0)
+                        reframe(
+                            o,
+                            Frame {
+                                h_mm: v.max(0.0),
+                                ..o.frame
+                            },
+                        )
                     }),
                 ];
                 for (key, id, v, ctx, set) in rows {
@@ -733,6 +839,17 @@ impl ViewerUi {
                         });
                     }
                     ui.end_row();
+                } else if o.is_group() {
+                    // A group with a text box or a pattern region in it does not turn (rung 7a bbq,
+                    // Q2): the field is there, greyed, with the reason.
+                    let label = ui.label(self.t("app-rotation"));
+                    let mut deg = 0.0;
+                    ui.add_enabled(false, egui::DragValue::new(&mut deg).suffix("°"))
+                        .labelled_by(label.id);
+                    ui.end_row();
+                    ui.label("");
+                    ui.label(RichText::new(self.t("app-rotation-note")).small());
+                    ui.end_row();
                 }
             });
     }
@@ -745,6 +862,15 @@ impl ViewerUi {
             return;
         };
         let enabled = !self.viewer.editable_selection().is_empty();
+        // A group has opacity and nothing else: its stroke and fill are its children's (rung 7a).
+        if o.is_group() {
+            ui.add_enabled_ui(enabled, |ui| {
+                egui::Grid::new("style-grid").num_columns(2).show(ui, |ui| {
+                    self.opacity_row(ui, &o);
+                });
+            });
+            return;
+        }
         let shape = o.kind.is_shape();
         // Dash and cap are for anything drawn as a stroke: lines and the shapes.
         let stroked = shape || matches!(o.kind, ObjectKind::Line(_));
@@ -848,24 +974,7 @@ impl ViewerUi {
                     self.dash_rows(ui, &o, &cx, enabled);
                 }
 
-                // Opacity, 0 to 100 percent, for every kind; the export is flattened onto what lies
-                // beneath (rung 6b).
-                let label = ui.label(self.t("app-opacity"));
-                let mut pct = o.opacity();
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut pct)
-                            .range(quadrule_model::OPACITY_MIN..=quadrule_model::OPACITY_MAX)
-                            .suffix(" %"),
-                    )
-                    .labelled_by(label.id)
-                    .changed()
-                {
-                    let _ = self.viewer.edit_selected(Some("style-opacity"), |x| {
-                        x.opacity_pct = pct;
-                    });
-                }
-                ui.end_row();
+                self.opacity_row(ui, &o);
 
                 if let ObjectKind::Pattern(pr) = &o.kind {
                     let label = ui.label(self.t("app-pattern"));
@@ -895,6 +1004,27 @@ impl ViewerUi {
     }
 
     /// The fill: none, a role (each device gives it a gray) or a gray of its own.
+    /// The Opacity row: 0 to 100 percent, for every kind; the export is flattened onto what lies
+    /// beneath (rung 6b). A group fades as one (rung 7a bbq, Q7).
+    fn opacity_row(&mut self, ui: &mut egui::Ui, o: &Object) {
+        let label = ui.label(self.t("app-opacity"));
+        let mut pct = o.opacity();
+        if ui
+            .add(
+                egui::DragValue::new(&mut pct)
+                    .range(quadrule_model::OPACITY_MIN..=quadrule_model::OPACITY_MAX)
+                    .suffix(" %"),
+            )
+            .labelled_by(label.id)
+            .changed()
+        {
+            let _ = self.viewer.edit_selected(Some("style-opacity"), |x| {
+                x.opacity_pct = pct;
+            });
+        }
+        ui.end_row();
+    }
+
     fn fill_rows(&mut self, ui: &mut egui::Ui, o: &Object, _enabled: bool) {
         let label = ui.label(self.t("app-fill"));
         let was = FillChoice::of(o.fill);
@@ -1240,6 +1370,20 @@ impl ViewerUi {
             return;
         };
         let enabled = !self.viewer.editable_selection().is_empty();
+        // Inside a group the rules work against the group's box, not the page (rung 7a bbq).
+        if let Some(g) = self
+            .viewer
+            .doc()
+            .and_then(|d| d.parent_of(o.id).and_then(|g| d.object(g)))
+        {
+            ui.label(
+                RichText::new(
+                    self.strings
+                        .format(&Message::new("app-against-group").text("name", &g.name)),
+                )
+                .small(),
+            );
+        }
         ui.add_enabled_ui(enabled, |ui| {
             egui::Grid::new("constraints-grid")
                 .num_columns(2)

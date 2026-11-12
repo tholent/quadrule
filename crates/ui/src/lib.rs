@@ -41,7 +41,7 @@ pub use drag::{
     turned_angle,
 };
 pub use draw::{Draw, DrawKind, NewNames, new_polygon};
-pub use editor::{DropOn, Toward, layer_drop_place, object_drop_place};
+pub use editor::{DropOn, RowZone, Toward, layer_drop_place, object_drop_place, row_drop_place};
 pub use panels::Tab;
 pub use recovery::{Autosave, Recovered, Recovery};
 pub use tools::Tool;
