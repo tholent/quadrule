@@ -1234,3 +1234,18 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   the Align-to switching; "mixed" fields in the window (typing applies to all); the ten buttons named and clicking one.
 - **Not touched**: every export byte. `git diff 57f2896 -- crates/render/tests/golden/SHA256SUMS crates/render/tests/fixtures/`
   is empty (7b only moves objects). Debt: the new "Rung 7b, owed" line; the rung 3 "mixed" item is paid and removed.
+
+## 2026-11-12 — rung 7b judged and approved; v0.7.1; rung 7 done (lead: Opus 5.5, `CLAUDE_EFFORT=high`)
+
+- `v0.7.0` release: run 43157146501, every job success (four package builds and "Draft, attach, publish"); `gh release
+  view v0.7.0` → `draft=false prerelease=true assets=7`. The first real use of the tag-push release.
+- Meter readings from chris: 63 % at 04:49 UTC (after 7a), 64 % at 19:42 UTC (after 7b), logged with `spend-ledger.py
+  reading`. The share (10 points) was reached in flight: no builder was started after 7b.
+- 7b built by one Sonnet 5.5 high subagent (212,367 tokens, 62 tool uses), its entry above; commits `c4405a0` to `b80b218`.
+- Judged by the lead: `make check-all` → `TESTS scope=workspace checks=312 check_fail=0 passed=292 failed=0 status=ok`;
+  `git diff 57f2896 -- crates/render/tests/golden/SHA256SUMS crates/render/tests/fixtures/` → empty; `make build-proof` →
+  `BUILD head=b80b218 dirty=no`; drag bench on the groups page, release build, 90th percentile: export `p90_ms=27.3`, chip
+  `p90_ms=40.6`, both `result=pass`.
+- chris: "approved. the meter is at 64%". Workspace bumped to `0.7.1`; notes `docs/arcs/v1/release-notes/v0.7.1.md`; tag
+  `v0.7.1` pushed. The spec gains a dated note under §5.2 recording the Figma groups ruling. Board re-planned; next lead's
+  prompt `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`; calibration row in `docs/budget-calibration.md`.

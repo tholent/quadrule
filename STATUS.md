@@ -112,6 +112,14 @@ The project's live state. Update it when work lands. Every claim cites at least 
   golden page per device; the six old sums unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, groups
   page, 90th percentile: export about 27 ms, chip about 42 ms, against 50 ms (`docs/STATUS-log.md`). Try it:
   `cargo run --release -p quadrule-app -- --groups-page`.
+- Rung 7b, align and distribute, is done, approved by chris 2026-11-12 and tagged `v0.7.1`, so rung 7 is done (record
+  `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): in the Arrange tab, six align and four distribute buttons (by gaps
+  and by centres) and an Align to choice (Selection, Page, Margins; Page with one object picked, Selection with several,
+  each remembering the user's pick); results land on whole device pixels when the pixel snap is on; turned objects and
+  groups align by their turned box; locked objects stay put; one undo step each. With several objects selected, X, Y,
+  Width, Height and Rotation read "mixed" where they differ (`crates/layout/src/align.rs`, `crates/ui/src/arrange.rs`,
+  `crates/ui/src/panels.rs`). No export change: all eight golden sums unchanged
+  (`crates/render/tests/golden/SHA256SUMS`).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with the seven rules that need no calibration (`crates/lint/src/lib.rs`); `cargo xtask lint`.
@@ -119,8 +127,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/format/fuzz/fuzz_targets/open_quad.rs`).
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
   (`crates/xtask/tests/license_headers.rs`).
-- Checks, 2026-11-10 on the Pi: `make check-all` → `TESTS scope=workspace checks=255 check_fail=0 passed=239 failed=0
-  status=ok` (after rung 6b); fmt and clippy `-D warnings` clean
+- Checks, 2026-11-12 on the Pi: `make check-all` → `TESTS scope=workspace checks=312 check_fail=0 passed=292 failed=0
+  status=ok` (after rung 7b); fmt and clippy `-D warnings` clean
   (`Makefile`). CI for rung 5: see `docs/STATUS-log.md`
   (`.github/workflows/ci.yml`).
 - Release packages: `.github/workflows/release.yml` builds an AppImage and a `.deb` (Linux x86-64 and ARM64), a
@@ -150,8 +158,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   leads, Sonnet 5.5 high builds). Rung 6, shapes, is planned (bbq, 8 questions, `docs/bbq/2026-11-10-rung-6-shapes.md`):
   6a all the shapes with fill (Shade and Block roles), dashes and caps; 6b rotation, lines any way, opacity. **Rung 6 is
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
-  planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): 7a groups, done (`v0.7.0`); next
-  7b, align and distribute (`v0.7.1`).
+  planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
+  align and distribute `v0.7.1`). Next: rung 8, several devices; the next lead's prompt is
+  `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`.
 - Waits on chris (early, alongside rungs 6–7): the clean gray levels on both devices (the new grays sheet,
   `docs/calibration.md`), and a landscape check on a
   device plus landscape toolbar screenshots (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
@@ -213,3 +222,6 @@ debt in `docs/STATUS-debt.md`, each session in `docs/STATUS-log.md` (dated, newe
 month when it grows), and finished entries, moved word for word, in `docs/STATUS-archive.md`. Every bullet under Now, Next
 and Known debt cites at least one file that exists. Keep this file under 300 lines; the project-prep
 skill's `scripts/status-check.py` checks both.
+- 2026-11-12: rung 7b built (Sonnet 5.5, high): align and distribute, "mixed" fields; approved by chris; `v0.7.1`
+  tagged; rung 7 done; board re-planned; rung 8 prompt written (`docs/STATUS-log.md`,
+  `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`).

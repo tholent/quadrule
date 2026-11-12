@@ -217,6 +217,8 @@ All objects share: `id` (UUID), `name`, `transform`, `constraints`, `visible`, `
 
 **Pattern regions** are the backbone of grid-style templates. An isometric sheet is one object with a spacing value, not hundreds of lines. They clip to their bounds and support "every Nth line uses a different role" (e.g. a stronger line every 5th grid line). By default a pattern region's spacing is **bound to the document rhythm** (§6.3), so changing the rhythm updates every grid at once. Unbinding lets a region use its own spacing.
 
+> Amended 2026-11-12, chris at the rung 7a look: "I approve the build, but would like to change question #1 to reflect what figma does" (record `docs/bbq/2026-11-11-rung-7-groups-and-align.md`, Q3 amendment). A group is a transform container only, not a constraint container: each object inside keeps its own constraints against the page, `%` inside a group is of the page, and resizing a group by hand scales what is inside.
+
 > Amended 2026-11-10, chris ratified ADR-014 (`docs/decisions/ADR-014-pattern-edges.md`): pattern regions do not clip. Each line or dot whose centre is inside the region is drawn whole, reaching at most half its stroke past the edge.
 
 ### 5.3 Units and coordinates

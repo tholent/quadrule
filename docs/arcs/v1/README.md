@@ -20,8 +20,8 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 | Rung | What it holds | Size | State |
 |---|---|---|---|
 | 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity. Split (bbq Q1, `docs/bbq/2026-11-10-rung-6-shapes.md`): **6a** all the shapes, fill (Shade and Block roles), dashes and caps; **6b** rotation, lines any way, opacity | large: 6a + 6b | done: 6a `v0.6.0`, 6b `v0.6.1`, both approved by chris 2026-11-11 |
-| 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3); how a group turns (6b debt) | medium | 7a (groups) done, approved by chris 2026-11-12, `v0.7.0`; 7b (align and distribute) next (record `docs/bbq/2026-11-11-rung-7-groups-and-align.md`) |
-| 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (needs chris's landscape check, below) | large | — |
+| 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3); how a group turns (6b debt) | medium | done: 7a `v0.7.0`, 7b `v0.7.1`, both approved by chris 2026-11-12 (7a with the Figma constraints change) |
+| 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (needs chris's landscape check, below) | large | next: `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md` |
 | 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | — |
 | 10 | Repeat tool: linear and grid, pitch or gap, fill to bounds, alternation, Expand (§6.4) | large | — |
 | 11 | Text and fonts: the bundled set with its OFL texts, system fonts on all three systems, the font picker, fixed-size boxes and L08, paragraph spacing, vertical alignment, baselines on the rhythm; monochrome emoji and its picker | large | — |
@@ -95,3 +95,12 @@ above (which chris approves before it counts).
   before they cross it; (2) GitHub releases need chris's hand while this session's permission check refuses `gh
   release create`; (3) rotation in groups is open and lands in rung 7's bbq. No change to the rungs is proposed; the
   rung 7 row now names the group-turn question. Next lead's prompt: `docs/arcs/v1/rung-7-PROMPT-2026-11-11.md`.
+- 2026-11-12, after rung 7: rung 7 took one lead session and three builder subagents (7a 0.49M tokens, its look change
+  0.21M, 7b 0.21M) and moved the weekly meter 9 points (55 → 64 %, chris's readings), almost all of its 10-point share;
+  the fitted K so far is 12.2M tokens per point over two pairs (`docs/budget-calibration.md`). Lessons: (1) a ruled
+  answer can turn at the look: chris changed Q3 to Figma's groups (see-through to constraints), so the spec's
+  "constraint container" (§5.2) no longer holds and rung 8's per-device work builds on the Figma rule; (2) the chip
+  canvas sits at 40–42 ms on the groups page against 50 ms, the heaviest page yet after the shapes page; (3) at
+  rung 7's rate, rung 8 (large) is likely 15–20 points, more than this week has left before its hard stop, so it
+  should start after the Saturday reset or split 8a/8b. No change to the rungs is proposed. Next lead's prompt:
+  `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`.
