@@ -102,13 +102,15 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: export canvas about 25 ms, chip canvas
   34.9–36.7 ms on the transforms page, against 50 ms (`docs/STATUS-log.md`). Try it: `cargo run --release -p
   quadrule-app -- --transforms-page`.
-- Rung 7a, groups, is built and waits for chris's look (record `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): Ctrl+G
+- Rung 7a, groups, is done, approved by chris 2026-11-12 with one change (groups see-through to constraints, as in
+  Figma; Q3 amended, built) and tagged `v0.7.0` (record `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): Ctrl+G
   and Ctrl+Shift+G, nesting, click picks the outermost group, double-click enters, Escape leaves, Ctrl+click picks the
-  innermost; children follow their constraints against the group's box; a group keeps its own angle (not with text or a
+  innermost; children keep their own constraints against the page, so grouping changes no pixel on either device, and
+  resizing a group scales what is inside; a group keeps its own angle (not with text or a
   pattern inside); a group fades as one; the layers panel is a tree; file format 0.7.0, 0.6 files opening with the same
   export bytes (`crates/render/tests/fixtures/v0.6/`, `crates/layout/src/tree.rs`, `crates/ui/src/editor.rs`). A new
   golden page per device; the six old sums unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, groups
-  page, 90th percentile: export about 26 ms, chip 41–42 ms, against 50 ms (`docs/STATUS-log.md`). Try it:
+  page, 90th percentile: export about 27 ms, chip about 42 ms, against 50 ms (`docs/STATUS-log.md`). Try it:
   `cargo run --release -p quadrule-app -- --groups-page`.
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
@@ -148,8 +150,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   leads, Sonnet 5.5 high builds). Rung 6, shapes, is planned (bbq, 8 questions, `docs/bbq/2026-11-10-rung-6-shapes.md`):
   6a all the shapes with fill (Shade and Block roles), dashes and caps; 6b rotation, lines any way, opacity. **Rung 6 is
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
-  planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): 7a groups, built, waits for chris's
-  look; then 7b, align and distribute.
+  planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): 7a groups, done (`v0.7.0`); next
+  7b, align and distribute (`v0.7.1`).
 - Waits on chris (early, alongside rungs 6–7): the clean gray levels on both devices (the new grays sheet,
   `docs/calibration.md`), and a landscape check on a
   device plus landscape toolbar screenshots (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
@@ -201,7 +203,8 @@ Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
 - 2026-11-11: rung 6b approved with one change (handles turn with the object), built; `v0.6.1` tagged; rung 6 done;
   board re-planned; rung 7 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-7-PROMPT-2026-11-11.md`).
 - 2026-11-12: rung 7 kickoff: budget 10 points; planned (bbq, 8 questions), split 7a/7b; 7a built (Sonnet 5.5, high):
-  groups, format 0.7.0; measured on the Pi; waits for chris's look (`docs/STATUS-log.md`).
+  groups, format 0.7.0; measured on the Pi; approved with the Figma constraints change, built; `v0.7.0` tagged
+  (`docs/STATUS-log.md`).
 
 ## How this file is kept
 

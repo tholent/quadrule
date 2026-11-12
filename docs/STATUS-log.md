@@ -1189,3 +1189,16 @@ the record's Q3 is amended). Built on `main`, not pushed, version unchanged (0.6
   every H and V rule, grouped, ungrouped, in two groups, nested: 0 px on both devices). Layout, model and ui group tests changed to
   the new rule (not deleted); new ui tests: a group dragged and resized with the Nomad on screen, a turned group with a turned child resized.
 - **Docs**: `README.md` and `DEVELOPMENT.md` describe the new rule; the Rung 7a debt line rewritten.
+
+## 2026-11-12 — rung 7a approved with one change, built; v0.7.0 (lead: Opus 5.5, `CLAUDE_EFFORT=high`)
+
+- chris at the 7a look, word for word: "I approve the build, but would like to change question #1 to reflect what figma
+  does". Q3 amended in the record (`544f9bb`): groups are see-through to constraints, as in Figma.
+- Built by one Sonnet 5.5 high subagent (214,193 tokens, 76 tool uses), its entry above; commits `eab048d` to `62cc6ca`.
+- Judged by the lead: `make check-all` → `TESTS scope=workspace checks=299 check_fail=0 passed=278 failed=0 status=ok`
+  (the builder's run printed `checks=298`; the `CHECK`-line count is the known debt about lines sharing the runner's
+  output); `git diff 544f9bb -- crates/render/tests/golden/SHA256SUMS crates/render/tests/fixtures/` → only the groups
+  Nomad line, `2963ff3f…` → `e364516f…`; bench on the Pi, release build, groups page, 90th percentile: chip `p90_ms=42.5`,
+  export `p90_ms=27.5`, both `result=pass`.
+- chris, after seeing the window again: "approved". Workspace bumped to `0.7.0`; release notes
+  `docs/arcs/v1/release-notes/v0.7.0.md`; tag `v0.7.0` pushed, so the release workflow drafts, attaches and publishes.
