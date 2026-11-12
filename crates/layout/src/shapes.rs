@@ -258,12 +258,23 @@ pub fn line_items(
 /// A shape's items: its fill, then its stroke on top. `frame` is (left, top, right, bottom) in
 /// device pixels, already resolved for the profile.
 pub fn shape_items(o: &Object, frame: (f64, f64, f64, f64), p: &Profile) -> Vec<Item> {
+    shape_items_turned(o, frame, o.rotation(), p)
+}
+
+/// [`shape_items`] with the angle given: an object in a turned group is drawn at its own angle
+/// plus the group's (rung 7a).
+pub fn shape_items_turned(
+    o: &Object,
+    frame: (f64, f64, f64, f64),
+    rotation_deg: f64,
+    p: &Profile,
+) -> Vec<Item> {
     let (mut fx0, mut fy0) = (frame.0.min(frame.2), frame.1.min(frame.3));
     let (mut fx1, mut fy1) = (frame.0.max(frame.2), frame.1.max(frame.3));
     // Format 0.6: a rotation turns the shape about the frame's centre. A rectangle or an ellipse
     // turned by a whole number of quarter turns is the same shape, so it is drawn as an unrotated
     // one in the turned box (sides swapped for 90 and 270): straight edges stay pixel-exact.
-    let mut rot = o.rotation();
+    let mut rot = rotation_deg;
     if !matches!(o.kind, ObjectKind::Polygon(_)) && crate::rotate::is_quarter_turn(rot) {
         if rot == 90.0 || rot == 270.0 {
             let (cx, cy) = ((fx0 + fx1) / 2.0, (fy0 + fy1) / 2.0);

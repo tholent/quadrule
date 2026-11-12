@@ -20,7 +20,7 @@
 //! {"quadrule-clipboard": 1, "objects": [ ...objects... ]}
 //! ```
 //!
-//! Objects are written in stacking order (bottom first). Text outlines are not copied: they are
+//! Objects are written in stacking order (bottom first); a group is written with its children. Text outlines are not copied: they are
 //! made again for each profile when a document is saved, as Save does (napkin §7.3).
 
 use crate::{Document, Object, Uuid};
@@ -49,12 +49,11 @@ struct In {
 /// The clipboard text for `ids`: their objects in stacking order, or `None` when none of the ids
 /// is in the document.
 pub fn to_text(doc: &Document, ids: &[Uuid]) -> Option<String> {
-    let mut found: Vec<(usize, usize)> = ids.iter().filter_map(|&id| doc.find(id)).collect();
-    found.sort_unstable();
-    found.dedup();
-    let objects: Vec<Object> = found
+    // A group is copied whole, with everything inside it; an object whose group is also picked is
+    // left to the group (rung 7a).
+    let objects: Vec<Object> = crate::edit::outermost(doc, ids)
         .into_iter()
-        .map(|(l, o)| doc.layers[l].objects[o].clone())
+        .filter_map(|(loc, _)| doc.at(&loc).cloned())
         .collect();
     if objects.is_empty() {
         return None;

@@ -25,9 +25,9 @@
 #![forbid(unsafe_code)]
 
 use quadrule_i18n::{Arg, Message};
-use quadrule_layout::{RhythmPx, resolve_frame};
+use quadrule_layout::{RhythmPx, Shape, placed_objects};
 use quadrule_model::outlines::ProfileOutlines;
-use quadrule_model::{Document, Object, ObjectKind, RhythmResolution, Style, Uuid};
+use quadrule_model::{Document, ObjectKind, RhythmResolution, Style, Uuid};
 use quadrule_profiles::Profile;
 
 /// How much a finding matters (napkin §8.3).
@@ -181,7 +181,6 @@ pub fn lint_with(
             area: area.map(px_rect),
         })
     };
-    let (from, to) = (primary.page_mm(), target.page_mm());
     let rhythm = RhythmPx::new(doc, target);
     let (pw, ph) = (target.width_px as f64, target.height_px as f64);
 
@@ -242,24 +241,32 @@ pub fn lint_with(
         }
     }
 
-    for o in doc
-        .layers
-        .iter()
-        .filter(|l| l.visible)
-        .flat_map(|l| l.objects.iter())
-        .filter(|o| o.visible)
-    {
-        let f = resolve_frame(o.frame, o.constraints, from, to);
+    // Every leaf object at its resolved, turned place (rung 7a bbq, Defaulted "Lint"): a group has
+    // no rules of its own, and what it holds is judged where it falls on the page. The places come
+    // from layout, the one copy of the maths.
+    for placed in placed_objects(doc, primary, target, outlines) {
+        let node = placed.node;
+        let Some(o) = doc.object(placed.id) else {
+            continue;
+        };
+        if node.group || node.hidden {
+            continue;
+        }
+        let f = node.frame;
         let px = |mm: f64| target.mm_to_px(mm);
-        let b = bounds(o, f, target, outlines);
-        let rotation = o.rotation();
+        let rotation = node.angle;
+        let half_stroke = quadrule_layout::stroke(o.style, target).0 as f64 / 2.0;
+        let b = bounds(
+            &placed.shape,
+            matches!(o.kind, ObjectKind::Text(_)),
+            half_stroke,
+        );
         let frame_px = (
             px(f.x_mm).min(px(f.x_mm + f.w_mm)),
             px(f.y_mm).min(px(f.y_mm + f.h_mm)),
             px(f.x_mm).max(px(f.x_mm + f.w_mm)),
             px(f.y_mm).max(px(f.y_mm + f.h_mm)),
         );
-        let half_stroke = quadrule_layout::stroke(o.style, target).0 as f64 / 2.0;
         let turned = rotation != 0.0 && o.kind.is_shape();
         let at = |id| Message::new(id).text("name", o.name.clone());
         let mut push = |rule, severity, message| push(rule, severity, Some(o.id), Some(b), message);
@@ -268,7 +275,7 @@ pub fn lint_with(
         // Q8). L02 asks only about straight, unrotated edges: a curve or a slanted edge is soft by
         // design (Q2), so a stroke width that is not whole pixels does not matter there.
         let stroked = !matches!(o.kind, ObjectKind::Text(_));
-        let hard_edges = quadrule_layout::shapes::has_axis_aligned_edge(&o.kind, o.rotation());
+        let hard_edges = quadrule_layout::shapes::has_axis_aligned_edge(&o.kind, rotation);
         if stroked && let Style::Custom { width_mm, .. } = o.style {
             let exact = px(width_mm);
             if exact < 1.0 {
@@ -301,7 +308,7 @@ pub fn lint_with(
                     px(f.y_mm + f.h_mm),
                 ),
                 line.direction,
-                o.rotation(),
+                rotation,
             );
             if (x1 - x0).abs() > 1e-6 && (y1 - y0).abs() > 1e-6 {
                 push("L02", Severity::Info, at("lint-l02-diagonal"));
@@ -411,51 +418,19 @@ fn zone_name(name: &str) -> Message {
     }
 }
 
-/// An object's box on `target`, in pixels, including half its stroke.
-fn bounds(
-    o: &Object,
-    f: quadrule_model::Frame,
-    target: &Profile,
-    outlines: &ProfileOutlines,
-) -> Bounds {
-    let px = |mm: f64| target.mm_to_px(mm);
-    let (x0, y0, x1, y1) = (
-        px(f.x_mm),
-        px(f.y_mm),
-        px(f.x_mm + f.w_mm),
-        px(f.y_mm + f.h_mm),
-    );
-    match &o.kind {
-        ObjectKind::Text(_) => {
-            let h = outlines
-                .text(o.id)
-                .map(|t| px(t.height_mm as f64))
-                .unwrap_or(y1 - y0);
-            (x0, y0, x1, y0 + h)
-        }
-        kind => {
-            let half = quadrule_layout::stroke(o.style, target).0 as f64 / 2.0;
-            // The box round the turned corners (a line: round its two ends, which point either
-            // way); an unrotated box is just the frame.
-            let (bx0, by0, bx1, by1) = match kind {
-                ObjectKind::Line(line) => {
-                    let (a, b) = quadrule_layout::rotate::rotated_line_ends(
-                        (x0, y0, x1, y1),
-                        line.direction,
-                        o.rotation(),
-                    );
-                    quadrule_layout::rotate::bounds_of(&[a, b])
-                }
-                _ if o.rotation() != 0.0 => {
-                    let r = (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1));
-                    quadrule_layout::rotate::bounds_of(&quadrule_layout::rotate::rotated_corners(
-                        r,
-                        o.rotation(),
-                    ))
-                }
-                _ => (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1)),
-            };
-            (bx0 - half, by0 - half, bx1 + half, by1 + half)
-        }
+/// An object's box in pixels, from its placed shape: including half its stroke, except a text
+/// box, which has none.
+fn bounds(shape: &Shape, text: bool, half_stroke: f64) -> Bounds {
+    let (x0, y0, x1, y1) = shape.bounds();
+    // A line's bounds already hold half its stroke.
+    if text || matches!(shape, Shape::Segment { .. }) {
+        (x0, y0, x1, y1)
+    } else {
+        (
+            x0 - half_stroke,
+            y0 - half_stroke,
+            x1 + half_stroke,
+            y1 + half_stroke,
+        )
     }
 }

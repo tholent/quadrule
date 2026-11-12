@@ -30,6 +30,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.3.0", "0.4.0", v0_3_to_v0_4),
     ("0.4.0", "0.5.0", v0_4_to_v0_5),
     ("0.5.0", "0.6.0", v0_5_to_v0_6),
+    ("0.6.0", "0.7.0", v0_6_to_v0_7),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -67,6 +68,14 @@ fn v0_4_to_v0_5(_scene: &mut Value) -> Result<(), FormatError> {
 /// so there is nothing to rewrite. A 0.5 build cannot read a 0.6 file that uses them correctly (it
 /// would keep them as unknown fields and draw the object unrotated); it keeps them on a save.
 fn v0_5_to_v0_6(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.7 adds the group kind (`Group`, with its `children`; rung 7a bbq, Defaulted "File format 0.7.0
+/// (7a)"). It is a new choice only: every 0.6 scene is already a valid 0.7 scene, nothing is
+/// rewritten (as 0.1 to 0.2). A 0.6 build cannot read a 0.7 file that holds a group; it reports an
+/// error rather than guessing.
+fn v0_6_to_v0_7(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

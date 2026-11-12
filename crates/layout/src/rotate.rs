@@ -26,33 +26,11 @@ use quadrule_model::LineDir;
 /// A box in device pixels: (left, top, right, bottom).
 pub type Box4 = (f64, f64, f64, f64);
 
-/// The cosine and sine of `deg` degrees, exactly 0, 1 or -1 at multiples of 90.
-pub fn cos_sin_deg(deg: f64) -> (f64, f64) {
-    let d = quadrule_model::normalize_deg(deg);
-    if d == 0.0 {
-        (1.0, 0.0)
-    } else if d == 90.0 {
-        (0.0, 1.0)
-    } else if d == 180.0 {
-        (-1.0, 0.0)
-    } else if d == 270.0 {
-        (0.0, -1.0)
-    } else {
-        let r = d.to_radians();
-        (r.cos(), r.sin())
-    }
-}
+pub use quadrule_model::geom::{cos_sin_deg, rotate_point};
 
 /// Whether `deg` is a multiple of 90 (0, 90, 180 or 270), where edges stay horizontal and vertical.
 pub fn is_quarter_turn(deg: f64) -> bool {
     quadrule_model::normalize_deg(deg).rem_euclid(90.0) == 0.0
-}
-
-/// `p` turned clockwise by `deg` degrees about `c`.
-pub fn rotate_point(p: (f64, f64), c: (f64, f64), deg: f64) -> (f64, f64) {
-    let (cs, sn) = cos_sin_deg(deg);
-    let (dx, dy) = (p.0 - c.0, p.1 - c.1);
-    (c.0 + dx * cs - dy * sn, c.1 + dx * sn + dy * cs)
 }
 
 /// The centre of a box.

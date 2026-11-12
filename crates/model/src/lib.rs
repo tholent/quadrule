@@ -25,6 +25,7 @@
 pub mod blank;
 pub mod clipboard;
 pub mod edit;
+pub mod geom;
 pub mod outlines;
 pub mod sample;
 
@@ -79,9 +80,19 @@ impl Document {
             .collect()
     }
 
-    /// Every object in the document, in drawing order.
+    /// Every object in the document, groups and everything inside them (format 0.7) included, in
+    /// drawing order: a group comes before its children.
     pub fn objects(&self) -> impl Iterator<Item = &Object> {
-        self.layers.iter().flat_map(|l| l.objects.iter())
+        let mut out = Vec::new();
+        for l in &self.layers {
+            collect_objects(&l.objects, &mut out);
+        }
+        out.into_iter()
+    }
+
+    /// Every object that is not a group, in drawing order: what is actually drawn.
+    pub fn leaves(&self) -> impl Iterator<Item = &Object> {
+        self.objects().filter(|o| !o.is_group())
     }
 }
 
@@ -293,6 +304,15 @@ pub struct Object {
     pub extra: Extra,
 }
 
+fn collect_objects<'a>(objs: &'a [Object], out: &mut Vec<&'a Object>) {
+    for o in objs {
+        out.push(o);
+        if let ObjectKind::Group(g) = &o.kind {
+            collect_objects(&g.children, out);
+        }
+    }
+}
+
 fn is_zero(v: &f64) -> bool {
     *v == 0.0
 }
@@ -334,6 +354,45 @@ impl Object {
     /// The opacity that counts, 0 to 100 percent.
     pub fn opacity(&self) -> u8 {
         self.opacity_pct.min(OPACITY_MAX)
+    }
+
+    /// Whether this is a group (format 0.7).
+    pub fn is_group(&self) -> bool {
+        matches!(self.kind, ObjectKind::Group(_))
+    }
+
+    /// A group's children, bottom first; none for any other object.
+    pub fn children(&self) -> &[Object] {
+        match &self.kind {
+            ObjectKind::Group(g) => &g.children,
+            _ => &[],
+        }
+    }
+
+    /// Moves the object by (`dx`, `dy`) mm, and, for a group, everything inside it: children are
+    /// stored in the group's unturned space, which moves with it.
+    pub fn translate(&mut self, dx: f64, dy: f64) {
+        self.frame.x_mm += dx;
+        self.frame.y_mm += dy;
+        if let ObjectKind::Group(g) = &mut self.kind {
+            for c in &mut g.children {
+                c.translate(dx, dy);
+            }
+        }
+    }
+
+    /// The box round the object as it is placed in its parent's space: its frame turned by its
+    /// rotation (a line: round its two ends). A group's box is its frame turned about its centre.
+    pub fn outer_box(&self) -> Frame {
+        let line = match &self.kind {
+            ObjectKind::Line(l) => Some(l.direction),
+            _ => None,
+        };
+        if self.rotation() == 0.0 && line.is_none() {
+            self.frame
+        } else {
+            self.frame.turned_bounds(self.rotation(), line)
+        }
     }
 }
 
@@ -576,6 +635,22 @@ pub enum ObjectKind {
     Ellipse(EllipseShape),
     /// A regular polygon or star, stretched to its frame (format 0.5).
     Polygon(PolygonShape),
+    /// Objects kept together (format 0.7): moved, turned, resized and faded as one.
+    Group(GroupShape),
+}
+
+/// A group (format 0.7, rung 7a bbq, Defaulted "File format 0.7.0 (7a)"): its children, bottom
+/// first. A group uses the object's `frame`, `constraints`, `visible`, `locked`, `rotation_deg`,
+/// `opacity_pct` and `name`; its `style`, `fill`, `dash` and `cap` are ignored. The children's
+/// frames are in page millimetres in the group's unturned space, so grouping moves nothing. The
+/// group's box is refitted to the children's outer box after an edit inside it.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+pub struct GroupShape {
+    /// What is in the group, drawn in order: the first is the bottom one. Groups may nest.
+    pub children: Vec<Object>,
+    /// Fields from newer versions.
+    #[serde(flatten)]
+    pub extra: Extra,
 }
 
 /// A rectangle (format 0.5). Its geometry is the frame.
@@ -657,10 +732,16 @@ impl PolygonShape {
 }
 
 impl ObjectKind {
-    /// Whether the kind can rotate (format 0.6): lines and the shapes. A text box and a pattern
-    /// region cannot, in 6b (rung 6 bbq, "Things I chose" of the 6b builder).
+    /// Whether the kind can rotate (format 0.6): lines, the shapes and groups of such. A text box and
+    /// a pattern region cannot, in 6b (rung 6 bbq, "Things I chose" of the 6b builder).
     pub fn can_rotate(&self) -> bool {
-        !matches!(self, ObjectKind::Text(_) | ObjectKind::Pattern(_))
+        match self {
+            ObjectKind::Text(_) | ObjectKind::Pattern(_) => false,
+            // A group turns only if nothing in it, at any depth, is a text box or a pattern region
+            // (rung 7a bbq, Q2).
+            ObjectKind::Group(g) => g.children.iter().all(|c| c.kind.can_rotate()),
+            _ => true,
+        }
     }
 
     /// Whether this is one of the shapes (rectangle, ellipse, polygon): the kinds that have a fill

@@ -26,13 +26,13 @@ pub mod newpage;
 pub mod rotate;
 pub mod shapes;
 pub mod snap;
+pub mod tree;
 pub mod units;
 
 use kurbo::{BezPath, Point};
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{
-    Constraints, Document, Frame, HConstraint, LineCap, ObjectKind, Pattern, RhythmOrigin,
-    RhythmResolution, Style, Uuid, VConstraint,
+    Document, LineCap, ObjectKind, Pattern, RhythmOrigin, RhythmResolution, Style, Uuid,
 };
 use quadrule_profiles::Profile;
 use quadrule_text::{FontRegistry, Laid, TextError, TextRequest};
@@ -228,87 +228,7 @@ impl From<TextError> for LayoutError {
     }
 }
 
-/// Moves and sizes a frame from the primary page to the target page (napkin §5.4).
-/// Page sizes are (width, height) in mm.
-pub fn resolve_frame(f: Frame, c: Constraints, from: (f64, f64), to: (f64, f64)) -> Frame {
-    let (x_mm, w_mm) = match c.h {
-        HConstraint::Left => axis_keep_start(f.x_mm, f.w_mm),
-        HConstraint::Right => axis_keep_end(f.x_mm, f.w_mm, from.0, to.0),
-        HConstraint::LeftRight => axis_stretch(f.x_mm, f.w_mm, from.0, to.0),
-        HConstraint::Center => axis_center(f.x_mm, f.w_mm, from.0, to.0),
-        HConstraint::Scale => axis_scale(f.x_mm, f.w_mm, from.0, to.0),
-    };
-    let (y_mm, h_mm) = match c.v {
-        VConstraint::Top => axis_keep_start(f.y_mm, f.h_mm),
-        VConstraint::Bottom => axis_keep_end(f.y_mm, f.h_mm, from.1, to.1),
-        VConstraint::TopBottom => axis_stretch(f.y_mm, f.h_mm, from.1, to.1),
-        VConstraint::Center => axis_center(f.y_mm, f.h_mm, from.1, to.1),
-        VConstraint::Scale => axis_scale(f.y_mm, f.h_mm, from.1, to.1),
-    };
-    Frame {
-        x_mm,
-        y_mm,
-        w_mm,
-        h_mm,
-    }
-}
-
-/// The inverse of [`resolve_frame`]: the frame on the primary page that lands on `resolved` on
-/// the target page. Dragging on a secondary device works in that device's frame; this turns the
-/// result back into the stored one. Exact for every constraint: `resolve_frame(unresolve_frame(f))`
-/// gives `f` back, except an axis whose page is the same size on both (any rule) and the width of
-/// `Scale` on a zero-size page.
-pub fn unresolve_frame(resolved: Frame, c: Constraints, from: (f64, f64), to: (f64, f64)) -> Frame {
-    let (x_mm, w_mm) = match c.h {
-        HConstraint::Left => (resolved.x_mm, resolved.w_mm),
-        HConstraint::Right => (resolved.x_mm - (to.0 - from.0), resolved.w_mm),
-        HConstraint::LeftRight => (resolved.x_mm, resolved.w_mm - (to.0 - from.0)),
-        HConstraint::Center => (resolved.x_mm - (to.0 - from.0) / 2.0, resolved.w_mm),
-        HConstraint::Scale => {
-            let k = from.0 / to.0;
-            (resolved.x_mm * k, resolved.w_mm * k)
-        }
-    };
-    let (y_mm, h_mm) = match c.v {
-        VConstraint::Top => (resolved.y_mm, resolved.h_mm),
-        VConstraint::Bottom => (resolved.y_mm - (to.1 - from.1), resolved.h_mm),
-        VConstraint::TopBottom => (resolved.y_mm, resolved.h_mm - (to.1 - from.1)),
-        VConstraint::Center => (resolved.y_mm - (to.1 - from.1) / 2.0, resolved.h_mm),
-        VConstraint::Scale => {
-            let k = from.1 / to.1;
-            (resolved.y_mm * k, resolved.h_mm * k)
-        }
-    };
-    Frame {
-        x_mm,
-        y_mm,
-        w_mm,
-        h_mm,
-    }
-}
-
-fn axis_keep_start(pos: f64, size: f64) -> (f64, f64) {
-    (pos, size)
-}
-
-fn axis_keep_end(pos: f64, size: f64, from: f64, to: f64) -> (f64, f64) {
-    let gap = from - (pos + size);
-    (to - gap - size, size)
-}
-
-fn axis_stretch(pos: f64, size: f64, from: f64, to: f64) -> (f64, f64) {
-    let gap = from - (pos + size);
-    (pos, to - gap - pos)
-}
-
-fn axis_center(pos: f64, size: f64, from: f64, to: f64) -> (f64, f64) {
-    (pos + (to - from) / 2.0, size)
-}
-
-fn axis_scale(pos: f64, size: f64, from: f64, to: f64) -> (f64, f64) {
-    let k = to / from;
-    (pos * k, size * k)
-}
+pub use quadrule_model::geom::{Holder, resolve_frame, unresolve_frame};
 
 /// Where a stroke's centre goes so its edges land on whole pixels: odd widths on pixel
 /// centres, even widths on pixel edges (napkin §10.2).
@@ -415,13 +335,14 @@ pub fn text_requests<'a>(
     primary: &Profile,
     target: &Profile,
 ) -> Vec<TextRequest<'a>> {
-    let (from, to) = (primary.page_mm(), target.page_mm());
+    let nodes = tree::resolve_nodes(doc, primary.page_mm(), target.page_mm());
     doc.objects()
         .filter_map(|o| match &o.kind {
             ObjectKind::Text(tb) => Some(TextRequest {
                 object_id: o.id,
                 text: tb,
-                width_mm: resolve_frame(o.frame, o.constraints, from, to).w_mm,
+                // The width it falls at: against the page, or against the group it is in.
+                width_mm: nodes.iter().find(|n| n.id == o.id)?.local.w_mm,
             }),
             _ => None,
         })
@@ -456,129 +377,16 @@ pub fn display_list(
             got: outlines.profile_id.clone(),
         });
     }
-    let (from, to) = (primary.page_mm(), target.page_mm());
     let rhythm = RhythmPx::new(doc, target);
-    let px = |mm: f64| target.mm_to_px(mm);
+    let env = Env {
+        target,
+        rhythm,
+        outlines,
+    };
     let mut items = Vec::new();
+    let ctx = tree::Ctx::page(primary.page_mm(), target.page_mm());
     for layer in doc.layers.iter().filter(|l| l.visible) {
-        for o in layer.objects.iter().filter(|o| o.visible) {
-            let f = resolve_frame(o.frame, o.constraints, from, to);
-            let first_item = items.len();
-            match &o.kind {
-                ObjectKind::Line(line) => {
-                    let Some((w, gray)) = stroke_opt(o.style, target) else {
-                        continue;
-                    };
-                    let frame_px = (
-                        px(f.x_mm),
-                        px(f.y_mm),
-                        px(f.x_mm + f.w_mm),
-                        px(f.y_mm + f.h_mm),
-                    );
-                    // The line's two ends: along the frame's diagonal it points, turned about the
-                    // frame's centre.
-                    let ((x0, y0), (x1, y1)) =
-                        rotate::rotated_line_ends(frame_px, line.direction, o.rotation());
-                    if o.dash.is_solid() && o.cap.is_butt() {
-                        items.push(line_item(x0, y0, x1, y1, w, gray));
-                    } else {
-                        items.extend(shapes::line_items(
-                            (x0, y0, x1, y1),
-                            w,
-                            gray,
-                            o.dash,
-                            o.cap,
-                            target,
-                        ));
-                    }
-                }
-                ObjectKind::Rect(_) | ObjectKind::Ellipse(_) | ObjectKind::Polygon(_) => {
-                    let (x0, y0) = (px(f.x_mm), px(f.y_mm));
-                    let (x1, y1) = (px(f.x_mm + f.w_mm), px(f.y_mm + f.h_mm));
-                    items.extend(shapes::shape_items(o, (x0, y0, x1, y1), target));
-                }
-                ObjectKind::Pattern(pr) => {
-                    let Some((w, gray)) = stroke_opt(o.style, target) else {
-                        continue;
-                    };
-                    let (x0, y0) = (px(f.x_mm).round(), px(f.y_mm).round());
-                    let (x1, y1) = (px(f.x_mm + f.w_mm).round(), px(f.y_mm + f.h_mm).round());
-                    let ys = RhythmPx::positions(rhythm.origin_y, rhythm.unit_y, y0, y1);
-                    let half = w as f64 / 2.0;
-                    // A pattern draws every line and dot whose centre lies in its region, whole: a dot
-                    // on the region's edge (where the rhythm meets the margin) straddles it by half a
-                    // stroke rather than being cut in two.
-                    match pr.pattern {
-                        Pattern::Lines => {
-                            for y in ys {
-                                let c = snap_center(y, w);
-                                items.push(Item::Rect {
-                                    x0,
-                                    y0: c - half,
-                                    x1,
-                                    y1: c + half,
-                                    gray,
-                                });
-                            }
-                        }
-                        Pattern::Dots => {
-                            let xs = RhythmPx::positions(rhythm.origin_x, rhythm.unit_x, x0, x1);
-                            for &y in &ys {
-                                let cy = snap_center(y, w);
-                                for &x in &xs {
-                                    let cx = snap_center(x, w);
-                                    items.push(Item::Rect {
-                                        x0: cx - half,
-                                        y0: cy - half,
-                                        x1: cx + half,
-                                        y1: cy + half,
-                                        gray,
-                                    });
-                                }
-                            }
-                        }
-                        Pattern::Grid => {
-                            // Horizontal lines across the region, then vertical lines down it.
-                            for &y in &ys {
-                                let c = snap_center(y, w);
-                                items.push(Item::Rect {
-                                    x0,
-                                    y0: c - half,
-                                    x1,
-                                    y1: c + half,
-                                    gray,
-                                });
-                            }
-                            for x in RhythmPx::positions(rhythm.origin_x, rhythm.unit_x, x0, x1) {
-                                let c = snap_center(x, w);
-                                items.push(Item::Rect {
-                                    x0: c - half,
-                                    y0,
-                                    x1: c + half,
-                                    y1,
-                                    gray,
-                                });
-                            }
-                        }
-                    }
-                }
-                ObjectKind::Text(_) => {
-                    let text = outlines.text(o.id).ok_or(LayoutError::MissingText(o.id))?;
-                    let Some((_, gray)) = stroke_opt(o.style, target) else {
-                        continue;
-                    };
-                    let origin = Point::new(px(f.x_mm).round(), px(f.y_mm).round());
-                    let path = text_path(
-                        outlines,
-                        text,
-                        origin,
-                        target.ppi / quadrule_model::MM_PER_IN,
-                    )?;
-                    items.push(Item::Fill { path, gray });
-                }
-            }
-            wrap_opacity(&mut items, first_item, o.opacity());
-        }
+        draw_objects(&layer.objects, &ctx, &env, &mut items)?;
     }
     Ok(DisplayList {
         width: target.width_px,
@@ -586,6 +394,160 @@ pub fn display_list(
         background: doc.page.background_gray,
         items,
     })
+}
+
+/// What drawing an object needs besides the object.
+struct Env<'a> {
+    target: &'a Profile,
+    rhythm: RhythmPx,
+    outlines: &'a ProfileOutlines,
+}
+
+/// Draws `objs` in order into `items`; a group's children are drawn inside it, and a group below
+/// 100 percent is one opacity group, so its children do not show through each other (rung 7a bbq,
+/// Q7).
+fn draw_objects(
+    objs: &[quadrule_model::Object],
+    ctx: &tree::Ctx,
+    env: &Env,
+    items: &mut Vec<Item>,
+) -> Result<(), LayoutError> {
+    let (target, rhythm, outlines) = (env.target, env.rhythm, env.outlines);
+    let px = |mm: f64| target.mm_to_px(mm);
+    for o in objs.iter().filter(|o| o.visible) {
+        let local = ctx.holder.resolve(o.frame, o.constraints);
+        let (f, angle) = ctx.place(local, o.rotation());
+        let first_item = items.len();
+        if let ObjectKind::Group(g) = &o.kind {
+            let inner = ctx.child(local, o.frame, o.rotation());
+            draw_objects(&g.children, &inner, env, items)?;
+            wrap_opacity(items, first_item, o.opacity());
+            continue;
+        }
+        match &o.kind {
+            ObjectKind::Line(line) => {
+                let Some((w, gray)) = stroke_opt(o.style, target) else {
+                    continue;
+                };
+                let frame_px = (
+                    px(f.x_mm),
+                    px(f.y_mm),
+                    px(f.x_mm + f.w_mm),
+                    px(f.y_mm + f.h_mm),
+                );
+                // The line's two ends: along the frame's diagonal it points, turned about the
+                // frame's centre.
+                let ((x0, y0), (x1, y1)) =
+                    rotate::rotated_line_ends(frame_px, line.direction, angle);
+                if o.dash.is_solid() && o.cap.is_butt() {
+                    items.push(line_item(x0, y0, x1, y1, w, gray));
+                } else {
+                    items.extend(shapes::line_items(
+                        (x0, y0, x1, y1),
+                        w,
+                        gray,
+                        o.dash,
+                        o.cap,
+                        target,
+                    ));
+                }
+            }
+            ObjectKind::Rect(_) | ObjectKind::Ellipse(_) | ObjectKind::Polygon(_) => {
+                let (x0, y0) = (px(f.x_mm), px(f.y_mm));
+                let (x1, y1) = (px(f.x_mm + f.w_mm), px(f.y_mm + f.h_mm));
+                items.extend(shapes::shape_items_turned(
+                    o,
+                    (x0, y0, x1, y1),
+                    angle,
+                    target,
+                ));
+            }
+            ObjectKind::Pattern(pr) => {
+                let Some((w, gray)) = stroke_opt(o.style, target) else {
+                    continue;
+                };
+                let (x0, y0) = (px(f.x_mm).round(), px(f.y_mm).round());
+                let (x1, y1) = (px(f.x_mm + f.w_mm).round(), px(f.y_mm + f.h_mm).round());
+                let ys = RhythmPx::positions(rhythm.origin_y, rhythm.unit_y, y0, y1);
+                let half = w as f64 / 2.0;
+                // A pattern draws every line and dot whose centre lies in its region, whole: a dot
+                // on the region's edge (where the rhythm meets the margin) straddles it by half a
+                // stroke rather than being cut in two.
+                match pr.pattern {
+                    Pattern::Lines => {
+                        for y in ys {
+                            let c = snap_center(y, w);
+                            items.push(Item::Rect {
+                                x0,
+                                y0: c - half,
+                                x1,
+                                y1: c + half,
+                                gray,
+                            });
+                        }
+                    }
+                    Pattern::Dots => {
+                        let xs = RhythmPx::positions(rhythm.origin_x, rhythm.unit_x, x0, x1);
+                        for &y in &ys {
+                            let cy = snap_center(y, w);
+                            for &x in &xs {
+                                let cx = snap_center(x, w);
+                                items.push(Item::Rect {
+                                    x0: cx - half,
+                                    y0: cy - half,
+                                    x1: cx + half,
+                                    y1: cy + half,
+                                    gray,
+                                });
+                            }
+                        }
+                    }
+                    Pattern::Grid => {
+                        // Horizontal lines across the region, then vertical lines down it.
+                        for &y in &ys {
+                            let c = snap_center(y, w);
+                            items.push(Item::Rect {
+                                x0,
+                                y0: c - half,
+                                x1,
+                                y1: c + half,
+                                gray,
+                            });
+                        }
+                        for x in RhythmPx::positions(rhythm.origin_x, rhythm.unit_x, x0, x1) {
+                            let c = snap_center(x, w);
+                            items.push(Item::Rect {
+                                x0: c - half,
+                                y0,
+                                x1: c + half,
+                                y1,
+                                gray,
+                            });
+                        }
+                    }
+                }
+            }
+            ObjectKind::Text(_) => {
+                let text = outlines.text(o.id).ok_or(LayoutError::MissingText(o.id))?;
+                let Some((_, gray)) = stroke_opt(o.style, target) else {
+                    continue;
+                };
+                let origin = Point::new(px(f.x_mm).round(), px(f.y_mm).round());
+                let path = text_path(
+                    outlines,
+                    text,
+                    origin,
+                    target.ppi / quadrule_model::MM_PER_IN,
+                )?;
+                items.push(Item::Fill { path, gray });
+            }
+            // Handled above: a group draws its children.
+            ObjectKind::Group(_) => {}
+        }
+
+        wrap_opacity(items, first_item, o.opacity());
+    }
+    Ok(())
 }
 
 /// A line from (x0, y0) to (x1, y1) in pixels. Horizontal and vertical lines snap to whole
@@ -690,8 +652,10 @@ pub struct Placed {
     pub id: Uuid,
     /// Its layer's index, bottom first.
     pub layer: usize,
-    /// Its shape.
+    /// Its shape. A group's is its box, turned with it.
     pub shape: Shape,
+    /// Where it sits in the tree and falls on the page (rung 7a).
+    pub node: tree::Node,
 }
 
 /// An object's shape for picking.
@@ -817,78 +781,86 @@ impl Shape {
     }
 }
 
-/// Every object's shape on `target`, hidden and locked ones included, bottom first. A text box
-/// is as tall as its laid-out text in `outlines` (or its frame, when the outlines lack it).
+/// Every object's shape on `target`, hidden and locked ones included, bottom first; a group is
+/// listed before what is in it, and its shape is its box (rung 7a). A text box is as tall as its
+/// laid-out text in `outlines` (or its frame, when the outlines lack it).
 pub fn placed_objects(
     doc: &Document,
     primary: &Profile,
     target: &Profile,
     outlines: &ProfileOutlines,
 ) -> Vec<Placed> {
-    let (from, to) = (primary.page_mm(), target.page_mm());
     let px = |mm: f64| target.mm_to_px(mm);
-    let mut out = Vec::new();
-    for (li, layer) in doc.layers.iter().enumerate() {
-        for o in &layer.objects {
-            let f = resolve_frame(o.frame, o.constraints, from, to);
-            let (x0, y0, x1, y1) = (
-                px(f.x_mm),
-                px(f.y_mm),
-                px(f.x_mm + f.w_mm),
-                px(f.y_mm + f.h_mm),
-            );
-            let shape = match &o.kind {
-                ObjectKind::Line(line) => {
-                    let ((x0, y0), (x1, y1)) =
-                        rotate::rotated_line_ends((x0, y0, x1, y1), line.direction, o.rotation());
-                    Shape::Segment {
-                        x0,
-                        y0,
-                        x1,
-                        y1,
-                        width: stroke(o.style, target).0 as f64,
-                    }
+    let nodes = tree::resolve_nodes(doc, primary.page_mm(), target.page_mm());
+    let mut out = Vec::with_capacity(nodes.len());
+    for node in nodes {
+        let Some(o) = doc.object(node.id) else {
+            continue;
+        };
+        let f = node.frame;
+        let angle = node.angle;
+        let (x0, y0, x1, y1) = (
+            px(f.x_mm),
+            px(f.y_mm),
+            px(f.x_mm + f.w_mm),
+            px(f.y_mm + f.h_mm),
+        );
+        let shape = match &o.kind {
+            ObjectKind::Line(line) => {
+                let ((x0, y0), (x1, y1)) =
+                    rotate::rotated_line_ends((x0, y0, x1, y1), line.direction, angle);
+                Shape::Segment {
+                    x0,
+                    y0,
+                    x1,
+                    y1,
+                    width: stroke(o.style, target).0 as f64,
                 }
-                ObjectKind::Rect(_) | ObjectKind::Ellipse(_) | ObjectKind::Polygon(_)
-                    if o.rotation() != 0.0 =>
-                {
-                    let b = (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1));
-                    let (cx, cy) = rotate::centre(b);
-                    Shape::Rotated {
-                        cx,
-                        cy,
-                        hw: (b.2 - b.0) / 2.0,
-                        hh: (b.3 - b.1) / 2.0,
-                        deg: o.rotation(),
-                    }
+            }
+            ObjectKind::Rect(_)
+            | ObjectKind::Ellipse(_)
+            | ObjectKind::Polygon(_)
+            | ObjectKind::Group(_)
+                if angle != 0.0 =>
+            {
+                let b = (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1));
+                let (cx, cy) = rotate::centre(b);
+                Shape::Rotated {
+                    cx,
+                    cy,
+                    hw: (b.2 - b.0) / 2.0,
+                    hh: (b.3 - b.1) / 2.0,
+                    deg: angle,
                 }
-                ObjectKind::Pattern(_)
-                | ObjectKind::Rect(_)
-                | ObjectKind::Ellipse(_)
-                | ObjectKind::Polygon(_) => Shape::Box {
-                    x0: x0.min(x1),
-                    y0: y0.min(y1),
-                    x1: x0.max(x1),
-                    y1: y0.max(y1),
-                },
-                ObjectKind::Text(_) => {
-                    let h = outlines
-                        .text(o.id)
-                        .map_or(y1 - y0, |t| px(t.height_mm as f64));
-                    Shape::Box {
-                        x0,
-                        y0,
-                        x1,
-                        y1: y0 + h,
-                    }
+            }
+            ObjectKind::Pattern(_)
+            | ObjectKind::Rect(_)
+            | ObjectKind::Ellipse(_)
+            | ObjectKind::Polygon(_)
+            | ObjectKind::Group(_) => Shape::Box {
+                x0: x0.min(x1),
+                y0: y0.min(y1),
+                x1: x0.max(x1),
+                y1: y0.max(y1),
+            },
+            ObjectKind::Text(_) => {
+                let h = outlines
+                    .text(o.id)
+                    .map_or(y1 - y0, |t| px(t.height_mm as f64));
+                Shape::Box {
+                    x0,
+                    y0,
+                    x1,
+                    y1: y0 + h,
                 }
-            };
-            out.push(Placed {
-                id: o.id,
-                layer: li,
-                shape,
-            });
-        }
+            }
+        };
+        out.push(Placed {
+            id: o.id,
+            layer: node.layer,
+            shape,
+            node,
+        });
     }
     out
 }
