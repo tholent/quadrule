@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Groups in layout (rung 7a, docs/bbq/2026-11-11-rung-7-groups-and-align.md, Defaulted "Layout
-//! (7a)"): a group resolves against the page by its own constraints, its children against the
-//! group's box, then the group's angle turns them about its centre. Each test prints one
+//! Groups in layout (rung 7a, docs/bbq/2026-11-11-rung-7-groups-and-align.md, Q3 as amended at
+//! the look): groups are see-through to constraints. Every child resolves against the page by its
+//! own constraints; a group's box is its children's outer box on every device; then the group's
+//! angle turns the resolved children about the centre of that box. Each test prints one
 //! structured `CHECK` line (run with `-- --nocapture`).
 
 use quadrule_layout::tree::resolve_nodes;
@@ -88,35 +89,67 @@ fn angles_add_down_the_tree_and_nesting_resolves() {
 }
 
 #[test]
-fn a_pinned_child_keeps_its_size_and_its_edges_on_the_other_device() {
+fn a_child_resolves_against_the_page_and_a_group_is_its_children_box() {
     let doc = groups_document();
     let (manta, nomad) = (builtin(MANTA_ID).unwrap(), builtin(NOMAD_ID).unwrap());
     let on = |p: &quadrule_profiles::Profile| resolve_nodes(&doc, manta.page_mm(), p.page_mm());
-    let (a, b) = (on(&manta), on(&nomad));
+    let b = on(&nomad);
     let get = |nodes: &[tree::Node], id: Uuid| *nodes.iter().find(|n| n.id == id).unwrap();
-    let (pg_a, pg_b) = (get(&a, group_ids::PINNED), get(&b, group_ids::PINNED));
-    let (pc_a, pc_b) = (
-        get(&a, group_ids::PINNED_CHILD),
-        get(&b, group_ids::PINNED_CHILD),
-    );
-    // The group scales with the page (it has the default rules); the pinned child does not.
+    // Every child that is not a group sits where its own constraints put it against the page, as
+    // if it were not in a group (the groups' own constraints, stored or not, play no part).
+    let mut leaves_on_page = true;
+    for o in doc.objects().filter(|o| !o.is_group()) {
+        let want = resolve_frame(o.frame, o.constraints, manta.page_mm(), nomad.page_mm());
+        let got = get(&b, o.id).local;
+        leaves_on_page &= want.near(&got);
+    }
+    // The pinned child keeps its size, and its distance from the page's right and top edges.
+    let pc = doc.object(group_ids::PINNED_CHILD).unwrap();
+    let on_nomad = get(&b, group_ids::PINNED_CHILD).local;
+    let pinned = near(on_nomad.w_mm, pc.frame.w_mm)
+        && near(on_nomad.h_mm, pc.frame.h_mm)
+        && near(
+            nomad.page_mm().0 - on_nomad.right(),
+            manta.page_mm().0 - pc.frame.right(),
+        )
+        && near(on_nomad.y_mm, pc.frame.y_mm);
+    // A group's box on each device is the box round its children's turned boxes, and its stored
+    // constraints are ignored: set to something odd, nothing moves.
+    let mut odd = doc.clone();
+    for id in [group_ids::NESTED, group_ids::PINNED, group_ids::TURNED] {
+        odd.object_mut(id).unwrap().constraints = Constraints {
+            h: HConstraint::Right,
+            v: VConstraint::Bottom,
+        };
+    }
+    let other = resolve_nodes(&odd, manta.page_mm(), nomad.page_mm());
+    let same = other.len() == b.len()
+        && other.iter().zip(&b).all(|(x, y)| {
+            x.id == y.id && x.local == y.local && x.frame == y.frame && x.angle == y.angle
+        });
+    let mut boxes = true;
+    for id in [group_ids::NESTED, group_ids::PINNED, group_ids::HEAVY] {
+        let g = get(&b, id);
+        let round = doc
+            .object(id)
+            .unwrap()
+            .children()
+            .iter()
+            .map(|c| c.outer_box_of(get(&b, c.id).local))
+            .reduce(|a, c| a.union(&c))
+            .unwrap();
+        boxes &= g.local.near(&round);
+    }
+    // A scaled child grows with the page, not with the group.
     let k = nomad.page_mm().0 / manta.page_mm().0;
-    let group_scales = near(pg_b.frame.w_mm, pg_a.frame.w_mm * k);
-    let size_kept =
-        near(pc_b.frame.w_mm, pc_a.frame.w_mm) && near(pc_b.frame.h_mm, pc_a.frame.h_mm);
-    let right_gap = |g: &tree::Node, c: &tree::Node| g.frame.right() - c.frame.right();
-    let top_gap = |g: &tree::Node, c: &tree::Node| c.frame.y_mm - g.frame.y_mm;
-    let edges = near(right_gap(&pg_a, &pc_a), right_gap(&pg_b, &pc_b))
-        && near(top_gap(&pg_a, &pc_a), top_gap(&pg_b, &pc_b));
-    // A scaled child grows with the group.
-    let (sc_a, sc_b) = (get(&a, group_ids::nth(43)), get(&b, group_ids::nth(43)));
+    let sc = get(&b, group_ids::nth(43)).local;
     let scaled = near(
-        sc_b.frame.w_mm / sc_a.frame.w_mm,
-        pg_b.frame.w_mm / pg_a.frame.w_mm,
+        sc.w_mm,
+        doc.object(group_ids::nth(43)).unwrap().frame.w_mm * k,
     );
-    let ok = group_scales && size_kept && edges && scaled;
+    let ok = leaves_on_page && pinned && same && boxes && scaled;
     println!(
-        "\nCHECK crate=layout name=group_children_follow_their_constraints result={} group_scales={group_scales} pinned_size_kept={size_kept} pinned_edges_kept={edges} scaled_child_grows={scaled}",
+        "\nCHECK crate=layout name=group_children_follow_the_page result={} leaves_against_page={leaves_on_page} pinned_edges_kept={pinned} group_constraints_ignored={same} group_box_is_children_box={boxes} scaled_child_follows_page={scaled}",
         pass(ok)
     );
     assert!(ok);
@@ -215,17 +248,14 @@ fn placed_objects_lists_groups_and_their_children() {
 }
 
 #[test]
-fn percent_is_of_the_group_inside_one() {
+fn percent_is_of_the_page_inside_a_group() {
     let doc = groups_document();
     let primary = builtin(&doc.primary_profile_id).unwrap();
     let cx = UnitContext::new(&doc, &primary, &primary, Axis::X);
-    let g = doc.object(group_ids::NESTED).unwrap();
-    let in_group = cx.with_percent_of(g.frame.w_mm);
     let page = parse_length("50%", &cx).unwrap();
-    let inner = parse_length("50%", &in_group).unwrap();
-    let ok = near(page, primary.page_mm().0 / 2.0) && near(inner, g.frame.w_mm / 2.0);
+    let ok = near(page, primary.page_mm().0 / 2.0);
     println!(
-        "\nCHECK crate=layout name=percent_of_group result={} page_half_mm={page:.3} group_half_mm={inner:.3}",
+        "\nCHECK crate=layout name=percent_of_page result={} page_half_mm={page:.3}",
         pass(ok)
     );
     assert!(ok);

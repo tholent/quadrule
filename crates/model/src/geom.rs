@@ -119,6 +119,61 @@ impl Frame {
     }
 }
 
+/// Where a box goes when the box `old` is moved and stretched into the box `new`: the mapping of a
+/// resize by handles, for a loose selection and for the contents of a group alike. `deg` is the
+/// angle the box is turned by (its own, plus any group between it and the box being resized): a
+/// turned box keeps its angle, its centre goes where the mapping puts it, and its sides grow by how
+/// much the mapping stretches their directions (approximate, as a loose selection's always was).
+/// `text` keeps its height (a text box's height is its text's). A box that only moves (`old` and
+/// `new` the same size) moves exactly; one with no width (or height) is moved along that axis
+/// only.
+pub fn map_frame(f: Frame, deg: f64, text: bool, old: &Frame, new: &Frame) -> Frame {
+    let sx = if old.w_mm > 0.0 {
+        new.w_mm / old.w_mm
+    } else {
+        1.0
+    };
+    let sy = if old.h_mm > 0.0 {
+        new.h_mm / old.h_mm
+    } else {
+        1.0
+    };
+    let mx = |x: f64| new.x_mm + (x - old.x_mm) * sx;
+    let my = |y: f64| new.y_mm + (y - old.y_mm) * sy;
+    if deg != 0.0 && !text {
+        let (cs, sn) = cos_sin_deg(deg);
+        let kw = ((sx * cs).powi(2) + (sy * sn).powi(2)).sqrt();
+        let kh = ((sx * sn).powi(2) + (sy * cs).powi(2)).sqrt();
+        let (c0, c1) = f.centre();
+        let (cx, cy) = (mx(c0), my(c1));
+        let (w, h) = if sx == 1.0 && sy == 1.0 {
+            (f.w_mm, f.h_mm)
+        } else {
+            (f.w_mm * kw, f.h_mm * kh)
+        };
+        return Frame::new(cx - w / 2.0, cy - h / 2.0, w, h);
+    }
+    // An axis that is not stretched keeps its length exactly.
+    let (x, w) = if sx == 1.0 {
+        (f.x_mm + (new.x_mm - old.x_mm), f.w_mm)
+    } else {
+        (mx(f.x_mm), mx(f.right()) - mx(f.x_mm))
+    };
+    let (y, h) = if text || sy == 1.0 {
+        (
+            if sy == 1.0 {
+                f.y_mm + (new.y_mm - old.y_mm)
+            } else {
+                my(f.y_mm)
+            },
+            f.h_mm,
+        )
+    } else {
+        (my(f.y_mm), my(f.bottom()) - my(f.y_mm))
+    };
+    Frame::new(x, y, w, h)
+}
+
 /// Moves and sizes a frame from the primary page to the target page (napkin §5.4).
 /// Page sizes are (width, height) in mm.
 pub fn resolve_frame(f: Frame, c: Constraints, from: (f64, f64), to: (f64, f64)) -> Frame {
@@ -202,8 +257,9 @@ fn axis_scale(pos: f64, size: f64, from: f64, to: f64) -> (f64, f64) {
 }
 
 /// A box that holds children: the box they were designed against (`from`) and the box they are
-/// laid out in (`to`), both in mm on the page. The page is one (origin 0, 0); a group is another
-/// (rung 7a bbq, Defaulted "Layout (7a)").
+/// laid out in (`to`), both in mm. Today it is always the page (origin 0, 0): groups are see-through
+/// to constraints, so a child of a group resolves against the page like any other (rung 7a look
+/// change, docs/bbq/2026-11-11-rung-7-groups-and-align.md, Q3 as amended).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Holder {
     /// The box the children's frames are stored against.

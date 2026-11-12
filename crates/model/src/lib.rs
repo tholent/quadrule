@@ -269,7 +269,10 @@ pub struct Object {
     pub name: String,
     /// The object's box on the primary profile, in mm.
     pub frame: Frame,
-    /// How the box adapts to other profiles (§5.4).
+    /// How the box adapts to other profiles (§5.4), against the page. A group has none of its own:
+    /// this is ignored for a group (its box is always round its children's, which each keep their
+    /// own constraints against the page; rung 7a look change, docs/bbq/2026-11-11-rung-7-groups-and-align.md,
+    /// Q3 as amended). It stays in the file so every object has the same shape.
     pub constraints: Constraints,
     /// Hidden objects are not drawn or exported.
     pub visible: bool,
@@ -384,14 +387,20 @@ impl Object {
     /// The box round the object as it is placed in its parent's space: its frame turned by its
     /// rotation (a line: round its two ends). A group's box is its frame turned about its centre.
     pub fn outer_box(&self) -> Frame {
+        self.outer_box_of(self.frame)
+    }
+
+    /// [`Object::outer_box`] for the object if its frame were `frame` (for instance as resolved on
+    /// another device's page).
+    pub fn outer_box_of(&self, frame: Frame) -> Frame {
         let line = match &self.kind {
             ObjectKind::Line(l) => Some(l.direction),
             _ => None,
         };
         if self.rotation() == 0.0 && line.is_none() {
-            self.frame
+            frame
         } else {
-            self.frame.turned_bounds(self.rotation(), line)
+            frame.turned_bounds(self.rotation(), line)
         }
     }
 }
@@ -640,10 +649,12 @@ pub enum ObjectKind {
 }
 
 /// A group (format 0.7, rung 7a bbq, Defaulted "File format 0.7.0 (7a)"): its children, bottom
-/// first. A group uses the object's `frame`, `constraints`, `visible`, `locked`, `rotation_deg`,
-/// `opacity_pct` and `name`; its `style`, `fill`, `dash` and `cap` are ignored. The children's
-/// frames are in page millimetres in the group's unturned space, so grouping moves nothing. The
-/// group's box is refitted to the children's outer box after an edit inside it.
+/// first. A group uses the object's `frame`, `visible`, `locked`, `rotation_deg`, `opacity_pct`
+/// and `name`; its `constraints` (kept so every object has the same shape) and its `style`, `fill`,
+/// `dash` and `cap` are ignored. The children's frames are in page millimetres in the group's
+/// unturned space, so grouping moves nothing, and each child resolves against the page by its own
+/// constraints (groups are see-through to constraints, as in Figma). The group's box is the
+/// children's outer box on every device, and is refitted to it after an edit inside it.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct GroupShape {
     /// What is in the group, drawn in order: the first is the bottom one. Groups may nest.

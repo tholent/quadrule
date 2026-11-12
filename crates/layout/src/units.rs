@@ -16,8 +16,8 @@
 //! `mm`, `pt`, `px`, `in`, `%` and `u`, and shows values in the document's display unit.
 //!
 //! - `px` is a device pixel of the profile on screen.
-//! - `%` is of the page along the field's axis, or, for an object inside a group, of that group's
-//!   box (rung 7a; [`UnitContext::with_percent_of`]).
+//! - `%` is of the page along the field's axis (also for an object inside a group: groups are
+//!   see-through to constraints, so a child is placed against the page; rung 7a look change).
 //! - `u` is the rhythm unit along the field's axis, as the profile on screen resolves it: with a
 //!   pixel-locked rhythm, `2u` is exactly two grid steps on that device.
 //! - A number with no unit is in the display unit.
@@ -73,13 +73,6 @@ impl UnitContext {
             rhythm_mm: unit_px / px_per_mm,
             display: doc.units,
         }
-    }
-
-    /// The same context with `%` meaning a percent of `mm` along the axis: the box of the group an
-    /// object is in (rung 7a).
-    pub fn with_percent_of(mut self, mm: f64) -> Self {
-        self.page_mm = mm;
-        self
     }
 
     /// Millimetres in one of `unit`.

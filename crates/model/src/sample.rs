@@ -929,8 +929,8 @@ pub mod group_ids {
 /// The rung 7a groups page (docs/bbq/2026-11-11-rung-7-groups-and-align.md, Defaulted "Goldens
 /// (7a)"): groups nested three deep, a turned group with a turned child, a group at 50 percent
 /// whose children overlap (so the overlap must not show through), a group whose child is pinned
-/// to the top and the right (it keeps its size when the group's box grows on the other device),
-/// and a heavy group of dozens of shapes in two levels for the drag benchmark. It holds the
+/// to the top and the right (it resolves against the page, not the group, so it keeps its size and
+/// its distance from those edges of the page on the other device), and a heavy group of dozens of shapes in two levels for the drag benchmark. It holds the
 /// sample's dot grid ([`ids::DOTS`]) so the benchmarks can run over it, and no text, so it needs
 /// no fonts. Designed on the Manta, also targeting the Nomad.
 pub fn groups_document() -> Document {

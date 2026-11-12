@@ -13,10 +13,12 @@
 // limitations under the License.
 
 //! The tree of objects laid out on one profile's page (rung 7a, docs/bbq/2026-11-11-rung-7-groups-and-align.md,
-//! Defaulted "Layout (7a)"): a group's frame resolves against the page by its own constraints; its
-//! children resolve against the group's stored box → the group's resolved box, recursively; then
-//! the group's angle turns them all about the group's centre. Everything that needs to know where
-//! an object falls (drawing, picking, handles, snapping, lint) takes it from here.
+//! Q3 as amended at the look): groups are see-through to constraints, as in Figma. Every object
+//! that is not a group resolves against the page by its own constraints, exactly as if it were not
+//! in a group; a group has no constraints, and its box is its children's outer box (each child's
+//! turned box) on every device; then the group's angle turns its resolved children about the
+//! centre of that box. Everything that needs to know where an object falls (drawing, picking,
+//! handles, snapping, lint) takes it from here.
 //!
 //! Positions are in millimetres on the profile's page; the angles add up down the tree.
 
@@ -81,13 +83,14 @@ impl Rigid {
     }
 }
 
-/// What a child is laid out in: the box it was designed against and the box it falls in (the
-/// page, or a group), and where that box's space sits on the page.
+/// What an object is laid out in: the page it resolves against, and where the unturned space it
+/// is in sits on the page (the turns of the groups round it).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Ctx {
-    /// Stored box → resolved box.
+    /// Stored page → page shown. Always the page: a group does not hold its children against its
+    /// own box.
     pub holder: Holder,
-    /// From the holder's unturned space to the page.
+    /// From the unturned space the object is resolved in to the page.
     pub xf: Rigid,
 }
 
@@ -121,17 +124,35 @@ impl Ctx {
         (placed.centred_on(c), normalize_deg(total - self.xf.deg))
     }
 
-    /// The context for the children of a group whose resolved frame is `local` (in this
-    /// context's space), stored as `stored`, turned by `rot`.
-    pub fn child(&self, local: Frame, stored: Frame, rot: f64) -> Ctx {
+    /// The context for the children of a group whose box (their outer box, see [`group_box`]) is
+    /// `local` (in this context's space), turned by `rot`: the same page, one more turn.
+    pub fn child(&self, local: Frame, rot: f64) -> Ctx {
         Ctx {
-            holder: Holder {
-                from: stored,
-                to: local,
-            },
+            holder: self.holder,
             xf: self.xf.then_turn(local.centre(), rot),
         }
     }
+}
+
+/// Where `o` falls in the unturned space it is in, resolved on the page `holder` describes: a
+/// shape, line, text box or pattern region by its own constraints against the page; a group as the
+/// box round its children's turned boxes (so it is the same on every device, whatever the
+/// constraints of the group itself, which are ignored). A group with nothing in it keeps its
+/// stored box.
+pub fn local_frame(o: &Object, holder: &Holder) -> Frame {
+    match &o.kind {
+        ObjectKind::Group(g) => group_box(&g.children, holder).unwrap_or(o.frame),
+        _ => holder.resolve(o.frame, o.constraints),
+    }
+}
+
+/// The box round `children` as resolved on `holder`'s page, each as turned by its own angle;
+/// `None` for no children.
+pub fn group_box(children: &[Object], holder: &Holder) -> Option<Frame> {
+    children
+        .iter()
+        .map(|c| c.outer_box_of(local_frame(c, holder)))
+        .reduce(|a, b| a.union(&b))
 }
 
 /// One object laid out: where it falls on the page, and what it sits in.
@@ -197,13 +218,13 @@ fn walk(
     out: &mut Vec<Node>,
 ) {
     for o in objs {
-        let local = ctx.holder.resolve(o.frame, o.constraints);
+        let local = local_frame(o, &ctx.holder);
         let rot = o.rotation();
         let (frame, angle) = ctx.place(local, rot);
         // A kind that cannot turn is not turned by a group round it either (a hand-made file).
         let angle = if o.kind.can_rotate() { angle } else { 0.0 };
         let (hidden, locked) = (hidden || !o.visible, locked || o.locked);
-        let inner = o.is_group().then(|| ctx.child(local, o.frame, rot));
+        let inner = o.is_group().then(|| ctx.child(local, rot));
         out.push(Node {
             id: o.id,
             layer,

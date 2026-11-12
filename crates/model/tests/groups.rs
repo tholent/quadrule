@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Groups in the model (rung 7a, docs/bbq/2026-11-11-rung-7-groups-and-align.md): making and
-//! breaking, nesting, the box that refits, lock and turn rules, resizing against the group's box,
+//! breaking, nesting, the box that refits, lock and turn rules, resizing a group (its contents stretch),
 //! copy and paste. Each test prints one structured `CHECK` line (run with `-- --nocapture`).
 
 use quadrule_model::edit::*;
@@ -348,14 +348,16 @@ fn locks_hide_and_turn_rules() {
 }
 
 #[test]
-fn resizing_a_group_resolves_children_by_their_constraints() {
-    // A group box of 100 x 100 at (0, 0) grows to 150 x 120: each child follows its own rule.
+fn resizing_a_group_stretches_everything_inside_like_a_loose_selection() {
+    // A group whose box is round its two children, (10, 10) to (100, 100), grows to 135 x 108: each
+    // child is mapped as in a loose multiple selection's resize, whatever its constraints (a group
+    // is see-through to them), then the box is round the children again.
     let group_with = |c: Constraints| {
         let mut child = leaf(1, Frame::new(10.0, 10.0, 20.0, 20.0));
         child.constraints = c;
         let mut other = leaf(2, Frame::new(80.0, 80.0, 20.0, 20.0));
         other.constraints = Constraints::default();
-        let mut g = leaf(9, Frame::new(0.0, 0.0, 100.0, 100.0));
+        let mut g = leaf(9, Frame::new(10.0, 10.0, 90.0, 90.0));
         g.kind = ObjectKind::Group(GroupShape {
             children: vec![child, other],
             extra: Extra::new(),
@@ -364,35 +366,56 @@ fn resizing_a_group_resolves_children_by_their_constraints() {
     };
     let grown = |c: Constraints| {
         let mut g = group_with(c);
-        reframe(&mut g, Frame::new(0.0, 0.0, 150.0, 120.0));
-        g.children()[0].frame
+        reframe(&mut g, Frame::new(10.0, 10.0, 135.0, 108.0));
+        g
     };
     let c = |h, v| Constraints { h, v };
-    let left_top = grown(c(HConstraint::Left, VConstraint::Top));
-    let right_bottom = grown(c(HConstraint::Right, VConstraint::Bottom));
-    let both = grown(c(HConstraint::LeftRight, VConstraint::TopBottom));
-    let centre = grown(c(HConstraint::Center, VConstraint::Center));
-    let scale = grown(Constraints::default());
     let near = |a: Frame, b: Frame| a.near(&b);
-    let ok = near(left_top, Frame::new(10.0, 10.0, 20.0, 20.0))
-        // Right keeps the 70 mm gap to the right edge and the width; LeftRight keeps both gaps.
-        && near(right_bottom, Frame::new(60.0, 30.0, 20.0, 20.0))
-        && near(both, Frame::new(10.0, 10.0, 70.0, 40.0))
-        && near(centre, Frame::new(35.0, 20.0, 20.0, 20.0))
-        && near(scale, Frame::new(15.0, 12.0, 30.0, 24.0));
-    // A move alone carries everything by the same step, and the group in it likewise.
+    let first = Frame::new(10.0, 10.0, 30.0, 24.0);
+    let second = Frame::new(115.0, 94.0, 30.0, 24.0);
+    let mut each_rule = true;
+    for k in [
+        c(HConstraint::Left, VConstraint::Top),
+        c(HConstraint::Right, VConstraint::Bottom),
+        c(HConstraint::LeftRight, VConstraint::TopBottom),
+        c(HConstraint::Center, VConstraint::Center),
+        Constraints::default(),
+    ] {
+        let g = grown(k);
+        each_rule &= near(g.children()[0].frame, first)
+            && near(g.children()[1].frame, second)
+            && near(g.frame, Frame::new(10.0, 10.0, 135.0, 108.0));
+    }
+    // A move alone carries everything by the same step, and the box with it.
     let mut g = group_with(Constraints::default());
-    reframe(&mut g, Frame::new(5.0, 7.0, 100.0, 100.0));
-    let moved = g.children()[1].frame == Frame::new(85.0, 87.0, 20.0, 20.0);
+    reframe(&mut g, Frame::new(15.0, 17.0, 90.0, 90.0));
+    let moved = g.children()[1].frame == Frame::new(85.0, 87.0, 20.0, 20.0)
+        && g.frame == Frame::new(15.0, 17.0, 90.0, 90.0);
+    // A turned child keeps its angle and stretches approximately; the box ends up round it.
+    let mut t = group_with(Constraints::default());
+    if let ObjectKind::Group(s) = &mut t.kind {
+        s.children[0].rotation_deg = 90.0;
+        s.children[0].frame = Frame::new(10.0, 10.0, 10.0, 30.0);
+    }
+    t.frame = children_outer(&t);
+    let wide = Frame::new(t.frame.x_mm, t.frame.y_mm, t.frame.w_mm * 2.0, t.frame.h_mm);
+    reframe(&mut t, wide);
+    let kid = &t.children()[0];
+    let turned = kid.rotation_deg == 90.0 && near(t.frame, children_outer(&t));
+    let ok = each_rule && moved && turned;
     println!(
-        "\nCHECK crate=model name=group_resize_constraints result={} left_top={left_top:?} right_bottom_ok={} stretch_ok={} centre_ok={} scale_ok={} move_ok={moved}",
-        pass(ok && moved),
-        near(right_bottom, Frame::new(60.0, 30.0, 20.0, 20.0)),
-        near(both, Frame::new(10.0, 10.0, 70.0, 40.0)),
-        near(centre, Frame::new(35.0, 20.0, 20.0, 20.0)),
-        near(scale, Frame::new(15.0, 12.0, 30.0, 24.0)),
+        "\nCHECK crate=model name=group_resize_stretches result={} every_rule_alike={each_rule} move_ok={moved} turned_child_keeps_angle_box_refits={turned}",
+        pass(ok)
     );
-    assert!(ok && moved);
+    assert!(ok);
+}
+
+fn children_outer(g: &Object) -> Frame {
+    g.children()
+        .iter()
+        .map(Object::outer_box)
+        .reduce(|a, b| a.union(&b))
+        .unwrap()
 }
 
 #[test]

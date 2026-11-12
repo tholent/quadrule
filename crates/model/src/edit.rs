@@ -20,7 +20,7 @@
 //! layers panel's own controls (name, eye, lock) still work on it, so it can be unlocked. Undo
 //! and redo skip the lock check: they only return the document to a state it was already in.
 
-use crate::geom::{Holder, cos_sin_deg, rotate_point};
+use crate::geom::{Holder, cos_sin_deg, map_frame, rotate_point};
 use crate::{
     Constraints, Document, Frame, GroupShape, Layer, LineDir, Metadata, Object, ObjectKind,
     PageSettings, Rhythm, Style, Unit, Uuid, normalize_deg,
@@ -256,6 +256,16 @@ fn object_in_mut<'a>(objs: &'a mut [Object], path: &[usize]) -> Option<&'a mut O
         match &mut o.kind {
             ObjectKind::Group(g) => object_in_mut(&mut g.children, &path[1..]),
             _ => None,
+        }
+    }
+}
+
+/// Adds to `out` the id of `o` if it is a group, and of every group inside it.
+fn collect_groups(o: &Object, out: &mut Vec<Uuid>) {
+    if o.is_group() {
+        out.push(o.id);
+        for c in o.children() {
+            collect_groups(c, out);
         }
     }
 }
@@ -546,6 +556,8 @@ impl Document {
                     return Err(EditError::Locked(new.id));
                 }
                 dirty.extend(self.ancestors(new.id));
+                // A group set whole (a resize of its contents) is refitted too, and the groups in it.
+                collect_groups(&new, dirty);
                 let slot = self.at_mut(&loc).expect("just located");
                 let old = std::mem::replace(slot, new);
                 Ok(Command::SetObject(old))
@@ -690,6 +702,13 @@ impl Document {
     }
 }
 
+/// The box round `children` (each child's turned box), as stored; `None` for none.
+fn children_box(children: &[Object]) -> Option<Frame> {
+    let mut boxes = children.iter().map(Object::outer_box);
+    let first = boxes.next()?;
+    Some(boxes.fold(first, |a, b| a.union(&b)))
+}
+
 /// Refits a group's box to its children's outer box (each child's turned box); false if it
 /// already is, or there are no children. A turned group's children are moved so the drawing does
 /// not shift when the box, and so the centre it turns about, changes.
@@ -699,11 +718,9 @@ fn refit_group(g: &mut Object) -> bool {
     let ObjectKind::Group(shape) = &mut g.kind else {
         return false;
     };
-    let mut boxes = shape.children.iter().map(Object::outer_box);
-    let Some(first) = boxes.next() else {
+    let Some(mut union) = children_box(&shape.children) else {
         return false;
     };
-    let mut union = boxes.fold(first, |a, b| a.union(&b));
     let mut shift = (0.0, 0.0);
     if theta != 0.0 {
         // Rendering is `c + R(q - c)` about the box centre c; with the centre moving to the union's
@@ -1017,25 +1034,91 @@ pub fn set_frames(doc: &Document, frames: &[(Uuid, Frame)]) -> Command {
     )
 }
 
-/// Gives `o` the frame `new`. A group's contents go with it: if only its place changes they move
-/// by the same amount; if its size changes each child is resolved against the new box by its own
-/// constraints, as another device's page does (rung 7a bbq, Q3), and a group among them likewise.
+/// How a group's contents follow when the group's box is moved or stretched: every leaf in it is
+/// mapped from the group's old box to its new one, as a loose multiple selection is when it is
+/// resized (rung 7a look change, Q3 as amended; [`crate::geom::map_frame`]). The boxes are in the
+/// unturned space the group's contents are resolved in on the page `holder` describes, which is
+/// the page shown while dragging (the leaves' stored frames go there and back by their own
+/// constraints); `None` is the primary page itself.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GroupMap {
+    /// The page the boxes are measured on, or `None` for the primary page.
+    pub holder: Option<Holder>,
+    /// The group's box before.
+    pub old: Frame,
+    /// The group's box after.
+    pub new: Frame,
+}
+
+/// Moves and stretches everything in the group `o` by `map`, then refits the box of every group
+/// among them (and of `o`) round its children, so the boxes stay what they must be. A turned
+/// child stretches approximately: it keeps its angle.
+pub fn map_contents(o: &mut Object, map: &GroupMap) {
+    // The primary page shown on itself resolves nothing: skip it, so nothing picks up float noise.
+    let holder = map.holder.filter(|h| h.from != h.to);
+    fn walk(o: &mut Object, map: &GroupMap, holder: &Option<Holder>, deg: f64) {
+        let ObjectKind::Group(g) = &mut o.kind else {
+            return;
+        };
+        for c in &mut g.children {
+            let ang = deg + c.rotation();
+            if c.is_group() {
+                walk(c, map, holder, ang);
+                continue;
+            }
+            let text = matches!(c.kind, ObjectKind::Text(_));
+            let at = match holder {
+                Some(h) => h.resolve(c.frame, c.constraints),
+                None => c.frame,
+            };
+            let to = map_frame(at, ang, text, &map.old, &map.new);
+            let to = match holder {
+                Some(h) => h.unresolve(to, c.constraints),
+                None => to,
+            };
+            // Float noise is not a move.
+            if !to.near(&c.frame) {
+                c.frame = to;
+            }
+        }
+        if let Some(b) = children_box(&g.children)
+            && !b.near(&o.frame)
+        {
+            o.frame = b;
+        }
+    }
+    walk(o, map, &holder, 0.0);
+}
+
+/// Gives `o` the frame `new`. A group's contents go with it: they move by the same amount if only
+/// its place changes, and are stretched with the box if its size does, as a resize of a loose
+/// selection does ([`map_contents`]; rung 7a look change, Q3 as amended). A group's box then is
+/// round its children again.
 pub fn reframe(o: &mut Object, new: Frame) {
     let old = o.frame;
-    if let ObjectKind::Group(g) = &mut o.kind {
+    if o.is_group() {
         if (old.w_mm - new.w_mm).abs() < 1e-9 && (old.h_mm - new.h_mm).abs() < 1e-9 {
             let (dx, dy) = (new.x_mm - old.x_mm, new.y_mm - old.y_mm);
-            if dx != 0.0 || dy != 0.0 {
+            if (dx != 0.0 || dy != 0.0)
+                && let ObjectKind::Group(g) = &mut o.kind
+            {
                 for c in &mut g.children {
                     c.translate(dx, dy);
                 }
             }
         } else {
-            let holder = Holder { from: old, to: new };
-            for c in &mut g.children {
-                let f = holder.resolve(c.frame, c.constraints);
-                reframe(c, f);
-            }
+            map_contents(
+                o,
+                &GroupMap {
+                    holder: None,
+                    old,
+                    new,
+                },
+            );
+        }
+        if let Some(b) = children_box(o.children()) {
+            o.frame = b;
+            return;
         }
     }
     o.frame = new;
@@ -1051,6 +1134,10 @@ pub struct Placement {
     pub rotation_deg: f64,
     /// A line's diagonal; `None` for any other kind.
     pub dir: Option<LineDir>,
+    /// A group dragged on a device other than the primary: how its contents follow (the `frame`
+    /// is then only for the group's own bookkeeping). `None` moves and sizes them on the primary
+    /// page by `frame`.
+    pub map: Option<GroupMap>,
 }
 
 impl Placement {
@@ -1063,6 +1150,7 @@ impl Placement {
                 ObjectKind::Line(l) => Some(l.direction),
                 _ => None,
             },
+            map: None,
         }
     }
 
@@ -1077,7 +1165,10 @@ impl Placement {
     /// Puts `o` there. A kind that cannot rotate keeps rotation 0; a direction is for lines only.
     /// A group's contents follow its frame ([`reframe`]).
     pub fn apply(&self, o: &mut Object) {
-        reframe(o, self.frame);
+        match (&self.map, o.is_group()) {
+            (Some(map), true) => map_contents(o, map),
+            _ => reframe(o, self.frame),
+        }
         if o.kind.can_rotate() {
             o.rotation_deg = normalize_deg(self.rotation_deg);
         }

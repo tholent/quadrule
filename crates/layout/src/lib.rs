@@ -342,7 +342,7 @@ pub fn text_requests<'a>(
             ObjectKind::Text(tb) => Some(TextRequest {
                 object_id: o.id,
                 text: tb,
-                // The width it falls at: against the page, or against the group it is in.
+                // The width it falls at on this page.
                 width_mm: nodes.iter().find(|n| n.id == o.id)?.local.w_mm,
             }),
             _ => None,
@@ -416,11 +416,11 @@ fn draw_objects(
     let (target, rhythm, outlines) = (env.target, env.rhythm, env.outlines);
     let px = |mm: f64| target.mm_to_px(mm);
     for o in objs.iter().filter(|o| o.visible) {
-        let local = ctx.holder.resolve(o.frame, o.constraints);
+        let local = tree::local_frame(o, &ctx.holder);
         let (f, angle) = ctx.place(local, o.rotation());
         let first_item = items.len();
         if let ObjectKind::Group(g) = &o.kind {
-            let inner = ctx.child(local, o.frame, o.rotation());
+            let inner = ctx.child(local, o.rotation());
             draw_objects(&g.children, &inner, env, items)?;
             wrap_opacity(items, first_item, o.opacity());
             continue;
