@@ -46,8 +46,10 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
     6's Shade and Block fill roles.) The grays sheet was added 2026-11-10 (`dcf5458`): run `cargo xtask calibration-sheet`, put each device's
     `quadrule-calib_grays-*.png` on it, and report which of G1–G30 are clean and how many bands GR shows
     (`docs/calibration.md`).
+  - Landscape toolbar screenshots: captured 2026-11-12, left, right and top on both devices, not measured yet
+    (`docs/device-measurements/<device>/landscape/`; rung 8 measures them).
   - Landscape: put one landscape PNG on a device and say whether it expects rotated pixels or swapped sizes
-    (spec §17.1 item 3); landscape toolbar screenshots for the safe zones (needed by rung 8).
+    (spec §17.1 item 3; still open 2026-11-12: "Not yet").
   - Not needed: the Manta's pen shades. chris ruled them equal to the Nomad's (Q8).
 - **Starters (Q11, Q13):** chris designs one starter per category in the app as the features land; agents follow
   his example for the rest of that category. The lead says when each becomes buildable:

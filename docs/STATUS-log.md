@@ -1276,3 +1276,9 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   are unchanged; their expected sums for shapes and transforms follow the new goldens.
 - `make check-all` → `TESTS scope=workspace checks=312 check_fail=0 passed=292 failed=0 status=ok`. chris: "yes, commit
   and push".
+- Landscape toolbar screenshots from chris (left, right, top; Manta 2560 × 1920, Nomad 1872 × 1404). In the device
+  folders they broke `crates/xtask/tests/safezones.rs` (`safe_zones_match_screenshots result=fail …screenshots=7:zones=6`),
+  since `cargo xtask safe-zones` reads portrait only; chris: "Landscape subfolder (Recommended)", so they moved unrenamed
+  to `docs/device-measurements/<device>/landscape/` and the test passes again (2 passed). The Nomad files came with mode
+  `rwxr-----`; set to 644 like the rest, and `nomad-pen-shades.png`'s stored mode 100755 corrected to 100644. The
+  landscape PNG check is still open ("Not yet").

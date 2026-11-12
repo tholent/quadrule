@@ -23,7 +23,12 @@ edge, because its length depends on which icons the user has chosen; only its th
 **Measured so far (2026-11-09):** portrait only, toolbar docked left, right and top, and floating at its default
 place, for `supernote.a5x2` and `supernote.a6x2`.
 
-**Still to capture:** landscape, a collapsed toolbar, and any other floating positions.
+**Landscape, captured 2026-11-12 (chris), not measured yet:** toolbar docked left, right and top on both devices, in
+`<profile_id>/landscape/` (Manta 2560 × 1920, Nomad 1872 × 1404; no floating shot). They sit in a subfolder because
+`cargo xtask safe-zones` reads only portrait shots from the device folder itself; rung 8 teaches it landscape and
+measures them. In landscape a scroll bar shows down the right edge, which portrait does not have.
+
+**Still to capture:** a collapsed toolbar, other floating positions, and a floating toolbar in landscape.
 
 ## What Supernote's stock 5 mm grid shows (2026-11-09)
 

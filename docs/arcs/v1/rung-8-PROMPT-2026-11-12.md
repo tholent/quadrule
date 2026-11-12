@@ -42,8 +42,10 @@
 
 ## Open questions to ask again at the start (AGENTS.md: "ask open questions again at the next session start")
 
-- chris's hardware queue (board): a landscape PNG check and landscape toolbar screenshots (rung 8 needs them). The
-  grays sheet is done (2026-11-12: Block 68 → 102; Manta ruled equal to the Nomad).
+- chris's hardware queue (board): a landscape PNG check (rotated pixels or swapped sizes?). The landscape toolbar
+  screenshots are in (2026-11-12, `docs/device-measurements/<device>/landscape/`), not measured: `cargo xtask
+  safe-zones` reads portrait only, so rung 8 teaches it landscape. The grays sheet is done (2026-11-12: Block 68 →
+  102; Manta ruled equal to the Nomad).
 - Still parked: "Scale vs pixel-locked rhythm on A5 X" (v1.1, arc Q16); the Label gray (v1.1); text and pattern
   rotation (v1.1, chris 2026-11-12: "Not in v1").
 
