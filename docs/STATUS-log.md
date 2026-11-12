@@ -1282,3 +1282,8 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   to `docs/device-measurements/<device>/landscape/` and the test passes again (2 passed). The Nomad files came with mode
   `rwxr-----`; set to 644 like the rest, and `nomad-pen-shades.png`'s stored mode 100755 corrected to 100644. The
   landscape PNG check is still open ("Not yet").
+- Landscape template check (spec §17.1 item 3), on the Nomad: four test PNGs made with a one-off script in the scratchpad
+  (Test A wide 1872 × 1404 and 2560 × 1920; Test B the same turned clockwise, 1404 × 1872 and 1920 × 2560). chris's
+  readings, word for word, in `docs/device-measurements/supernote.a6x2/landscape-test.md`. Grid spacing in the landscape
+  screenshots: 79 px against 59 px in portrait (× 4/3). Answer: rotated pixels; landscape mode zooms. Recorded as a note
+  under spec §17.1 item 3, on the board, in STATUS and in the rung 8 prompt. Not tested on the Manta.

@@ -737,6 +737,11 @@ The `model`, `layout`, `lint` and `format` crates must be fully testable headles
    > shades". The Manta's ink values are the Nomad's; only the clean gray levels are still to measure.
 2. **Safe zones:** Measure from toolbar screenshots (§3.5), per toolbar state and orientation.
 3. **Landscape templates:** Export one landscape PNG and confirm whether the device expects rotated pixels or swapped dimensions.
+   > Answered 2026-11-12 on the Nomad (chris; `docs/device-measurements/supernote.a6x2/landscape-test.md`): **rotated
+   > pixels**. A template is always a portrait page at the screen's size. A wide PNG is shrunk to fit the page width
+   > (blurred); a landscape design turned a quarter turn and saved as a portrait PNG is shown pixel for pixel in portrait
+   > mode. Turning the device to landscape zooms the portrait page by 4/3 to fit the width and scrolls it, so nothing is
+   > pixel-exact in landscape mode. Gray levels (item 1) were read on the Nomad the same day; the Manta was ruled equal.
 
 ### 17.2 Deferred
 

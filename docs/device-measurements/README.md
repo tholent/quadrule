@@ -26,7 +26,9 @@ place, for `supernote.a5x2` and `supernote.a6x2`.
 **Landscape, captured 2026-11-12 (chris), not measured yet:** toolbar docked left, right and top on both devices, in
 `<profile_id>/landscape/` (Manta 2560 × 1920, Nomad 1872 × 1404; no floating shot). They sit in a subfolder because
 `cargo xtask safe-zones` reads only portrait shots from the device folder itself; rung 8 teaches it landscape and
-measures them. In landscape a scroll bar shows down the right edge, which portrait does not have.
+measures them. In landscape a scroll bar shows down the right edge, which portrait does not have. **These are zoomed views:** the grid in them
+is 79 px apart against 59 px in portrait (× 4/3), because the device shows the portrait page zoomed to fit the width in
+landscape (`supernote.a6x2/landscape-test.md`), so their zones are not in template pixels.
 
 **Still to capture:** a collapsed toolbar, other floating positions, and a floating toolbar in landscape.
 

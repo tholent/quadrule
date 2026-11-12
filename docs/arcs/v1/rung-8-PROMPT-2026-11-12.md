@@ -33,18 +33,21 @@
 - **The graphics-chip canvas** sits at 40–42 ms (90th percentile) on the groups page against the 50 ms line (ADR-009);
   the shapes page was 45.9–48.4 ms in rung 6. The device previews strip draws more pages per frame: measure dragging
   with the strip showing, on the heaviest page, the chip canvas included, and say before anything crosses 50 ms.
-- **Landscape is blocked on chris's hardware:** the spec's open question (§17.1 item 3: does the device expect rotated
-  pixels or swapped sizes?) and the landscape toolbar screenshots for the safe zones (spec §3.5) are still on his
-  queue ("Nothing yet", 2026-11-12). Orientation cannot be finished without them; consider putting it in a later part.
+- **Landscape is no longer blocked** (2026-11-12, after this prompt was first written): rotated pixels, on the Nomad;
+  see "Open questions" below and `docs/device-measurements/supernote.a6x2/landscape-test.md`.
 - **Debt touched by rung 8:** the rung 7b line (align works on the primary page only, whichever device is on screen);
   the rung 7a line; the rung 2 viewer line; the Style tab still shows the first object's values, not "mixed"
   (`docs/STATUS-debt.md`).
 
 ## Open questions to ask again at the start (AGENTS.md: "ask open questions again at the next session start")
 
-- chris's hardware queue (board): a landscape PNG check (rotated pixels or swapped sizes?). The landscape toolbar
-  screenshots are in (2026-11-12, `docs/device-measurements/<device>/landscape/`), not measured: `cargo xtask
-  safe-zones` reads portrait only, so rung 8 teaches it landscape. The grays sheet is done (2026-11-12: Block 68 →
+- **Landscape is answered on the Nomad** (2026-11-12, `docs/device-measurements/supernote.a6x2/landscape-test.md`):
+  the device wants **rotated pixels**. A template is always a portrait page; a landscape design must be turned a
+  quarter turn and saved as a portrait PNG, read in portrait mode with the tablet held sideways. A wide PNG is shrunk
+  (soft); landscape mode zooms the page by 4/3 and scrolls, so nothing is pixel-exact there. Rung 8's bbq must decide
+  which way a landscape design turns, and whether the landscape toolbar screenshots
+  (`docs/device-measurements/<device>/landscape/`, zoomed views, not template pixels) matter at all, since a sideways
+  template is used in portrait mode where the portrait safe zones apply. Not tested on the Manta. The grays sheet is done (2026-11-12: Block 68 →
   102; Manta ruled equal to the Nomad).
 - Still parked: "Scale vs pixel-locked rhythm on A5 X" (v1.1, arc Q16); the Label gray (v1.1); text and pattern
   rotation (v1.1, chris 2026-11-12: "Not in v1").
@@ -59,8 +62,7 @@ this rung's budget with `budget-select`. Ask the open questions above. Then run 
 **rung 8: several devices** — secondary profiles, Linked and Forked (spec §3.4), the device previews strip, per-object
 overrides with badges and an Overrides tab (spec §6.1 line 278), lint L15 (spec §8.3), and portrait and landscape
 orientation (spec §3.2 `orientations`, §17.1 item 3) — including how overrides apply to groups under the Figma rule; the
-file format bump this needs (0.8.0 through the migration chain); and whether to split 8a/8b (orientation waits on
-chris's landscape check). Have Sonnet 5.5 at high effort build it on `main`; keep the eight golden lines and the
+file format bump this needs (0.8.0 through the migration chain); and whether to split 8a/8b (orientation is now unblocked: a landscape design exports turned into portrait pixels). Have Sonnet 5.5 at high effort build it on `main`; keep the eight golden lines and the
 fixtures frozen (stop and ask chris if any would change); add a golden page per device for what changes export; measure
 drawing and dragging on the Pi (90th percentile, ADR-009) on the heaviest page with the previews strip showing, the chip
 canvas included; pay the debt in code the rung touches. Show chris the window and stop for his look. After his approval:

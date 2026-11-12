@@ -166,8 +166,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). Next: rung 8, several devices; the next lead's prompt is
   `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`.
-- Waits on chris: a landscape PNG check on a device (the landscape toolbar screenshots are in, 2026-11-12, not yet
-  measured: `docs/device-measurements/README.md`) (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
+- Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
+  design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
+  4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
   (`napkins/quadrule-spec.md` §8.3 note).
 
 ## Known debt

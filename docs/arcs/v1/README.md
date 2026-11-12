@@ -21,7 +21,7 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 |---|---|---|---|
 | 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity. Split (bbq Q1, `docs/bbq/2026-11-10-rung-6-shapes.md`): **6a** all the shapes, fill (Shade and Block roles), dashes and caps; **6b** rotation, lines any way, opacity | large: 6a + 6b | done: 6a `v0.6.0`, 6b `v0.6.1`, both approved by chris 2026-11-11 |
 | 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3); how a group turns (6b debt) | medium | done: 7a `v0.7.0`, 7b `v0.7.1`, both approved by chris 2026-11-12 (7a with the Figma constraints change) |
-| 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (needs chris's landscape check, below) | large | next: `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md` |
+| 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (a landscape design exports turned into portrait pixels: chris's Nomad check, 2026-11-12, below) | large | next: `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md` |
 | 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | — |
 | 10 | Repeat tool: linear and grid, pitch or gap, fill to bounds, alternation, Expand (§6.4) | large | — |
 | 11 | Text and fonts: the bundled set with its OFL texts, system fonts on all three systems, the font picker, fixed-size boxes and L08, paragraph spacing, vertical alignment, baselines on the rhythm; monochrome emoji and its picker | large | — |
@@ -48,8 +48,10 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
     (`docs/calibration.md`).
   - Landscape toolbar screenshots: captured 2026-11-12, left, right and top on both devices, not measured yet
     (`docs/device-measurements/<device>/landscape/`; rung 8 measures them).
-  - Landscape: put one landscape PNG on a device and say whether it expects rotated pixels or swapped sizes
-    (spec §17.1 item 3; still open 2026-11-12: "Not yet").
+  - ~~Landscape: put one landscape PNG on a device and say whether it expects rotated pixels or swapped sizes~~
+    answered on the Nomad 2026-11-12: **rotated pixels** (a landscape design turned and saved as a portrait PNG; a wide
+    PNG is shrunk, and landscape mode zooms by 4/3) (`docs/device-measurements/supernote.a6x2/landscape-test.md`,
+    spec §17.1 item 3 note). Not tested on the Manta.
   - Not needed: the Manta's pen shades. chris ruled them equal to the Nomad's (Q8).
 - **Starters (Q11, Q13):** chris designs one starter per category in the app as the features land; agents follow
   his example for the rest of that category. The lead says when each becomes buildable:
