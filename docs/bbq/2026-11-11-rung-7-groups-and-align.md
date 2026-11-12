@@ -164,6 +164,9 @@ Hand off at ~500k of your context. Before handoff, write your row in the calibra
 - **Landing:** commits straight to `main` (`AGENTS.md`, amendment of 2026-11-09); CI checked on each push. README
   ("what works today") and DEVELOPMENT.md kept true. veto: none expected.
 
+Settled 2026-11-12 (looseends, chris: "Settled by approval (Recommended)"): chris approved 7a (with the Figma change,
+Q3 amendment, ADR-015) and 7b, so every Defaulted call above stands as built; their `veto:` lines are closed.
+
 ## Kickoff
 
 Run on **Opus 5.5 at high effort** as the lead; on any other model or effort, stop and say so before doing anything

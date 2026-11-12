@@ -1254,3 +1254,8 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   (`docs/decisions/ADR-015-groups-see-through-to-constraints.md`, record `docs/bbq/2026-11-12-adr-groups.md`);
   `adr-check.py` → `15 ADRs, 0 failure(s)`. The rung 8 prompt now asks for its ratification.
 - chris ratified ADR-015 ("Ratify").
+- looseends (session), chris's yes: CI read for rung 7's code pushes with `gh run list --branch main` — CI, Coverage
+  and Fuzz `success` on `d6bd9c0` (7a), `62cc6ca` (7a look change), `57f2896` (`v0.7.0`), `b80b218` (7b) and `2e1f4ff`
+  (`v0.7.1`; Fuzz not run on `b80b218`/`62cc6ca`'s list beyond those shown); docs-only pushes start no CI. The budget
+  row re-measured for the whole session; the rung 7 record's Defaulted calls marked settled by chris's approvals. Record
+  `docs/looseends/2026-11-12-rung-7-session.md`.
