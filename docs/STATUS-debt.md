@@ -29,7 +29,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   right-to-left translation.
 - Rung 2 viewer, owed (`crates/ui/src/view.rs`, `crates/app/src/main.rs`): the controls' font on macOS is looked up as
   `.AppleSystemUIFont`, unverified (no Mac here); if fontdb cannot find it, egui's own font shows. Ctrl + scroll
-  zooms by a step but does not keep the point under the pointer still. The export writes no PNG text note (napkin
+  keeps the point under the pointer still since 8a, untested headless (`egui_kittest` cannot make a scroll-zoom). The export writes no PNG text note (napkin
   §11.1 has it on by default), so its bytes match rung 1's goldens; the note belongs with the export settings.
 - The graphics-chip canvas (built in rung 3, `crates/app/src/chip.rs`) is measured only on the Pi at Fit zoom (40 ms
   a frame, release build); still to measure zoomed in, while scrolling, and on a desktop graphics card (rung 3 bbq
@@ -84,7 +84,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   cap on Long dash at 1 mm reads solid): the inspector does not warn. A polygon is picked and snapped by its frame, not by
   its corners. L13 (large dark fills) stays in rung 14 although Block makes it likelier. The inspector edits the first
   selected object's values and applies to all, as before (the Arrange tab's X, Y, W, H and Rotation read "mixed" since 7b; the
-  Style fields do not). The Style tab shows Dash and Cap for lines
+  Style tab's opacity, stroke kind, role, width and gray since 8a; fill, dash, cap and the shape rows do not). The Style tab shows Dash and Cap for lines
   too (a line is a stroke); a pattern region and a text box have neither. The shapes page is built in code
   (`quadrule_model::sample::shapes_document`) and opened with `--shapes-page`, not as a file.
 - Rung 6b, owed (`crates/layout/src/rotate.rs`, `crates/layout/src/shapes.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/view.rs`): text
@@ -105,26 +105,32 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   with no children keeps its stored box. Resizing a group stretches turned things inside it approximately, as a loose
   selection does (the 6b debt returns for groups: a turned child keeps its angle and its sides grow by how much the
   stretch lengthens their directions, so a turned child is not sheared; a group inside a turned group stretches the
-  same way). A group dragged or resized while the other device is on screen moves each child's resolved box on that
-  device and unresolves it by the child's own rules, as a loose selection does, so a child pinned to an edge may
-  come out of a drag with a different stored position than the pointer step suggests. The drawing tools put a new
+  same way). The drawing tools put a new
   object on a layer, never inside the group entered. Dragging a row of the layers tree across the edge of a turned group
   is refused with a note (the object would move on the page; Group and Ungroup are the way), and objects can be grouped
   only from one place (the layers, or one group).
   Shift-picking a group and something inside it in the layers panel keeps only the last of the two. Group opacity on the
   chip canvas is one vello layer per opacity group, nested ones nested (not measured with many). A loose multiple
   selection still resizes turned objects approximately.
-- Rung 7b, owed (`crates/layout/src/align.rs`, `crates/ui/src/arrange.rs`, `crates/ui/src/panels.rs`): align and distribute work
-  on the stored design on the primary page, as the Arrange fields do, whichever device is on screen (a child pinned to an
-  edge that the other device resolves differently is not aligned there). A text box aligns by its stored frame, not by the
+- Rung 7b, owed (`crates/layout/src/align.rs`, `crates/ui/src/arrange.rs`, `crates/ui/src/panels.rs`): A text box aligns by its stored frame, not by the
   height of its laid-out text. Aligning or distributing objects inside a turned group moves them in the group's own space and
   the group's box is refitted after, so its pivot may shift and the others with it by a little; this is the same for a drag or
   a nudge there. On a pixel grid an object's extent counts as its width rounded to a pixel (how the export draws it), the
   aligned edge lands on a pixel, a centre align puts the left or top edge on a pixel (the centre within half a pixel), and
   distribute by centres rounds each place, with no leftover-pixel spreading (spacing has it). Distribute by spacing
   takes the object with the leftmost (topmost) edge and the one with the rightmost (bottommost) edge as the ends, and
-  puts them on the pixel grid too (up to half a pixel). A pick of Selection with one object picked does nothing. Only
-  X, Y, width, height and rotation read "mixed"; the Style tab's fields still show the first object's value. The align
+  puts them on the pixel grid too (up to half a pixel). A pick of Selection with one object picked does nothing. The align
   buttons' icons are drawn by hand and not yet seen by chris; no keyboard shortcuts (rung 17); the dragging and drawing
   speed is unchanged and was not re-measured for 7b; the Align-to choice is tested through
   `Viewer::align_to` and `Viewer::set_align_to`, not by opening the dropdown in the window.
+- Rung 8a, owed (`crates/ui/src/drag.rs`, `crates/ui/src/editor.rs`, `crates/layout/src/device.rs`, `crates/lint/src/lib.rs`,
+  `crates/ui/src/strip.rs`): editing a child inside a group that has an override on the device on screen stores the
+  child's override but does not adjust the group's box, so if the children's outer box changes, everything re-scales
+  into the same box (a jump). Make primary can shift a child of a turned group on a device whose group box differs (the
+  group turns about its box's middle); Ungroup's bake is exact for unturned groups only. A rotation or line-direction
+  change made by a drag on a secondary changes the shared design without the status-bar note (only field edits say it).
+  L15's "squeezed" check uses a text box's stored height, not its laid-out height. Override keys for a device no longer
+  targeted stay only when they came from a file. The strip's pictures and the Ctrl + scroll anchor have no pointer test.
+  The overrides dot is the accent colour (chris's look decides). Drawing a pattern region on the shapes page on the chip
+  canvas is over 50 ms at the 90th percentile (8a lead, strip on: 50.8–51.1 ms; first timed in 8a, rung 6a timed only
+  rectangle, ellipse and polygon there) (`docs/STATUS-log.md`, 2026-11-12/13 rung 8a).

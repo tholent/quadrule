@@ -1291,3 +1291,34 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - Hard stop, chris word for word: "let's move the hard stop to 90%"; asked how it applies: "This week only". So 90 % until
   the Saturday 14th 5 pm reset, then back to 75 / 80 / 85 / 93 %. Meter 67 % (21:39 UTC): 23 points of room this week.
   Written into the rung 8 prompt's Budget watch item and `docs/budget-calibration.md`.
+
+## 2026-11-12/13 — rung 8 kickoff, bbq; rung 8a built (lead: Opus 5.5, `CLAUDE_EFFORT=high`; builder: Sonnet 5.5, high)
+
+- Kickoff from `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`: `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` →
+  `BUILD head=bb0b5ed dirty=no rebuilt=6`.
+- Budget (`budget-select`): chris's reading "Still 67 %" (21:59 UTC, logged with `spend-ledger.py reading 67 --meter
+  weekly`); ceiling "20 points (Recommended)", reserve "0 points", "No, alone". Share 20 points; hard stop 90 % until
+  Saturday's reset.
+- bbq, 8 questions, every answer the recommended option: record `docs/bbq/2026-11-12-rung-8-several-devices.md`
+  (`91693aa`). Split 8a several devices / 8b orientation; Forked stays v1.1 (spec §17.3); position, size, font size and
+  visibility are per device; a group's override is its box; strip at the bottom; landscape turns clockwise; L15 only on
+  trouble.
+- 8a built by one Sonnet 5.5 high subagent (0.48M tokens, 163 tool uses, 70 min): `2cbb8d1` (model, layout, format
+  0.8.0, `v0.7/` fixture, overrides page, goldens), `2bbf752` (editor on secondary devices, strip, Overrides tab, Make
+  primary, device ticks, L15, benches), `82b74e8` (README, DEVELOPMENT). Departures from the record: Make primary
+  adds an override wherever anything would move at all (1e-6 mm), stricter than half a pixel; overrides text, the strip
+  and L15 use the short names "Manta" and "Nomad"; the `nudge` test now expects a Nomad override (Q3).
+- Judged by the lead: `make build-proof` → `BUILD head=82b74e8 dirty=no rebuilt=7`; `make check-all` → `TESTS
+  scope=workspace checks=346 check_fail=0 passed=323 failed=0 status=ok`. `git diff 91693aa..HEAD --
+  crates/render/tests/golden/SHA256SUMS` adds two lines (`devices_*`) and changes none; fixtures v0.4–v0.6 untouched.
+- Speed, release build on the Pi, 90th percentile, strip on (builder's runs; `--bench-drag|--bench-draw 150 <page>
+  --canvas export|chip`): drag export about 20 ms on every page, chip 42.5 (shapes), 32.3 (groups), 18.2 (devices),
+  15.5 (devices on the Nomad); draw export about 20 ms, chip 38.1 (groups), 26.5 / 22.7 (devices). **Over the line:**
+  drawing a pattern region on the shapes page on the chip canvas. Re-timed by the lead: `./target/release/quadrule
+  --shapes-page --bench-draw 150 --canvas chip` → p90 51.0, 51.1, 50.8 ms. The same command at `91693aa` (before 8a,
+  built in a worktree under `target/`, since removed) → 56.6, 56.2, 56.3 ms; with `--bench-tool rect` → 47.9, 47.9,
+  48.0 ms (as rung 6a). So it was over before 8a, never timed (rung 6a timed rect, ellipse and polygon only), and 8a made
+  it faster. Said to chris before the look (ADR-009).
+- New debt in `docs/STATUS-debt.md` (rung 8a line); paid: the 7a "group dragged on the other device" and 7b "align on
+  the primary page" lines, part of the Style tab's "mixed", the rung 2 Ctrl + scroll anchor.
+- Waits on chris: the look at 8a.
