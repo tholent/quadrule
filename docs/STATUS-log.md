@@ -1077,3 +1077,67 @@ chris approved 6b at his look with one change, in his words: "approved, with one
   draft, pre-release, 7 files. Then the draft and the tag were deleted (`gh release view v0.6.2-test.1` → "release not
   found"; `git ls-remote --tags origin` shows no test tag). Not tried: the final publish step and the tag-push trigger
   on a real tag; `v0.7.0` is their first use.
+
+## 2026-11-11 — rung 7a built: groups (Sonnet 5.5, `CLAUDE_EFFORT=high`)
+
+Kickoff from `docs/bbq/2026-11-11-rung-7-groups-and-align.md` (7a only: Q2, Q3, Q4, Q7, Q8 and the Defaulted items about
+groups; no align or distribute, Q5, Q6 or "mixed" fields). Preconditions: tree clean at `f839644` (workspace 0.6.1). I did
+not push, tag, bump the version, publish, or touch `STATUS.md`.
+
+- **Format 0.7.0** (`bb5c542`): `ObjectKind::Group(GroupShape { children, extra })` (`crates/model/src/lib.rs`); a no-op
+  `0.6.0 → 0.7.0` step in `migrate::CHAIN`; the 0.6 fixtures `crates/render/tests/fixtures/v0.6/` (`transforms.quad`, `slice.quad`
+  with its text, and `SHA256SUMS`) were saved by the 0.6 code from a throwaway worktree of `f839644`, before any 0.7 change; test
+  `crates/render/tests/migrate_v06.rs` (both open as 0.6, migrate, export the same four hashes; saved again they are 0.7.0 and
+  hold no `children` key). `migrate_v04` and `migrate_v05` only had their `FORMAT_VERSION == "0.6.0"` guard moved to `"0.7.0"`.
+- **Model and commands** (`crates/model/src/edit.rs`, `geom.rs`): children live in the group's unturned space in page mm, so
+  grouping moves nothing. New: `Place`, `Loc`, `Document::locate/at/object_mut/place_of/parent_of/ancestors/children_of/
+  effectively_locked/effectively_hidden` (a locked or hidden group locks or hides what is in it), `Command::InsertIn` and
+  `MoveObjectIn` (`Remove`, `MoveObject`, `SetObject` now work at any depth), `edit::group`, `edit::ungroup` (bakes the group's
+  angle into each child, centre moved about the group's centre, a child group's own contents carried with it; multiplies
+  opacity, carries hidden and locked), `reframe` (a group's contents follow its frame: a move translates the subtree, a resize
+  resolves each child by its own constraints against the old box → the new box, recursively; Q3). `Document::apply` refits the
+  box of every group an edit touched inside, deepest first, to the union of its children's turned boxes, removes a group left
+  with no children, and puts the box restores in the undo command so undo is exact; a turned group's children are shifted by
+  (R − I)(centre moved) so the drawing does not move when its turn centre does. `Document::objects()` now walks groups
+  (group before children); `leaves()` skips the groups. Text boxes and pattern regions are refused by a turned group (`EditError::
+  TurnedGroup`) and a group holding one cannot turn (`ObjectKind::can_rotate`). The constraint maths (`resolve_frame`,
+  `unresolve_frame`) moved to `quadrule_model::geom` (layout re-exports it; byte-identical arithmetic), with `Holder` (a stored box →
+  a resolved box; a box with no width or no height does not divide by zero).
+- **Layout** (`crates/layout/src/tree.rs`, `lib.rs`): `resolve_nodes` gives every object its resolved frame in its holder, its frame
+  on the page, its total angle (own plus every group's), and effective hidden and locked; `display_list` draws a group's children
+  inside it and wraps a group below 100 % in one `BeginAlpha … EndAlpha` (nesting works in both renderers, which already used a
+  layer stack); `placed_objects` lists groups before their children (a group's shape is its box, turned with it) and `Placed`
+  carries its `Node`; `text_requests` uses the width a text box has in its group. `UnitContext::with_percent_of` makes `%` the
+  group's box inside a group (pays the `units.rs` "no groups yet" note).
+- **Lint** (`crates/lint/src/lib.rs`): runs on each leaf from `placed_objects` (its own copy of the bounds maths is gone: debt "rung 3,
+  lint keeps its own copy" paid); a group has no rules.
+- **Editor** (`crates/ui/src/editor.rs`, `drag.rs`, `panels.rs`, `view.rs`): `Viewer::entered`, `pick_leaf`, `pick` (the child on the
+  way down at the level entered), `click_with(…, deep)`, `enter_at` (double-click; tested through this method), `leave_group`
+  (Escape), `select_row` (a tree row enters its groups), `group_selection`, `ungroup_selection`, `move_object_into`,
+  `row_drop_place` (drop above, below, or on the middle of a group row). Ctrl+G, Ctrl+Shift+G, Group and Ungroup buttons in the
+  Arrange tab and the layers panel. Drag, resize, turn, nudge, Alt-duplicate and the marquee work on a group as one object and on a
+  child inside a turned group (the pointer step is carried back through the turns: `Item::stored`); a resize holding a group stops at
+  one pixel instead of flipping (`not_past`; debt 4a paid for real groups). The layers panel is a tree (fold arrows named for
+  readers). The Style tab of a group is Opacity only; Rotation is greyed with a note when a text box or pattern region is inside;
+  the Constraints tab says "work against the group" for a child; the entered group has a faint dashed outline.
+- **Goldens and benches**: the groups page `quadrule_model::sample::groups_document()` (nested three deep; a group turned 25° with a
+  child turned 15°; a group at 50 % with overlapping children; a child pinned Right and Top; a heavy group of 40 shapes in two sub-groups,
+  one at 80 %); `--groups-page`, `GROUPS=1` for `make bench-drag` and `bench-draw`; new lines in `crates/render/tests/golden/SHA256SUMS`:
+  `70ec1bf7…` (a5x2) and `2963ff3f…` (a6x2); the six old lines, the v0.4 and v0.5 fixtures are untouched. Pixel checks: a group at 50 %
+  fades as one (227 vs 164 where two 50 % objects would show the bar through); grouping the nested group moves nothing (0 px on both
+  devices); a turned group equals its children with the angle baked in (0 px).
+- **Speed** (Pi, release build, window on the Pi, `--groups-page`, 150 frames, 90th percentile, all `result=pass` under 50 ms): drag of the
+  heavy group, export canvas 25.6, 25.7, 25.7 ms (three runs), chip canvas 41.0, 41.3, 41.0; draw rect export 25.0, chip 42.5; draw line
+  export 25.2, chip 41.6. For comparison the sample page's chip drag in the same session: 32.2. The chip canvas on this page is the
+  heaviest so far (nested opacity layers) and is closer to the line than before.
+- **Chosen**: (1) after a resize of the group itself the box is left as dragged (the children resolve against it), and refits only on the
+  next edit inside; (2) grouping needs objects from one place; (3) moves across the edge of a turned group in the layers panel are refused
+  with a note; (4) Ctrl+press drags what is already selected if it holds or is the object under the pointer, else picks the innermost;
+  (5) a hidden or locked group's flag is carried to its children by Ungroup; (6) a group left empty is removed, and comes back on undo;
+  (7) grouping can change how a page looks on the other device: children follow the group's box (which scales with the page), not the
+  page, as the record's Q3 says (shown by the render test `text_in_group`: the slice's title grouped with its rule differs by 48,319 px on
+  the Nomad, 0 on the Manta).
+
+**Waits on chris**: the look at 7a (`cargo run --release -p quadrule-app -- --groups-page`: click a group, double-click into it, Escape,
+Ctrl+click; Ctrl+G and Ctrl+Shift+G; drag, resize, turn a group; the layers tree and dragging rows into and out of groups; the Group
+buttons). Owed items are in `docs/STATUS-debt.md` (rung 7a line).
