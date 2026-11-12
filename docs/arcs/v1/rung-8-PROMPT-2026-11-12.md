@@ -44,7 +44,8 @@
 
 - chris's hardware queue (board): the grays sheet on both devices (Shade 204 and Block 68 are estimates until then); a
   landscape PNG check and landscape toolbar screenshots (rung 8 needs them).
-- Should the Figma groups rule get its own ADR (it reverses the spec's "constraint container")? Offer `makeadr`.
+- ADR-015 (groups see-through to constraints, `docs/decisions/ADR-015-groups-see-through-to-constraints.md`) was
+  drafted 2026-11-12 and is proposed: if chris has not ratified it, ask "Ratify ADR-015 as written?".
 - Still parked: "Scale vs pixel-locked rhythm on A5 X" (v1.1, arc Q16); the Label gray (v1.1); text and pattern
   rotation (v1.1, chris 2026-11-12: "Not in v1").
 

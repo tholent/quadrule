@@ -1249,3 +1249,7 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - chris: "approved. the meter is at 64%". Workspace bumped to `0.7.1`; notes `docs/arcs/v1/release-notes/v0.7.1.md`; tag
   `v0.7.1` pushed. The spec gains a dated note under §5.2 recording the Figma groups ruling. Board re-planned; next lead's
   prompt `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`; calibration row in `docs/budget-calibration.md`.
+- `v0.7.1` release: run 43293356639, every job success; `gh release view v0.7.1` → `draft=false prerelease=true assets=7`.
+- chris: "makeadr" (goforit, no rounds). ADR-015 drafted, proposed: groups are see-through to constraints, as in Figma
+  (`docs/decisions/ADR-015-groups-see-through-to-constraints.md`, record `docs/bbq/2026-11-12-adr-groups.md`);
+  `adr-check.py` → `15 ADRs, 0 failure(s)`. The rung 8 prompt now asks for its ratification.
