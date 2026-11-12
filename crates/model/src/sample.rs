@@ -903,3 +903,299 @@ pub fn transforms_document() -> Document {
     ];
     doc
 }
+
+/// Fixed ids for the groups page's objects.
+pub mod group_ids {
+    use crate::Uuid;
+    /// The `n`th object of the groups page (1-based, groups and children alike); the dot grid is
+    /// [`super::ids::DOTS`].
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0009_4000_8000_0000_0000_0000 + n)
+    }
+    /// The outermost of the three nested groups.
+    pub const NESTED: Uuid = nth(1);
+    /// The turned group (holding a turned child).
+    pub const TURNED: Uuid = nth(20);
+    /// The group at 50 percent with children that overlap.
+    pub const HALF: Uuid = nth(30);
+    /// The group whose child is pinned to the top and right.
+    pub const PINNED: Uuid = nth(40);
+    /// The pinned child of [`PINNED`].
+    pub const PINNED_CHILD: Uuid = nth(41);
+    /// The heavy group the drag benchmark moves: dozens of children in two levels.
+    pub const HEAVY: Uuid = nth(100);
+}
+
+/// The rung 7a groups page (docs/bbq/2026-11-11-rung-7-groups-and-align.md, Defaulted "Goldens
+/// (7a)"): groups nested three deep, a turned group with a turned child, a group at 50 percent
+/// whose children overlap (so the overlap must not show through), a group whose child is pinned
+/// to the top and the right (it keeps its size when the group's box grows on the other device),
+/// and a heavy group of dozens of shapes in two levels for the drag benchmark. It holds the
+/// sample's dot grid ([`ids::DOTS`]) so the benchmarks can run over it, and no text, so it needs
+/// no fonts. Designed on the Manta, also targeting the Nomad.
+pub fn groups_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 7a groups".into();
+    doc.metadata.description =
+        "The rung 7a groups page: nesting, a turned group, group opacity, a pinned child.".into();
+    let rule = doc.layers[1].objects[1].clone();
+    let dots = doc.layers[0].objects[0].clone();
+    let structure = Style::Role(LineRole::Structure);
+    let emphasis = Style::Role(LineRole::Emphasis);
+    let (shade, block) = (
+        Some(Fill::Role(FillRole::Shade)),
+        Some(Fill::Role(FillRole::Block)),
+    );
+    let mk =
+        |n: u128, name: &str, frame: Frame, style: Style, fill: Option<Fill>, kind: ObjectKind| {
+            let mut o = rule.clone();
+            o.id = group_ids::nth(n);
+            o.name = name.into();
+            o.frame = frame;
+            o.constraints = Constraints::default();
+            o.style = style;
+            o.fill = fill;
+            o.kind = kind;
+            o
+        };
+    let rect = || ObjectKind::Rect(RectShape::default());
+    let ellipse = || ObjectKind::Ellipse(EllipseShape::default());
+    let star = |n: u8| ObjectKind::Polygon(PolygonShape::star(n));
+    let line = |dir: LineDir| {
+        ObjectKind::Line(Line {
+            direction: dir,
+            ..Line::default()
+        })
+    };
+    // A group whose box is round its children, as the editor leaves it.
+    let group = |n: u128, name: &str, children: Vec<Object>| {
+        let frame = children
+            .iter()
+            .map(Object::outer_box)
+            .reduce(|a, b| a.union(&b))
+            .unwrap_or(Frame::new(0.0, 0.0, 0.0, 0.0));
+        let mut g = mk(
+            n,
+            name,
+            frame,
+            Style::None,
+            None,
+            ObjectKind::Group(GroupShape {
+                children,
+                extra: Extra::new(),
+            }),
+        );
+        g.style = Style::None;
+        g
+    };
+
+    // 1. Three levels: Outer holds a box and Middle; Middle holds an ellipse and Inner; Inner holds
+    //    a star and a line.
+    let inner = group(
+        4,
+        "Inner group",
+        vec![
+            mk(
+                5,
+                "Star",
+                Frame::new(34.0, 40.0, 18.0, 18.0),
+                emphasis,
+                block,
+                star(5),
+            ),
+            mk(
+                6,
+                "Line",
+                Frame::new(32.0, 62.0, 22.0, 6.0),
+                structure,
+                None,
+                line(LineDir::Up),
+            ),
+        ],
+    );
+    let middle = group(
+        3,
+        "Middle group",
+        vec![
+            mk(
+                7,
+                "Ellipse",
+                Frame::new(22.0, 36.0, 34.0, 26.0),
+                structure,
+                shade,
+                ellipse(),
+            ),
+            inner,
+        ],
+    );
+    let nested = group(
+        1,
+        "Outer group",
+        vec![
+            mk(
+                2,
+                "Box",
+                Frame::new(12.0, 32.0, 54.0, 40.0),
+                structure,
+                None,
+                rect(),
+            ),
+            middle,
+        ],
+    );
+
+    // 2. A group turned by 25 degrees holding a rectangle turned by 15, an ellipse and a line.
+    let mut turned_child = mk(
+        21,
+        "Turned child",
+        Frame::new(80.0, 40.0, 24.0, 12.0),
+        structure,
+        shade,
+        rect(),
+    );
+    turned_child.rotation_deg = 15.0;
+    let mut turned = group(
+        20,
+        "Turned group",
+        vec![
+            turned_child,
+            mk(
+                22,
+                "Disc",
+                Frame::new(98.0, 52.0, 16.0, 16.0),
+                structure,
+                block,
+                ellipse(),
+            ),
+            mk(
+                23,
+                "Rule",
+                Frame::new(80.0, 58.0, 34.0, 0.0),
+                emphasis,
+                None,
+                line(LineDir::Down),
+            ),
+        ],
+    );
+    turned.rotation_deg = 25.0;
+
+    // 3. A group at 50 percent: a Block bar and a Shade disc that overlap, and a line across both.
+    let mut half = group(
+        30,
+        "Half group",
+        vec![
+            mk(
+                31,
+                "Bar",
+                Frame::new(12.0, 96.0, 40.0, 14.0),
+                Style::None,
+                block,
+                rect(),
+            ),
+            mk(
+                32,
+                "Disc",
+                Frame::new(34.0, 90.0, 26.0, 26.0),
+                emphasis,
+                shade,
+                ellipse(),
+            ),
+            mk(
+                33,
+                "Slash",
+                Frame::new(14.0, 92.0, 44.0, 22.0),
+                emphasis,
+                None,
+                line(LineDir::Up),
+            ),
+        ],
+    );
+    half.opacity_pct = 50;
+
+    // 4. A group whose child is pinned to the top and right: on a wider or taller page it keeps its
+    //    size and its distance from those edges, while the child that scales grows with the group.
+    let mut pinned_child = mk(
+        41,
+        "Pinned top right",
+        Frame::new(124.0, 92.0, 18.0, 12.0),
+        structure,
+        block,
+        rect(),
+    );
+    pinned_child.constraints = Constraints {
+        h: HConstraint::Right,
+        v: VConstraint::Top,
+    };
+    let pinned = group(
+        40,
+        "Pinned group",
+        vec![
+            mk(
+                42,
+                "Frame",
+                Frame::new(76.0, 88.0, 66.0, 38.0),
+                structure,
+                None,
+                rect(),
+            ),
+            pinned_child,
+            mk(
+                43,
+                "Scaled disc",
+                Frame::new(84.0, 100.0, 22.0, 20.0),
+                structure,
+                shade,
+                ellipse(),
+            ),
+        ],
+    );
+
+    // 5. The heavy group: a 8 x 5 grid of small shapes in two sub-groups, to move in the benchmark.
+    let mut cells: Vec<Object> = Vec::new();
+    let mut n = 101u128;
+    for row in 0..5 {
+        for col in 0..8 {
+            let frame = Frame::new(
+                10.0 + f64::from(col) * 16.0,
+                150.0 + f64::from(row) * 11.0,
+                12.0,
+                8.0,
+            );
+            let kind = match (row + col) % 3 {
+                0 => rect(),
+                1 => ellipse(),
+                _ => star(5),
+            };
+            let fill = if (row + col) % 2 == 0 { shade } else { None };
+            cells.push(mk(n, "Cell", frame, structure, fill, kind));
+            n += 1;
+        }
+    }
+    let right = cells.split_off(20);
+    let left = group(n, "Heavy left", cells);
+    let mut faded = group(n + 1, "Heavy right", right);
+    faded.opacity_pct = 80;
+    let mut heavy = group(n + 2, "Heavy group", vec![left, faded]);
+    heavy.id = group_ids::HEAVY;
+
+    let mut dot_strip = dots.clone();
+    dot_strip.frame = Frame::new(8.0, 8.0, 146.0, 18.0);
+    dot_strip.constraints = Constraints::default();
+    doc.layers = vec![
+        Layer {
+            name: "Grid".into(),
+            visible: true,
+            locked: false,
+            objects: vec![dot_strip],
+            extra: Extra::new(),
+        },
+        Layer {
+            name: "Groups".into(),
+            visible: true,
+            locked: false,
+            objects: vec![nested, turned, half, pinned, heavy],
+            extra: Extra::new(),
+        },
+    ];
+    doc
+}
