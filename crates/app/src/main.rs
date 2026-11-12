@@ -55,6 +55,9 @@ const KEY_SNAP_EQUAL: &str = "snap_equal_spacing";
 const KEY_RHYTHM_OVERLAY: &str = "show_rhythm_overlay";
 /// The device the New dialog starts on: the last one picked (rung 5).
 const KEY_NEW_DEVICE: &str = "new_device";
+/// What Align to was last set to, for one object picked and for several (rung 7b, Q5).
+const KEY_ALIGN_SINGLE: &str = "align_to_single";
+const KEY_ALIGN_MULTI: &str = "align_to_multi";
 
 struct App {
     ui: ViewerUi,
@@ -92,6 +95,12 @@ impl App {
                 eframe::get_value(storage, KEY_SNAP_EQUAL).unwrap_or(snap.equal_spacing);
             ui.viewer.show_rhythm =
                 eframe::get_value(storage, KEY_RHYTHM_OVERLAY).unwrap_or(ui.viewer.show_rhythm);
+            let kept = |key| {
+                eframe::get_value::<String>(storage, key)
+                    .and_then(|k| quadrule_layout::align::AlignTo::from_key(&k))
+            };
+            ui.viewer.align_single = kept(KEY_ALIGN_SINGLE).unwrap_or(ui.viewer.align_single);
+            ui.viewer.align_multi = kept(KEY_ALIGN_MULTI).unwrap_or(ui.viewer.align_multi);
             if let Some(id) = eframe::get_value::<String>(storage, KEY_NEW_DEVICE) {
                 ui.set_new_device(&id);
             }
@@ -238,6 +247,8 @@ impl eframe::App for App {
         eframe::set_value(storage, KEY_SNAP_SMART, &v.snap.smart_guides);
         eframe::set_value(storage, KEY_SNAP_EQUAL, &v.snap.equal_spacing);
         eframe::set_value(storage, KEY_RHYTHM_OVERLAY, &v.show_rhythm);
+        eframe::set_value(storage, KEY_ALIGN_SINGLE, &v.align_single.key().to_string());
+        eframe::set_value(storage, KEY_ALIGN_MULTI, &v.align_multi.key().to_string());
         eframe::set_value(storage, KEY_NEW_DEVICE, &self.ui.new_device().to_string());
     }
 }

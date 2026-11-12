@@ -276,3 +276,21 @@ app-group = Group
 app-ungroup = Ungroup
 app-fold-item = Show what is inside { $name }
 app-rotation-note = A group with a text box or a pattern region in it cannot turn.
+
+# Align and distribute, and mixed values (rung 7b).
+app-align-heading = Align and distribute
+app-align-to = Align to
+app-align-to-selection = Selection
+app-align-to-page = Page
+app-align-to-margins = Margins
+app-arrange-align-left = Align left edges
+app-arrange-align-centre = Align horizontal centres
+app-arrange-align-right = Align right edges
+app-arrange-align-top = Align top edges
+app-arrange-align-middle = Align vertical middles
+app-arrange-align-bottom = Align bottom edges
+app-distribute-h-spacing = Distribute horizontally by spacing
+app-distribute-h-centres = Distribute horizontally by centres
+app-distribute-v-spacing = Distribute vertically by spacing
+app-distribute-v-centres = Distribute vertically by centres
+app-mixed = mixed

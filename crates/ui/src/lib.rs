@@ -23,6 +23,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod arrange;
 pub mod bench;
 pub mod canvas;
 pub mod drag;
@@ -34,6 +35,7 @@ pub mod tools;
 pub mod view;
 pub mod viewer;
 
+pub use arrange::{ArrangeOp, Mixed};
 pub use bench::DragBench;
 pub use canvas::{CanvasMode, ChipRenderer, ChipState, DragClock, Fallback};
 pub use drag::{

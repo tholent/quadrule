@@ -18,11 +18,13 @@
 //! moved the layers there from the left on 2026-11-10, keeping the left side for a future tools
 //! bar.
 
+use crate::arrange::ArrangeOp;
 use crate::editor::{DropOn, RowZone, Toward, layer_drop_place, object_drop_place, row_drop_place};
 use crate::view::ViewerUi;
-use egui::{RichText, Role, ScrollArea, Sense, WidgetInfo};
+use egui::{Color32, RichText, Role, ScrollArea, Sense, WidgetInfo};
 use quadrule_i18n::Message;
 use quadrule_layout::RhythmPx;
+use quadrule_layout::align::AlignTo;
 use quadrule_layout::units::{Axis, UnitContext, format_length, parse_length, trim_number};
 use quadrule_lint::Severity;
 use quadrule_model::edit::{Command, Place, reframe};
@@ -789,21 +791,23 @@ impl ViewerUi {
             return;
         };
         let enabled = !self.viewer.editable_selection().is_empty();
+        let mixed = self.viewer.arrange_mixed();
         let f = o.frame;
         ui.horizontal(|ui| self.group_buttons(ui));
+        self.align_section(ui);
         egui::Grid::new("arrange-grid")
             .num_columns(2)
             .show(ui, |ui| {
                 type Set = fn(&mut Object, f64);
-                let rows: [(&str, &str, f64, &UnitContext, Set); 4] = [
+                let rows: [(&str, &str, f64, bool, &UnitContext, Set); 4] = [
                     // A group's contents follow its frame (`reframe`).
-                    ("arrange-x", "app-x", f.x_mm, &cx, |o, v| {
+                    ("arrange-x", "app-x", f.x_mm, mixed.x, &cx, |o, v| {
                         reframe(o, Frame { x_mm: v, ..o.frame })
                     }),
-                    ("arrange-y", "app-y", f.y_mm, &cy, |o, v| {
+                    ("arrange-y", "app-y", f.y_mm, mixed.y, &cy, |o, v| {
                         reframe(o, Frame { y_mm: v, ..o.frame })
                     }),
-                    ("arrange-w", "app-width", f.w_mm, &cx, |o, v| {
+                    ("arrange-w", "app-width", f.w_mm, mixed.w, &cx, |o, v| {
                         reframe(
                             o,
                             Frame {
@@ -812,7 +816,7 @@ impl ViewerUi {
                             },
                         )
                     }),
-                    ("arrange-h", "app-height", f.h_mm, &cy, |o, v| {
+                    ("arrange-h", "app-height", f.h_mm, mixed.h, &cy, |o, v| {
                         reframe(
                             o,
                             Frame {
@@ -822,26 +826,49 @@ impl ViewerUi {
                         )
                     }),
                 ];
-                for (key, id, v, ctx, set) in rows {
-                    if let Some(mm) = self.length_row(ui, key, id, v, ctx, enabled) {
+                for (key, id, v, is_mixed, ctx, set) in rows {
+                    if let Some(mm) = self.length_row_mixed(ui, key, id, v, ctx, enabled, is_mixed)
+                    {
                         let _ = self.viewer.edit_selected(Some(key), |o| set(o, mm));
                     }
                     ui.end_row();
                 }
                 // Rotation in degrees, clockwise, about the frame's centre (rung 6b, Q5). Lines and
-                // shapes only: a text box and a pattern region do not rotate, so no field.
-                if o.kind.can_rotate() {
+                // shapes only: a text box and a pattern region do not rotate, so no field. With
+                // several selected, the first that turns gives the value, and the field reads
+                // "mixed" when those that turn differ.
+                let turner = self
+                    .viewer
+                    .selection
+                    .iter()
+                    .filter_map(|id| self.viewer.doc().and_then(|d| d.object(*id)))
+                    .find(|x| x.kind.can_rotate())
+                    .cloned();
+                if let Some(turner) = turner {
                     let label = ui.label(self.t("app-rotation"));
-                    let mut deg = o.rotation();
+                    let mut deg = turner.rotation();
+                    let mut drag = egui::DragValue::new(&mut deg)
+                        .range(-360.0..=360.0)
+                        .speed(1.0)
+                        .max_decimals(2);
+                    if mixed.rotation {
+                        // The word stands in for the number and its degree sign.
+                        let word = self.t("app-mixed");
+                        drag = drag
+                            .custom_formatter(move |_, _| word.clone())
+                            .custom_parser(|t| {
+                                t.trim()
+                                    .trim_start_matches(|c: char| c.is_alphabetic())
+                                    .trim_end_matches('°')
+                                    .trim()
+                                    .parse()
+                                    .ok()
+                            });
+                    } else {
+                        drag = drag.suffix("°");
+                    }
                     let changed = ui
-                        .add_enabled(
-                            enabled,
-                            egui::DragValue::new(&mut deg)
-                                .range(-360.0..=360.0)
-                                .speed(1.0)
-                                .max_decimals(2)
-                                .suffix("°"),
-                        )
+                        .add_enabled(enabled, drag)
                         .labelled_by(label.id)
                         .changed();
                     if changed {
@@ -865,6 +892,71 @@ impl ViewerUi {
                     ui.end_row();
                 }
             });
+    }
+
+    /// Align and distribute (rung 7b): the Align to choice, six align buttons, four distribute
+    /// buttons. Icons, each named for screen readers and its tooltip.
+    fn align_section(&mut self, ui: &mut egui::Ui) {
+        ui.add_space(4.0);
+        ui.strong(self.t("app-align-heading"));
+        let to = self.viewer.align_to();
+        let mut picked = to;
+        ui.horizontal(|ui| {
+            let label = ui.label(self.t("app-align-to"));
+            self.combo(
+                ui,
+                "align-to",
+                label.id,
+                &mut picked,
+                &[
+                    (AlignTo::Selection, "app-align-to-selection"),
+                    (AlignTo::Page, "app-align-to-page"),
+                    (AlignTo::Margins, "app-align-to-margins"),
+                ],
+            );
+        });
+        if picked != to {
+            self.viewer.set_align_to(picked);
+        }
+        ui.horizontal_wrapped(|ui| {
+            for (n, op) in ArrangeOp::ALL.into_iter().enumerate() {
+                if n == 6 {
+                    ui.add_space(8.0);
+                }
+                let on = self.viewer.arrange_enabled(op);
+                let name = self.t(op.message_id());
+                let (rect, response) =
+                    ui.allocate_exact_size(egui::vec2(26.0, 26.0), Sense::click());
+                response.widget_info(|| WidgetInfo::labeled(Role::Button, on, &name));
+                let v = ui.visuals();
+                let (fill, color) = if !on {
+                    (
+                        Color32::TRANSPARENT,
+                        v.widgets.noninteractive.fg_stroke.color,
+                    )
+                } else if response.hovered() {
+                    (
+                        v.widgets.hovered.weak_bg_fill,
+                        v.widgets.hovered.fg_stroke.color,
+                    )
+                } else {
+                    (Color32::TRANSPARENT, v.widgets.inactive.fg_stroke.color)
+                };
+                let color = if on {
+                    color
+                } else {
+                    color.gamma_multiply(0.45)
+                };
+                let painter = ui.painter();
+                painter.rect_filled(rect, 4.0, fill);
+                crate::arrange::paint_icon(painter, op, rect.center(), color);
+                let response = response.on_hover_text(name);
+                if on && response.clicked() {
+                    let _ = self.viewer.arrange(op);
+                }
+            }
+        });
+        ui.add_space(4.0);
     }
 
     fn style_tab(&mut self, ui: &mut egui::Ui) {
@@ -1463,18 +1555,40 @@ impl ViewerUi {
         ctx: &UnitContext,
         enabled: bool,
     ) -> Option<f64> {
+        self.length_row_mixed(ui, key, label_id, mm, ctx, enabled, false)
+    }
+
+    /// [`ViewerUi::length_row`], and with `mixed` (the selected objects differ) the field reads
+    /// "mixed" until it is focused, then is empty; a length typed applies to all of them (rung 7b,
+    /// Defaulted "7b pays the rung 3 debt").
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn length_row_mixed(
+        &mut self,
+        ui: &mut egui::Ui,
+        key: &str,
+        label_id: &str,
+        mm: f64,
+        ctx: &UnitContext,
+        enabled: bool,
+        mixed: bool,
+    ) -> Option<f64> {
         let label = ui.label(self.t(label_id));
         let id = ui.make_persistent_id(("length", key));
         let focused = ui.memory(|m| m.has_focus(id));
         let mut text = match (focused, self.field_text.get(key)) {
             (true, Some(t)) => t.clone(),
+            (true, None) if mixed => String::new(),
+            (false, _) if mixed => self.t("app-mixed"),
             _ => format_length(mm, ctx),
         };
         let parsed = parse_length(&text, ctx);
-        let bad = focused && parsed.is_err();
+        let bad = focused && parsed.is_err() && !(mixed && text.is_empty());
         let mut edit = egui::TextEdit::singleline(&mut text)
             .id(id)
             .desired_width(110.0);
+        if mixed {
+            edit = edit.hint_text(self.t("app-mixed"));
+        }
         if bad {
             edit = edit.background_color(ui.visuals().error_fg_color.gamma_multiply(0.25));
         }

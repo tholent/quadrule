@@ -177,6 +177,11 @@ pub struct Viewer {
     /// How far the rotate handle stands from the top edge, in device pixels: the window sets it
     /// from the zoom so the stalk keeps one length on screen (rung 6b).
     pub rotate_stalk_px: f64,
+    /// What Align to is for a single object picked, as the user last chose it (rung 7b, Q5):
+    /// the page, until they pick otherwise. An app setting, not saved in the `.quad` file.
+    pub align_single: quadrule_layout::align::AlignTo,
+    /// What Align to is for two or more objects picked: the selection, until they pick otherwise.
+    pub align_multi: quadrule_layout::align::AlignTo,
     pub(crate) fonts: FontRegistry,
 }
 
@@ -225,6 +230,8 @@ impl Default for Viewer {
             names: crate::draw::NewNames::default(),
             focus_new_text: false,
             rotate_stalk_px: 24.0 / 0.3,
+            align_single: quadrule_layout::align::AlignTo::Page,
+            align_multi: quadrule_layout::align::AlignTo::Selection,
             fonts: FontRegistry::bundled_only(),
         }
     }

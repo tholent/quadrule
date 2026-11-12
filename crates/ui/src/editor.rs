@@ -709,7 +709,7 @@ impl Viewer {
         self.edit(Command::SetObject(o), None)
     }
 
-    fn locked_notice_if_none_editable(&mut self) {
+    pub(crate) fn locked_notice_if_none_editable(&mut self) {
         if !self.selection.is_empty() && self.editable_selection().is_empty() {
             self.notice = Some(crate::viewer::Notice {
                 message: Message::new("notice-locked"),
