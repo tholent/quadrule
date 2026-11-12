@@ -1141,3 +1141,23 @@ not push, tag, bump the version, publish, or touch `STATUS.md`.
 **Waits on chris**: the look at 7a (`cargo run --release -p quadrule-app -- --groups-page`: click a group, double-click into it, Escape,
 Ctrl+click; Ctrl+G and Ctrl+Shift+G; drag, resize, turn a group; the layers tree and dragging rows into and out of groups; the Group
 buttons). Owed items are in `docs/STATUS-debt.md` (rung 7a line).
+
+## 2026-11-12 — rung 7 kickoff, bbq and 7a judged (lead: Opus 5.5, `CLAUDE_EFFORT=high`)
+
+- Start: `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` → `BUILD head=5fc4301 dirty=no rebuilt=7`.
+- Budget (`budget-select`): 10 points of a 10-point ceiling, alone on the weekly meter, no reserve; chris gave the reading
+  "Still about 55 %" (not measured), logged with `spend-ledger.py reading 55 --meter weekly` at 2026-11-12T00:02:56Z. Stop
+  lines: 65 % on the meter, the 75 % hard stop, ~500k of the lead's context.
+- Open questions asked again, chris's answers: text boxes and pattern regions rotate "Not in v1 (Recommended)"; a
+  multi-selection's box stays "Upright for a selection (Recommended)"; hardware queue "Nothing yet".
+- bbq, 8 questions, all answered with the recommendation: record `docs/bbq/2026-11-11-rung-7-groups-and-align.md` (`f839644`).
+- 7a built by one Sonnet 5.5 high subagent (494,829 tokens, 189 tool uses, about 61 minutes), its entry above; commits
+  `bb5c542` to `d6bd9c0`, pushed.
+- Judged by the lead: `make check-all` → `TESTS scope=workspace checks=296 check_fail=0 passed=275 failed=0 status=ok`;
+  `make build-proof` → `BUILD head=d6bd9c0 dirty=no rebuilt=0`; `git diff 5fc4301 -- crates/render/tests/golden/SHA256SUMS`
+  shows only the two new `groups_*` lines; `git diff --stat 5fc4301 -- crates/render/tests/fixtures/v0.4 …/v0.5` is empty.
+- Re-measured by the lead on the Pi, release build, groups page, 90th percentile: `make bench-drag GROUPS=1` → export
+  `p90_ms=26.6`; `target/release/quadrule --bench-drag 150 --groups-page --canvas chip` → `p90_ms=42.1`, `42.0`; all
+  `result=pass` against 50 ms.
+- Put to chris at the look: the builder's choice (1), the box left as dragged after a group's own resize, and (7), grouping
+  changes the other device's picture because children follow the group's box (Q3 as ruled).
