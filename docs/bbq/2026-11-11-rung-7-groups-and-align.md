@@ -55,6 +55,14 @@ Hand off at ~500k of your context. Before handoff, write your row in the calibra
 - **Q3 Resizing a group.** Each child obeys its own constraints against the group's box, the same rule another device
   uses (spec §5.4, "Transform and constraint container", §5.2). Default children (Scale) scale; a child pinned Top
   keeps its height. What the user sees while resizing is what a different-sized device gets.
+  - **Amended 2026-11-12 by chris, at the 7a look**, word for word: "I approve the build, but would like to change
+    question #1 to reflect what figma does" (question #1 of the look: grouping changed the Nomad picture because
+    children followed the group's box). Q3 as built is superseded: groups are see-through to constraints, as in
+    Figma. Each child keeps its own constraints against the page (the `%` unit inside a group is of the page again);
+    a group has no constraints of its own (no Constraints tab; its stored `constraints` are ignored); its box is
+    always its children's outer box, on every device. Resizing a group by its handles scales everything inside, as a
+    loose multi-selection does; turned children inside then stretch approximately (the 6b debt returns for groups).
+    Grouping never changes how a page looks on either device. The rest of Q3's text is history only.
 - **Q4 Selecting inside groups.** A click picks the outermost group; a double-click goes one level in and picks the
   child under the pointer; Escape, or a click outside the entered group, steps back out one level; Ctrl+click picks
   the innermost object at once (Ctrl+drag still drags with snapping off). The layers panel becomes a tree with fold
