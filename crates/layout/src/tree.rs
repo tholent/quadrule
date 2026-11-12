@@ -21,9 +21,15 @@
 //! handles, snapping, lint) takes it from here.
 //!
 //! Positions are in millimetres on the profile's page; the angles add up down the tree.
+//!
+//! Overrides (rung 8 bbq, Q3 and Q4): on a secondary device an object may carry its own place and
+//! size, which replace what its constraints give. A group's override is its box; what is in the
+//! group is laid out as usual, and the box round it is then moved and stretched onto the override
+//! box ([`Fit`]). The functions here that take `ov` read the overrides of that device; `None` lays
+//! out the stored design (the primary profile, where no override is ever read).
 
 use crate::rotate::{cos_sin_deg, rotate_point};
-use quadrule_model::geom::Holder;
+use quadrule_model::geom::{Fit, Holder};
 use quadrule_model::{Constraints, Document, Frame, Object, ObjectKind, Uuid, normalize_deg};
 
 /// A rigid move of the page: a turn of `deg` degrees clockwise, then a shift by `t` (mm).
@@ -92,6 +98,9 @@ pub struct Ctx {
     pub holder: Holder,
     /// From the unturned space the object is resolved in to the page.
     pub xf: Rigid,
+    /// What the overrides of the groups round the object do to it, before the turns: the box round
+    /// each group's children onto the group's override box (identity when no group has one).
+    pub fit: Fit,
 }
 
 impl Ctx {
@@ -100,6 +109,24 @@ impl Ctx {
         Ctx {
             holder: Holder::page(from, to),
             xf: Rigid::IDENTITY,
+            fit: Fit::IDENTITY,
+        }
+    }
+
+    /// The frame `unfit` (laid out by constraints and its own override) after the overrides of the
+    /// groups round it, `deg` being the angle it is turned by itself (`text`: a text box, which
+    /// keeps its height).
+    pub fn fitted(&self, unfit: Frame, deg: f64, text: bool) -> Frame {
+        self.fit.apply(unfit, deg, text)
+    }
+
+    /// The reverse of [`Ctx::fitted`]: the frame, before the groups' overrides, that ends up as
+    /// `fitted`. A group squashed to nothing on an axis cannot be undone: the frame is then taken
+    /// as it is.
+    pub fn unfit(&self, fitted: Frame, deg: f64, text: bool) -> Frame {
+        match self.fit.inverse() {
+            Some(inv) => inv.apply(fitted, deg, text),
+            None => fitted,
         }
     }
 
@@ -130,6 +157,15 @@ impl Ctx {
         Ctx {
             holder: self.holder,
             xf: self.xf.then_turn(local.centre(), rot),
+            fit: self.fit,
+        }
+    }
+
+    /// The same context with one more group's override map applied to what is in it first.
+    pub fn with_fit(&self, group_fit: Fit) -> Ctx {
+        Ctx {
+            fit: group_fit.then(self.fit),
+            ..*self
         }
     }
 }
@@ -138,21 +174,73 @@ impl Ctx {
 /// shape, line, text box or pattern region by its own constraints against the page; a group as the
 /// box round its children's turned boxes (so it is the same on every device, whatever the
 /// constraints of the group itself, which are ignored). A group with nothing in it keeps its
-/// stored box.
+/// stored box. This is the stored design: no override is read.
 pub fn local_frame(o: &Object, holder: &Holder) -> Frame {
-    match &o.kind {
-        ObjectKind::Group(g) => group_box(&g.children, holder).unwrap_or(o.frame),
-        _ => holder.resolve(o.frame, o.constraints),
-    }
+    unfit_frame(o, holder, None).1
 }
 
-/// The box round `children` as resolved on `holder`'s page, each as turned by its own angle;
-/// `None` for no children.
-pub fn group_box(children: &[Object], holder: &Holder) -> Option<Frame> {
+/// Where `o` falls before the overrides of the groups round it, on the page `holder` describes,
+/// laid out for device `ov` (`None`: the stored design): the box its constraints (or, for a group,
+/// its children) give, and that box with the object's own place and size override on it. The
+/// second is where the object is in the space of the group it is in, before that group's own
+/// override moves it.
+pub fn unfit_frame(o: &Object, holder: &Holder, ov: Option<&str>) -> (Frame, Frame) {
+    let base = match &o.kind {
+        ObjectKind::Group(g) => group_box(&g.children, holder, ov).unwrap_or(o.frame),
+        _ => holder.resolve(o.frame, o.constraints),
+    };
+    let own = ov
+        .and_then(|p| o.override_on(p))
+        .map_or(base, |x| x.apply_to(base));
+    (base, own)
+}
+
+/// The box round `children` as resolved on `holder`'s page for device `ov`, each as turned by its
+/// own angle; `None` for no children.
+pub fn group_box(children: &[Object], holder: &Holder, ov: Option<&str>) -> Option<Frame> {
     children
         .iter()
-        .map(|c| c.outer_box_of(local_frame(c, holder)))
+        .map(|c| c.outer_box_of(unfit_frame(c, holder, ov).1))
         .reduce(|a, b| a.union(&b))
+}
+
+/// An object placed in its context: the stages between its constraints and the page.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Placing {
+    /// What its constraints give (for a group, the box round its children): no override read.
+    pub base: Frame,
+    /// `base` with the object's own place and size override.
+    pub unfit: Frame,
+    /// `unfit` after the overrides of the groups round it: its frame in its holder's space.
+    pub local: Frame,
+    /// Its unturned box on the page.
+    pub frame: Frame,
+    /// Its angle on the page.
+    pub angle: f64,
+    /// For a group: what its children are laid out in.
+    pub inner: Option<Ctx>,
+}
+
+/// Lays `o` out in `ctx` for device `ov`.
+pub fn place_object(o: &Object, ctx: &Ctx, ov: Option<&str>) -> Placing {
+    let (base, unfit) = unfit_frame(o, &ctx.holder, ov);
+    let rot = o.rotation();
+    let text = matches!(o.kind, ObjectKind::Text(_));
+    let local = ctx.fitted(unfit, rot, text);
+    let (frame, angle) = ctx.place(local, rot);
+    // A group's contents are mapped from the box round them onto its override box first, then
+    // through the groups round it.
+    let inner = o
+        .is_group()
+        .then(|| ctx.child(local, rot).with_fit(Fit::between(&base, &unfit)));
+    Placing {
+        base,
+        unfit,
+        local,
+        frame,
+        angle,
+        inner,
+    }
 }
 
 /// One object laid out: where it falls on the page, and what it sits in.
@@ -170,8 +258,15 @@ pub struct Node {
     pub group: bool,
     /// Its constraints.
     pub constraints: Constraints,
-    /// Its frame resolved in its holder's space (before the holder's turns).
+    /// Its frame resolved in its holder's space (before the holder's turns), overrides included.
     pub local: Frame,
+    /// What its constraints give (for a group, the box round its children), before any override.
+    pub base: Frame,
+    /// `base` with the object's own place and size override, before the overrides of the groups
+    /// round it move it.
+    pub unfit: Frame,
+    /// Whether it carries a place or size override on this device.
+    pub framed: bool,
     /// Its frame on the page: the unturned box, centred where the turns put it.
     pub frame: Frame,
     /// Its angle on the page: its own plus every group's round it.
@@ -190,6 +285,17 @@ pub struct Node {
 /// comes before its children), on a page of `to` mm for a design made on a page of `from` mm.
 /// Hidden and locked objects are included, flagged.
 pub fn resolve_nodes(doc: &Document, from: (f64, f64), to: (f64, f64)) -> Vec<Node> {
+    resolve_nodes_on(doc, from, to, None)
+}
+
+/// [`resolve_nodes`] for device `ov`: its objects' overrides are read (`None` is the stored design,
+/// which is what the primary profile shows).
+pub fn resolve_nodes_on(
+    doc: &Document,
+    from: (f64, f64),
+    to: (f64, f64),
+    ov: Option<&str>,
+) -> Vec<Node> {
     let mut out = Vec::new();
     for (li, layer) in doc.layers.iter().enumerate() {
         walk(
@@ -200,6 +306,7 @@ pub fn resolve_nodes(doc: &Document, from: (f64, f64), to: (f64, f64)) -> Vec<No
             &Ctx::page(from, to),
             !layer.visible,
             layer.locked,
+            ov,
             &mut out,
         );
     }
@@ -215,16 +322,25 @@ fn walk(
     ctx: &Ctx,
     hidden: bool,
     locked: bool,
+    ov: Option<&str>,
     out: &mut Vec<Node>,
 ) {
     for o in objs {
-        let local = local_frame(o, &ctx.holder);
-        let rot = o.rotation();
-        let (frame, angle) = ctx.place(local, rot);
+        let Placing {
+            base,
+            unfit,
+            local,
+            frame,
+            angle,
+            inner,
+        } = place_object(o, ctx, ov);
         // A kind that cannot turn is not turned by a group round it either (a hand-made file).
         let angle = if o.kind.can_rotate() { angle } else { 0.0 };
-        let (hidden, locked) = (hidden || !o.visible, locked || o.locked);
-        let inner = o.is_group().then(|| ctx.child(local, rot));
+        let visible = ov.map_or(o.visible, |p| o.visible_on(p));
+        let (hidden, locked) = (hidden || !visible, locked || o.locked);
+        let framed = ov
+            .and_then(|p| o.override_on(p))
+            .is_some_and(quadrule_model::Override::has_frame);
         out.push(Node {
             id: o.id,
             layer,
@@ -233,6 +349,9 @@ fn walk(
             group: o.is_group(),
             constraints: o.constraints,
             local,
+            base,
+            unfit,
+            framed,
             frame,
             angle,
             ctx: *ctx,
@@ -249,6 +368,7 @@ fn walk(
                 inner,
                 hidden,
                 locked,
+                ov,
                 out,
             );
         }

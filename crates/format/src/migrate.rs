@@ -31,6 +31,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.4.0", "0.5.0", v0_4_to_v0_5),
     ("0.5.0", "0.6.0", v0_5_to_v0_6),
     ("0.6.0", "0.7.0", v0_6_to_v0_7),
+    ("0.7.0", "0.8.0", v0_7_to_v0_8),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -76,6 +77,15 @@ fn v0_5_to_v0_6(_scene: &mut Value) -> Result<(), FormatError> {
 /// rewritten (as 0.1 to 0.2). A 0.6 build cannot read a 0.7 file that holds a group; it reports an
 /// error rather than guessing.
 fn v0_6_to_v0_7(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.8 adds two optional fields (rung 8 bbq, Defaulted "File format 0.8.0"): `overrides` on an
+/// object (what differs on one secondary device: place, size, font size, eye) and `orientation` on
+/// the page settings. A 0.7 file has neither, which reads as no overrides and a portrait page,
+/// exactly what it drew before, so there is nothing to rewrite. A 0.7 build keeps the new fields
+/// as unknown ones on a save, but would draw the object where its constraints put it.
+fn v0_7_to_v0_8(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

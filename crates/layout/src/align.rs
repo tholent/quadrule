@@ -23,8 +23,9 @@
 //! extent in pixels is its width rounded to a pixel, which is how the export draws it. With the
 //! snap off the results are exact millimetres.
 
+use crate::override_key;
 use crate::rotate::rotate_point;
-use crate::tree::resolve_nodes;
+use crate::tree::{Node, resolve_nodes_on};
 use crate::units::Axis;
 use quadrule_model::{Document, Frame, ObjectKind, Uuid};
 use quadrule_profiles::Profile;
@@ -79,7 +80,8 @@ pub enum Spread {
     Centres,
 }
 
-/// The page, or the page inside its margins, as a box on the primary page (mm).
+/// The page, or the page inside its margins, as a box on the page of `profile` (mm): the primary
+/// profile, or the device on screen.
 pub fn target_box(doc: &Document, primary: &Profile, to: AlignTo) -> Option<Frame> {
     let (pw, ph) = primary.page_mm();
     match to {
@@ -112,6 +114,9 @@ pub struct Boxed {
     /// The turn of everything above it (the groups it is in), in degrees: a step on the page
     /// becomes a step in the object's own space by turning back by this.
     pub holder_turn: f64,
+    /// The object laid out (its frame in the space it is in, the box its constraints give, and the
+    /// context it sits in): what a device's overrides are worked out against.
+    pub node: Node,
 }
 
 impl Boxed {
@@ -128,8 +133,18 @@ impl Boxed {
 /// The boxes of `ids` on the primary page, in the order given (an id that is not there is left
 /// out). The page is laid out against itself, so an object's box is where its stored frame puts it.
 pub fn boxes_of(doc: &Document, primary: &Profile, ids: &[Uuid]) -> Vec<Boxed> {
-    let page = primary.page_mm();
-    let nodes = resolve_nodes(doc, page, page);
+    boxes_on(doc, primary, primary, ids)
+}
+
+/// The boxes of `ids` on the page of device `shown` (rung 8 bbq, Defaulted "Align and distribute on
+/// a secondary"): where its constraints and its overrides put them, in the mm of that page.
+pub fn boxes_on(doc: &Document, primary: &Profile, shown: &Profile, ids: &[Uuid]) -> Vec<Boxed> {
+    let nodes = resolve_nodes_on(
+        doc,
+        primary.page_mm(),
+        shown.page_mm(),
+        override_key(primary, shown),
+    );
     ids.iter()
         .filter_map(|id| {
             let n = nodes.iter().find(|n| n.id == *id)?;
@@ -147,6 +162,7 @@ pub fn boxes_of(doc: &Document, primary: &Profile, ids: &[Uuid]) -> Vec<Boxed> {
                 id: *id,
                 outer,
                 holder_turn: n.ctx.xf.deg,
+                node: *n,
             })
         })
         .collect()

@@ -68,6 +68,7 @@ fn object(
         cap: LineCap::Butt,
         rotation_deg: 0.0,
         opacity_pct: 100,
+        overrides: Default::default(),
         kind,
         extra: Extra::new(),
     }
@@ -163,6 +164,7 @@ pub fn slice_document() -> Document {
         page: PageSettings {
             background_gray: 255,
             margins_mm: Margins::all(margin),
+            orientation: Default::default(),
             extra: Extra::new(),
         },
         rhythm: Rhythm {
@@ -1194,6 +1196,240 @@ pub fn groups_document() -> Document {
             visible: true,
             locked: false,
             objects: vec![nested, turned, half, pinned, heavy],
+            extra: Extra::new(),
+        },
+    ];
+    doc
+}
+
+/// Fixed ids for the overrides page's objects.
+pub mod device_ids {
+    use crate::Uuid;
+    /// The `n`th object of the overrides page (1-based, groups and children alike); the dot grid is
+    /// [`super::ids::DOTS`].
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_000A_4000_8000_0000_0000_0000 + n)
+    }
+    /// A box moved on the Nomad (a position override).
+    pub const MOVED: Uuid = nth(1);
+    /// An ellipse sized on the Nomad (a size override).
+    pub const SIZED: Uuid = nth(2);
+    /// A star hidden on the Nomad (an eye override).
+    pub const HIDDEN: Uuid = nth(3);
+    /// A text box set smaller on the Nomad (a font-size override).
+    pub const SMALL_TEXT: Uuid = nth(4);
+    /// A group with an override on the Nomad (its box there).
+    pub const GROUP: Uuid = nth(5);
+    /// A child of [`GROUP`] with an override of its own.
+    pub const GROUP_CHILD: Uuid = nth(7);
+    /// A box that runs off the Nomad's page by its constraints (the L15 case).
+    pub const OFF_PAGE: Uuid = nth(8);
+}
+
+/// The overrides page (rung 8a, docs/bbq/2026-11-12-rung-8-several-devices.md, Defaulted "Goldens
+/// (8a)"): a box with a position override on the Nomad, an ellipse with a size override, a star
+/// hidden on the Nomad, a text box with a font-size override, a group with an override whose child
+/// has one of its own, and a box that runs off the Nomad's page by its constraints (the L15 case).
+/// It holds the sample's dot grid ([`ids::DOTS`]) so the benchmarks can run over it. Designed on
+/// the Manta, also targeting the Nomad; the Manta draws the design alone.
+pub fn devices_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 8a overrides".into();
+    doc.metadata.description =
+        "The rung 8a overrides page: what differs on the Nomad, and one thing the constraints get wrong."
+            .into();
+    let rule = doc.layers[1].objects[1].clone();
+    let dots = doc.layers[0].objects[0].clone();
+    let title = doc.layers[1].objects[0].clone();
+    let structure = Style::Role(LineRole::Structure);
+    let emphasis = Style::Role(LineRole::Emphasis);
+    let (shade, block) = (
+        Some(Fill::Role(FillRole::Shade)),
+        Some(Fill::Role(FillRole::Block)),
+    );
+    let mk =
+        |n: u128, name: &str, frame: Frame, style: Style, fill: Option<Fill>, kind: ObjectKind| {
+            let mut o = rule.clone();
+            o.id = device_ids::nth(n);
+            o.name = name.into();
+            o.frame = frame;
+            o.constraints = Constraints::default();
+            o.style = style;
+            o.fill = fill;
+            o.kind = kind;
+            o
+        };
+    let on_nomad = |o: &mut Object, ov: Override| {
+        o.overrides.insert(NOMAD_ID.to_string(), ov);
+    };
+
+    // 1. A box moved on the Nomad: only its place is overridden, so it keeps the size it scales to.
+    let mut moved = mk(
+        1,
+        "Moved on Nomad",
+        Frame::new(12.0, 34.0, 40.0, 24.0),
+        structure,
+        shade,
+        ObjectKind::Rect(RectShape::default()),
+    );
+    on_nomad(
+        &mut moved,
+        Override {
+            position: Some(Position {
+                x_mm: 20.0,
+                y_mm: 62.0,
+            }),
+            ..Override::default()
+        },
+    );
+    // 2. An ellipse sized on the Nomad: place and size both overridden.
+    let mut sized = mk(
+        2,
+        "Sized on Nomad",
+        Frame::new(62.0, 34.0, 40.0, 24.0),
+        structure,
+        None,
+        ObjectKind::Ellipse(EllipseShape::default()),
+    );
+    on_nomad(
+        &mut sized,
+        Override {
+            position: Some(Position {
+                x_mm: 56.0,
+                y_mm: 24.0,
+            }),
+            size: Some(Size {
+                w_mm: 36.0,
+                h_mm: 26.0,
+            }),
+            ..Override::default()
+        },
+    );
+    // 3. A star that is not there on the Nomad.
+    let mut hidden = mk(
+        3,
+        "Hidden on Nomad",
+        Frame::new(112.0, 34.0, 30.0, 30.0),
+        emphasis,
+        block,
+        ObjectKind::Polygon(PolygonShape::star(5)),
+    );
+    on_nomad(
+        &mut hidden,
+        Override {
+            visible: Some(false),
+            ..Override::default()
+        },
+    );
+    // 4. Text set smaller on the Nomad.
+    let mut small = title.clone();
+    small.id = device_ids::SMALL_TEXT;
+    small.name = "Small on Nomad".into();
+    small.frame = Frame::new(12.0, 76.0, 138.0, 18.0);
+    small.constraints = Constraints::default();
+    if let ObjectKind::Text(t) = &mut small.kind {
+        t.content = "Same words, smaller type on the Nomad".into();
+        t.size_pt = 16.0;
+        t.weight = 500;
+    }
+    on_nomad(
+        &mut small,
+        Override {
+            font_size_pt: Some(11.0),
+            ..Override::default()
+        },
+    );
+    // 5. A group with an override on the Nomad, holding a child with one of its own.
+    let mut child = mk(
+        7,
+        "Group child",
+        Frame::new(44.0, 120.0, 30.0, 26.0),
+        structure,
+        shade,
+        ObjectKind::Ellipse(EllipseShape::default()),
+    );
+    on_nomad(
+        &mut child,
+        Override {
+            position: Some(Position {
+                x_mm: 40.0,
+                y_mm: 118.0,
+            }),
+            ..Override::default()
+        },
+    );
+    let kids = vec![
+        mk(
+            6,
+            "Group box",
+            Frame::new(12.0, 108.0, 40.0, 30.0),
+            structure,
+            None,
+            ObjectKind::Rect(RectShape::default()),
+        ),
+        child,
+    ];
+    let frame = kids
+        .iter()
+        .map(Object::outer_box)
+        .reduce(|a, b| a.union(&b))
+        .unwrap_or(Frame::new(0.0, 0.0, 0.0, 0.0));
+    let mut group = mk(
+        5,
+        "Group with override",
+        frame,
+        Style::None,
+        None,
+        ObjectKind::Group(GroupShape {
+            children: kids,
+            extra: Extra::new(),
+        }),
+    );
+    on_nomad(
+        &mut group,
+        Override {
+            position: Some(Position {
+                x_mm: 10.0,
+                y_mm: 100.0,
+            }),
+            size: Some(Size {
+                w_mm: 66.0,
+                h_mm: 36.0,
+            }),
+            ..Override::default()
+        },
+    );
+    // 6. A box pinned to the left that fits the Manta's page and runs off the Nomad's: the one
+    //    thing here that the constraints get wrong, for L15.
+    let mut off = mk(
+        8,
+        "Runs off on Nomad",
+        Frame::new(92.0, 150.0, 62.0, 14.0),
+        structure,
+        block,
+        ObjectKind::Rect(RectShape::default()),
+    );
+    off.constraints = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+
+    let mut dot_strip = dots;
+    dot_strip.frame = Frame::new(8.0, 8.0, 146.0, 18.0);
+    dot_strip.constraints = Constraints::default();
+    doc.layers = vec![
+        Layer {
+            name: "Grid".into(),
+            visible: true,
+            locked: false,
+            objects: vec![dot_strip],
+            extra: Extra::new(),
+        },
+        Layer {
+            name: "Overrides".into(),
+            visible: true,
+            locked: false,
+            objects: vec![moved, sized, hidden, small, group, off],
             extra: Extra::new(),
         },
     ];

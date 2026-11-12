@@ -60,6 +60,7 @@ fn line(id: u128, frame: Frame, style: Style) -> Object {
         cap: LineCap::Butt,
         rotation_deg: 0.0,
         opacity_pct: 100,
+        overrides: Default::default(),
         kind: ObjectKind::Line(Line::default()),
         extra: Extra::new(),
     }

@@ -23,7 +23,8 @@
 use crate::geom::{Holder, cos_sin_deg, map_frame, rotate_point};
 use crate::{
     Constraints, Document, Frame, GroupShape, Layer, LineDir, Metadata, Object, ObjectKind,
-    PageSettings, Rhythm, Style, Unit, Uuid, normalize_deg,
+    Override, PageSettings, Position, ProfileContext, Rhythm, Size, Style, Unit, Uuid,
+    normalize_deg,
 };
 
 /// Where objects are kept: a layer's list, or a group's children.
@@ -59,6 +60,18 @@ pub enum Command {
     },
     /// Replaces the page settings.
     SetPage(PageSettings),
+    /// Replaces the devices and the design together (rung 8 bbq, Defaulted "Switching the primary
+    /// device", "Which devices a document targets"): the primary profile, the profiles (primary
+    /// first) and every layer, as one step with no refit and no lock check, because it changes
+    /// what a device shows, not what a person drew.
+    SetDesign {
+        /// The primary profile's id.
+        primary_profile_id: String,
+        /// The target profiles, primary first.
+        profiles: Vec<ProfileContext>,
+        /// Every layer, with its objects.
+        layers: Vec<Layer>,
+    },
     /// Replaces the rhythm.
     SetRhythm(Rhythm),
     /// Replaces the metadata.
@@ -574,6 +587,18 @@ impl Document {
                 Ok(Command::SetLayer { index, props: old })
             }
             Command::SetPage(p) => Ok(Command::SetPage(std::mem::replace(&mut self.page, p))),
+            Command::SetDesign {
+                primary_profile_id,
+                profiles,
+                layers,
+            } => Ok(Command::SetDesign {
+                primary_profile_id: std::mem::replace(
+                    &mut self.primary_profile_id,
+                    primary_profile_id,
+                ),
+                profiles: std::mem::replace(&mut self.profiles, profiles),
+                layers: std::mem::replace(&mut self.layers, layers),
+            }),
             Command::SetRhythm(r) => Ok(Command::SetRhythm(std::mem::replace(&mut self.rhythm, r))),
             Command::SetMetadata(m) => Ok(Command::SetMetadata(std::mem::replace(
                 &mut self.metadata,
@@ -703,7 +728,7 @@ impl Document {
 }
 
 /// The box round `children` (each child's turned box), as stored; `None` for none.
-fn children_box(children: &[Object]) -> Option<Frame> {
+pub fn children_box(children: &[Object]) -> Option<Frame> {
     let mut boxes = children.iter().map(Object::outer_box);
     let first = boxes.next()?;
     Some(boxes.fold(first, |a, b| a.union(&b)))
@@ -1003,6 +1028,7 @@ pub fn paste(
             renew_ids(&mut copy, &mut new_id);
             copy.locked = false;
             copy.translate(offset_mm.0, offset_mm.1);
+            translate_overrides(&mut copy, offset_mm.0, offset_mm.1);
             ids.push(copy.id);
             Command::Insert {
                 layer,
@@ -1090,6 +1116,168 @@ pub fn map_contents(o: &mut Object, map: &GroupMap) {
     walk(o, map, &holder, 0.0);
 }
 
+/// A move or a resize under this many mm is float noise, not an override.
+pub const OVERRIDE_NOISE_MM: f64 = 1e-6;
+
+/// One part of an override, for Reset (rung 8 bbq, Defaulted "The Overrides tab").
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OverrideField {
+    /// The place.
+    Position,
+    /// The width and height.
+    Size,
+    /// A text box's font size.
+    FontSize,
+    /// The eye.
+    Visible,
+}
+
+impl OverrideField {
+    /// Every part, in the order the Overrides tab lists them.
+    pub const ALL: [OverrideField; 4] = [
+        OverrideField::Position,
+        OverrideField::Size,
+        OverrideField::FontSize,
+        OverrideField::Visible,
+    ];
+
+    /// Whether `ov` holds this part.
+    pub fn is_set(self, ov: &Override) -> bool {
+        match self {
+            OverrideField::Position => ov.position.is_some(),
+            OverrideField::Size => ov.size.is_some(),
+            OverrideField::FontSize => ov.font_size_pt.is_some(),
+            OverrideField::Visible => ov.visible.is_some(),
+        }
+    }
+}
+
+/// The override `o` carries on `profile`, made if there is none yet; [`prune_override`] drops it
+/// again when it ends up empty.
+fn override_mut<'a>(o: &'a mut Object, profile: &str) -> &'a mut Override {
+    o.overrides.entry(profile.to_string()).or_default()
+}
+
+/// Drops the override on `profile` if nothing is left in it.
+pub fn prune_override(o: &mut Object, profile: &str) {
+    if o.overrides.get(profile).is_some_and(Override::is_empty) {
+        o.overrides.remove(profile);
+    }
+}
+
+fn differs(a: f64, b: f64) -> bool {
+    (a - b).abs() > OVERRIDE_NOISE_MM
+}
+
+/// Puts `o` at `to` on device `profile`, where `base` is the box its constraints give there (for
+/// a group, the box round its children): the place is an override if it is not `base`'s, and the
+/// size too; a part that is back to `base` is no override at all (rung 8 bbq, Defaulted "Position
+/// and size are separate overrides"). A move leaves the size alone, because the size it had is
+/// `to`'s.
+pub fn set_frame_override(o: &mut Object, profile: &str, base: Frame, to: Frame) {
+    let ov = override_mut(o, profile);
+    ov.position =
+        (differs(to.x_mm, base.x_mm) || differs(to.y_mm, base.y_mm)).then_some(Position {
+            x_mm: to.x_mm,
+            y_mm: to.y_mm,
+        });
+    ov.size = (differs(to.w_mm, base.w_mm) || differs(to.h_mm, base.h_mm)).then_some(Size {
+        w_mm: to.w_mm,
+        h_mm: to.h_mm,
+    });
+    prune_override(o, profile);
+}
+
+/// Sets only the place on `profile` (a nudge, an align): the size override, if any, stays.
+pub fn set_position_override(o: &mut Object, profile: &str, base: Frame, x_mm: f64, y_mm: f64) {
+    let ov = override_mut(o, profile);
+    ov.position =
+        (differs(x_mm, base.x_mm) || differs(y_mm, base.y_mm)).then_some(Position { x_mm, y_mm });
+    prune_override(o, profile);
+}
+
+/// Sets a text box's font size on `profile`; the size it already has is no override.
+pub fn set_font_size_override(o: &mut Object, profile: &str, pt: f64) {
+    let own = match &o.kind {
+        ObjectKind::Text(t) => t.size_pt,
+        _ => return,
+    };
+    let ov = override_mut(o, profile);
+    ov.font_size_pt = (pt.is_finite() && pt > 0.0 && (pt - own).abs() > 1e-9).then_some(pt);
+    prune_override(o, profile);
+}
+
+/// Sets whether `o` shows on `profile`; the eye it already has is no override.
+pub fn set_visible_override(o: &mut Object, profile: &str, shown: bool) {
+    let own = o.visible;
+    let ov = override_mut(o, profile);
+    ov.visible = (shown != own).then_some(shown);
+    prune_override(o, profile);
+}
+
+/// Takes the named parts out of `o`'s override on `profile` (Reset).
+pub fn reset_override(o: &mut Object, profile: &str, fields: &[OverrideField]) {
+    if let Some(ov) = o.overrides.get_mut(profile) {
+        for f in fields {
+            match f {
+                OverrideField::Position => ov.position = None,
+                OverrideField::Size => ov.size = None,
+                OverrideField::FontSize => ov.font_size_pt = None,
+                OverrideField::Visible => ov.visible = None,
+            }
+        }
+    }
+    prune_override(o, profile);
+}
+
+/// Moves every override place inside `o` (a group's children too) by (`dx`, `dy`) mm: a pasted
+/// copy is offset on each device as on the primary.
+pub fn translate_overrides(o: &mut Object, dx: f64, dy: f64) {
+    for ov in o.overrides.values_mut() {
+        if let Some(p) = &mut ov.position {
+            p.x_mm += dx;
+            p.y_mm += dy;
+        }
+    }
+    if let ObjectKind::Group(g) = &mut o.kind {
+        for c in &mut g.children {
+            translate_overrides(c, dx, dy);
+        }
+    }
+}
+
+impl Document {
+    /// How many objects carry an override on device `profile` (the number on its picture in the
+    /// previews strip; rung 8 bbq, Defaulted "Badges").
+    pub fn overridden_count(&self, profile: &str) -> usize {
+        self.objects()
+            .filter(|o| o.override_on(profile).is_some_and(|x| !x.is_empty()))
+            .count()
+    }
+
+    /// Whether any object carries an override on device `profile`.
+    pub fn has_overrides_on(&self, profile: &str) -> bool {
+        self.overridden_count(profile) > 0
+    }
+}
+
+/// Takes every override on device `profile` out of `layers`, groups' children too.
+pub fn strip_overrides(layers: &mut [Layer], profile: &str) {
+    fn strip(o: &mut Object, profile: &str) {
+        o.overrides.remove(profile);
+        if let ObjectKind::Group(g) = &mut o.kind {
+            for c in &mut g.children {
+                strip(c, profile);
+            }
+        }
+    }
+    for l in layers {
+        for o in &mut l.objects {
+            strip(o, profile);
+        }
+    }
+}
+
 /// Gives `o` the frame `new`. A group's contents go with it: they move by the same amount if only
 /// its place changes, and are stretched with the box if its size does, as a resize of a loose
 /// selection does ([`map_contents`]; rung 7a look change, Q3 as amended). A group's box then is
@@ -1124,9 +1312,20 @@ pub fn reframe(o: &mut Object, new: Frame) {
     o.frame = new;
 }
 
+/// A placement made on a secondary device (rung 8 bbq, Q3): the frame is an override there, not
+/// the stored design.
+#[derive(Clone, Debug, PartialEq)]
+pub struct DevicePlace {
+    /// The device.
+    pub profile: String,
+    /// The box the object's constraints give on that device (for a group, the box round its
+    /// children): the frame is an override unless it is this box.
+    pub base: Frame,
+}
+
 /// Where an object is: its frame, its rotation and, for a line, the diagonal it runs along (format
 /// 0.6). A drag changes all of them as one step.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Placement {
     /// The unrotated box, primary mm.
     pub frame: Frame,
@@ -1138,6 +1337,10 @@ pub struct Placement {
     /// is then only for the group's own bookkeeping). `None` moves and sizes them on the primary
     /// page by `frame`.
     pub map: Option<GroupMap>,
+    /// Made on a secondary device: the `frame` is then where the object is there (before the
+    /// overrides of the groups round it), written as the device's override, and the stored frame
+    /// is left alone. The rotation and a line's diagonal are still the shared design's.
+    pub device: Option<DevicePlace>,
 }
 
 impl Placement {
@@ -1151,6 +1354,7 @@ impl Placement {
                 _ => None,
             },
             map: None,
+            device: None,
         }
     }
 
@@ -1162,11 +1366,22 @@ impl Placement {
         }
     }
 
+    /// The same placement, made on a secondary device.
+    pub fn on_device(mut self, profile: &str, base: Frame) -> Self {
+        self.device = Some(DevicePlace {
+            profile: profile.to_string(),
+            base,
+        });
+        self.map = None;
+        self
+    }
+
     /// Puts `o` there. A kind that cannot rotate keeps rotation 0; a direction is for lines only.
     /// A group's contents follow its frame ([`reframe`]).
     pub fn apply(&self, o: &mut Object) {
-        match (&self.map, o.is_group()) {
-            (Some(map), true) => map_contents(o, map),
+        match (&self.device, &self.map, o.is_group()) {
+            (Some(d), _, _) => set_frame_override(o, &d.profile, d.base, self.frame),
+            (None, Some(map), true) => map_contents(o, map),
             _ => reframe(o, self.frame),
         }
         if o.kind.can_rotate() {
@@ -1185,8 +1400,8 @@ pub fn set_placements(doc: &Document, places: &[(Uuid, Placement)]) -> Command {
     Command::Batch(
         places
             .iter()
-            .filter_map(|&(id, place)| {
-                let o = doc.object(id)?;
+            .filter_map(|(id, place)| {
+                let o = doc.object(*id)?;
                 let mut n = o.clone();
                 place.apply(&mut n);
                 (n != *o).then_some(Command::SetObject(n))
@@ -1255,6 +1470,7 @@ pub fn group(doc: &Document, ids: &[Uuid], new_id: Uuid, name: &str) -> Result<C
         cap: crate::LineCap::Butt,
         rotation_deg: 0.0,
         opacity_pct: crate::OPACITY_MAX,
+        overrides: Default::default(),
         kind: ObjectKind::Group(GroupShape::default()),
         extra: crate::Extra::new(),
     };
@@ -1275,6 +1491,21 @@ pub fn group(doc: &Document, ids: &[Uuid], new_id: Uuid, name: &str) -> Result<C
 /// leaving hidden children. They keep their own constraints, now against whatever holds the
 /// group (rung 7a bbq, Defaulted "Making and breaking").
 pub fn ungroup(doc: &Document, id: Uuid) -> Result<Command, EditError> {
+    ungroup_with(doc, id, &std::collections::BTreeMap::new())
+}
+
+/// [`ungroup`] with the overrides each child gets, by child id and device: what the group's own
+/// override on each device did to the child, baked in (rung 8 bbq, Defaulted "Clipboard and
+/// duplicate"; worked out by `quadrule_layout::device::ungroup_overrides`). A child not named
+/// keeps the overrides it has.
+pub fn ungroup_with(
+    doc: &Document,
+    id: Uuid,
+    baked_overrides: &std::collections::BTreeMap<
+        Uuid,
+        std::collections::BTreeMap<String, Override>,
+    >,
+) -> Result<Command, EditError> {
     let g = doc.object(id).ok_or(EditError::NoSuchObject(id))?;
     if !g.is_group() {
         return Err(EditError::NotAGroup(id));
@@ -1296,6 +1527,9 @@ pub fn ungroup(doc: &Document, id: Uuid) -> Result<Command, EditError> {
         baked.opacity_pct = ((u32::from(c.opacity()) * u32::from(g.opacity()) + 50) / 100) as u8;
         baked.visible = c.visible && g.visible;
         baked.locked = c.locked || g.locked;
+        if let Some(ov) = baked_overrides.get(&c.id) {
+            baked.overrides = ov.clone();
+        }
         cmds.push(Command::SetObject(baked));
     }
     for (k, c) in g.children().iter().enumerate() {

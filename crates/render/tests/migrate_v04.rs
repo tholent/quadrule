@@ -81,7 +81,7 @@ fn export(file: &QuadFile, id: &str) -> Vec<u8> {
 #[test]
 fn v04_files_open_migrate_and_export_the_same_bytes() {
     let sums = saved_sums();
-    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.7.0";
+    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.8.0";
     let mut parts = Vec::new();
     let mut matched = 0;
     for name in ["slice", "busy"] {

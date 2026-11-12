@@ -50,7 +50,8 @@ impl Axis {
 pub struct UnitContext {
     /// Device pixels per mm on the profile on screen.
     pub px_per_mm: f64,
-    /// The page's length along the field's axis, in mm (the primary page, where designs live).
+    /// The page's length along the field's axis, in mm: the page of the profile on screen (the
+    /// primary page when the primary profile is on screen, where designs live).
     pub page_mm: f64,
     /// One rhythm unit along the field's axis, in mm, as the profile on screen resolves it.
     pub rhythm_mm: f64,
@@ -60,12 +61,12 @@ pub struct UnitContext {
 
 impl UnitContext {
     /// The context for a field on `axis`, with `shown` on screen.
-    pub fn new(doc: &Document, primary: &Profile, shown: &Profile, axis: Axis) -> Self {
+    pub fn new(doc: &Document, _primary: &Profile, shown: &Profile, axis: Axis) -> Self {
         let px_per_mm = shown.ppi / MM_PER_IN;
         let r = RhythmPx::new(doc, shown);
         let (page, unit_px) = match axis {
-            Axis::X => (primary.page_mm().0, r.unit_x),
-            Axis::Y => (primary.page_mm().1, r.unit_y),
+            Axis::X => (shown.page_mm().0, r.unit_x),
+            Axis::Y => (shown.page_mm().1, r.unit_y),
         };
         UnitContext {
             px_per_mm,

@@ -174,6 +174,101 @@ pub fn map_frame(f: Frame, deg: f64, text: bool, old: &Frame, new: &Frame) -> Fr
     Frame::new(x, y, w, h)
 }
 
+/// A map of one box onto another, one axis at a time: a scale and a shift (rung 8 bbq, Q4). It is
+/// what a group's override does to the group's contents on a device: they are laid out as usual,
+/// and the box round them is then moved and stretched onto the override box, as a hand resize does
+/// ([`map_frame`]). Maps compose, so groups inside groups need no more than one of these.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Fit {
+    /// Horizontal scale; 1 keeps lengths exactly.
+    pub sx: f64,
+    /// Vertical scale.
+    pub sy: f64,
+    /// Horizontal shift, after the scale.
+    pub tx: f64,
+    /// Vertical shift, after the scale.
+    pub ty: f64,
+}
+
+impl Fit {
+    /// The map that moves nothing.
+    pub const IDENTITY: Fit = Fit {
+        sx: 1.0,
+        sy: 1.0,
+        tx: 0.0,
+        ty: 0.0,
+    };
+
+    /// Whether this moves nothing.
+    pub fn is_identity(&self) -> bool {
+        *self == Fit::IDENTITY
+    }
+
+    /// The map that takes the box `old` onto the box `new`. A box with no width (or height) has
+    /// nothing to scale by: along that axis the map only shifts.
+    pub fn between(old: &Frame, new: &Frame) -> Fit {
+        if old == new {
+            return Fit::IDENTITY;
+        }
+        let sx = if old.w_mm > 0.0 {
+            new.w_mm / old.w_mm
+        } else {
+            1.0
+        };
+        let sy = if old.h_mm > 0.0 {
+            new.h_mm / old.h_mm
+        } else {
+            1.0
+        };
+        Fit {
+            sx,
+            sy,
+            tx: new.x_mm - old.x_mm * sx,
+            ty: new.y_mm - old.y_mm * sy,
+        }
+    }
+
+    /// This map, then `outer`.
+    pub fn then(self, outer: Fit) -> Fit {
+        if outer.is_identity() {
+            return self;
+        }
+        if self.is_identity() {
+            return outer;
+        }
+        Fit {
+            sx: outer.sx * self.sx,
+            sy: outer.sy * self.sy,
+            tx: outer.tx + outer.sx * self.tx,
+            ty: outer.ty + outer.sy * self.ty,
+        }
+    }
+
+    /// The map that undoes this one; `None` when it squashes an axis to nothing.
+    pub fn inverse(&self) -> Option<Fit> {
+        if self.sx == 0.0 || self.sy == 0.0 {
+            return None;
+        }
+        Some(Fit {
+            sx: 1.0 / self.sx,
+            sy: 1.0 / self.sy,
+            tx: -self.tx / self.sx,
+            ty: -self.ty / self.sy,
+        })
+    }
+
+    /// Where the box `f` goes, turned `deg` degrees (or a text box, which keeps its height), as
+    /// [`map_frame`] puts it.
+    pub fn apply(&self, f: Frame, deg: f64, text: bool) -> Frame {
+        if self.is_identity() {
+            return f;
+        }
+        let old = Frame::new(0.0, 0.0, 1.0, 1.0);
+        let new = Frame::new(self.tx, self.ty, self.sx, self.sy);
+        map_frame(f, deg, text, &old, &new)
+    }
+}
+
 /// Moves and sizes a frame from the primary page to the target page (napkin §5.4).
 /// Page sizes are (width, height) in mm.
 pub fn resolve_frame(f: Frame, c: Constraints, from: (f64, f64), to: (f64, f64)) -> Frame {

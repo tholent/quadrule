@@ -140,8 +140,9 @@ pub enum Unit {
     In,
 }
 
-/// One of the document's target profiles (napkin §3.4). Rung 1 has linked profiles only;
-/// forking arrives in v1.1.
+/// One of the document's target profiles (napkin §3.4). Every secondary profile is linked to the
+/// primary one (it adapts through constraints, and per-object overrides, format 0.8, change single
+/// things on it); forking a profile's design off arrives in v1.1 (rung 8 bbq, Q2).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ProfileContext {
     /// A profile id such as `supernote.a5x2`.
@@ -158,9 +159,30 @@ pub struct PageSettings {
     pub background_gray: u8,
     /// Page margins, physical millimetres on every profile.
     pub margins_mm: Margins,
+    /// Which way the page is held (format 0.8; rung 8 bbq, Defaulted "File format 0.8.0"). Portrait
+    /// unless the file says otherwise; only portrait is offered until rung 8b.
+    #[serde(default, skip_serializing_if = "Orientation::is_portrait")]
+    pub orientation: Orientation,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+/// Which way the page is held (format 0.8).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Orientation {
+    /// Taller than wide: the device's own page (the default, and every file before 0.8).
+    #[default]
+    Portrait,
+    /// Wider than tall (rung 8b): exported turned into the device's portrait pixels.
+    Landscape,
+}
+
+impl Orientation {
+    /// Whether this is the default; used to leave the field out of a file when it is.
+    pub fn is_portrait(&self) -> bool {
+        matches!(self, Orientation::Portrait)
+    }
 }
 
 /// Four margins in millimetres.
@@ -300,6 +322,12 @@ pub struct Object {
     /// (napkin §5.2). Format 0.6; a file without it reads as 100.
     #[serde(default = "full_opacity", skip_serializing_if = "is_full_opacity")]
     pub opacity_pct: u8,
+    /// What differs on one secondary device, by profile id (format 0.8; rung 8 bbq, Q3): its place
+    /// and size, its font size and whether it shows. Empty for most objects, and left out of the
+    /// file when it is. An override of the primary profile is never read (the primary shows the
+    /// stored design); one for a device the document does not target is kept, unused.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub overrides: BTreeMap<String, Override>,
     /// What the object is.
     pub kind: ObjectKind,
     /// Fields from newer versions.
@@ -359,6 +387,19 @@ impl Object {
         self.opacity_pct.min(OPACITY_MAX)
     }
 
+    /// What differs on device `profile`, if anything.
+    pub fn override_on(&self, profile: &str) -> Option<&Override> {
+        self.overrides.get(profile)
+    }
+
+    /// Whether the object shows on device `profile`: its own eye, unless the device says
+    /// otherwise.
+    pub fn visible_on(&self, profile: &str) -> bool {
+        self.override_on(profile)
+            .and_then(|o| o.visible)
+            .unwrap_or(self.visible)
+    }
+
     /// Whether this is a group (format 0.7).
     pub fn is_group(&self) -> bool {
         matches!(self.kind, ObjectKind::Group(_))
@@ -402,6 +443,88 @@ impl Object {
         } else {
             frame.turned_bounds(self.rotation(), line)
         }
+    }
+}
+
+/// What one object does differently on one secondary device (format 0.8, rung 8 bbq, Q3 and
+/// Defaulted "File format 0.8.0"). Each part is optional and replaces what the object's constraints
+/// give on that device; the rest still follows the design. Millimetres on that device's page, in
+/// the space the object is laid out in (the page, unless it is inside a turned group).
+///
+/// A group's override is its box on that device (Q4): its children resolve as usual, and what they
+/// make is then scaled into that box.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+pub struct Override {
+    /// The top-left corner of the object's box.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<Position>,
+    /// The width and height of the object's box.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size: Option<Size>,
+    /// A text box's font size in points.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size_pt: Option<f64>,
+    /// Whether the object shows on this device.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visible: Option<bool>,
+    /// Fields from newer versions.
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// A place on a page in mm (format 0.8).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct Position {
+    /// Distance from the left edge.
+    pub x_mm: f64,
+    /// Distance from the top edge.
+    pub y_mm: f64,
+}
+
+/// A width and height in mm (format 0.8).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct Size {
+    /// Width.
+    pub w_mm: f64,
+    /// Height.
+    pub h_mm: f64,
+}
+
+impl Override {
+    /// Whether nothing is overridden (an override like this is dropped, not saved).
+    pub fn is_empty(&self) -> bool {
+        self.position.is_none()
+            && self.size.is_none()
+            && self.font_size_pt.is_none()
+            && self.visible.is_none()
+            && self.extra.is_empty()
+    }
+
+    /// Whether the place or the size is overridden: what Q7's lint rule (L15) leaves alone.
+    pub fn has_frame(&self) -> bool {
+        self.position.is_some() || self.size.is_some()
+    }
+
+    /// How many parts are overridden (place, size, font size, eye).
+    pub fn count(&self) -> usize {
+        usize::from(self.position.is_some())
+            + usize::from(self.size.is_some())
+            + usize::from(self.font_size_pt.is_some())
+            + usize::from(self.visible.is_some())
+    }
+
+    /// `frame` with the place and size replaced where they are overridden.
+    pub fn apply_to(&self, frame: Frame) -> Frame {
+        let mut f = frame;
+        if let Some(p) = self.position {
+            f.x_mm = p.x_mm;
+            f.y_mm = p.y_mm;
+        }
+        if let Some(s) = self.size {
+            f.w_mm = s.w_mm;
+            f.h_mm = s.h_mm;
+        }
+        f
     }
 }
 

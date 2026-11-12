@@ -23,6 +23,7 @@
 #![forbid(unsafe_code)]
 
 pub mod align;
+pub mod device;
 pub mod newpage;
 pub mod rotate;
 pub mod shapes;
@@ -330,22 +331,52 @@ impl RhythmPx {
     }
 }
 
-/// The text boxes of the document as they fall on `target`, ready for [`quadrule_text::lay_out`].
-/// Hidden text is included: saved outlines must cover it too.
-pub fn text_requests<'a>(
-    doc: &'a Document,
-    primary: &Profile,
-    target: &Profile,
-) -> Vec<TextRequest<'a>> {
-    let nodes = tree::resolve_nodes(doc, primary.page_mm(), target.page_mm());
+/// The key under which `target`'s overrides are read: its profile id, or `None` for the primary
+/// profile, which shows the stored design (an override for it is never read; rung 8 bbq, Q3).
+pub fn override_key<'a>(primary: &Profile, target: &'a Profile) -> Option<&'a str> {
+    (target.id != primary.id).then_some(target.id.as_str())
+}
+
+/// One text box to lay out on a profile: the object's text as it falls there (with its font-size
+/// override, if any) and the width of its box there.
+#[derive(Debug, Clone)]
+pub struct TextJob<'a> {
+    /// The text object's id.
+    pub object_id: Uuid,
+    /// Its text and style on this device.
+    pub text: std::borrow::Cow<'a, quadrule_model::TextBox>,
+    /// The box width on this profile, in mm.
+    pub width_mm: f64,
+}
+
+/// The text boxes of the document as they fall on `target`, ready for [`quadrule_text::lay_out`]
+/// (see [`lay_out_text`]): a text box takes the width its place gives it on this device, and the
+/// font size an override gives. Hidden text is included: saved outlines must cover it too.
+pub fn text_jobs<'a>(doc: &'a Document, primary: &Profile, target: &Profile) -> Vec<TextJob<'a>> {
+    let ov = override_key(primary, target);
+    let nodes = tree::resolve_nodes_on(doc, primary.page_mm(), target.page_mm(), ov);
     doc.objects()
         .filter_map(|o| match &o.kind {
-            ObjectKind::Text(tb) => Some(TextRequest {
-                object_id: o.id,
-                text: tb,
-                // The width it falls at on this page.
-                width_mm: nodes.iter().find(|n| n.id == o.id)?.local.w_mm,
-            }),
+            ObjectKind::Text(tb) => {
+                let size = ov
+                    .and_then(|p| o.override_on(p))
+                    .and_then(|x| x.font_size_pt)
+                    .filter(|s| s.is_finite() && *s > 0.0);
+                let text = match size {
+                    Some(pt) if pt != tb.size_pt => {
+                        let mut t = tb.clone();
+                        t.size_pt = pt;
+                        std::borrow::Cow::Owned(t)
+                    }
+                    _ => std::borrow::Cow::Borrowed(tb),
+                };
+                Some(TextJob {
+                    object_id: o.id,
+                    text,
+                    // The width it falls at on this page.
+                    width_mm: nodes.iter().find(|n| n.id == o.id)?.local.w_mm,
+                })
+            }
             _ => None,
         })
         .collect()
@@ -358,11 +389,16 @@ pub fn lay_out_text(
     target: &Profile,
     reg: &mut FontRegistry,
 ) -> Result<Laid, LayoutError> {
-    Ok(quadrule_text::lay_out(
-        reg,
-        &target.id,
-        &text_requests(doc, primary, target),
-    )?)
+    let jobs = text_jobs(doc, primary, target);
+    let requests: Vec<TextRequest> = jobs
+        .iter()
+        .map(|j| TextRequest {
+            object_id: j.object_id,
+            text: &j.text,
+            width_mm: j.width_mm,
+        })
+        .collect();
+    Ok(quadrule_text::lay_out(reg, &target.id, &requests)?)
 }
 
 /// Lays out the whole page on `target`. Text comes from `outlines`, which are either freshly
@@ -384,6 +420,7 @@ pub fn display_list(
         target,
         rhythm,
         outlines,
+        ov: override_key(primary, target),
     };
     let mut items = Vec::new();
     let ctx = tree::Ctx::page(primary.page_mm(), target.page_mm());
@@ -403,6 +440,8 @@ struct Env<'a> {
     target: &'a Profile,
     rhythm: RhythmPx,
     outlines: &'a ProfileOutlines,
+    /// The device whose overrides are read; `None` for the primary profile.
+    ov: Option<&'a str>,
 }
 
 /// Draws `objs` in order into `items`; a group's children are drawn inside it, and a group below
@@ -416,13 +455,15 @@ fn draw_objects(
 ) -> Result<(), LayoutError> {
     let (target, rhythm, outlines) = (env.target, env.rhythm, env.outlines);
     let px = |mm: f64| target.mm_to_px(mm);
-    for o in objs.iter().filter(|o| o.visible) {
-        let local = tree::local_frame(o, &ctx.holder);
-        let (f, angle) = ctx.place(local, o.rotation());
+    for o in objs
+        .iter()
+        .filter(|o| env.ov.map_or(o.visible, |p| o.visible_on(p)))
+    {
+        let placing = tree::place_object(o, ctx, env.ov);
+        let (f, angle) = (placing.frame, placing.angle);
         let first_item = items.len();
-        if let ObjectKind::Group(g) = &o.kind {
-            let inner = ctx.child(local, o.rotation());
-            draw_objects(&g.children, &inner, env, items)?;
+        if let (ObjectKind::Group(g), Some(inner)) = (&o.kind, &placing.inner) {
+            draw_objects(&g.children, inner, env, items)?;
             wrap_opacity(items, first_item, o.opacity());
             continue;
         }
@@ -793,7 +834,12 @@ pub fn placed_objects(
     outlines: &ProfileOutlines,
 ) -> Vec<Placed> {
     let px = |mm: f64| target.mm_to_px(mm);
-    let nodes = tree::resolve_nodes(doc, primary.page_mm(), target.page_mm());
+    let nodes = tree::resolve_nodes_on(
+        doc,
+        primary.page_mm(),
+        target.page_mm(),
+        override_key(primary, target),
+    );
     let mut out = Vec::with_capacity(nodes.len());
     for node in nodes {
         let Some(o) = doc.object(node.id) else {

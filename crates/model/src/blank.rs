@@ -113,6 +113,7 @@ pub fn blank_document(
         page: PageSettings {
             background_gray: 255,
             margins_mm: margins,
+            orientation: Default::default(),
             extra: Extra::new(),
         },
         rhythm: Rhythm {
