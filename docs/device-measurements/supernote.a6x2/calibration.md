@@ -180,3 +180,27 @@ Asked as three questions; chris's answers, word for word (the option chosen):
 Text, from the text sheet: reading text 9 pt at gray 51 (TD2, TL2); labels 9 pt at gray 153 (TD4, TL4).
 
 None of this is in `crates/profiles/data/supernote.a6x2.ron` yet.
+
+## Grays sheet — 2026-11-12
+
+Sheet: `cargo xtask calibration-sheet` run 2026-11-12 on the Pi (`calib/supernote-a6x2/quadrule-calib_grays-1_…png`,
+sha256 `13e67e50…`, and `…grays-2_…png`, sha256 `fed559df…`). Patches G1–G15 are the even steps 0, 17 … 238; G16–G30
+are halfway between them, 8, 25 … 246; GR is a ramp from 0 to 255 (`calib/supernote-a6x2/codes.txt`).
+
+chris, word for word: "nomad: all patches clean, though G1-G5,G16-G19 are indistinguishable from each other (all appear
+black). G15,G29-G30 just appear white. the ramp appears to have about 16 steps which includes two large bands on each
+end where the shades are indistinguishably white or black."
+
+What it says, in grays:
+
+| reading | patches | grays |
+|---|---|---|
+| clean (no speckle, dots, stripes or blotches) | all, G1–G30 | 0 to 246 |
+| look black, the same as each other | G1–G5, G16–G19 | 0, 8, 17, 25, 34, 42, 51, 59, 68 |
+| look white | G15, G29, G30 | 229, 238, 246 |
+| between (neither black nor white) | G6–G14, G20–G28 | 76 to 221 |
+| ramp | GR | about 16 steps, a wide black band at the dark end and a wide white band at the light end |
+
+So on a flat area every gray from 0 to 68 shows as black, and every gray from 229 up as white. Not said yet: whether the
+between-step patches in the middle (G20–G28) can be told from the even steps beside them, which decides how many
+distinct middle levels there are.
