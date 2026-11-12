@@ -30,3 +30,9 @@ through 05:18 UTC; re-measured at 20:00 UTC (looseends, chris's yes) so the row 
 work and ADR-015 included. `spend-ledger.py calibrate --since 2026-11-10` →
 two kept pairs (15.1M and 10.5M tokens per point) and one small move flagged; **K = 12.2M tokens per point over 2 pairs**,
 still not trusted (three wanted). The start reading, 55 %, was chris's "Still about 55 %".
+
+2026-11-12, after rung 7 (same session): chris's reading 67 % at 21:39 UTC, logged. From 64 % the session spent 3 more
+points on work chris asked for after the rung closed (ADR-015, looseends, the grays sheet and Block 102, the landscape
+screenshots and test): **12 points in all against the 10-point share**, the 2 over all on chris's own requests, with no
+builder started after 7b. Room left this week before the hard stop: 8 points (75 %) until 48 h before Saturday's 5 pm
+reset, then 13 (80 %).
