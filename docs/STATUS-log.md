@@ -1287,3 +1287,4 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   readings, word for word, in `docs/device-measurements/supernote.a6x2/landscape-test.md`. Grid spacing in the landscape
   screenshots: 79 px against 59 px in portrait (× 4/3). Answer: rotated pixels; landscape mode zooms. Recorded as a note
   under spec §17.1 item 3, on the board, in STATUS and in the rung 8 prompt. Not tested on the Manta.
+- The Manta ruled the same as the Nomad for landscape, not tested (chris: "Same as the Nomad").

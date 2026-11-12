@@ -47,7 +47,7 @@
   (soft); landscape mode zooms the page by 4/3 and scrolls, so nothing is pixel-exact there. Rung 8's bbq must decide
   which way a landscape design turns, and whether the landscape toolbar screenshots
   (`docs/device-measurements/<device>/landscape/`, zoomed views, not template pixels) matter at all, since a sideways
-  template is used in portrait mode where the portrait safe zones apply. Not tested on the Manta. The grays sheet is done (2026-11-12: Block 68 →
+  template is used in portrait mode where the portrait safe zones apply. The Manta is ruled the same, not tested. The grays sheet is done (2026-11-12: Block 68 →
   102; Manta ruled equal to the Nomad).
 - Still parked: "Scale vs pixel-locked rhythm on A5 X" (v1.1, arc Q16); the Label gray (v1.1); text and pattern
   rotation (v1.1, chris 2026-11-12: "Not in v1").

@@ -35,3 +35,9 @@ the Nomad". So the Manta's profile (`crates/profiles/data/supernote.a5x2.ron`) t
 (`docs/device-measurements/supernote.a6x2/calibration.md`, "Grays sheet — 2026-11-12"): all sixteen even steps clean,
 0–68 black and 238–255 white on a flat area, nine distinct middle grays 85–221; Shade 204, Block 102. If the screens
 turn out to differ, run the grays sheet here and record it.
+
+## Landscape — ruled equal to the Nomad, 2026-11-12
+
+Not tested on the Manta. chris: "Same as the Nomad". So a landscape design is turned a quarter turn and saved as a
+portrait PNG (1920 × 2560), and landscape mode zooms the page by 4/3 (the Manta's landscape screenshots agree: grid 79
+px against 59 px). The Nomad's test: `docs/device-measurements/supernote.a6x2/landscape-test.md`.

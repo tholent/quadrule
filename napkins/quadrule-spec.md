@@ -741,7 +741,7 @@ The `model`, `layout`, `lint` and `format` crates must be fully testable headles
    > pixels**. A template is always a portrait page at the screen's size. A wide PNG is shrunk to fit the page width
    > (blurred); a landscape design turned a quarter turn and saved as a portrait PNG is shown pixel for pixel in portrait
    > mode. Turning the device to landscape zooms the portrait page by 4/3 to fit the width and scrolls it, so nothing is
-   > pixel-exact in landscape mode. Gray levels (item 1) were read on the Nomad the same day; the Manta was ruled equal.
+   > pixel-exact in landscape mode. Gray levels (item 1) were read on the Nomad the same day. For both, the Manta was ruled the same as the Nomad (chris: "Same as the Nomad").
 
 ### 17.2 Deferred
 

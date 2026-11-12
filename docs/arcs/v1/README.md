@@ -51,7 +51,7 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
   - ~~Landscape: put one landscape PNG on a device and say whether it expects rotated pixels or swapped sizes~~
     answered on the Nomad 2026-11-12: **rotated pixels** (a landscape design turned and saved as a portrait PNG; a wide
     PNG is shrunk, and landscape mode zooms by 4/3) (`docs/device-measurements/supernote.a6x2/landscape-test.md`,
-    spec §17.1 item 3 note). Not tested on the Manta.
+    spec §17.1 item 3 note). The Manta ruled the same, not tested (chris, 2026-11-12).
   - Not needed: the Manta's pen shades. chris ruled them equal to the Nomad's (Q8).
 - **Starters (Q11, Q13):** chris designs one starter per category in the app as the features land; agents follow
   his example for the rest of that category. The lead says when each becomes buildable:

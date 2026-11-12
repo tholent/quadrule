@@ -42,4 +42,5 @@ width, and scrolls it. So those screenshots show a zoomed view, not template pix
   decide; so is whether the landscape safe-zone screenshots are needed at all, since a sideways template is used in
   portrait mode, where the portrait safe zones apply.
 
-Not tested on the Manta (see the board, chris's queue).
+The Manta: ruled the same as the Nomad, not tested (chris, 2026-11-12: "Same as the Nomad"). Its landscape
+screenshots show the same 4/3 zoom (grid 79 px against 59 px).
