@@ -1402,3 +1402,20 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   --canvas chip` → 41.2, 41.2, 41.3 (was 50.8–51.1): the chip canvas now draws a run of same-gray rectangles as one
   path (`crates/ui/src/canvas.rs`, `crates/ui/tests/canvas.rs`); export bytes unaffected.
 - Waits on chris: the look.
+
+## 2026-11-13 — rung 9 look changes built (same builder, 0.48M tokens in all) and judged
+
+- chris at the look: "things look really nice overall" and "the isometric grid and dot pattern is rotated 90 degrees
+  from what I expected"; then three rulings (record `docs/bbq/2026-11-13-rung-9-pattern-library.md`, Amendments):
+  isometric turned everywhere (axes 30°, 90°, 150°; spec §6.3 note), hex edges cut at the frame (ADR-014 amended),
+  major dots one pixel bigger in the major role's gray. Committed `0825fbd`.
+- Builder commits `1dfebaa` (all three) and `5fff8c9` (a model test). Judged: `make build-proof` → `BUILD
+  head=5fff8c9 dirty=no rebuilt=7`; `make check-all` → `TESTS scope=workspace checks=387 check_fail=0 passed=360
+  failed=0 status=ok`. Golden sums: still only the four `patterns*` lines added (re-blessed, unreleased); the twelve
+  older lines and fixtures v0.4–v0.8 unchanged. All four images looked at by eye.
+- Speed, release build on the Pi, strip on, 90th percentile, pattern page: drag export 21.0, 21.8, 22.0 ms; drag chip
+  33.9, 34.1, 33.9; draw export 22.0, 21.8, 23.7; draw chip 41.2, 41.4, 41.5.
+- Left by the builder, for chris: hex slanted edges keep round caps, which reach about 1.5 px past the frame at a cut
+  end, and isometric's butt caps reach half a stroke diagonally; so "cut exactly" holds to the line's centre, not its
+  ink. Under an isometric rhythm the overlay does not draw the half-side rows that snapping also catches.
+- Waits on chris: the second look.
