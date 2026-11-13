@@ -2700,7 +2700,7 @@ checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
 
 [[package]]
 name = "quadrule-app"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "directories",
  "eframe",
@@ -2713,7 +2713,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-format"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "ciborium",
  "quadrule-layout",
@@ -2729,7 +2729,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-i18n"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "fluent-bundle",
  "unic-langid",
@@ -2737,7 +2737,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-layout"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "kurbo",
  "quadrule-model",
@@ -2747,7 +2747,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-lint"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "quadrule-i18n",
  "quadrule-layout",
@@ -2758,7 +2758,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-model"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "ciborium",
  "serde",
@@ -2768,7 +2768,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-profiles"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "quadrule-model",
  "ron",
@@ -2777,7 +2777,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-render"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "ciborium",
  "png",
@@ -2794,7 +2794,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-text"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "cosmic-text",
  "quadrule-model",
@@ -2803,7 +2803,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-ui"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "egui",
  "egui_kittest",
@@ -2822,7 +2822,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-xtask"
-version = "0.7.1"
+version = "0.8.0"
 dependencies = [
  "kurbo",
  "png",

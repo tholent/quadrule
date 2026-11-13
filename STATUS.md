@@ -120,8 +120,10 @@ The project's live state. Update it when work lands. Every claim cites at least 
   Width, Height and Rotation read "mixed" where they differ (`crates/layout/src/align.rs`, `crates/ui/src/arrange.rs`,
   `crates/ui/src/panels.rs`). No export change: all eight golden sums unchanged
   (`crates/render/tests/golden/SHA256SUMS`).
-- Rung 8, several devices, is built in two parts and **waits for chris's look** (record
-  `docs/bbq/2026-11-12-rung-8-several-devices.md`); chris deferred 8a's look so 8b could go ahead, and neither is tagged.
+- Rung 8, several devices, is done: 8a and 8b approved together by chris 2026-11-13 and shipped as one `v0.8.0`
+  ("let's bundle this into a single v0.8.0 release"; record `docs/bbq/2026-11-12-rung-8-several-devices.md`,
+  Amendments). The overrides dot keeps the accent colour; clicking it to open the Overrides tab is v1.1
+  (`napkins/quadrule-spec.md` §16).
   **8a**: per-device overrides of position, size, font size and the eye on a secondary device, the previews strip, the
   Overrides tab, Make primary, device ticks in the Page tab, lint L15, file format 0.8.0
   (`crates/layout/src/device.rs`, `crates/ui/src/strip.rs`, `crates/lint/src/lib.rs`). **8b**: Portrait or Landscape in
@@ -176,9 +178,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   6a all the shapes with fill (Shade and Block roles), dashes and caps; 6b rotation, lines any way, opacity. **Rung 6 is
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
-  align and distribute `v0.7.1`). Rung 8, several devices, is built (8a and 8b) and waits for chris's look; after it,
-  `v0.8.0` and `v0.8.1` are tagged, the board is re-planned and the rung 9 prompt is written
-  (`docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`).
+  align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). Next: rung 9,
+  the pattern library; the next lead's prompt is `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`.
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
@@ -244,3 +245,5 @@ skill's `scripts/status-check.py` checks both.
   `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`).
 - 2026-11-12/13: rung 8 planned (bbq, 8 questions), split 8a/8b; 8a built (Sonnet 5.5, high); its look deferred by
   chris; 8b finished, tested and measured by the lead; both wait for chris's look (`docs/STATUS-log.md`).
+- 2026-11-13: rung 8 approved by chris (8a and 8b); version 0.8.0, one release `v0.8.0`; board re-planned; rung 9
+  prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`).

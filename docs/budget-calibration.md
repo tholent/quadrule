@@ -38,3 +38,8 @@ builder started after 7b. Room left this week before the hard stop: 8 points (75
 reset, then 13 (80 %).
 Hard stop for this week: 90 % (chris, 2026-11-12: "let's move the hard stop to 90%", "This week only"), so the room left
 is 23 points until Saturday's reset; the normal stops return after it.
+
+2026-11-13, rung 8: start 67 % (chris, 2026-11-12 21:59 UTC), 72 % after the 8a build (one Sonnet 5.5 high builder,
+0.48M tokens), 74 % after this session finished 8b by hand (lead only, no builder; chris's `/usage` reading, 15:39 UTC,
+logged with `spend-ledger.py reading 74 --meter weekly`). **7 points against a 20-point share.** The 8b session's own
+tokens are not measured; the 2-point move was the lead's context alone. K not refitted this session.

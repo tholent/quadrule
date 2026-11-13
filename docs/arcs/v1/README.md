@@ -13,7 +13,8 @@ Model-shaping rungs come first, so features built later need no rework (Q5). Eac
 questions before building (Q6), its own budget from `budget-select` at kickoff (Q9), and chris's look before it is
 done (ADR-007). A rung bigger than one session splits into 6a, 6b… with a look each (Q10). When chris approves a rung,
 it becomes version `0.N.0` with a pushed git tag `v0.N.0` (Q19); each later part of a split rung bumps the last
-number (6a `v0.6.0`, 6b `v0.6.1`), as rungs 1 to 5 were tagged (chris, 2026-11-10). Each approved rung or part also gets a
+number (6a `v0.6.0`, 6b `v0.6.1`), as rungs 1 to 5 were tagged (chris, 2026-11-10). Rung 8's two parts shipped as
+one `v0.8.0` (chris, 2026-11-13: "let's bundle this into a single v0.8.0 release"). Each approved rung or part also gets a
 GitHub release on its tag, marked pre-release until v1.0, with notes on what the rung added (chris, 2026-11-10:
 "please make github releases for v0.5.0 and for any approved rung (release) moving forward").
 
@@ -21,8 +22,8 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 |---|---|---|---|
 | 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity. Split (bbq Q1, `docs/bbq/2026-11-10-rung-6-shapes.md`): **6a** all the shapes, fill (Shade and Block roles), dashes and caps; **6b** rotation, lines any way, opacity | large: 6a + 6b | done: 6a `v0.6.0`, 6b `v0.6.1`, both approved by chris 2026-11-11 |
 | 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3); how a group turns (6b debt) | medium | done: 7a `v0.7.0`, 7b `v0.7.1`, both approved by chris 2026-11-12 (7a with the Figma constraints change) |
-| 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (a landscape design exports turned into portrait pixels: chris's Nomad check, 2026-11-12, below) | large | next: `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md` |
-| 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | — |
+| 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (a landscape design exports turned into portrait pixels: chris's Nomad check, 2026-11-12, below) | large: 8a + 8b | done: `v0.8.0` (8a and 8b in one release), approved by chris 2026-11-13 |
+| 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | next: `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md` |
 | 10 | Repeat tool: linear and grid, pitch or gap, fill to bounds, alternation, Expand (§6.4) | large | — |
 | 11 | Text and fonts: the bundled set with its OFL texts, system fonts on all three systems, the font picker, fixed-size boxes and L08, paragraph spacing, vertical alignment, baselines on the rhythm; monochrome emoji and its picker | large | — |
 | 12 | The missing-font flow (§7.3: saved outlines, substitute, locate), L11, the system-font lint (ADR-002), embedded fonts in `assets/fonts/` | medium | — |
@@ -46,8 +47,9 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
     6's Shade and Block fill roles.) The grays sheet was added 2026-11-10 (`dcf5458`): run `cargo xtask calibration-sheet`, put each device's
     `quadrule-calib_grays-*.png` on it, and report which of G1–G30 are clean and how many bands GR shows
     (`docs/calibration.md`).
-  - Landscape toolbar screenshots: captured 2026-11-12, left, right and top on both devices, not measured yet
-    (`docs/device-measurements/<device>/landscape/`; rung 8 measures them).
+  - ~~Landscape toolbar screenshots~~ captured 2026-11-12, left, right and top on both devices; rung 8 ruled them
+    records only, not measured, since a landscape template is read in portrait mode where the portrait zones apply,
+    turned (`docs/device-measurements/<device>/landscape/`, rung 8 record, Defaulted "Landscape safe zones").
   - ~~Landscape: put one landscape PNG on a device and say whether it expects rotated pixels or swapped sizes~~
     answered on the Nomad 2026-11-12: **rotated pixels** (a landscape design turned and saved as a portrait PNG; a wide
     PNG is shrunk, and landscape mode zooms by 4/3) (`docs/device-measurements/supernote.a6x2/landscape-test.md`,
@@ -78,7 +80,7 @@ tastetest says READY; the release candidate has had testers on macOS and Windows
 
 ## Out of this arc
 
-L04 (v1.1, Q7). The A5 X rhythm question (parked until the A5 X profile, v1.1, Q16). Winget and Flathub listings
+L04 (v1.1, Q7). Clicking the overrides dot to open the Overrides tab (v1.1, chris 2026-11-13). The A5 X rhythm question (parked until the A5 X profile, v1.1, Q16). Winget and Flathub listings
 (after v1.0, Q12). Everything the spec puts in v1.1 or later.
 
 ## Re-plans
@@ -109,3 +111,13 @@ above (which chris approves before it counts).
   rung 7's rate, rung 8 (large) is likely 15–20 points, more than this week has left before its hard stop, so it
   should start after the Saturday reset or split 8a/8b. No change to the rungs is proposed. Next lead's prompt:
   `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`.
+- 2026-11-13, after rung 8: rung 8 took two lead sessions and one builder subagent (8a, 0.48M tokens) and moved the
+  weekly meter 7 points (67 → 74 %, chris's readings) for a 20-point share. 8b was started after 8a and left
+  uncommitted, with no log entry, when that session stopped; this session found it, added its tests, goldens and docs,
+  and judged it. Lessons: (1) commit work in progress, or at least log it, before a session ends, so the next one can
+  tell finished from half-done; (2) look at new golden images before blessing them: the first landscape bless showed
+  the Nomad page's star scaled into the header band (the sample, not the code); (3) chris may bundle a split rung into
+  one release at the look, as he did here; (4) the chip canvas holds on the landscape page (29 ms drag, 38 ms draw),
+  but drawing a pattern region on the shapes page is 51 ms, left for later by chris, and rung 9 adds heavier patterns
+  (isometric, hex), so rung 9 must time pattern drawing on its heaviest pattern page, both canvases. No change to the
+  rungs is proposed. Next lead's prompt: `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`.

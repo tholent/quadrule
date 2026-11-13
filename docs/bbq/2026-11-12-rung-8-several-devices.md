@@ -177,3 +177,12 @@ bump to `0.8.0`, commit the notes, tag `v0.8.0` (the tag push publishes), then 8
 tagged `v0.8.1`. Re-plan the board after the rung, and write the next lead's prompt in `docs/arcs/v1/`. Update
 `STATUS.md`, `docs/STATUS-log.md` and `docs/STATUS-debt.md` at the end of each session, and write the calibration row
 in `docs/budget-calibration.md`.
+
+## Amendments
+
+- **2026-11-13, chris at the look of 8a and 8b together, word for word:** "1. let's keep the color, but put on v1.1 a
+  way to click the override dot and have the app open the overrides tab, otherwise approve all and let's bundle this
+  into a single v0.8.0 release". So: 8a and 8b are approved as built; the overrides dot keeps the accent colour
+  (Defaulted "Badges"); clicking the dot to open the Overrides tab is v1.1 (spec §16 v1.1 note); the two calls the
+  lead named at the look stand as built (turning a page maps override boxes in proportion; margins stay the numbers
+  typed). **Versions and releases** changes: 8a and 8b ship as one `v0.8.0`; there is no `v0.8.1`.

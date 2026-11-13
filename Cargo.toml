@@ -33,7 +33,7 @@ default-members = [
 ]
 
 [workspace.package]
-version = "0.7.1"
+version = "0.8.0"
 edition = "2024"
 # The Rust on the Pi (STATUS.md); rust-toolchain.toml pins CI to the same compiler.
 rust-version = "1.99.1"

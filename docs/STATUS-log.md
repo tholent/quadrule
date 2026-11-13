@@ -1354,3 +1354,13 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   (`--bench-secondary`) export 17.0, chip 24.2. All under 50 ms.
 - Meter after finishing 8b: 74 % (chris, `/usage`, 2026-11-13 15:39 UTC; logged with `spend-ledger.py reading 74 --meter weekly`): 2 points for this session, 7 of rung 8's 20-point share so far; hard stop 90 % until Saturday's reset.
 - Waits on chris: the look at 8a and 8b together. `v0.8.0` and `v0.8.1` are not tagged until he approves.
+
+## 2026-11-13 — rung 8 approved; v0.8.0
+
+- chris looked at 8a and 8b in the app (`--devices-page`, `--landscape-page`, release build on the Pi) and ruled, word
+  for word: "1. let's keep the color, but put on v1.1 a way to click the override dot and have the app open the
+  overrides tab, otherwise approve all and let's bundle this into a single v0.8.0 release". Written into the rung 8
+  record (Amendments), the spec's v1.1 list (§16 note), the board and the debt list.
+- CI for `70d537a` (8b) passed: CI, Fuzz and Coverage all success (`gh run list --branch main`).
+- Version 0.8.0 (`Cargo.toml`, `Cargo.lock`); notes `docs/arcs/v1/release-notes/v0.8.0.md`; board re-planned (rung 8
+  done, rung 9 next, lessons); next lead's prompt `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`. No `v0.8.1`.

@@ -713,6 +713,9 @@ The `model`, `layout`, `lint` and `format` crates must be fully testable headles
 - Profile forking.
 - Color emoji via grayscale pipeline; rich text runs.
 
+> Added 2026-11-13, chris at the rung 8 look (`docs/bbq/2026-11-12-rung-8-several-devices.md`, Amendments): "put on
+> v1.1 a way to click the override dot and have the app open the overrides tab".
+
 ### v1.2 and later
 - SVG import.
 - Calendar generator and text tokens (`{n}`, `{date}`, …).
