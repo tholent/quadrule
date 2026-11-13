@@ -1655,8 +1655,9 @@ fn pattern_cells() -> Vec<(&'static str, PatternRegion, LineRole)> {
         ),
         (
             "Grand staff",
+            // Closer lines, so a pair still fits the cell on the smaller page.
             region(Pattern::MusicStaff {
-                gap_mm: STAFF_GAP_DEFAULT_MM,
+                gap_mm: 1.5,
                 pitch_units: 5,
                 grand: true,
             }),
