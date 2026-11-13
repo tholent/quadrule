@@ -309,6 +309,11 @@ Every document has its own **rhythm**: a horizontal unit and a vertical unit tha
 | Major every N | Optional; marks every Nth unit as major, used by pattern regions and the overlay |
 | Resolution mode | **Pixel-locked** (default) or **Physical-locked** (see below) |
 
+> Amended 2026-11-13, chris at the rung 9 look: "the isometric grid and dot pattern is rotated 90 degrees from what I
+> expected", then "Replace, everywhere" (record `docs/bbq/2026-11-13-rung-9-pattern-library.md`, Amendments). The
+> isometric axes are at **30°, 90° and 150°**: vertical lines, with the slanted ones crossing on them, for the
+> isometric rhythm and the isometric pattern alike.
+
 **Per-profile resolution:** Each profile resolves the rhythm to device pixels. In **pixel-locked** mode, the unit rounds to a whole number of device pixels (5 mm at 300 PPI = 59 px, i.e. 4.995 mm). Lines then stay perfectly crisp and evenly spaced, with no drift across the page. In **physical-locked** mode, exact millimetres are kept and pixel snapping places each line on the nearest pixel, which can make spacing vary by 1 px. The inspector shows the resolved value per profile, e.g. "5 mm → 59 px (Manta), 44 px (A5 X)." Secondary profiles can override the rhythm, like any other per-profile property.
 
 **What rhythm drives by default:**

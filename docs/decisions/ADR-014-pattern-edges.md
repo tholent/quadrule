@@ -68,3 +68,21 @@ Drivers:
 - 2026-11-10: ratified by chris (his answer "Ratify" to "Ratify ADR-014 as written?"). Prior header values: status
   `proposed`, status-note `chris chose 2026-11-10 to keep the rule the exports already follow; draft updated to say so;
   awaiting ratification`. Napkin §5.2 given its dated note, as Consequences says.
+- 2026-11-13: amended by chris at the rung 9 look: slanted pattern lines are cut at the region's frame (see Amendment
+  below). Header values unchanged.
+
+## Amendment — 2026-11-13, chris
+
+**What changed.** Slanted pattern lines (the isometric pattern's lines and the hex pattern's edges, in both
+orientations) are **cut exactly at the region's frame**, so nothing reaches past it. Lines parallel to the frame
+(ruled lines, grid lines, the isometric pattern's vertical lines, the hex pattern's flat edges) and dots keep the
+Decision above: drawn whole when their centre is inside, reaching at most half a stroke past the edge.
+
+**Why.** Rung 9's first build drew a hex edge whole when its middle was inside, so stubs reached up to half an edge
+past the frame, far beyond the half stroke the Decision allows. The isometric lines were already cut at the frame (the
+builder's choice). chris, asked "Hex edges at the region's border: today an edge whose middle is inside is drawn whole,
+so stubs stick out up to half an edge (long on pointy top). Which do you want?", answered "Cut at the frame
+(Recommended)" (the option read "Like the isometric lines: the region's edge is exact and nothing sticks out").
+
+**Touches.** Decision. Record: `docs/bbq/2026-11-13-rung-9-pattern-library.md` (Amendments); built in rung 9
+(`crates/layout/src/pattern.rs`).

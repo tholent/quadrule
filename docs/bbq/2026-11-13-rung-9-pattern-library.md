@@ -134,3 +134,22 @@ tests; (7) README and DEVELOPMENT. The lead then judges it (`make check-all`, th
 measures on the Pi, and shows chris the window for his look. After his approval: version `0.9.0`, notes in
 `docs/arcs/v1/release-notes/v0.9.0.md`, tag `v0.9.0` (the tag push publishes), re-plan the board, write the next lead's
 prompt, and update `STATUS.md`, `docs/STATUS-log.md`, `docs/STATUS-debt.md` and `docs/budget-calibration.md`.
+
+## Amendments
+
+2026-11-13, chris at the rung 9 look (release build on the Pi, `--patterns-page`), word for word: "a couple items.
+First, things look really nice overall. Second, the isometric grid and dot pattern is rotated 90 degrees from what I
+expected." Then three questions, answered:
+
+- **Q2 amended — isometric turned 90°, everywhere.** Asked "Should that replace horizontal rows, or be a choice on the
+  region?", answered "Replace, everywhere (Recommended)". The axes are at 30°, 90° and 150°: vertical lines one column
+  apart, pixel-sharp, with the slanted lines crossing on them, for isometric lines, isometric dots and the isometric
+  rhythm. Bound to a Rectangular rhythm, the column is the horizontal unit; under an Isometric rhythm, the column is
+  side × √3/2 (whole pixels when pixel-locked). Spec §6.3 has the dated note.
+- **Q7 amended to match.** The isometric rhythm's snap grid is one column across × half a side down.
+- **Hex edges (Defaulted "Slanted lines") — cut at the frame.** Asked "Hex edges at the region's border … Which do you
+  want?", answered "Cut at the frame (Recommended)". ADR-014 amended the same day.
+- **Major dots (Defaulted "Which patterns have major lines") — one pixel bigger.** Asked "What should a major dot be?",
+  answered "One px bigger, major gray (Recommended)": a major dot is the Dot grid dot's size in device pixels plus 1,
+  in the major role's gray. The first build drew them at Structure's 2 px, smaller than the 3 px ordinary dot, because
+  the Defaulted line said "at the major role's width" (the lead's brief).
