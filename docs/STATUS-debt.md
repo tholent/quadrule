@@ -133,4 +133,4 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   targeted stay only when they came from a file. The strip's pictures and the Ctrl + scroll anchor have no pointer test.
   The overrides dot is the accent colour (chris's look decides). Drawing a pattern region on the shapes page on the chip
   canvas is over 50 ms at the 90th percentile (8a lead, strip on: 50.8–51.1 ms; first timed in 8a, rung 6a timed only
-  rectangle, ellipse and polygon there) (`docs/STATUS-log.md`, 2026-11-12/13 rung 8a).
+  rectangle, ellipse and polygon there); chris, 2026-11-13: "Leave it for later" (rung 17's sweep, or sooner if a rung touches it) (`docs/STATUS-log.md`, 2026-11-12/13 rung 8a).

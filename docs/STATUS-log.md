@@ -1322,3 +1322,6 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - New debt in `docs/STATUS-debt.md` (rung 8a line); paid: the 7a "group dragged on the other device" and 7b "align on
   the primary page" lines, part of the Style tab's "mixed", the rung 2 Ctrl + scroll anchor.
 - Waits on chris: the look at 8a.
+- chris on the over-50 ms pattern draw: "Leave it for later" (kept in the rung 8a debt line). Meter after the 8a build:
+  72 % (`/usage`, logged with `spend-ledger.py reading 72 --meter weekly`): 5 points of the 20-point share spent; the
+  five-hour window read 61 %.
