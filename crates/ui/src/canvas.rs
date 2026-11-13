@@ -103,22 +103,38 @@ pub fn screen_list(dl: &DisplayList, view: &ScreenView) -> DisplayList {
     let tx = |x: f64| (x - view.x) * s;
     let ty = |y: f64| (y - view.y) * s;
     let affine = Affine::translate((-view.x, -view.y)).then_scale(s);
-    let items = dl
-        .items
-        .iter()
-        .map(|it| match it {
+    let mut items: Vec<Item> = Vec::with_capacity(dl.items.len());
+    // Whether the last item pushed is a path of merged rectangles.
+    let mut merging = false;
+    for it in &dl.items {
+        let item = match it {
             // As an anti-aliased fill: the export's hard-edged rectangles would drop a line
-            // thinner than half a screen pixel when zoomed out.
+            // thinner than half a screen pixel when zoomed out. A run of them in one gray (a
+            // pattern's lines or dots, drawn one after the other) becomes one path, so the chip
+            // makes one object of it, not one for each line or dot (rung 9, the chip-canvas debt
+            // of rung 8a). Where they overlap the gray is the same, so the picture is the same.
             Item::Rect {
                 x0,
                 y0,
                 x1,
                 y1,
                 gray,
-            } => Item::Fill {
-                path: kurbo::Rect::new(tx(*x0), ty(*y0), tx(*x1), ty(*y1)).to_path(0.1),
-                gray: *gray,
-            },
+            } => {
+                let r = kurbo::Rect::new(tx(*x0), ty(*y0), tx(*x1), ty(*y1));
+                if let Some(Item::Fill { path, gray: g }) = items.last_mut()
+                    && *g == *gray
+                    && merging
+                {
+                    path.extend(r.path_elements(0.1));
+                } else {
+                    items.push(Item::Fill {
+                        path: r.to_path(0.1),
+                        gray: *gray,
+                    });
+                }
+                merging = true;
+                continue;
+            }
             Item::Stroke {
                 x0,
                 y0,
@@ -162,8 +178,10 @@ pub fn screen_list(dl: &DisplayList, view: &ScreenView) -> DisplayList {
                 bounds: (tx(bounds.0), ty(bounds.1), tx(bounds.2), ty(bounds.3)),
             },
             Item::EndAlpha => Item::EndAlpha,
-        })
-        .collect();
+        };
+        merging = false;
+        items.push(item);
+    }
     DisplayList {
         width: view.width.max(1),
         height: view.height.max(1),

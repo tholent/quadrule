@@ -25,6 +25,7 @@
 pub mod align;
 pub mod device;
 pub mod newpage;
+pub mod pattern;
 pub mod rotate;
 pub mod shapes;
 pub mod snap;
@@ -33,9 +34,7 @@ pub mod units;
 
 use kurbo::{BezPath, Point};
 use quadrule_model::outlines::ProfileOutlines;
-use quadrule_model::{
-    Document, LineCap, ObjectKind, Pattern, RhythmOrigin, RhythmResolution, Style, Uuid,
-};
+use quadrule_model::{Document, LineCap, ObjectKind, RhythmOrigin, RhythmResolution, Style, Uuid};
 use quadrule_profiles::Profile;
 use quadrule_text::{FontRegistry, Laid, TextError, TextRequest};
 
@@ -421,6 +420,7 @@ pub fn display_list(
     let env = Env {
         target,
         rhythm,
+        doc_rhythm: &doc.rhythm,
         outlines,
         ov: override_key(primary, target),
     };
@@ -441,6 +441,8 @@ pub fn display_list(
 struct Env<'a> {
     target: &'a Profile,
     rhythm: RhythmPx,
+    /// The document's rhythm settings (type, resolution, major lines).
+    doc_rhythm: &'a quadrule_model::Rhythm,
     outlines: &'a ProfileOutlines,
     /// The device whose overrides are read; `None` for the primary profile.
     ov: Option<&'a str>,
@@ -511,68 +513,26 @@ fn draw_objects(
                 let Some((w, gray)) = stroke_opt(o.style, target) else {
                     continue;
                 };
-                let (x0, y0) = (px(f.x_mm).round(), px(f.y_mm).round());
-                let (x1, y1) = (px(f.x_mm + f.w_mm).round(), px(f.y_mm + f.h_mm).round());
-                let ys = RhythmPx::positions(rhythm.origin_y, rhythm.unit_y, y0, y1);
-                let half = w as f64 / 2.0;
+                let region = (
+                    px(f.x_mm).round(),
+                    px(f.y_mm).round(),
+                    px(f.x_mm + f.w_mm).round(),
+                    px(f.y_mm + f.h_mm).round(),
+                );
                 // A pattern draws every line and dot whose centre lies in its region, whole: a dot
                 // on the region's edge (where the rhythm meets the margin) straddles it by half a
-                // stroke rather than being cut in two.
-                match pr.pattern {
-                    Pattern::Lines => {
-                        for y in ys {
-                            let c = snap_center(y, w);
-                            items.push(Item::Rect {
-                                x0,
-                                y0: c - half,
-                                x1,
-                                y1: c + half,
-                                gray,
-                            });
-                        }
-                    }
-                    Pattern::Dots => {
-                        let xs = RhythmPx::positions(rhythm.origin_x, rhythm.unit_x, x0, x1);
-                        for &y in &ys {
-                            let cy = snap_center(y, w);
-                            for &x in &xs {
-                                let cx = snap_center(x, w);
-                                items.push(Item::Rect {
-                                    x0: cx - half,
-                                    y0: cy - half,
-                                    x1: cx + half,
-                                    y1: cy + half,
-                                    gray,
-                                });
-                            }
-                        }
-                    }
-                    Pattern::Grid => {
-                        // Horizontal lines across the region, then vertical lines down it.
-                        for &y in &ys {
-                            let c = snap_center(y, w);
-                            items.push(Item::Rect {
-                                x0,
-                                y0: c - half,
-                                x1,
-                                y1: c + half,
-                                gray,
-                            });
-                        }
-                        for x in RhythmPx::positions(rhythm.origin_x, rhythm.unit_x, x0, x1) {
-                            let c = snap_center(x, w);
-                            items.push(Item::Rect {
-                                x0: c - half,
-                                y0,
-                                x1: c + half,
-                                y1,
-                                gray,
-                            });
-                        }
-                    }
-                    // The new patterns are drawn in the next step.
-                    _ => {}
-                }
+                // stroke rather than being cut in two (ADR-014).
+                pattern::pattern_items(
+                    pr,
+                    pattern::Pen { w, gray },
+                    region,
+                    &pattern::Env {
+                        target,
+                        rhythm: env.doc_rhythm,
+                        rhythm_px: rhythm,
+                    },
+                    items,
+                );
             }
             ObjectKind::Text(_) => {
                 let text = outlines.text(o.id).ok_or(LayoutError::MissingText(o.id))?;

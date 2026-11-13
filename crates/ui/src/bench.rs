@@ -66,6 +66,8 @@ pub struct DragBench {
     pub devices: bool,
     /// Opens the rung 8b landscape page when nothing is open yet (`--landscape-page`).
     pub landscape: bool,
+    /// Opens the rung 9 pattern page when nothing is open yet (`--patterns-page`).
+    pub patterns: bool,
     /// Runs on the document's first secondary device, not the primary one (`--bench-secondary`), so
     /// a drag writes overrides (rung 8a).
     pub secondary: bool,
@@ -89,6 +91,7 @@ impl DragBench {
             rotate: false,
             devices: false,
             landscape: false,
+            patterns: false,
             secondary: false,
             no_strip: false,
         }
@@ -98,6 +101,14 @@ impl DragBench {
     pub fn with_devices(self) -> Self {
         DragBench {
             devices: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark over the rung 9 pattern page.
+    pub fn with_patterns(self) -> Self {
+        DragBench {
+            patterns: true,
             ..self
         }
     }

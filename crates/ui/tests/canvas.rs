@@ -134,3 +134,36 @@ fn drag_frames_are_judged_by_the_90th_percentile() {
     );
     assert!(ok);
 }
+
+#[test]
+fn screen_list_makes_one_path_of_a_pattern_s_lines_and_dots() {
+    // The chip-canvas debt of rung 8a (paid in rung 9): a run of rectangles of one gray is one
+    // path, not one item each, and drawn at 1:1 it still gives the export's own pixels.
+    let mut v = Viewer::default();
+    v.open_patterns();
+    let page = v.page().unwrap().clone();
+    let dl = &page.display_list;
+    let rects = dl
+        .items
+        .iter()
+        .filter(|i| matches!(i, quadrule_layout::Item::Rect { .. }))
+        .count();
+    let view = ScreenView {
+        scale: 1.0,
+        x: 0.0,
+        y: 0.0,
+        width: dl.width,
+        height: dl.height,
+    };
+    let list = screen_list(dl, &view);
+    let fewer = list.items.len() * 4 < dl.items.len();
+    let same = render(&list, Math::Fastest).data == page.image.data;
+    let ok = rects > 200 && fewer && same;
+    println!(
+        "CHECK crate=ui name=screen_list_merges_rects result={} export_items={} rects={rects} screen_items={} same_pixels_at_1_to_1={same}",
+        pass(ok),
+        dl.items.len(),
+        list.items.len()
+    );
+    assert!(ok);
+}

@@ -1591,3 +1591,179 @@ pub fn landscape_document() -> Document {
     ];
     doc
 }
+
+/// Fixed ids for the pattern page's objects.
+pub mod pattern_ids {
+    use crate::Uuid;
+    /// The `n`th object of the pattern page (1-based).
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_000C_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+}
+
+/// What the pattern page's cells hold, in order (left to right, then down): the label and the
+/// region.
+fn pattern_cells() -> Vec<(&'static str, PatternRegion, LineRole)> {
+    let region = |p: Pattern| PatternRegion::new(p);
+    let guide = LineRole::Guide;
+    let mut unbound = region(Pattern::Grid);
+    unbound.bound = false;
+    unbound.h_spacing_mm = Some(4.3);
+    unbound.v_spacing_mm = Some(7.0);
+    let mut own_major = region(Pattern::Dots);
+    own_major.major = MajorLines::Every(3);
+    own_major.major_role = LineRole::Emphasis;
+    let hex = |orientation| Pattern::Hex {
+        orientation,
+        height_units: 2,
+    };
+    vec![
+        (
+            "Isometric, major every 5",
+            region(Pattern::Isometric {
+                style: IsoStyle::Lines,
+            }),
+            guide,
+        ),
+        (
+            "Isometric dots, major 5",
+            region(Pattern::Isometric {
+                style: IsoStyle::Dots,
+            }),
+            LineRole::DotGrid,
+        ),
+        ("Hex, flat top", region(hex(HexOrientation::Flat)), guide),
+        (
+            "Hex, pointy top",
+            region(hex(HexOrientation::Pointy)),
+            guide,
+        ),
+        (
+            "Cornell",
+            region(Pattern::Cornell {
+                cue_units: None,
+                summary_units: None,
+            }),
+            guide,
+        ),
+        (
+            "Music staff",
+            region(PatternKind::MusicStaff.default_pattern()),
+            guide,
+        ),
+        (
+            "Grand staff",
+            region(Pattern::MusicStaff {
+                gap_mm: STAFF_GAP_DEFAULT_MM,
+                pitch_units: 5,
+                grand: true,
+            }),
+            guide,
+        ),
+        ("Grid, own 4.3 x 7 mm", unbound, guide),
+        ("Grid, major 5", region(Pattern::Grid), guide),
+        ("Dots, own major 3", own_major, LineRole::DotGrid),
+    ]
+}
+
+/// The rung 9 pattern page (docs/bbq/2026-11-13-rung-9-pattern-library.md, Defaulted "Golden
+/// pages"): every new pattern and style in a labelled cell (isometric lines and dots, hexagons
+/// flat and pointy, Cornell, a music staff and a grand staff), major lines from the rhythm and
+/// from a region of its own, and a region unbound from the rhythm. The rhythm is 5 mm with a major
+/// line every 5. It holds a dot region with the sample's id ([`ids::DOTS`]), so the benchmarks run
+/// over it. Designed on the Manta, also targeting the Nomad.
+pub fn patterns_document() -> Document {
+    patterns_page(false)
+}
+
+/// The pattern page held sideways (rung 9, one landscape page per device): the same cells in three
+/// columns on the Manta's page turned.
+pub fn patterns_landscape_document() -> Document {
+    patterns_page(true)
+}
+
+fn patterns_page(landscape: bool) -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 9 patterns".into();
+    doc.metadata.description =
+        "The rung 9 pattern page: isometric, hex, Cornell, music staff, major lines and an unbound region."
+            .into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    doc.rhythm.major_every = Some(5);
+    // Columns, the cell's width and height in 5 mm units (the label and the gap below take three more
+    // rows). A hexagon at a region's edge is drawn whole, so it pokes out of it by up to half an edge.
+    let (cols, cell_w, cell_h) = if landscape {
+        doc.page.orientation = Orientation::Landscape;
+        (4, 9, 6)
+    } else {
+        (3, 9, 6)
+    };
+    let title = doc.layers[1].objects[0].clone();
+    let dots = doc.layers[0].objects[0].clone();
+    let unit = 5.0;
+    let mut objs: Vec<Object> = Vec::new();
+    let mut head = title.clone();
+    head.id = pattern_ids::TITLE;
+    head.name = "Title".into();
+    head.frame = Frame::new(
+        margin,
+        margin,
+        if landscape { MANTA_H_MM } else { MANTA_W_MM } - 2.0 * margin,
+        8.0,
+    );
+    if let ObjectKind::Text(t) = &mut head.kind {
+        t.content = "Rung 9: the pattern library".into();
+        t.size_pt = 12.0;
+    }
+    head.constraints = Constraints::default();
+    objs.push(head);
+    for (i, (label, region, role)) in pattern_cells().into_iter().enumerate() {
+        let (col, row) = ((i % cols) as f64, (i / cols) as f64);
+        let x = margin + col * (cell_w as f64 + 1.0) * unit;
+        let y = margin + (2.0 + row * (cell_h as f64 + 3.0)) * unit;
+        let mut text = title.clone();
+        text.id = pattern_ids::nth(100 + i as u128);
+        text.name = format!("Label {}", i + 1);
+        text.frame = Frame::new(x, y, cell_w as f64 * unit, 5.0);
+        if let ObjectKind::Text(t) = &mut text.kind {
+            t.content = label.into();
+            t.size_pt = 7.0;
+            t.weight = 400;
+        }
+        text.constraints = Constraints::default();
+        objs.push(text);
+        let mut o = dots.clone();
+        // The sample's own id goes to the last dot region, so the drag benchmark finds it.
+        o.id = if i == 9 {
+            ids::DOTS
+        } else {
+            pattern_ids::nth(1 + i as u128)
+        };
+        o.name = label.into();
+        // A millimetre past the rhythm lines at each edge, so the edge lines are in whatever a
+        // pixel of rounding says.
+        o.frame = Frame::new(
+            x - 1.0,
+            y + 2.0 * unit - 1.0,
+            cell_w as f64 * unit + 2.0,
+            cell_h as f64 * unit + 2.0,
+        );
+        o.constraints = Constraints::default();
+        o.style = Style::Role(role);
+        o.kind = ObjectKind::Pattern(region);
+        objs.push(o);
+    }
+    doc.layers = vec![Layer {
+        name: "Patterns".into(),
+        visible: true,
+        locked: false,
+        objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}

@@ -1152,7 +1152,9 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    if b.landscape {
+                    if b.patterns {
+                        self.viewer.open_patterns();
+                    } else if b.landscape {
                         self.viewer.open_landscape();
                     } else if b.devices {
                         self.viewer.open_devices();

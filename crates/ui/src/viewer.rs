@@ -286,6 +286,19 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 9 pattern page: every new pattern and style, major lines and an unbound region
+    /// (a dot region holds the sample's id, for the benchmarks). Like the sample, it has no file.
+    pub fn open_patterns(&mut self) {
+        let doc = quadrule_model::sample::patterns_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
+    /// The pattern page held sideways (rung 9).
+    pub fn open_patterns_landscape(&mut self) {
+        let doc = quadrule_model::sample::patterns_landscape_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens a new blank document from the New dialog's choices (rung 5): the chosen device is
     /// the one shown. It has no file until Save, and no unsaved changes until it is edited.
     pub fn open_new(&mut self, spec: &quadrule_layout::newpage::NewPage) -> Result<(), String> {

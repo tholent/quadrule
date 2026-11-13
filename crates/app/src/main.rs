@@ -29,7 +29,8 @@
 //! a heavy group; the benchmarks then run over it and the drag moves the heavy group). Rung 8a adds
 //! `--devices-page` (the overrides page), `--bench-secondary` (run on the Nomad, where a drag writes
 //! overrides) and `--no-strip` (fold the device previews strip shut; it is open in a bench
-//! otherwise). Rung 8b adds `--landscape-page` (the landscape page; the benchmarks then run over it).
+//! otherwise). Rung 8b adds `--landscape-page` (the landscape page; the benchmarks then run over it). Rung 9 adds
+//! `--patterns-page` (the pattern page: every new pattern; the benchmarks then run over it).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -129,6 +130,8 @@ impl App {
         }
         if let Some(p) = path {
             ui.open_file(&p);
+        } else if args.patterns_page {
+            ui.viewer.open_patterns();
         } else if args.landscape_page {
             ui.viewer.open_landscape();
         } else if args.devices_page {
@@ -158,7 +161,9 @@ impl App {
                 b
             };
             let b = if args.no_strip { b.without_strip() } else { b };
-            if args.landscape_page {
+            if args.patterns_page {
+                b.with_patterns()
+            } else if args.landscape_page {
                 b.with_landscape()
             } else if args.devices_page {
                 b.with_devices()
@@ -377,6 +382,9 @@ struct Args {
     /// Open the rung 8b landscape page instead of the empty start (`--landscape-page`); the
     /// benchmarks then run over it.
     landscape_page: bool,
+    /// Open the rung 9 pattern page instead of the empty start (`--patterns-page`); the benchmarks
+    /// then run over it.
+    patterns_page: bool,
     /// Run the benchmark on the first secondary device, so a drag writes overrides
     /// (`--bench-secondary`).
     bench_secondary: bool,
@@ -426,6 +434,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.devices_page = true;
         } else if a == "--landscape-page" {
             out.landscape_page = true;
+        } else if a == "--patterns-page" {
+            out.patterns_page = true;
         } else if a == "--bench-secondary" {
             out.bench_secondary = true;
         } else if a == "--no-strip" {
@@ -573,6 +583,14 @@ mod tests {
                 Ok(Args {
                     bench_drag: Some(150),
                     shapes_page: true,
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--patterns-page", "--bench-draw", "20"]),
+                Ok(Args {
+                    bench_draw: Some(20),
+                    patterns_page: true,
                     ..Args::default()
                 }),
             ),
