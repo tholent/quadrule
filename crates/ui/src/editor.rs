@@ -757,7 +757,8 @@ impl Viewer {
         };
         let from_here = objects.iter().any(|o| doc.object(o.id).is_some());
         let steps = f64::from(if from_here { times } else { times - 1 });
-        let offset = (doc.rhythm.h_unit_mm * steps, doc.rhythm.v_unit_mm * steps);
+        let (step_x, step_y) = doc.rhythm.steps_mm();
+        let offset = (step_x * steps, step_y * steps);
         let (cmd, new) = paste(doc, &objects, layer, offset, Uuid::new_v4);
         if is_empty(&cmd) {
             return Ok(false);

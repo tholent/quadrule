@@ -32,6 +32,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.5.0", "0.6.0", v0_5_to_v0_6),
     ("0.6.0", "0.7.0", v0_6_to_v0_7),
     ("0.7.0", "0.8.0", v0_7_to_v0_8),
+    ("0.8.0", "0.9.0", v0_8_to_v0_9),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -86,6 +87,17 @@ fn v0_6_to_v0_7(_scene: &mut Value) -> Result<(), FormatError> {
 /// exactly what it drew before, so there is nothing to rewrite. A 0.7 build keeps the new fields
 /// as unknown ones on a save, but would draw the object where its constraints put it.
 fn v0_7_to_v0_8(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.9 adds new `Pattern` choices (isometric, hex, Cornell, music staff, each carrying its own
+/// settings) and optional fields: `rhythm_type`, `side_mm` and `major_every` on the rhythm, and
+/// `bound`, `h_spacing_mm`, `v_spacing_mm`, `major` and `major_role` on a pattern region (rung 9 bbq,
+/// Defaulted "File format 0.9.0"). A 0.8 file has none of them, which reads as a rectangular
+/// rhythm, no major lines and regions bound to the rhythm, exactly what it drew before, so there is
+/// nothing to rewrite. A 0.8 build cannot read a 0.9 file that uses the new patterns; it reports an
+/// error rather than guessing.
+fn v0_8_to_v0_9(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

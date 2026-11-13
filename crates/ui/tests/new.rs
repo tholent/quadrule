@@ -63,10 +63,7 @@ fn fill_region(doc: &quadrule_model::Document) -> Object {
         rotation_deg: 0.0,
         opacity_pct: 100,
         overrides: Default::default(),
-        kind: ObjectKind::Pattern(PatternRegion {
-            pattern: Pattern::Lines,
-            extra: Extra::new(),
-        }),
+        kind: ObjectKind::Pattern(PatternRegion::new(Pattern::Lines)),
         extra: Extra::new(),
     }
 }

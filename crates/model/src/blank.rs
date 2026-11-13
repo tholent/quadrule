@@ -122,6 +122,9 @@ pub fn blank_document(
             origin: RhythmOrigin::MarginCorner,
             resolution: RhythmResolution::PixelLocked,
             subdivisions: None,
+            rhythm_type: RhythmType::Rectangular,
+            side_mm: None,
+            major_every: None,
             extra: Extra::new(),
         },
         layers: vec![Layer {

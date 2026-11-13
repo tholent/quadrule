@@ -258,10 +258,7 @@ fn make_object(
             frame,
             constraints,
             Style::Role(LineRole::Guide),
-            ObjectKind::Pattern(PatternRegion {
-                pattern: Pattern::Lines,
-                extra: Extra::new(),
-            }),
+            ObjectKind::Pattern(PatternRegion::new(Pattern::Lines)),
         ),
         DrawKind::Rect => mm_object(
             id,

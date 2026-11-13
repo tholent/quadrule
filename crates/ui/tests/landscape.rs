@@ -107,10 +107,7 @@ fn fill_region(doc: &Document) -> Object {
             h: HConstraint::LeftRight,
             v: VConstraint::TopBottom,
         },
-        ObjectKind::Pattern(PatternRegion {
-            pattern: Pattern::Lines,
-            extra: Extra::new(),
-        }),
+        ObjectKind::Pattern(PatternRegion::new(Pattern::Lines)),
     )
 }
 

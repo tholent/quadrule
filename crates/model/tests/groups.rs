@@ -315,10 +315,7 @@ fn locks_hide_and_turn_rules() {
     g.rotation_deg = 20.0;
     work2.apply(Command::SetObject(g)).unwrap();
     let mut text = work2.object(id(3)).unwrap().clone();
-    text.kind = ObjectKind::Pattern(PatternRegion {
-        pattern: Pattern::Lines,
-        extra: Extra::new(),
-    });
+    text.kind = ObjectKind::Pattern(PatternRegion::new(Pattern::Lines));
     work2.apply(Command::SetObject(text)).unwrap();
     let into = work2.apply(Command::MoveObjectIn {
         id: id(3),

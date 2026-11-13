@@ -115,10 +115,7 @@ pub fn slice_document() -> Document {
         // Same physical size on every profile, under the pinned header.
         pinned_top,
         Style::Role(LineRole::DotGrid),
-        ObjectKind::Pattern(PatternRegion {
-            pattern: Pattern::Dots,
-            extra: Extra::new(),
-        }),
+        ObjectKind::Pattern(PatternRegion::new(Pattern::Dots)),
     );
     let lines = object(
         ids::LINES,
@@ -130,10 +127,7 @@ pub fn slice_document() -> Document {
             v: VConstraint::TopBottom,
         },
         Style::Role(LineRole::Guide),
-        ObjectKind::Pattern(PatternRegion {
-            pattern: Pattern::Lines,
-            extra: Extra::new(),
-        }),
+        ObjectKind::Pattern(PatternRegion::new(Pattern::Lines)),
     );
 
     Document {
@@ -173,6 +167,9 @@ pub fn slice_document() -> Document {
             origin: RhythmOrigin::MarginCorner,
             resolution: RhythmResolution::PixelLocked,
             subdivisions: None,
+            rhythm_type: RhythmType::Rectangular,
+            side_mm: None,
+            major_every: None,
             extra: Extra::new(),
         },
         layers: vec![
@@ -854,10 +851,7 @@ pub fn transforms_document() -> Document {
         solid,
         0.0,
         30,
-        ObjectKind::Pattern(PatternRegion {
-            pattern: Pattern::Lines,
-            extra: Extra::new(),
-        }),
+        ObjectKind::Pattern(PatternRegion::new(Pattern::Lines)),
     );
     add(
         "Circle, 0 percent",

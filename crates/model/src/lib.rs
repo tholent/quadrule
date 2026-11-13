@@ -225,10 +225,50 @@ pub struct Rhythm {
     /// §6.3). `None` means off. Format 0.4; a file without it reads as off.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub subdivisions: Option<u8>,
+    /// Rectangular (the default, and every file before 0.9) or isometric (format 0.9; rung 9 bbq,
+    /// Q7). Under an isometric rhythm the units are derived from the side length
+    /// ([`Rhythm::steps_mm`]), and `h_unit_mm` and `v_unit_mm` are kept for when it is switched back.
+    #[serde(default, skip_serializing_if = "RhythmType::is_rectangular")]
+    pub rhythm_type: RhythmType,
+    /// The side of an isometric rhythm's triangles in mm (format 0.9); `None` reads as
+    /// [`ISOMETRIC_SIDE_DEFAULT_MM`]. Unused by a rectangular rhythm.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub side_mm: Option<f64>,
+    /// "Major every N": every Nth rhythm unit counts as major, for pattern regions and the overlay
+    /// (format 0.9; rung 9 bbq, Q6). `None` means off, which is what every file before 0.9 reads as.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub major_every: Option<u8>,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
 }
+
+/// The kind of a rhythm (napkin §6.3, format 0.9).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RhythmType {
+    /// Independent horizontal and vertical units (the default).
+    #[default]
+    Rectangular,
+    /// One side length; axes at 0, 60 and 120 degrees. Snapping uses half a side across and one
+    /// row (side times the square root of three over two) down.
+    Isometric,
+}
+
+impl RhythmType {
+    /// Whether this is the default; used to leave the field out of a file when it is.
+    pub fn is_rectangular(&self) -> bool {
+        *self == RhythmType::Rectangular
+    }
+}
+
+/// The side of an isometric rhythm when the file gives none (the "Isometric 5 mm" preset).
+pub const ISOMETRIC_SIDE_DEFAULT_MM: f64 = 5.0;
+/// Half the square root of three: a row of an isometric grid is its side times this.
+pub const HALF_SQRT_3: f64 = 0.866_025_403_784_438_6;
+/// The fewest rhythm units between major lines (2: every other one).
+pub const MAJOR_MIN: u8 = 2;
+/// The most rhythm units between major lines.
+pub const MAJOR_MAX: u8 = 50;
 
 /// The fewest subdivisions per rhythm unit (napkin §6.3).
 pub const SUBDIVISIONS_MIN: u8 = 2;
@@ -241,6 +281,35 @@ impl Rhythm {
     pub fn subdivisions_on(&self) -> Option<u8> {
         self.subdivisions
             .filter(|n| (SUBDIVISIONS_MIN..=SUBDIVISIONS_MAX).contains(n))
+    }
+
+    /// "Major every N" when it is on: `Some(n)` for 2 to 50, otherwise `None`. A file holding
+    /// another number is read as off, not rejected.
+    pub fn major_on(&self) -> Option<u8> {
+        self.major_every
+            .filter(|n| (MAJOR_MIN..=MAJOR_MAX).contains(n))
+    }
+
+    /// Whether the rhythm is isometric.
+    pub fn is_isometric(&self) -> bool {
+        self.rhythm_type == RhythmType::Isometric
+    }
+
+    /// The isometric side in mm: the one in the file, or the default.
+    pub fn side(&self) -> f64 {
+        self.side_mm
+            .filter(|s| s.is_finite() && *s > 0.0)
+            .unwrap_or(ISOMETRIC_SIDE_DEFAULT_MM)
+    }
+
+    /// The steps snapping, Shift+arrow and drawn sizes use, in mm: (across, down). A rectangular
+    /// rhythm gives its two units; an isometric one half a side across and one row down, the
+    /// rectangular grid that holds every isometric crossing (rung 9 bbq, Q7).
+    pub fn steps_mm(&self) -> (f64, f64) {
+        match self.rhythm_type {
+            RhythmType::Rectangular => (self.h_unit_mm, self.v_unit_mm),
+            RhythmType::Isometric => (self.side() / 2.0, self.side() * HALF_SQRT_3),
+        }
     }
 }
 
@@ -963,18 +1032,121 @@ pub enum TextAlign {
     Justify,
 }
 
-/// A pattern region (napkin §5.2). Rung 1 regions are always bound to the rhythm.
+/// A pattern region (napkin §5.2).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct PatternRegion {
-    /// Which pattern.
+    /// Which pattern, with its own settings.
     pub pattern: Pattern,
+    /// Bound to the rhythm (the default; napkin §5.2): the rhythm sets the spacing. Unticked, the
+    /// region has its own spacing, counted from its own top-left corner (format 0.9; rung 9 bbq,
+    /// Defaulted "Unbinding a region").
+    #[serde(default = "yes", skip_serializing_if = "is_true")]
+    pub bound: bool,
+    /// An unbound region's horizontal spacing in mm; `None` reads as the rhythm's horizontal step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub h_spacing_mm: Option<f64>,
+    /// An unbound region's vertical spacing in mm; `None` reads as the rhythm's vertical step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub v_spacing_mm: Option<f64>,
+    /// Major lines: follow the rhythm's "Major every N", turn them off, or use an N of its own
+    /// (rung 9 bbq, Q6).
+    #[serde(default, skip_serializing_if = "MajorLines::is_follow")]
+    pub major: MajorLines,
+    /// The role major lines are drawn in (Structure unless changed).
+    #[serde(default = "structure_role", skip_serializing_if = "is_structure_role")]
+    pub major_role: LineRole,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
 }
 
-/// The patterns rung 1 draws.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+fn yes() -> bool {
+    true
+}
+
+fn is_true(v: &bool) -> bool {
+    *v
+}
+
+fn structure_role() -> LineRole {
+    LineRole::Structure
+}
+
+fn is_structure_role(r: &LineRole) -> bool {
+    *r == LineRole::Structure
+}
+
+impl PatternRegion {
+    /// A region of `pattern`, bound to the rhythm, with the rhythm's major lines in Structure.
+    pub fn new(pattern: Pattern) -> Self {
+        PatternRegion {
+            pattern,
+            bound: true,
+            h_spacing_mm: None,
+            v_spacing_mm: None,
+            major: MajorLines::Follow,
+            major_role: LineRole::Structure,
+            extra: Extra::new(),
+        }
+    }
+
+    /// The N for this region's major lines under `rhythm`: its own, the rhythm's, or `None` for
+    /// off. Hex and music staff have none.
+    pub fn major_every(&self, rhythm: &Rhythm) -> Option<u8> {
+        if !self.pattern.has_major() {
+            return None;
+        }
+        match self.major {
+            MajorLines::Follow => rhythm.major_on(),
+            MajorLines::Off => None,
+            MajorLines::Every(n) => Some(n).filter(|n| (MAJOR_MIN..=MAJOR_MAX).contains(n)),
+        }
+    }
+}
+
+/// What a region does about major lines (format 0.9; rung 9 bbq, Q6).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum MajorLines {
+    /// Use the rhythm's "Major every N" (the default).
+    #[default]
+    Follow,
+    /// No major lines in this region.
+    Off,
+    /// Every Nth line, whatever the rhythm says.
+    Every(u8),
+}
+
+impl MajorLines {
+    /// Whether this is the default; used to leave the field out of a file when it is.
+    pub fn is_follow(&self) -> bool {
+        *self == MajorLines::Follow
+    }
+}
+
+/// How an isometric pattern is drawn (format 0.9; rung 9 bbq, Q2).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IsoStyle {
+    /// The triangle grid: horizontal rows and the two slanted families.
+    #[default]
+    Lines,
+    /// A dot at each crossing.
+    Dots,
+}
+
+/// Which way a hexagon sits (format 0.9; rung 9 bbq, Q3).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HexOrientation {
+    /// Top and bottom edges horizontal (the default).
+    #[default]
+    Flat,
+    /// Two edges vertical.
+    Pointy,
+}
+
+/// The pattern of a region, with its own settings. The first three are format 0.2 and before and
+/// are written as plain names; the others (format 0.9, rung 9) carry their settings, each with a
+/// default for a field a file leaves out.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Pattern {
     /// Horizontal ruled lines, one per vertical rhythm unit.
     Lines,
@@ -982,4 +1154,148 @@ pub enum Pattern {
     Dots,
     /// A square grid: horizontal and vertical lines on the rhythm (format 0.2).
     Grid,
+    /// Horizontal rows with the two slanted families at 60 and 120 degrees, as lines or dots.
+    Isometric {
+        /// Lines or dots.
+        #[serde(default)]
+        style: IsoStyle,
+    },
+    /// A honeycomb of regular hexagons.
+    Hex {
+        /// Flat top or pointy top.
+        #[serde(default)]
+        orientation: HexOrientation,
+        /// A hexagon's height across its flats in rhythm units (vertical for flat top, horizontal
+        /// for pointy top).
+        #[serde(default = "one")]
+        height_units: u32,
+    },
+    /// Ruled lines with a cue column at the left and a summary band at the bottom.
+    Cornell {
+        /// The cue column's width in rhythm units; `None` is 30 percent of the region's width,
+        /// rounded to whole units.
+        #[serde(default)]
+        cue_units: Option<u32>,
+        /// The summary band's height in rhythm units; `None` is 20 percent of the region's
+        /// height, rounded to whole units.
+        #[serde(default)]
+        summary_units: Option<u32>,
+    },
+    /// Staves of five lines, each starting on a rhythm row.
+    MusicStaff {
+        /// The gap between the five lines in mm.
+        #[serde(default = "staff_gap")]
+        gap_mm: f64,
+        /// A new staff every this many rhythm units.
+        #[serde(default = "three")]
+        pitch_units: u32,
+        /// Pairs the staves (treble and bass) with a brace line at the left.
+        #[serde(default)]
+        grand: bool,
+    },
+}
+
+fn one() -> u32 {
+    1
+}
+
+fn three() -> u32 {
+    3
+}
+
+fn staff_gap() -> f64 {
+    STAFF_GAP_DEFAULT_MM
+}
+
+/// The gap between a music staff's lines unless the region says otherwise: an 8 mm staff.
+pub const STAFF_GAP_DEFAULT_MM: f64 = 2.0;
+/// The most rhythm units any pattern count (hex height, staff pitch, Cornell sizes) may hold.
+pub const PATTERN_UNITS_MAX: u32 = 99;
+
+impl Pattern {
+    /// Whether the pattern draws major lines (Hex and Music staff do not).
+    pub fn has_major(&self) -> bool {
+        !matches!(self, Pattern::Hex { .. } | Pattern::MusicStaff { .. })
+    }
+
+    /// Which choice in the inspector this is.
+    pub fn kind(&self) -> PatternKind {
+        match self {
+            Pattern::Lines => PatternKind::Lines,
+            Pattern::Dots => PatternKind::Dots,
+            Pattern::Grid => PatternKind::Grid,
+            Pattern::Isometric { .. } => PatternKind::Isometric,
+            Pattern::Hex { .. } => PatternKind::Hex,
+            Pattern::Cornell { .. } => PatternKind::Cornell,
+            Pattern::MusicStaff { .. } => PatternKind::MusicStaff,
+        }
+    }
+
+    /// Whether the pattern draws dots (they take the Dot grid role).
+    pub fn is_dotted(&self) -> bool {
+        matches!(
+            self,
+            Pattern::Dots
+                | Pattern::Isometric {
+                    style: IsoStyle::Dots
+                }
+        )
+    }
+}
+
+/// The patterns a region can be, without their settings: the inspector's choice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PatternKind {
+    /// [`Pattern::Lines`].
+    Lines,
+    /// [`Pattern::Dots`].
+    Dots,
+    /// [`Pattern::Grid`].
+    Grid,
+    /// [`Pattern::Isometric`].
+    Isometric,
+    /// [`Pattern::Hex`].
+    Hex,
+    /// [`Pattern::Cornell`].
+    Cornell,
+    /// [`Pattern::MusicStaff`].
+    MusicStaff,
+}
+
+impl PatternKind {
+    /// Every choice, in the order the inspector lists them.
+    pub const ALL: [PatternKind; 7] = [
+        PatternKind::Lines,
+        PatternKind::Dots,
+        PatternKind::Grid,
+        PatternKind::Isometric,
+        PatternKind::Hex,
+        PatternKind::Cornell,
+        PatternKind::MusicStaff,
+    ];
+
+    /// The pattern with its default settings.
+    pub fn default_pattern(self) -> Pattern {
+        match self {
+            PatternKind::Lines => Pattern::Lines,
+            PatternKind::Dots => Pattern::Dots,
+            PatternKind::Grid => Pattern::Grid,
+            PatternKind::Isometric => Pattern::Isometric {
+                style: IsoStyle::Lines,
+            },
+            PatternKind::Hex => Pattern::Hex {
+                orientation: HexOrientation::Flat,
+                height_units: 1,
+            },
+            PatternKind::Cornell => Pattern::Cornell {
+                cue_units: None,
+                summary_units: None,
+            },
+            PatternKind::MusicStaff => Pattern::MusicStaff {
+                gap_mm: STAFF_GAP_DEFAULT_MM,
+                pitch_units: 3,
+                grand: false,
+            },
+        }
+    }
 }

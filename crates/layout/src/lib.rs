@@ -295,7 +295,9 @@ impl RhythmPx {
             RhythmResolution::PixelLocked => p.mm_to_px(mm).round().max(1.0),
             RhythmResolution::PhysicalLocked => p.mm_to_px(mm),
         };
-        let (unit_x, unit_y) = (unit(r.h_unit_mm), unit(r.v_unit_mm));
+        // An isometric rhythm snaps to half a side across and one row down (rung 9 bbq, Q7).
+        let (step_x, step_y) = r.steps_mm();
+        let (unit_x, unit_y) = (unit(step_x), unit(step_y));
         // Centred: n = floor(A / u) positions span (n - 1) units, leaving at least half a unit at
         // each side of the margin box; the leftover is split evenly, an odd pixel to the end.
         let centred = |start: f64, end: f64, u: f64| {
@@ -568,6 +570,8 @@ fn draw_objects(
                             });
                         }
                     }
+                    // The new patterns are drawn in the next step.
+                    _ => {}
                 }
             }
             ObjectKind::Text(_) => {

@@ -384,10 +384,9 @@ fn turning_a_group_turns_its_children_and_a_pattern_stops_it() {
     let pattern = {
         let mut o = v.doc().unwrap().object(group_ids::nth(32)).unwrap().clone();
         o.id = Uuid::from_u128(0x7A77);
-        o.kind = ObjectKind::Pattern(quadrule_model::PatternRegion {
-            pattern: quadrule_model::Pattern::Lines,
-            extra: quadrule_model::Extra::new(),
-        });
+        o.kind = ObjectKind::Pattern(quadrule_model::PatternRegion::new(
+            quadrule_model::Pattern::Lines,
+        ));
         o
     };
     let mut flat = v.doc().unwrap().object(group_ids::HALF).unwrap().clone();
@@ -688,10 +687,9 @@ fn a_group_with_a_pattern_greys_the_rotation_field_with_a_note() {
     let pattern = {
         let mut o = v.doc().unwrap().object(group_ids::nth(32)).unwrap().clone();
         o.id = Uuid::from_u128(0x7A77);
-        o.kind = ObjectKind::Pattern(quadrule_model::PatternRegion {
-            pattern: quadrule_model::Pattern::Lines,
-            extra: quadrule_model::Extra::new(),
-        });
+        o.kind = ObjectKind::Pattern(quadrule_model::PatternRegion::new(
+            quadrule_model::Pattern::Lines,
+        ));
         o
     };
     v.edit(

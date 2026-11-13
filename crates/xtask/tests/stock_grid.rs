@@ -41,10 +41,7 @@ fn stock_grid() -> Document {
         width_mm: MM_PER_IN / 300.0,
         gray: 1,
     };
-    grid.kind = ObjectKind::Pattern(PatternRegion {
-        pattern: Pattern::Grid,
-        extra: Extra::new(),
-    });
+    grid.kind = ObjectKind::Pattern(PatternRegion::new(Pattern::Grid));
     doc.layers = vec![Layer {
         name: "Grid".into(),
         visible: true,

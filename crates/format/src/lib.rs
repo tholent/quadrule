@@ -45,7 +45,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, DateTime, System, ZipArchive, ZipWriter};
 
 /// The format version this build writes. Pre-1.0 while the format settles.
-pub const FORMAT_VERSION: &str = "0.8.0";
+pub const FORMAT_VERSION: &str = "0.9.0";
 
 /// Required features this build understands. A file that requires any other opens read-only.
 pub const KNOWN_FEATURES: &[&str] = &["text-outlines"];
