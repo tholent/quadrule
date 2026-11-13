@@ -43,3 +43,10 @@ is 23 points until Saturday's reset; the normal stops return after it.
 0.48M tokens), 74 % after this session finished 8b by hand (lead only, no builder; chris's `/usage` reading, 15:39 UTC,
 logged with `spend-ledger.py reading 74 --meter weekly`). **7 points against a 20-point share.** The 8b session's own
 tokens are not measured; the 2-point move was the lead's context alone. K not refitted this session.
+
+2026-11-13, rung 9 (pattern library), one lead session (Opus 5.5 high) and one Sonnet 5.5 high builder, resumed once for
+chris's look changes (the harness reported 415,165 builder tokens at the build's end and 482,955 at the look leg's end;
+whether the second figure includes the first is not shown). Start 74 % (chris, 16:28 UTC), end **82 %** (chris,
+`/usage`, logged with `spend-ledger.py reading 82 --meter weekly`): **8 points against a 16-point share.** No stop line
+fired; the hard stop was 90 % this week. Alone on the meter. K not refitted this session. Room left before Saturday's
+5 pm reset: 8 points (90 %).
