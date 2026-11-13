@@ -659,3 +659,76 @@ fn l06_and_l10_use_the_turned_corners() {
     );
     assert!(ok);
 }
+
+/// A page (rhythm 5 mm: 59 px on the Manta, 59 on the Nomad) holding one region of `pr`.
+fn page_with_region(pr: PatternRegion) -> Document {
+    let mut doc = slice_document();
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    let mut o = doc.layers[0].objects[0].clone();
+    o.frame = Frame::new(30.0, 40.0, 60.0, 40.0);
+    o.kind = ObjectKind::Pattern(pr);
+    doc.layers = vec![Layer {
+        name: "L".into(),
+        visible: true,
+        locked: false,
+        objects: vec![o],
+        extra: Extra::new(),
+    }];
+    doc
+}
+
+#[test]
+fn l17_judges_an_unbound_regions_spacing_against_the_rhythm_on_each_device() {
+    let (manta, nomad) = (builtin(MANTA_ID).unwrap(), builtin(NOMAD_ID).unwrap());
+    let region = |h: f64, v: f64| {
+        let mut r = PatternRegion::new(Pattern::Grid);
+        r.bound = false;
+        r.h_spacing_mm = Some(h);
+        r.v_spacing_mm = Some(v);
+        r
+    };
+    let l17 = |doc: &Document, p: &Profile| -> Vec<Finding> {
+        run(doc, p)
+            .into_iter()
+            .filter(|f| f.rule == "L17")
+            .collect()
+    };
+    // Clean: twice the unit and half of it (59 px: 118 and 29.5 within half a pixel).
+    let clean = l17(&page_with_region(region(10.0, 2.5)), &manta);
+    // 4.3 mm is 51 px (50.8) against 59: neither a multiple nor a fraction.
+    let odd_doc = page_with_region(region(4.3, 5.0));
+    let odd_m = l17(&odd_doc, &manta);
+    let odd_n = l17(&odd_doc, &nomad);
+    // A bound region is never judged, and its spacing is not judged by L16 either: no L16 for any
+    // pattern region.
+    let bound = run(&page_with_region(PatternRegion::new(Pattern::Grid)), &manta);
+    let no_l16 = run(&odd_doc, &manta).iter().all(|f| f.rule != "L16");
+    let one_each = odd_m.len() == 1 && odd_n.len() == 1;
+    let sev = odd_m[0].severity == Severity::Info;
+    let area = odd_m[0].area.is_some() && odd_m[0].object.is_some();
+    let words = text(&odd_m[0]);
+    let message = words.contains("(across)") && words.contains("51 px against a unit of 59 px");
+    // Lines use rows only: an odd across spacing is not judged.
+    let mut lines = region(4.3, 5.0);
+    lines.pattern = Pattern::Lines;
+    let rows_only = l17(&page_with_region(lines), &manta).is_empty();
+    let ok = clean.is_empty()
+        && one_each
+        && bound.iter().all(|f| f.rule != "L17")
+        && no_l16
+        && sev
+        && area
+        && message
+        && rows_only;
+    println!(
+        "\nCHECK crate=lint name=l17_mixed_rhythm result={} clean={} odd_manta={} odd_nomad={} bound_none={} no_l16={no_l16} info_with_area={} message_ok={message} lines_rows_only={rows_only}",
+        pass(ok),
+        clean.len(),
+        odd_m.len(),
+        odd_n.len(),
+        bound.iter().all(|f| f.rule != "L17"),
+        sev && area
+    );
+    assert!(ok, "{words}");
+}

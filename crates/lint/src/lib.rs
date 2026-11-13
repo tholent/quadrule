@@ -518,8 +518,68 @@ pub fn lint_with(
                 );
             }
         }
+
+        // L17: a region unbound from the rhythm whose own spacing is not a clean multiple or
+        // fraction of it, as this device resolves both (rung 9 bbq, Defaulted "L17"). It judges
+        // the spacing the pattern uses; L16 leaves an unbound region's spacing to this rule.
+        if let ObjectKind::Pattern(pr) = &o.kind
+            && !pr.bound
+        {
+            let env = quadrule_layout::pattern::Env {
+                target,
+                rhythm: &doc.rhythm,
+                rhythm_px: rhythm,
+            };
+            let (sx, sy) = quadrule_layout::pattern::region_spacing_px(pr, &env);
+            let (use_x, use_y) = pattern_axes(&pr.pattern);
+            let clean = |spacing: f64, unit: f64| {
+                (1..=10).any(|m| (spacing - f64::from(m) * unit).abs() <= 0.5 + 1e-9)
+                    || (2..=10).any(|m| (spacing - unit / f64::from(m)).abs() <= 0.5 + 1e-9)
+            };
+            let bad_x = use_x && !clean(sx, rhythm.unit_x);
+            let bad_y = use_y && !clean(sy, rhythm.unit_y);
+            if bad_x || bad_y {
+                let (axes, spacing, unit) = match (bad_x, bad_y) {
+                    (true, true) => (
+                        "lint-axes-both",
+                        format!("{} × {}", trim(sx), trim(sy)),
+                        format!("{} × {}", trim(rhythm.unit_x), trim(rhythm.unit_y)),
+                    ),
+                    (true, false) => ("lint-axes-across", trim(sx), trim(rhythm.unit_x)),
+                    _ => ("lint-axes-down", trim(sy), trim(rhythm.unit_y)),
+                };
+                push(
+                    "L17",
+                    Severity::Info,
+                    at("lint-l17")
+                        .arg("axes", Arg::Msg(Box::new(Message::new(axes))))
+                        .text("spacing", spacing)
+                        .text("unit", unit),
+                );
+            }
+        }
     }
     out
+}
+
+/// Which of a pattern's two spacings it uses: (across, down). Rows alone for ruled lines, an
+/// isometric grid and a staff; columns alone for pointy hexagons.
+fn pattern_axes(p: &quadrule_model::Pattern) -> (bool, bool) {
+    use quadrule_model::{HexOrientation, Pattern};
+    match p {
+        Pattern::Lines | Pattern::Isometric { .. } | Pattern::MusicStaff { .. } => (false, true),
+        Pattern::Dots | Pattern::Grid | Pattern::Cornell { .. } => (true, true),
+        Pattern::Hex { orientation, .. } => match orientation {
+            HexOrientation::Flat => (false, true),
+            HexOrientation::Pointy => (true, false),
+        },
+    }
+}
+
+/// A pixel count to two places, without trailing zeros.
+fn trim(v: f64) -> String {
+    let s = format!("{v:.2}");
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
 }
 
 /// Boxes closer than this many mm are touching (float noise, not a gap).

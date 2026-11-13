@@ -15,6 +15,7 @@ lint-l15-overlap = "{ $name }" overlaps "{ $other }" on { $device }, where its c
 lint-l15-narrow = "{ $name }" is squeezed to { $px } px across on { $device }, where its constraints put it. Change how it follows the page, or size it by hand on this device.
 lint-l15-short = "{ $name }" is squeezed to { $px } px down on { $device }, where its constraints put it. Change how it follows the page, or size it by hand on this device.
 lint-l16 = "{ $name }" starts off the rhythm ({ $axes }). Snap it to the rhythm so it lines up with the grid.
+lint-l17 = "{ $name }" has its own spacing ({ $axes }) that is not a whole multiple or fraction of the rhythm on this device: { $spacing } px against a unit of { $unit } px. Bind it to the rhythm, or choose a spacing that is a whole multiple or fraction of it.
 lint-l18 = The rhythm leaves { $a } px at the { $near } margin and { $b } px at the { $far }: more than half a unit ({ $unit } px) apart. Centring the rhythm origin splits the space evenly.
 lint-l19 = The rhythm keeps exact millimetres, so on this device its lines are { $x } × { $y } px apart and some gaps are 1 px wider than others. Pixel-locked rhythm keeps every gap the same.
 
