@@ -1368,3 +1368,17 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   pages") at `29e46cc` and pushed; release run 43460443541: linux-x86_64, linux-aarch64, macos-universal,
   windows-x86_64 and "Draft, attach, publish" all success. Published as a pre-release with 7 files:
   https://github.com/tholent/quadrule/releases/tag/v0.8.0 (`gh release view v0.8.0`).
+
+## 2026-11-13 — rung 9 kickoff: planned, builder started (lead: Opus 5.5 high)
+
+- `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` → `BUILD head=ace7aa1 dirty=no rebuilt=7` (the 0.8.0 bump not
+  compiled until then).
+- Asked again: landscape on the Manta. chris, word for word: "The software on each is identical and rotation logic is
+  the same. no need to test".
+- Budget: 16 points, alone on the meter, no reserve; start 74 % (chris, 16:28 UTC, given not measured; logged with
+  `spend-ledger.py reading 74 --meter weekly`); stop at 90 % this week.
+- Planned (bbq, 8 questions): `docs/bbq/2026-11-13-rung-9-pattern-library.md`. One rung, one look (chris overruled the
+  9a/9b split); isometric with horizontal rows; hex both ways; Cornell one region; music staff plus grand staff; major
+  lines on the rhythm, adjustable per region; isometric rhythm snapping on the half-side × row grid.
+- One Sonnet 5.5 high builder started on `main`, committing each step locally; the lead judges and pushes. If this
+  session stops before the judging entry below, the builder's commits after `1497146` are unjudged.
