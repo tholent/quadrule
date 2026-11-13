@@ -38,3 +38,11 @@ lint-zone-toolbar_top = toolbar when docked top
 lint-zone-toolbar_floating_default = floating toolbar
 lint-zone-other = { $zone }
 lint-zone-sep = {", the "}
+
+# Repeats (rung 10): L06 and L10 judge every drawn copy and say how many; the pitch rules.
+lint-l06-repeat-fixed = { $count } of the { $total } copies in "{ $name }" are under the { $zones } on this device. Move the repeat inside the safe area, or widen the margins.
+lint-l06-repeat-movable = { $count } of the { $total } copies in "{ $name }" can be covered by the { $zones } where it first appears; it can be moved.
+lint-l10-repeat-gone = { $count } of the { $total } copies in "{ $name }" are entirely off the page on this device.
+lint-l10-repeat-partly = { $count } of the { $total } copies in "{ $name }" run off the edge of the page on this device.
+lint-l16-repeat-pitch = The pitch of "{ $name }" ({ $axes }) is not a whole number of rhythm steps, so its copies drift off the rhythm. Use Auto, or a whole number of units.
+lint-l17-repeat = "{ $name }" repeats every { $spacing } px ({ $axes }), which is not a whole multiple or fraction of the rhythm's { $unit } px on this device. Bind the pitch to the rhythm (use u), or choose one that is.

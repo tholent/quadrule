@@ -19,8 +19,9 @@
 //! L01 stroke thinner than 1 px, L02 stroke not pixel-aligned, L06 content in a safe zone,
 //! L10 off the page, L15 constraints cause trouble on a secondary device (rung 8a), L16 position
 //! off the rhythm, L18 rhythm fits the margins unevenly, L19 uneven physical-locked spacing. The gray, ink, text-size and handwriting rules (L03, L04, L05, L07,
-//! L09, L13, L14) wait for calibrated profile values; L08, L11, L12 and L17 wait for the
-//! features they check.
+//! L09, L13, L14) wait for calibrated profile values; L08, L11 and L12 wait for the
+//! features they check. Rung 10: a repeat's source is judged once, L06 and L10 judge every drawn
+//! copy (one finding per repeat and device, with the count), and L16 and L17 judge its pitch.
 
 #![forbid(unsafe_code)]
 
@@ -257,14 +258,22 @@ pub fn lint_with(
         HashMap::new()
     };
     let placed_all = placed_objects(doc, primary, target, outlines);
+    // What is inside a repeat's source is judged once, at its first cell; the rules that look at
+    // where it falls (L06, L10) are judged over every copy below, one finding per repeat.
+    let in_repeat = |id: Uuid| {
+        doc.ancestors(id)
+            .iter()
+            .any(|a| doc.object(*a).is_some_and(|o| o.is_repeat()))
+    };
     for (index, placed) in placed_all.iter().enumerate() {
         let node = placed.node;
         let Some(o) = doc.object(placed.id) else {
             continue;
         };
-        if node.group || node.hidden {
+        if (node.group && !node.repeat) || node.hidden || placed.copy {
             continue;
         }
+        let inside_repeat = !node.repeat && in_repeat(o.id);
         let f = node.frame;
         let px = |mm: f64| target.mm_to_px(mm);
         let rotation = node.angle;
@@ -328,12 +337,13 @@ pub fn lint_with(
             }
         }
 
-        // L10: off the page.
+        // L10: off the page. A repeat and what is in its source are judged over all copies below.
         let inside = b.0 >= 0.0 && b.1 >= 0.0 && b.2 <= pw && b.3 <= ph;
         let touches = b.2 > 0.0 && b.3 > 0.0 && b.0 < pw && b.1 < ph;
-        if !touches {
+        let over_copies = node.repeat || inside_repeat;
+        if !over_copies && !touches {
             push("L10", Severity::Info, at("lint-l10-gone"));
-        } else if !inside {
+        } else if !over_copies && !inside {
             push("L10", Severity::Info, at("lint-l10-partly"));
         }
 
@@ -341,6 +351,7 @@ pub fn lint_with(
         // object badly (Q7): off the page there while it is on the primary one, newly on top of
         // something it does not touch on the primary, or a side squeezed under one device pixel.
         if on_secondary
+            && !inside_repeat
             && !frame_overridden(doc, o, &target.id)
             && let Some(pn) = primary_nodes.get(&o.id)
             && !pn.hidden
@@ -407,7 +418,7 @@ pub fn lint_with(
             // about the lower of the two.
             for other in placed_all.iter().skip(index + 1) {
                 let on = other.node;
-                if on.group || on.hidden || on.framed {
+                if on.group || on.hidden || on.framed || other.copy || in_repeat(other.id) {
                     continue;
                 }
                 let Some(q) = doc.object(other.id) else {
@@ -442,6 +453,7 @@ pub fn lint_with(
         }
 
         // L06: safe zones, one finding per object for the fixed zones and one for the movable.
+        // (A repeat and what is in its source are judged over all copies below.)
         let mut fixed = Vec::new();
         let mut movable = Vec::new();
         for z in &target.safe_zones {
@@ -460,7 +472,9 @@ pub fn lint_with(
             );
             // A turned shape meets a zone by its turned corners (rung 6b), not by the box round
             // them; everything else by its box, as before.
-            let hit = if turned {
+            let hit = if over_copies {
+                false
+            } else if turned {
                 quadrule_layout::rotate::rotated_touches(
                     frame_px,
                     rotation,
@@ -498,7 +512,7 @@ pub fn lint_with(
         }
 
         // L16: position on the rhythm (checked where the design is made, on the primary).
-        if target.id == primary.id && !matches!(o.kind, ObjectKind::Pattern(_)) {
+        if target.id == primary.id && !matches!(o.kind, ObjectKind::Pattern(_)) && !inside_repeat {
             let on = |pos: f64, origin: f64, unit: f64| {
                 ((pos - origin).rem_euclid(unit)).min(unit - (pos - origin).rem_euclid(unit)) < 0.5
             };
@@ -557,6 +571,203 @@ pub fn lint_with(
                         .text("unit", unit),
                 );
             }
+        }
+
+        // A repeat's pitch (rung 10 bbq, Defaulted "L16 and L17 learn repeats"). L16 (Warn, on the
+        // primary): a pitch bound to the rhythm that is not a whole multiple of a step or
+        // subdivision. L17 (Info, on each device): a pitch in mm that is not within half a pixel of
+        // a whole multiple (1 to 10) or a whole fraction (a half to a tenth) of the rhythm step.
+        if let (Some(r), Some(plan)) = (o.repeat(), node.plan) {
+            let (ax, ay) = r.axes();
+            let steps = doc.rhythm.steps_mm();
+            let subs = f64::from(doc.rhythm.subdivisions_on().unwrap_or(1));
+            let stride_mm = r.stride_mm(plan.size_mm, steps);
+            let off = |used: bool, bound: bool, stride: f64, step: f64| {
+                let k = stride / step * subs;
+                used && bound && (k - k.round()).abs() > 1e-6
+            };
+            let (off_x, off_y) = (
+                off(ax, r.h_spacing.is_bound(), stride_mm.0, steps.0),
+                off(ay, r.v_spacing.is_bound(), stride_mm.1, steps.1),
+            );
+            let axes_of = |x: bool, y: bool| {
+                Arg::Msg(Box::new(Message::new(match (x, y) {
+                    (true, true) => "lint-axes-both",
+                    (true, false) => "lint-axes-across",
+                    _ => "lint-axes-down",
+                })))
+            };
+            if target.id == primary.id && (off_x || off_y) {
+                push(
+                    "L16",
+                    Severity::Warn,
+                    at("lint-l16-repeat-pitch").arg("axes", axes_of(off_x, off_y)),
+                );
+            }
+            let clean = |spacing: f64, unit: f64| {
+                (1..=10).any(|m| (spacing - f64::from(m) * unit).abs() <= 0.5 + 1e-9)
+                    || (2..=10).any(|m| (spacing - unit / f64::from(m)).abs() <= 0.5 + 1e-9)
+            };
+            let bad_x = ax && !r.h_spacing.is_bound() && !clean(plan.stride.0, rhythm.unit_x);
+            let bad_y = ay && !r.v_spacing.is_bound() && !clean(plan.stride.1, rhythm.unit_y);
+            if bad_x || bad_y {
+                let (spacing, unit) = match (bad_x, bad_y) {
+                    (true, true) => (
+                        format!("{} × {}", trim(plan.stride.0), trim(plan.stride.1)),
+                        format!("{} × {}", trim(rhythm.unit_x), trim(rhythm.unit_y)),
+                    ),
+                    (true, false) => (trim(plan.stride.0), trim(rhythm.unit_x)),
+                    _ => (trim(plan.stride.1), trim(rhythm.unit_y)),
+                };
+                push(
+                    "L17",
+                    Severity::Info,
+                    at("lint-l17-repeat")
+                        .arg("axes", axes_of(bad_x, bad_y))
+                        .text("spacing", spacing)
+                        .text("unit", unit),
+                );
+            }
+        }
+    }
+
+    // L06 and L10 over every drawn copy of each repeat (rung 10 bbq, Defaulted "Other lint rules on
+    // copies"): one finding per repeat and device, saying how many copies. The first cell's pieces
+    // are moved to each cell; a turned shape is judged by its box here.
+    for (i, rep) in placed_all.iter().enumerate() {
+        let (Some(r), Some(plan)) = (doc.object(rep.id).and_then(|o| o.repeat()), rep.node.plan)
+        else {
+            continue;
+        };
+        if rep.node.hidden || rep.copy {
+            continue;
+        }
+        let depth = rep.node.depth;
+        let range = &placed_all[i + 1..];
+        let range = &range[..range.iter().take_while(|q| q.node.depth > depth).count()];
+        let cells: Vec<_> = plan.copies(r).filter(|c| !c.effect.skip).collect();
+        let blocks = 1 + cells.iter().filter(|c| c.index > 0).count();
+        if cells.is_empty() || blocks == 0 || !range.len().is_multiple_of(blocks) {
+            continue;
+        }
+        let first = &range[..range.len() / blocks];
+        // The pieces that are drawn: not the containers, not what an eye hides.
+        let pieces: Vec<Bounds> = first
+            .iter()
+            .filter(|q| !q.node.group && !doc.effectively_hidden(q.id))
+            .filter_map(|q| {
+                let o = doc.object(q.id)?;
+                let half = quadrule_layout::stroke(o.style, target).0 as f64 / 2.0;
+                Some(bounds(
+                    &q.shape,
+                    matches!(o.kind, ObjectKind::Text(_)),
+                    half,
+                ))
+            })
+            .collect();
+        if pieces.is_empty() {
+            continue;
+        }
+        let total = cells.len();
+        let (mut gone, mut partly) = (0usize, 0usize);
+        let (mut fixed_n, mut movable_n) = (0usize, 0usize);
+        let (mut fixed, mut movable): (Vec<Message>, Vec<Message>) = (Vec::new(), Vec::new());
+        for c in &cells {
+            let moved = |b: &Bounds| (b.0 + c.d.0, b.1 + c.d.1, b.2 + c.d.0, b.3 + c.d.1);
+            let boxes: Vec<Bounds> = pieces.iter().map(moved).collect();
+            let all_gone = boxes
+                .iter()
+                .all(|b| !(b.2 > 0.0 && b.3 > 0.0 && b.0 < pw && b.1 < ph));
+            let all_in = boxes
+                .iter()
+                .all(|b| b.0 >= 0.0 && b.1 >= 0.0 && b.2 <= pw && b.3 <= ph);
+            if all_gone {
+                gone += 1;
+            } else if !all_in {
+                partly += 1;
+            }
+            let (mut cell_fixed, mut cell_movable) = (false, false);
+            for z in &target.safe_zones {
+                if let Ok(Some(t)) = Toolbar::of_zone(&z.name)
+                    && !opts.toolbars.contains(&t)
+                {
+                    continue;
+                }
+                let (zx, zy, zw, zh) = (
+                    z.rect.0 as f64,
+                    z.rect.1 as f64,
+                    z.rect.2 as f64,
+                    z.rect.3 as f64,
+                );
+                if boxes
+                    .iter()
+                    .any(|b| b.0 < zx + zw && b.2 > zx && b.1 < zy + zh && b.3 > zy)
+                {
+                    let name = zone_name(&z.name);
+                    let list = if z.advisory {
+                        cell_movable = true;
+                        &mut movable
+                    } else {
+                        cell_fixed = true;
+                        &mut fixed
+                    };
+                    if !list.contains(&name) {
+                        list.push(name);
+                    }
+                }
+            }
+            fixed_n += usize::from(cell_fixed);
+            movable_n += usize::from(cell_movable);
+        }
+        let name = doc
+            .object(rep.id)
+            .map(|o| o.name.clone())
+            .unwrap_or_default();
+        let at = |id| {
+            Message::new(id)
+                .text("name", name.clone())
+                .num("total", total as f64, 0)
+        };
+        let area = Some(bounds(&rep.shape, false, 0.0));
+        if gone + partly > 0 {
+            let (id, n) = if partly == 0 {
+                ("lint-l10-repeat-gone", gone)
+            } else {
+                ("lint-l10-repeat-partly", gone + partly)
+            };
+            push(
+                "L10",
+                Severity::Info,
+                Some(rep.id),
+                area,
+                at(id).num("count", n as f64, 0),
+            );
+        }
+        let zones = |items| Arg::List {
+            items,
+            sep: "lint-zone-sep",
+        };
+        if fixed_n > 0 {
+            push(
+                "L06",
+                Severity::Warn,
+                Some(rep.id),
+                area,
+                at("lint-l06-repeat-fixed")
+                    .num("count", fixed_n as f64, 0)
+                    .arg("zones", zones(fixed)),
+            );
+        }
+        if movable_n > 0 {
+            push(
+                "L06",
+                Severity::Info,
+                Some(rep.id),
+                area,
+                at("lint-l06-repeat-movable")
+                    .num("count", movable_n as f64, 0)
+                    .arg("zones", zones(movable)),
+            );
         }
     }
     out
