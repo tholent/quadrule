@@ -1429,3 +1429,9 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - Version 0.9.0 (`Cargo.toml`, `Cargo.lock`); notes `docs/arcs/v1/release-notes/v0.9.0.md`; board re-planned (rung 9
   done, rung 10 next, lessons; Paper, Notes and Creative starters buildable); next lead's prompt
   `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`.
+- Meter after rung 9: 82 % (chris, `/usage`, 19:16 UTC; logged): 8 points of the 16-point share; calibration row in
+  `docs/budget-calibration.md`.
+- CI, Fuzz and Coverage for `8a22065` passed (run 43490301559 and siblings). Tagged `v0.9.0` (annotated, "Rung 9: the
+  pattern library") at `8a22065` and pushed; release run 43492215541: linux-x86_64, linux-aarch64, macos-universal,
+  windows-x86_64 and "Draft, attach, publish" all success. Published as a pre-release with 7 files:
+  https://github.com/tholent/quadrule/releases/tag/v0.9.0 (`gh release view v0.9.0`).
