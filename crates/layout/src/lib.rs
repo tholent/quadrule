@@ -630,7 +630,7 @@ fn draw_repeat(
 /// Gives every stroke in `o` (and what is inside it) the line role `line`, and the fill of every
 /// shape that has one the fill role `fill`; text keeps its own look (rung 10 bbq, Defaulted
 /// "Alternation details").
-fn restyle(
+pub(crate) fn restyle(
     o: &mut quadrule_model::Object,
     line: Option<quadrule_model::LineRole>,
     fill: Option<quadrule_model::FillRole>,

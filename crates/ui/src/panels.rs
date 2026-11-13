@@ -46,6 +46,8 @@ pub enum Tab {
     Style,
     /// A text box's text and type.
     Text,
+    /// A repeat's settings and Expand (rung 10).
+    Repeat,
     /// How the object follows other devices' pages (napkin §5.4).
     Constraints,
     /// What differs on the secondary device on screen (rung 8a, spec §6.1).
@@ -60,6 +62,15 @@ pub(crate) enum Renaming {
     Layer(usize, String),
     Object(Uuid, String),
 }
+
+/// The line roles as the Repeat tab's rules offer them (the same words as the Style tab's).
+pub(crate) const LINE_ROLE_OPTIONS: [(LineRole, &str); 7] = ROLES;
+
+/// The fill roles as the Repeat tab's rules offer them.
+pub(crate) const FILL_ROLE_OPTIONS: [(FillRole, &str); 2] = [
+    (FillRole::Shade, "app-fill-shade"),
+    (FillRole::Block, "app-fill-block"),
+];
 
 const ROLES: [(LineRole, &str); 7] = [
     (LineRole::Whisper, "app-role-whisper"),
@@ -177,6 +188,17 @@ impl ViewerUi {
         {
             let _ = self.viewer.ungroup_selection();
         }
+        // Repeat: the picked objects become the source of a repeat (rung 10).
+        if ui
+            .add_enabled(
+                !editable.is_empty(),
+                egui::Button::new(self.t("app-repeat")),
+            )
+            .on_hover_text(self.t("app-repeat-hint"))
+            .clicked()
+        {
+            let _ = self.viewer.repeat_selection();
+        }
     }
 
     /// The rows of one list of objects, top of the stack first; a group's row has a fold arrow
@@ -193,7 +215,7 @@ impl ViewerUi {
         for o in objs.iter().rev() {
             let row = ui.horizontal(|ui| {
                 ui.add_space(18.0 + 14.0 * depth as f32);
-                if o.is_group() {
+                if o.is_container() {
                     let folded = self.folded.contains(&o.id);
                     let name = self
                         .strings
@@ -249,7 +271,7 @@ impl ViewerUi {
                     Renaming::Object(o.id, String::new()),
                     &o.name,
                     selected,
-                    o.is_group(),
+                    o.is_container(),
                     Some(LayerDrag::Object(o.id)),
                 ) {
                     match ev {
@@ -266,7 +288,7 @@ impl ViewerUi {
                 }
             });
             self.row_drop(ui, &row.response, doc, Drop::Row(o.id));
-            if o.is_group() && !self.folded.contains(&o.id) {
+            if o.is_container() && !self.folded.contains(&o.id) {
                 self.object_rows(ui, doc, o.children(), li, depth + 1, add);
             }
         }
@@ -478,6 +500,9 @@ impl ViewerUi {
         if text_selected {
             tabs.push((Tab::Text, self.t("app-tab-text")));
         }
+        if has_selection && self.repeat_subject().is_some() {
+            tabs.push((Tab::Repeat, self.t("app-tab-repeat")));
+        }
         // A group has no constraints of its own: what is in it follows the page by its own (rung 7a
         // look change, Q3 as amended).
         if self.constraints_subject().is_some() {
@@ -536,6 +561,7 @@ impl ViewerUi {
                 Tab::Arrange => self.arrange_tab(ui),
                 Tab::Style => self.style_tab(ui),
                 Tab::Text => self.text_tab(ui),
+                Tab::Repeat => self.repeat_tab(ui),
                 Tab::Constraints => self.constraints_tab(ui),
                 Tab::Overrides => self.overrides_tab(ui),
                 Tab::Lint => self.lint_tab(ui),
@@ -553,12 +579,18 @@ impl ViewerUi {
         crate::viewer::device_label(id)
     }
 
-    /// The first selected object that has constraints: anything but a group.
+    /// The first selected object that has constraints: anything but a group, and nothing inside a
+    /// repeat's source (it keeps the design of the primary page; rung 10).
     fn constraints_subject(&self) -> Option<Object> {
         let doc = self.viewer.doc()?;
         self.viewer
             .selection
             .iter()
+            .filter(|id| {
+                !doc.ancestors(**id)
+                    .iter()
+                    .any(|a| doc.object(*a).is_some_and(Object::is_repeat))
+            })
             .filter_map(|id| doc.object(*id))
             .find(|o| !o.is_group())
             .cloned()
@@ -2403,7 +2435,7 @@ impl ViewerUi {
     }
 
     /// A labelled choice from `options` (value, message id).
-    fn combo<T: Copy + PartialEq>(
+    pub(crate) fn combo<T: Copy + PartialEq>(
         &self,
         ui: &mut egui::Ui,
         salt: &str,

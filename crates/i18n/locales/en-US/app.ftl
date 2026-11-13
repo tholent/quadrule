@@ -379,3 +379,68 @@ app-strip-count = { $count ->
    *[other] { $count } changes
 }
 app-strip-on-screen = on screen
+
+# The repeat tool (rung 10).
+new-name-repeat = Repeat
+app-repeat = Repeat
+app-repeat-hint = Draw the picked objects again in a row, a column or a grid. Edit the first one and every copy follows.
+notice-repeat-none = Pick something to repeat.
+notice-repeat-source = The first object inside "{ $name }" is the one that is repeated, so it stays inside. Use Expand to turn the copies into plain objects, or delete the repeat.
+notice-expand-none = Pick a repeat to expand it.
+notice-expanded = Expanded into { $count ->
+    [one] 1 object
+   *[other] { $count } objects
+}.
+notice-expanded-differs = Expanded into { $count } objects, as the { $primary } drew them. The { $device } drew { $drawn } before; the copies keep the { $primary } count.
+app-status-repeat-capped = A repeat draws at most { $max } copies; the rest are left out.
+app-tab-repeat = Repeat
+app-repeat-layout = Layout
+app-repeat-across = Across
+app-repeat-down = Down
+app-repeat-grid = Grid
+app-repeat-how-many = Number of copies
+app-repeat-count-fixed = A set count
+app-repeat-count-fill = Fill the box
+app-repeat-copies = Copies
+app-repeat-columns = Columns
+app-repeat-rows = Rows
+app-repeat-fill-note = As many as fit in the box. Drag the box's handles to add or take away copies.
+app-repeat-spacing-by = Space by
+app-repeat-pitch = Pitch, centre to centre
+app-repeat-gap = Gap, edge to edge
+app-repeat-step-across = Step across
+app-repeat-step-down = Step down
+app-repeat-step-hint = Auto, or a length such as 2u or 12 mm
+app-repeat-auto = Auto
+app-repeat-leftover = Spare room
+app-repeat-start = From the start
+app-repeat-centre = Split to both sides
+app-repeat-rules = Alternation
+app-repeat-rules-none = No rules. Every copy is drawn like the first.
+app-repeat-rule-add = Add a rule
+app-repeat-rule-remove = Remove this rule
+app-repeat-rule-up = Move this rule up
+app-repeat-rule-down = Move this rule down
+app-repeat-rule-counts = Counts
+app-repeat-rule-copies = Copies
+app-repeat-rule-columns = Columns
+app-repeat-rule-rows = Rows
+app-repeat-rule-cells = Cells, left to right then down
+app-repeat-rule-when = Hits
+app-repeat-rule-every = Every Nth
+app-repeat-rule-list = These numbers
+app-repeat-rule-n = N
+app-repeat-rule-from = From
+app-repeat-rule-numbers = Numbers
+app-repeat-rule-numbers-hint = For example 3, 7
+app-repeat-rule-does = Does
+app-repeat-rule-skip = Skip the copy
+app-repeat-rule-line = Set the line role
+app-repeat-rule-fill = Set the fill role
+app-repeat-rule-role = Role
+app-repeat-rules-later = Rules apply in order; a later one wins.
+app-repeat-expand = Expand
+app-repeat-expand-hint = Turn the copies into plain objects in one group. Nothing moves on the primary device.
+app-repeat-drawn = { $drawn } of { $total } copies are drawn on this device.
+app-repeat-capped-note = The cap of { $max } copies cut it short.
+app-repeat-locked = This repeat is locked.

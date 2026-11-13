@@ -144,6 +144,41 @@ pub fn parse_length(input: &str, ctx: &UnitContext) -> Result<f64, UnitError> {
     Ok(value * mm_per)
 }
 
+/// Reads a typed repeat step (rung 10 bbq, Q4): `auto` (or any of `auto_words`, the word the screen
+/// shows), a number of rhythm units (`2u`, kept in units: it follows the rhythm), or a length in any
+/// other unit (kept in mm). `ctx` is the field's axis.
+pub fn parse_spacing(
+    input: &str,
+    ctx: &UnitContext,
+    auto_words: &[&str],
+) -> Result<quadrule_model::Spacing, UnitError> {
+    use quadrule_model::Spacing;
+    let s = input.trim();
+    let lower = s.to_ascii_lowercase();
+    if lower == "auto" || auto_words.iter().any(|w| w.eq_ignore_ascii_case(s)) {
+        return Ok(Spacing::Auto);
+    }
+    if let Some(num) = lower.strip_suffix('u') {
+        let n = num.trim().replace(',', ".");
+        if let Ok(v) = n.parse::<f64>()
+            && v.is_finite()
+        {
+            return Ok(Spacing::Units(v));
+        }
+    }
+    parse_length(s, ctx).map(Spacing::Mm)
+}
+
+/// A repeat step as shown in a field: `auto_word`, `2 u`, or a length in the display unit.
+pub fn format_spacing(sp: quadrule_model::Spacing, ctx: &UnitContext, auto_word: &str) -> String {
+    use quadrule_model::Spacing;
+    match sp {
+        Spacing::Auto => auto_word.to_string(),
+        Spacing::Units(u) => format!("{} u", trim_number(u, 3)),
+        Spacing::Mm(m) => format_length(m, ctx),
+    }
+}
+
 /// A length in mm as shown in a field: in the display unit, with its symbol, to a sensible
 /// number of places (`12.5 mm`, `148 px`, `0.492 in`), trailing zeros dropped.
 pub fn format_length(mm: f64, ctx: &UnitContext) -> String {

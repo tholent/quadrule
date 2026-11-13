@@ -239,3 +239,95 @@ pub fn plan(r: &RepeatShape, local: Frame, from: Frame, env: &RepeatEnv) -> Plan
         size_mm,
     }
 }
+
+/// What Expand did, for the status bar.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Expanded {
+    /// The new group's id.
+    pub group: quadrule_model::Uuid,
+    /// How many copies it holds.
+    pub copies: usize,
+    /// The other devices that drew a different number of copies before (a Fill repeat's box held
+    /// more or fewer there), with that number: the expanded copies keep the primary's count.
+    pub differing: Vec<(String, u64)>,
+}
+
+/// The command that expands repeat `id` into plain objects (rung 10 bbq, Q7 and Defaulted "Expand on
+/// other devices"): one group `group_id` named after the repeat, holding a real copy of the source
+/// for each copy the primary device draws (new ids from `new_id`, alternation baked in, skipped
+/// copies left out; with a group as the source, each copy is a group inside it). Changes no pixel on
+/// the primary device. One undo step.
+pub fn expand(
+    doc: &quadrule_model::Document,
+    primary: &quadrule_profiles::Profile,
+    id: quadrule_model::Uuid,
+    group_id: quadrule_model::Uuid,
+    mut new_id: impl FnMut() -> quadrule_model::Uuid,
+) -> Result<(quadrule_model::edit::Command, Expanded), quadrule_model::edit::EditError> {
+    use quadrule_model::edit::{EditError, children_box, renew_ids, replace_object};
+    use quadrule_model::{GroupShape, Object, ObjectKind};
+    let o = doc.object(id).ok_or(EditError::NoSuchObject(id))?;
+    let r = o.repeat().ok_or(EditError::NotARepeat(id))?;
+    if !doc.editable(id) {
+        return Err(EditError::Locked(id));
+    }
+    let plans_on = |target: &quadrule_profiles::Profile| {
+        crate::tree::resolve_nodes_env(
+            doc,
+            primary.page_mm(),
+            target.page_mm(),
+            crate::override_key(primary, target),
+            Some(crate::device_scale(doc, target)),
+        )
+        .into_iter()
+        .find(|n| n.id == id)
+        .and_then(|n| n.plan)
+    };
+    let plan = plans_on(primary).ok_or(EditError::NotARepeat(id))?;
+    let mut copies: Vec<Object> = Vec::new();
+    for c in plan.copies(r).filter(|c| !c.effect.skip) {
+        let mut copy = (*r.source).clone();
+        crate::restyle(&mut copy, c.effect.line, c.effect.fill);
+        renew_ids(&mut copy, &mut new_id);
+        copy.translate(plan.shift0.0 + c.mm.0, plan.shift0.1 + c.mm.1);
+        copies.push(copy);
+    }
+    let frame = children_box(&copies).ok_or(EditError::NothingToRepeat)?;
+    let n = copies.len();
+    let mut group = o.clone();
+    group.id = group_id;
+    group.frame = frame;
+    group.constraints = quadrule_model::Constraints::default();
+    group.overrides.clear();
+    group.style = quadrule_model::Style::None;
+    group.rotation_deg = 0.0;
+    group.kind = ObjectKind::Group(GroupShape {
+        children: copies,
+        extra: Default::default(),
+    });
+    let cmd = replace_object(doc, id, group)?;
+    // Devices that drew another number of copies.
+    let mut differing = Vec::new();
+    for dev in doc.profile_ids() {
+        if dev == primary.id {
+            continue;
+        }
+        let Ok(target) = quadrule_profiles::builtin_for(dev, doc.page.orientation) else {
+            continue;
+        };
+        if let Some(p) = plans_on(&target) {
+            let drawn = p.drawn(r);
+            if drawn != n as u64 {
+                differing.push((dev.to_string(), drawn));
+            }
+        }
+    }
+    Ok((
+        cmd,
+        Expanded {
+            group: group_id,
+            copies: n,
+            differing,
+        },
+    ))
+}

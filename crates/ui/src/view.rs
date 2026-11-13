@@ -213,6 +213,7 @@ impl ViewerUi {
             polygon: strings.get("new-name-polygon"),
             text_content: strings.get("new-text-content"),
             group: strings.get("new-name-group"),
+            repeat: strings.get("new-name-repeat"),
         };
         ViewerUi {
             viewer,
@@ -1068,6 +1069,15 @@ impl ViewerUi {
                 ui.separator();
                 ui.label(line);
             }
+            if self.viewer.page().is_some_and(|p| p.repeats_capped > 0) {
+                ui.separator();
+                let msg = Message::new("app-status-repeat-capped").num(
+                    "max",
+                    quadrule_model::REPEAT_COPIES_MAX as f64,
+                    0,
+                );
+                ui.label(self.strings.format(&msg));
+            }
             if self.drag_clock.frames > 0 {
                 ui.separator();
                 let c = &self.drag_clock;
@@ -1152,7 +1162,9 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    if b.patterns {
+                    if b.repeats {
+                        self.viewer.open_repeats();
+                    } else if b.patterns {
                         self.viewer.open_patterns();
                     } else if b.landscape {
                         self.viewer.open_landscape();
@@ -1189,6 +1201,9 @@ impl ViewerUi {
                 } else if b.groups {
                     // A cell of the heavy group: the press picks the group it is in.
                     quadrule_model::sample::group_ids::nth(120)
+                } else if b.repeats {
+                    // The habit tracker: the press picks the repeat, and the drag moves every copy.
+                    quadrule_model::sample::repeat_ids::HABIT
                 } else {
                     quadrule_model::sample::ids::DOTS
                 };
@@ -1284,7 +1299,9 @@ impl ViewerUi {
                     } else {
                         "release"
                     },
-                    if b.patterns {
+                    if b.repeats {
+                        "repeats"
+                    } else if b.patterns {
                         "patterns"
                     } else if b.landscape {
                         "landscape"

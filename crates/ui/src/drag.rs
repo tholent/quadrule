@@ -40,7 +40,9 @@ use quadrule_model::edit::{
     Command, EditError, GroupMap, Placement, duplicate, is_empty, set_placements,
 };
 use quadrule_model::geom::map_frame;
-use quadrule_model::{Constraints, Document, Frame, LineDir, ObjectKind, Uuid, normalize_deg};
+use quadrule_model::{
+    Constraints, Document, Frame, LineDir, Object, ObjectKind, Uuid, normalize_deg,
+};
 use quadrule_profiles::Profile;
 
 /// How strongly a line of the rhythm overlay is drawn (rung 9 bbq, Q6: major lines stronger).
@@ -220,16 +222,30 @@ pub(crate) fn others(
 /// group its children count too, as do the objects outside it (rung 7a bbq, "Picking, dragging,
 /// snapping"). What is being dragged, and what is inside it, is left out, and so is an entered
 /// group (the box its own children are in).
-pub(crate) fn others_at(
+pub fn others_at(
     doc: &Document,
     placed: &[quadrule_layout::Placed],
     skip: &[Uuid],
     entered: &[Uuid],
 ) -> Vec<Other> {
+    // A repeat that is on show (not inside a group that is closed): its source's cell and every
+    // copy count, each by its own box (rung 10 bbq, Defaulted "Snapping").
+    let open_repeats: Vec<Uuid> = placed
+        .iter()
+        .filter(|p| {
+            p.node.repeat
+                && !entered.contains(&p.id)
+                && p.node.parent.is_none_or(|g| entered.contains(&g))
+        })
+        .map(|p| p.id)
+        .collect();
     placed
         .iter()
         .filter(|p| !skip.contains(&p.id) && !entered.contains(&p.id))
-        .filter(|p| p.node.parent.is_none_or(|g| entered.contains(&g)))
+        .filter(|p| {
+            p.node.parent.is_none_or(|g| entered.contains(&g))
+                || (p.node.parent.is_some_and(|g| open_repeats.contains(&g)) && !p.node.hidden)
+        })
         .filter(|p| !doc.ancestors(p.id).iter().any(|a| skip.contains(a)))
         .map(|p| {
             let line = matches!(doc.object(p.id).map(|o| &o.kind), Some(ObjectKind::Line(_)));
@@ -550,6 +566,16 @@ impl Viewer {
         let Some(doc) = self.shown_doc() else {
             return Vec::new();
         };
+        // A repeat that counts its copies is as big as they make it: only Fill has a box to pull
+        // (rung 10 bbq, Q3).
+        if let [id] = ids[..]
+            && doc
+                .object(id)
+                .and_then(Object::repeat)
+                .is_some_and(|r| !r.fill)
+        {
+            return Vec::new();
+        }
         if let [id] = ids[..]
             && matches!(doc.object(id).map(|o| &o.kind), Some(ObjectKind::Line(_)))
             && let Some(Shape::Segment { x0, y0, x1, y1, .. }) =

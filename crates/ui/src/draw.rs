@@ -100,6 +100,8 @@ pub struct NewNames {
     pub text_content: String,
     /// A new group's name (rung 7a).
     pub group: String,
+    /// A new repeat's name (rung 10).
+    pub repeat: String,
 }
 
 impl Default for NewNames {
@@ -113,6 +115,7 @@ impl Default for NewNames {
             polygon: "Polygon".into(),
             text_content: "Text".into(),
             group: "Group".into(),
+            repeat: "Repeat".into(),
         }
     }
 }

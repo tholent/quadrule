@@ -1768,3 +1768,323 @@ fn patterns_page(landscape: bool) -> Document {
     }];
     doc
 }
+
+/// Fixed ids for the repeat page's objects.
+pub mod repeat_ids {
+    use crate::Uuid;
+    /// The `n`th object of the repeat page (1-based, repeats, sources and labels alike).
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_000D_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+    /// A row of four boxes, Auto pitch.
+    pub const ACROSS: Uuid = nth(1);
+    /// The same boxes at a pitch in mm, not bound to the rhythm.
+    pub const MM_PITCH: Uuid = nth(2);
+    /// A column of ellipses.
+    pub const DOWN: Uuid = nth(3);
+    /// A turned line repeated into a hatch.
+    pub const HATCH: Uuid = nth(4);
+    /// The habit tracker: a grid with a heavier line at every 7th column and a skipped row. It is
+    /// what the benchmarks drag.
+    pub const HABIT: Uuid = nth(5);
+    /// A group (a box, a ring and a star) repeated in a grid.
+    pub const GROUP: Uuid = nth(6);
+    /// A row of stars that fills the margins, centred: its count differs on each device.
+    pub const FILL: Uuid = nth(7);
+}
+
+/// The repeat page (docs/bbq/2026-11-13-rung-10-repeat-tool.md, Defaulted "Golden pages"): a linear
+/// repeat across and one down, a habit-tracker grid with every 7th column in Structure and a skipped
+/// row, a Fill repeat pinned to the margins with Centre (a different count on each device), a group as
+/// the source, a turned line repeated into a hatch and a pitch in mm (not bound to the rhythm).
+/// Designed on the Manta, also targeting the Nomad. The rhythm is 5 mm.
+pub fn repeats_document() -> Document {
+    repeats_page(false)
+}
+
+/// The repeat page held sideways: the same repeats on the Manta's page turned, the Fill repeat
+/// running the longer way.
+pub fn repeats_landscape_document() -> Document {
+    repeats_page(true)
+}
+
+fn repeats_page(landscape: bool) -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 10 repeats".into();
+    doc.metadata.description =
+        "The rung 10 repeat page: across, down, a habit tracker, Fill with Centre, a group and a hatch."
+            .into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    if landscape {
+        doc.page.orientation = Orientation::Landscape;
+    }
+    let title = doc.layers[1].objects[0].clone();
+    let text_at = |id: Uuid, name: &str, content: &str, x: f64, y: f64, w: f64, pt: f64, weight| {
+        let mut t = title.clone();
+        t.id = id;
+        t.name = name.into();
+        t.frame = Frame::new(x, y, w, 5.0);
+        t.constraints = Constraints {
+            h: HConstraint::Left,
+            v: VConstraint::Top,
+        };
+        if let ObjectKind::Text(tb) = &mut t.kind {
+            tb.content = content.into();
+            tb.size_pt = pt;
+            tb.weight = weight;
+        }
+        t
+    };
+    let pinned = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+    let shape = |n: u128, name: &str, frame: Frame, kind: ObjectKind, fill: Option<Fill>| {
+        let mut o = object(
+            repeat_ids::nth(100 + n),
+            name,
+            frame,
+            pinned,
+            Style::Role(LineRole::Structure),
+            kind,
+        );
+        o.fill = fill;
+        o
+    };
+    let repeat = |id: Uuid,
+                  name: &str,
+                  source: Object,
+                  constraints: Constraints,
+                  tweak: &dyn Fn(&mut RepeatShape)| {
+        let mut shape = RepeatShape::new(source);
+        tweak(&mut shape);
+        let mut o = object(
+            id,
+            name,
+            Frame::new(0.0, 0.0, 1.0, 1.0),
+            constraints,
+            Style::None,
+            ObjectKind::Repeat(shape),
+        );
+        // The box a repeat must have, from its source and its settings.
+        if let Some(f) = o.repeat_fit((5.0, 5.0)) {
+            o.frame = f;
+        }
+        o
+    };
+    let (left, top) = (margin, margin);
+    let mut objs: Vec<Object> = vec![text_at(
+        repeat_ids::TITLE,
+        "Title",
+        "Rung 10: the repeat tool",
+        left,
+        top,
+        100.0,
+        12.0,
+        700,
+    )];
+    let label = |n: u128, content: &str, x: f64, y: f64| {
+        text_at(
+            repeat_ids::nth(300 + n),
+            &format!("Label {n}"),
+            content,
+            x,
+            y,
+            52.0,
+            7.0,
+            400,
+        )
+    };
+
+    // Across, Auto pitch: four 10 x 5 mm boxes, a pitch of two units.
+    objs.push(label(1, "Across, 4 copies, Auto pitch", left, 22.0));
+    objs.push(repeat(
+        repeat_ids::ACROSS,
+        "Across",
+        shape(
+            1,
+            "Box",
+            Frame::new(left, 28.0, 10.0, 5.0),
+            ObjectKind::Rect(RectShape::default()),
+            Some(Fill::Role(FillRole::Shade)),
+        ),
+        pinned,
+        &|r| r.count = 4,
+    ));
+    // The same at 12 mm: a pitch in mm does not follow the rhythm.
+    objs.push(label(2, "Pitch 12 mm (not on the rhythm)", 58.0, 22.0));
+    objs.push(repeat(
+        repeat_ids::MM_PITCH,
+        "Pitch in mm",
+        shape(
+            2,
+            "Box",
+            Frame::new(58.0, 28.0, 8.0, 5.0),
+            ObjectKind::Rect(RectShape::default()),
+            None,
+        ),
+        pinned,
+        &|r| {
+            r.count = 4;
+            r.h_spacing = Spacing::Mm(12.0);
+        },
+    ));
+    // Down: a column of ellipses.
+    objs.push(label(3, "Down, Auto", left, 40.0));
+    objs.push(repeat(
+        repeat_ids::DOWN,
+        "Down",
+        shape(
+            3,
+            "Ellipse",
+            Frame::new(left, 46.0, 12.0, 6.0),
+            ObjectKind::Ellipse(EllipseShape::default()),
+            Some(Fill::Role(FillRole::Shade)),
+        ),
+        pinned,
+        &|r| {
+            r.mode = RepeatMode::Down;
+            r.count = 4;
+        },
+    ));
+    // A hatch: one turned line, copies side by side.
+    objs.push(label(4, "A turned line, 8 copies", 30.0, 40.0));
+    let mut hatch_line = object(
+        repeat_ids::nth(104),
+        "Line",
+        Frame::new(30.0, 46.0, 14.0, 0.0),
+        pinned,
+        Style::Role(LineRole::Structure),
+        ObjectKind::Line(Line::default()),
+    );
+    hatch_line.rotation_deg = 60.0;
+    objs.push(repeat(
+        repeat_ids::HATCH,
+        "Hatch",
+        hatch_line,
+        pinned,
+        &|r| {
+            r.count = 8;
+            r.h_spacing = Spacing::Units(0.5);
+        },
+    ));
+    // The habit tracker: 14 columns by 4 rows, every 7th column heavier, row 2 skipped.
+    objs.push(label(
+        5,
+        "Every 7th column heavier, row 2 skipped",
+        left,
+        86.0,
+    ));
+    objs.push(repeat(
+        repeat_ids::HABIT,
+        "Habit tracker",
+        shape(
+            5,
+            "Day",
+            Frame::new(left, 92.0, 5.0, 5.0),
+            ObjectKind::Rect(RectShape::default()),
+            None,
+        ),
+        pinned,
+        &|r| {
+            r.mode = RepeatMode::Grid;
+            r.columns = 14;
+            r.rows = 4;
+            r.rules = vec![
+                AlternationRule {
+                    counts: RuleCounts::Columns,
+                    when: RuleWhen::Every { n: 7, start: None },
+                    action: RuleAction::LineRole(LineRole::Emphasis),
+                },
+                AlternationRule {
+                    counts: RuleCounts::Rows,
+                    when: RuleWhen::List(vec![2]),
+                    action: RuleAction::Skip,
+                },
+            ];
+        },
+    ));
+    // A group as the source: a box, a ring and a star in a 10 mm cell.
+    objs.push(label(6, "A group as the source", 84.0, 86.0));
+    let mut group_box = shape(
+        6,
+        "Cell",
+        Frame::new(84.0, 92.0, 10.0, 10.0),
+        ObjectKind::Rect(RectShape {
+            corner_radius_mm: 2.0,
+            extra: Extra::new(),
+        }),
+        None,
+    );
+    group_box.style = Style::Role(LineRole::Guide);
+    let ring = shape(
+        7,
+        "Ring",
+        Frame::new(85.5, 93.5, 7.0, 7.0),
+        ObjectKind::Ellipse(EllipseShape::default()),
+        None,
+    );
+    let star = shape(
+        8,
+        "Star",
+        Frame::new(87.5, 95.5, 3.0, 3.0),
+        ObjectKind::Polygon(PolygonShape::star(5)),
+        Some(Fill::Role(FillRole::Block)),
+    );
+    let mut group = object(
+        repeat_ids::nth(109),
+        "Badge",
+        Frame::new(84.0, 92.0, 10.0, 10.0),
+        pinned,
+        Style::None,
+        ObjectKind::Group(GroupShape {
+            children: vec![group_box, ring, star],
+            extra: Extra::new(),
+        }),
+    );
+    if let Some(b) = crate::edit::children_box(group.children()) {
+        group.frame = b;
+    }
+    objs.push(repeat(repeat_ids::GROUP, "Badges", group, pinned, &|r| {
+        r.mode = RepeatMode::Grid;
+        r.columns = 3;
+        r.rows = 2;
+    }));
+    // Fill: stars as many as fit between the margins, the spare room split to both sides.
+    let page_w = if landscape { MANTA_H_MM } else { MANTA_W_MM };
+    objs.push(label(7, "Fill between the margins, centred", left, 124.0));
+    let mut fill = repeat(
+        repeat_ids::FILL,
+        "Fill",
+        shape(
+            9,
+            "Star",
+            Frame::new(left, 130.0, 4.5, 4.5),
+            ObjectKind::Polygon(PolygonShape::star(5)),
+            Some(Fill::Role(FillRole::Shade)),
+        ),
+        Constraints {
+            h: HConstraint::LeftRight,
+            v: VConstraint::Top,
+        },
+        &|r| {
+            r.fill = true;
+            r.leftover = Leftover::Centre;
+        },
+    );
+    fill.frame = Frame::new(left, 130.0, page_w - 2.0 * margin, 4.5);
+    objs.push(fill);
+    doc.layers = vec![Layer {
+        name: "Repeats".into(),
+        visible: true,
+        locked: false,
+        objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}

@@ -25,8 +25,8 @@ use quadrule_layout::lay_out_text;
 use quadrule_layout::units::{Axis, UnitContext};
 use quadrule_model::clipboard;
 use quadrule_model::edit::{
-    Command, EditError, LayerProps, OverrideField, Place, duplicate, group, is_empty, paste,
-    remove, reorder_into, reset_override, set_font_size_override, set_frame_override,
+    Command, EditError, LayerProps, OverrideField, Place, duplicate, group, is_empty, make_repeat,
+    paste, remove, reorder_into, reset_override, set_font_size_override, set_frame_override,
     set_position_override, set_visible_override, ungroup_with,
 };
 use quadrule_model::{Document, Extra, Frame, Object, ObjectKind, Uuid};
@@ -126,7 +126,7 @@ impl Viewer {
             let mut keep = 0;
             for (i, g) in self.entered.iter().enumerate() {
                 let outer_ok = i == 0 || doc.parent_of(*g) == Some(self.entered[i - 1]);
-                if doc.object(*g).is_some_and(Object::is_group) && outer_ok {
+                if doc.object(*g).is_some_and(Object::is_container) && outer_ok {
                     keep = i + 1;
                 } else {
                     break;
@@ -321,16 +321,27 @@ impl Viewer {
         let Some(doc) = self.doc() else {
             return Vec::new();
         };
-        self.selection
-            .iter()
-            .copied()
-            .filter(|id| doc.editable(*id))
-            .filter(|id| {
-                !doc.ancestors(*id)
-                    .iter()
-                    .any(|a| self.selection.contains(a))
-            })
-            .collect()
+        // A repeat's source has no overrides of its own: on a secondary device, picking something
+        // in a source works on the repeat's box (rung 10 bbq, Defaulted "The source's place").
+        let on_device = self.override_device().is_some();
+        let mut out: Vec<Uuid> = Vec::new();
+        for id in self.selection.iter().copied() {
+            let id = if on_device {
+                doc.ancestors(id)
+                    .into_iter()
+                    .find(|a| doc.object(*a).is_some_and(Object::is_repeat))
+                    .unwrap_or(id)
+            } else {
+                id
+            };
+            if !out.contains(&id) {
+                out.push(id);
+            }
+        }
+        out.retain(|id| doc.editable(*id));
+        let all = out.clone();
+        out.retain(|id| !doc.ancestors(*id).iter().any(|a| all.contains(a)));
+        out
     }
 
     /// Changes every editable selected object with `f`, as one step.
@@ -900,6 +911,125 @@ impl Viewer {
         Ok(())
     }
 
+    /// Turns the selected objects into a repeat (the Repeat button; rung 10 bbq, Defaulted "Making a
+    /// repeat"): one object is the source, several are grouped first and the group is. Linear,
+    /// across, 4 copies, Auto pitch, from the start. One undo step; the repeat is selected.
+    pub fn repeat_selection(&mut self) -> Result<(), EditError> {
+        let ids = self.editable_selection();
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        let (repeat_id, group_id) = (Uuid::new_v4(), Uuid::new_v4());
+        let cmd = match make_repeat(
+            doc,
+            &ids,
+            repeat_id,
+            group_id,
+            &self.names.repeat,
+            &self.names.group,
+        ) {
+            Ok(c) => c,
+            Err(e) => {
+                self.notice = Some(crate::viewer::Notice {
+                    message: edit_error_message(&e, doc),
+                    error: true,
+                });
+                return Err(e);
+            }
+        };
+        self.edit(cmd, None)?;
+        self.selection = vec![repeat_id];
+        Ok(())
+    }
+
+    /// Changes the settings of repeat `id` with `f`, as one undo step (steps with the same `merge`
+    /// key join while a field is being typed in). The repeat's box is refitted to the new settings.
+    pub fn set_repeat(
+        &mut self,
+        id: Uuid,
+        merge: &str,
+        f: impl FnOnce(&mut quadrule_model::RepeatShape),
+    ) -> Result<(), EditError> {
+        let Some(old) = self.doc().and_then(|d| d.object(id)).cloned() else {
+            return Ok(());
+        };
+        let mut new = old.clone();
+        let Some(r) = new.repeat_mut() else {
+            return Ok(());
+        };
+        f(r);
+        if new == old {
+            return Ok(());
+        }
+        self.edit(Command::SetObject(new), Some(merge))
+    }
+
+    /// Expands the selected repeats into plain objects (the Repeat tab's Expand; rung 10 bbq, Q7):
+    /// each becomes one group named after it, holding a real copy of the source for every copy the
+    /// primary device draws. One undo step; the groups are selected. The status bar says how many
+    /// objects there are and, when a Fill repeat drew another number on a secondary device, what that
+    /// was.
+    pub fn expand_selection(&mut self) -> Result<(), EditError> {
+        let ids: Vec<Uuid> = self
+            .editable_selection()
+            .into_iter()
+            .filter(|id| {
+                self.doc()
+                    .and_then(|d| d.object(*id))
+                    .is_some_and(Object::is_repeat)
+            })
+            .collect();
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        let Some((primary, _)) = self.profiles() else {
+            return Ok(());
+        };
+        if ids.is_empty() {
+            self.notice = Some(crate::viewer::Notice {
+                message: Message::new("notice-expand-none"),
+                error: true,
+            });
+            return Ok(());
+        }
+        let mut cmds = Vec::new();
+        let mut groups = Vec::new();
+        let (mut copies, mut differing) = (0usize, Vec::new());
+        for id in &ids {
+            let group_id = Uuid::new_v4();
+            match quadrule_layout::repeat::expand(doc, &primary, *id, group_id, Uuid::new_v4) {
+                Ok((cmd, done)) => {
+                    cmds.push(cmd);
+                    groups.push(group_id);
+                    copies += done.copies;
+                    differing.extend(done.differing);
+                }
+                Err(e) => {
+                    self.notice = Some(crate::viewer::Notice {
+                        message: edit_error_message(&e, doc),
+                        error: true,
+                    });
+                    return Err(e);
+                }
+            }
+        }
+        self.edit(Command::Batch(cmds), None)?;
+        self.selection = groups;
+        let mut message = Message::new("notice-expanded").num("count", copies as f64, 0);
+        if let Some((dev, drawn)) = differing.first() {
+            message = Message::new("notice-expanded-differs")
+                .num("count", copies as f64, 0)
+                .text("device", crate::viewer::device_label(dev))
+                .num("drawn", *drawn as f64, 0)
+                .text("primary", crate::viewer::device_label(&primary.id));
+        }
+        self.notice = Some(crate::viewer::Notice {
+            message,
+            error: false,
+        });
+        Ok(())
+    }
+
     /// Ungroups the selected groups (Ctrl+Shift+G) and selects what was inside them. One undo
     /// step.
     pub fn ungroup_selection(&mut self) -> Result<(), EditError> {
@@ -1116,6 +1246,11 @@ fn edit_error_message(e: &EditError, doc: &Document) -> Message {
         ),
         EditError::MixedParents => Message::new("notice-group-mixed"),
         EditError::TooFew => Message::new("notice-group-few"),
+        EditError::NothingToRepeat => Message::new("notice-repeat-none"),
+        EditError::SourceStays(id) => Message::new("notice-repeat-source").text(
+            "name",
+            doc.object(*id).map(|o| o.name.clone()).unwrap_or_default(),
+        ),
         other => Message::new("notice-edit-failed").text("error", other.to_string()),
     }
 }

@@ -69,6 +69,8 @@ pub struct Page {
     pub placed: Vec<Placed>,
     /// What was drawn, for the graphics-chip canvas (rung 3 bbq Q4).
     pub display_list: DisplayList,
+    /// How many repeats drew fewer copies than their counts give, because of the cap (rung 10).
+    pub repeats_capped: usize,
 }
 
 /// The open document.
@@ -290,6 +292,14 @@ impl Viewer {
     /// (a dot region holds the sample's id, for the benchmarks). Like the sample, it has no file.
     pub fn open_patterns(&mut self) {
         let doc = quadrule_model::sample::patterns_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
+    /// Opens the rung 10 repeat page: rows, columns, a habit tracker, a Fill repeat with Centre, a
+    /// group as the source and a hatch (the benchmarks drag the habit tracker). Like the sample, it
+    /// has no file.
+    pub fn open_repeats(&mut self) {
+        let doc = quadrule_model::sample::repeats_document();
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
@@ -590,6 +600,10 @@ fn make_page(
         None => lint_with(doc, &primary, &target, &outlines, &opts),
     };
     let placed = placed_objects(doc, &primary, &target, &outlines);
+    let repeats_capped = placed
+        .iter()
+        .filter(|p| p.node.plan.is_some_and(|plan| plan.capped()))
+        .count();
     Ok(Page {
         profile: target,
         image,
@@ -597,6 +611,7 @@ fn make_page(
         saved_outlines,
         placed,
         display_list: dl,
+        repeats_capped,
     })
 }
 
