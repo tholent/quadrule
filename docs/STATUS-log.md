@@ -1325,3 +1325,6 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - chris on the over-50 ms pattern draw: "Leave it for later" (kept in the rung 8a debt line). Meter after the 8a build:
   72 % (`/usage`, logged with `spend-ledger.py reading 72 --meter weekly`): 5 points of the 20-point share spent; the
   five-hour window read 61 %.
+- chris, word for word: "Move forward with 8b without the checks. I can't look now and I'd rather you kept working".
+  So 8a's look is deferred (not skipped): `v0.8.0` is not tagged until chris approves 8a; 8b is built on top of it now,
+  and both wait for his look.
