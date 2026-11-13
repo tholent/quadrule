@@ -1364,3 +1364,7 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - CI for `70d537a` (8b) passed: CI, Fuzz and Coverage all success (`gh run list --branch main`).
 - Version 0.8.0 (`Cargo.toml`, `Cargo.lock`); notes `docs/arcs/v1/release-notes/v0.8.0.md`; board re-planned (rung 8
   done, rung 9 next, lessons); next lead's prompt `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`. No `v0.8.1`.
+- CI for `29e46cc` passed (run 43459219245). Tagged `v0.8.0` (annotated, "Rung 8: several devices and landscape
+  pages") at `29e46cc` and pushed; release run 43460443541: linux-x86_64, linux-aarch64, macos-universal,
+  windows-x86_64 and "Draft, attach, publish" all success. Published as a pre-release with 7 files:
+  https://github.com/tholent/quadrule/releases/tag/v0.8.0 (`gh release view v0.8.0`).
