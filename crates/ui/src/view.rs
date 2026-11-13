@@ -1284,7 +1284,9 @@ impl ViewerUi {
                     } else {
                         "release"
                     },
-                    if b.landscape {
+                    if b.patterns {
+                        "patterns"
+                    } else if b.landscape {
                         "landscape"
                     } else if b.devices {
                         "devices"
