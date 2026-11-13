@@ -253,11 +253,11 @@ fn unknown_fields_survive_resave() {
 fn newer_minor_file_keeps_its_version() {
     // ADR-001 item 5: a resaved newer file keeps its own format_version; saved_by is updated.
     let (mut manifest, files) = split(&slice_file().to_bytes("0.1.0").unwrap());
-    *migrate::map_get_mut(&mut manifest, "format_version").unwrap() = Value::Text("0.9.0".into());
+    *migrate::map_get_mut(&mut manifest, "format_version").unwrap() = Value::Text("0.10.0".into());
     let opened = QuadFile::from_bytes(&raw_quad(manifest, &files)).unwrap();
     let again = QuadFile::from_bytes(&opened.to_bytes("0.1.0-older").unwrap()).unwrap();
     let ok = opened.read_only.is_none()
-        && again.manifest.format_version == "0.9.0"
+        && again.manifest.format_version == "0.10.0"
         && again.manifest.saved_by == "0.1.0-older";
     println!(
         "CHECK crate=format name=newer_minor_keeps_version result={} version={} saved_by={}",

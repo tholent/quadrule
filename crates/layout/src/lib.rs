@@ -26,6 +26,7 @@ pub mod align;
 pub mod device;
 pub mod newpage;
 pub mod pattern;
+pub mod repeat;
 pub mod rotate;
 pub mod shapes;
 pub mod snap;
@@ -332,6 +333,16 @@ impl RhythmPx {
     }
 }
 
+/// What a device's pixels are, for laying out the copies of a repeat: pixels per mm and the
+/// rhythm's steps in pixels on `target`.
+pub fn device_scale(doc: &Document, target: &Profile) -> repeat::PxScale {
+    let r = RhythmPx::new(doc, target);
+    repeat::PxScale {
+        ppmm: target.mm_to_px(1.0),
+        step: (r.unit_x, r.unit_y),
+    }
+}
+
 /// The key under which `target`'s overrides are read: its profile id, or `None` for the primary
 /// profile, which shows the stored design (an override for it is never read; rung 8 bbq, Q3).
 pub fn override_key<'a>(primary: &Profile, target: &'a Profile) -> Option<&'a str> {
@@ -425,7 +436,10 @@ pub fn display_list(
         ov: override_key(primary, target),
     };
     let mut items = Vec::new();
-    let ctx = tree::Ctx::page(primary.page_mm(), target.page_mm());
+    let ctx = tree::Ctx::page(primary.page_mm(), target.page_mm()).with_env(repeat::RepeatEnv {
+        steps_mm: doc.rhythm.steps_mm(),
+        px: Some(device_scale(doc, target)),
+    });
     for layer in doc.layers.iter().filter(|l| l.visible) {
         draw_objects(&layer.objects, &ctx, &env, &mut items)?;
     }
@@ -438,6 +452,7 @@ pub fn display_list(
 }
 
 /// What drawing an object needs besides the object.
+#[derive(Clone, Copy)]
 struct Env<'a> {
     target: &'a Profile,
     rhythm: RhythmPx,
@@ -468,6 +483,13 @@ fn draw_objects(
         let first_item = items.len();
         if let (ObjectKind::Group(g), Some(inner)) = (&o.kind, &placing.inner) {
             draw_objects(&g.children, inner, env, items)?;
+            wrap_opacity(items, first_item, o.opacity());
+            continue;
+        }
+        if let (ObjectKind::Repeat(r), Some(inner), Some(plan)) =
+            (&o.kind, &placing.inner, &placing.plan)
+        {
+            draw_repeat(r, inner, plan, env, items)?;
             wrap_opacity(items, first_item, o.opacity());
             continue;
         }
@@ -548,13 +570,146 @@ fn draw_objects(
                 )?;
                 items.push(Item::Fill { path, gray });
             }
-            // Handled above: a group draws its children.
-            ObjectKind::Group(_) => {}
+            // Handled above: a group draws its children, a repeat its copies.
+            ObjectKind::Group(_) | ObjectKind::Repeat(_) => {}
         }
 
         wrap_opacity(items, first_item, o.opacity());
     }
     Ok(())
+}
+
+/// Draws a repeat's copies (rung 10): the source is drawn once in the first cell, and each other
+/// copy is those items moved by a whole number of pixels, so every copy is pixel-identical to the
+/// source. A copy the alternation rules give another role is drawn once per role and moved the same
+/// way.
+fn draw_repeat(
+    r: &quadrule_model::RepeatShape,
+    inner: &tree::Ctx,
+    plan: &repeat::Plan,
+    env: &Env,
+    items: &mut Vec<Item>,
+) -> Result<(), LayoutError> {
+    // The source has no overrides of its own.
+    let src_env = Env { ov: None, ..*env };
+    type Key = (
+        Option<quadrule_model::LineRole>,
+        Option<quadrule_model::FillRole>,
+    );
+    let mut variants: Vec<(Key, Vec<Item>)> = Vec::new();
+    for c in plan.copies(r) {
+        if c.effect.skip {
+            continue;
+        }
+        let key: Key = (c.effect.line, c.effect.fill);
+        let at = match variants.iter().position(|(k, _)| *k == key) {
+            Some(i) => i,
+            None => {
+                let mut tmp = Vec::new();
+                if key == (None, None) {
+                    draw_objects(std::slice::from_ref(&*r.source), inner, &src_env, &mut tmp)?;
+                } else {
+                    let mut styled = (*r.source).clone();
+                    restyle(&mut styled, key.0, key.1);
+                    draw_objects(std::slice::from_ref(&styled), inner, &src_env, &mut tmp)?;
+                }
+                variants.push((key, tmp));
+                variants.len() - 1
+            }
+        };
+        let base = &variants[at].1;
+        if c.d == (0.0, 0.0) {
+            items.extend(base.iter().cloned());
+        } else {
+            items.extend(base.iter().map(|it| translate_item(it, c.d.0, c.d.1)));
+        }
+    }
+    Ok(())
+}
+
+/// Gives every stroke in `o` (and what is inside it) the line role `line`, and the fill of every
+/// shape that has one the fill role `fill`; text keeps its own look (rung 10 bbq, Defaulted
+/// "Alternation details").
+fn restyle(
+    o: &mut quadrule_model::Object,
+    line: Option<quadrule_model::LineRole>,
+    fill: Option<quadrule_model::FillRole>,
+) {
+    if let Some(role) = line
+        && !matches!(o.kind, ObjectKind::Text(_))
+        && !o.is_container()
+        && !matches!(o.style, Style::None)
+    {
+        o.style = Style::Role(role);
+    }
+    if let Some(role) = fill
+        && o.kind.is_shape()
+        && o.fill.is_some()
+    {
+        o.fill = Some(quadrule_model::Fill::Role(role));
+    }
+    for c in o.children_mut() {
+        restyle(c, line, fill);
+    }
+}
+
+/// The item moved by (`dx`, `dy`) device pixels.
+pub fn translate_item(it: &Item, dx: f64, dy: f64) -> Item {
+    match it {
+        Item::Rect {
+            x0,
+            y0,
+            x1,
+            y1,
+            gray,
+        } => Item::Rect {
+            x0: x0 + dx,
+            y0: y0 + dy,
+            x1: x1 + dx,
+            y1: y1 + dy,
+            gray: *gray,
+        },
+        Item::Stroke {
+            x0,
+            y0,
+            x1,
+            y1,
+            width,
+            gray,
+        } => Item::Stroke {
+            x0: x0 + dx,
+            y0: y0 + dy,
+            x1: x1 + dx,
+            y1: y1 + dy,
+            width: *width,
+            gray: *gray,
+        },
+        Item::Fill { path, gray } => {
+            let mut path = path.clone();
+            path.apply_affine(kurbo::Affine::translate((dx, dy)));
+            Item::Fill { path, gray: *gray }
+        }
+        Item::StrokePath {
+            path,
+            width,
+            gray,
+            cap,
+        } => {
+            let mut path = path.clone();
+            path.apply_affine(kurbo::Affine::translate((dx, dy)));
+            Item::StrokePath {
+                path,
+                width: *width,
+                gray: *gray,
+                cap: *cap,
+            }
+        }
+        Item::BeginAlpha { alpha, bounds } => Item::BeginAlpha {
+            alpha: *alpha,
+            bounds: (bounds.0 + dx, bounds.1 + dy, bounds.2 + dx, bounds.3 + dy),
+        },
+        Item::EndAlpha => Item::EndAlpha,
+    }
 }
 
 /// A line from (x0, y0) to (x1, y1) in pixels. Horizontal and vertical lines snap to whole
@@ -663,6 +818,27 @@ pub struct Placed {
     pub shape: Shape,
     /// Where it sits in the tree and falls on the page (rung 7a).
     pub node: tree::Node,
+    /// Whether this is one of a repeat's copies after the first (rung 10): it stands for the
+    /// object in the source (`id`), moved to another cell. Clicking one picks the repeat.
+    pub copy: bool,
+}
+
+impl Placed {
+    /// This entry moved to another cell: by (`dx`, `dy`) device pixels, which are (`mm.0`, `mm.1`)
+    /// mm.
+    pub fn moved_to_cell(&self, dx: f64, dy: f64, mm: (f64, f64)) -> Placed {
+        let mut p = *self;
+        p.shape = p.shape.shifted(dx, dy);
+        p.node.frame.x_mm += mm.0;
+        p.node.frame.y_mm += mm.1;
+        p.node.local.x_mm += mm.0;
+        p.node.local.y_mm += mm.1;
+        p.node.unfit.x_mm += mm.0;
+        p.node.unfit.y_mm += mm.1;
+        p.node.hidden = false;
+        p.copy = true;
+        p
+    }
 }
 
 /// An object's shape for picking.
@@ -709,6 +885,44 @@ pub enum Shape {
 }
 
 impl Shape {
+    /// The shape moved by (`dx`, `dy`) pixels.
+    pub fn shifted(&self, dx: f64, dy: f64) -> Shape {
+        match *self {
+            Shape::Segment {
+                x0,
+                y0,
+                x1,
+                y1,
+                width,
+            } => Shape::Segment {
+                x0: x0 + dx,
+                y0: y0 + dy,
+                x1: x1 + dx,
+                y1: y1 + dy,
+                width,
+            },
+            Shape::Rotated {
+                cx,
+                cy,
+                hw,
+                hh,
+                deg,
+            } => Shape::Rotated {
+                cx: cx + dx,
+                cy: cy + dy,
+                hw,
+                hh,
+                deg,
+            },
+            Shape::Box { x0, y0, x1, y1 } => Shape::Box {
+                x0: x0 + dx,
+                y0: y0 + dy,
+                x1: x1 + dx,
+                y1: y1 + dy,
+            },
+        }
+    }
+
     /// The shape's bounds (x0, y0, x1, y1), half the stroke included for a line.
     pub fn bounds(&self) -> (f64, f64, f64, f64) {
         match *self {
@@ -798,11 +1012,12 @@ pub fn placed_objects(
     outlines: &ProfileOutlines,
 ) -> Vec<Placed> {
     let px = |mm: f64| target.mm_to_px(mm);
-    let nodes = tree::resolve_nodes_on(
+    let nodes = tree::resolve_nodes_env(
         doc,
         primary.page_mm(),
         target.page_mm(),
         override_key(primary, target),
+        Some(device_scale(doc, target)),
     );
     let mut out = Vec::with_capacity(nodes.len());
     for node in nodes {
@@ -849,7 +1064,8 @@ pub fn placed_objects(
             | ObjectKind::Rect(_)
             | ObjectKind::Ellipse(_)
             | ObjectKind::Polygon(_)
-            | ObjectKind::Group(_) => Shape::Box {
+            | ObjectKind::Group(_)
+            | ObjectKind::Repeat(_) => Shape::Box {
                 x0: x0.min(x1),
                 y0: y0.min(y1),
                 x1: x0.max(x1),
@@ -872,7 +1088,47 @@ pub fn placed_objects(
             layer: node.layer,
             shape,
             node,
+            copy: false,
         });
     }
+    if out.iter().any(|p| p.node.repeat) {
+        let mut with = Vec::with_capacity(out.len());
+        with_copies(doc, &out, &mut with);
+        return with;
+    }
     out
+}
+
+/// Adds to `out` the entries of `placed` (a subtree, in order) and, after each repeat's source, the
+/// same entries moved to every other drawn cell (rung 10): picking, snapping and lint see every
+/// copy. The source's own cell is not pickable when the rules skip it.
+fn with_copies(doc: &Document, placed: &[Placed], out: &mut Vec<Placed>) {
+    let mut i = 0;
+    while i < placed.len() {
+        let p = &placed[i];
+        out.push(*p);
+        i += 1;
+        let Some(plan) = p.node.plan else {
+            continue;
+        };
+        let depth = p.node.depth;
+        let j = i + placed[i..]
+            .iter()
+            .take_while(|q| q.node.depth > depth)
+            .count();
+        let start = out.len();
+        with_copies(doc, &placed[i..j], out);
+        let sub: Vec<Placed> = out[start..].to_vec();
+        if let Some(r) = doc.object(p.id).and_then(|o| o.repeat()) {
+            if r.effect(1, 1, plan.cols.max(1)).skip {
+                for q in &mut out[start..] {
+                    q.node.hidden = true;
+                }
+            }
+            for c in plan.copies(r).filter(|c| c.index > 0 && !c.effect.skip) {
+                out.extend(sub.iter().map(|q| q.moved_to_cell(c.d.0, c.d.1, c.mm)));
+            }
+        }
+        i = j;
+    }
 }

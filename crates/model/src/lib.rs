@@ -27,8 +27,14 @@ pub mod clipboard;
 pub mod edit;
 pub mod geom;
 pub mod outlines;
+pub mod repeat;
 pub mod sample;
 
+pub use repeat::{
+    AlternationRule, CellEffect, Leftover, REPEAT_COPIES_MAX, REPEAT_COUNT_DEFAULT,
+    REPEAT_COUNT_MAX, RepeatMode, RepeatShape, RuleAction, RuleCounts, RuleWhen, Spacing,
+    SpacingBasis,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 pub use uuid::Uuid;
@@ -90,9 +96,9 @@ impl Document {
         out.into_iter()
     }
 
-    /// Every object that is not a group, in drawing order: what is actually drawn.
+    /// Every object that is not a group or a repeat, in drawing order: what is actually drawn.
     pub fn leaves(&self) -> impl Iterator<Item = &Object> {
-        self.objects().filter(|o| !o.is_group())
+        self.objects().filter(|o| !o.is_container())
     }
 }
 
@@ -408,9 +414,7 @@ pub struct Object {
 fn collect_objects<'a>(objs: &'a [Object], out: &mut Vec<&'a Object>) {
     for o in objs {
         out.push(o);
-        if let ObjectKind::Group(g) = &o.kind {
-            collect_objects(&g.children, out);
-        }
+        collect_objects(o.children(), out);
     }
 }
 
@@ -475,23 +479,32 @@ impl Object {
         matches!(self.kind, ObjectKind::Group(_))
     }
 
-    /// A group's children, bottom first; none for any other object.
+    /// A group's children, bottom first; a repeat's source (the only thing in it); none for any
+    /// other object.
     pub fn children(&self) -> &[Object] {
         match &self.kind {
             ObjectKind::Group(g) => &g.children,
+            ObjectKind::Repeat(r) => std::slice::from_ref(&*r.source),
             _ => &[],
         }
     }
 
-    /// Moves the object by (`dx`, `dy`) mm, and, for a group, everything inside it: children are
-    /// stored in the group's unturned space, which moves with it.
+    /// [`Object::children`] to change in place.
+    pub fn children_mut(&mut self) -> &mut [Object] {
+        match &mut self.kind {
+            ObjectKind::Group(g) => &mut g.children,
+            ObjectKind::Repeat(r) => std::slice::from_mut(&mut *r.source),
+            _ => &mut [],
+        }
+    }
+
+    /// Moves the object by (`dx`, `dy`) mm, and, for a group or a repeat, everything inside it:
+    /// children are stored in the group's unturned space, which moves with it.
     pub fn translate(&mut self, dx: f64, dy: f64) {
         self.frame.x_mm += dx;
         self.frame.y_mm += dy;
-        if let ObjectKind::Group(g) = &mut self.kind {
-            for c in &mut g.children {
-                c.translate(dx, dy);
-            }
+        for c in self.children_mut() {
+            c.translate(dx, dy);
         }
     }
 
@@ -839,6 +852,9 @@ pub enum ObjectKind {
     Polygon(PolygonShape),
     /// Objects kept together (format 0.7): moved, turned, resized and faded as one.
     Group(GroupShape),
+    /// A source drawn again in a row, a column or a grid (format 0.10): live, so editing the source
+    /// changes every copy.
+    Repeat(RepeatShape),
 }
 
 /// A group (format 0.7, rung 7a bbq, Defaulted "File format 0.7.0 (7a)"): its children, bottom
@@ -941,6 +957,8 @@ impl ObjectKind {
     pub fn can_rotate(&self) -> bool {
         match self {
             ObjectKind::Text(_) | ObjectKind::Pattern(_) => false,
+            // A repeat has no rotate handle (rung 10 bbq, Defaulted "Modes").
+            ObjectKind::Repeat(_) => false,
             // A group turns only if nothing in it, at any depth, is a text box or a pattern region
             // (rung 7a bbq, Q2).
             ObjectKind::Group(g) => g.children.iter().all(|c| c.kind.can_rotate()),

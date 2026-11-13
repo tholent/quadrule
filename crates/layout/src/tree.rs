@@ -28,6 +28,7 @@
 //! box ([`Fit`]). The functions here that take `ov` read the overrides of that device; `None` lays
 //! out the stored design (the primary profile, where no override is ever read).
 
+use crate::repeat::{Plan, RepeatEnv};
 use crate::rotate::{cos_sin_deg, rotate_point};
 use quadrule_model::geom::{Fit, Holder};
 use quadrule_model::{Constraints, Document, Frame, Object, ObjectKind, Uuid, normalize_deg};
@@ -101,16 +102,27 @@ pub struct Ctx {
     /// What the overrides of the groups round the object do to it, before the turns: the box round
     /// each group's children onto the group's override box (identity when no group has one).
     pub fit: Fit,
+    /// What a repeat needs to lay out its copies: the rhythm's steps, and the device's pixels when
+    /// the layout is for one (rung 10).
+    pub env: RepeatEnv,
 }
 
 impl Ctx {
-    /// The page itself.
+    /// The page itself. The rhythm is taken as one mm step each way until [`Ctx::with_env`] says
+    /// otherwise: only repeats read it.
     pub fn page(from: (f64, f64), to: (f64, f64)) -> Self {
         Ctx {
             holder: Holder::page(from, to),
             xf: Rigid::IDENTITY,
             fit: Fit::IDENTITY,
+            env: RepeatEnv::mm((1.0, 1.0)),
         }
+    }
+
+    /// The same context with the rhythm (and, for drawing, the device's pixels) a repeat lays out
+    /// its copies by.
+    pub fn with_env(&self, env: RepeatEnv) -> Ctx {
+        Ctx { env, ..*self }
     }
 
     /// The frame `unfit` (laid out by constraints and its own override) after the overrides of the
@@ -158,6 +170,7 @@ impl Ctx {
             holder: self.holder,
             xf: self.xf.then_turn(local.centre(), rot),
             fit: self.fit,
+            env: self.env,
         }
     }
 
@@ -204,6 +217,13 @@ pub fn group_box(children: &[Object], holder: &Holder, ov: Option<&str>) -> Opti
         .reduce(|a, b| a.union(&b))
 }
 
+/// The outer box of a repeat's source as designed on the primary page `from`: no constraint moves it
+/// and no override is read (rung 10 bbq, Defaulted "The source's place").
+pub fn source_box(src: &Object, from: Frame) -> Frame {
+    let h = Holder { from, to: from };
+    src.outer_box_of(unfit_frame(src, &h, None).1)
+}
+
 /// An object placed in its context: the stages between its constraints and the page.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Placing {
@@ -217,8 +237,11 @@ pub struct Placing {
     pub frame: Frame,
     /// Its angle on the page.
     pub angle: f64,
-    /// For a group: what its children are laid out in.
+    /// For a group: what its children are laid out in. For a repeat: what its source is laid out
+    /// in, in the first cell.
     pub inner: Option<Ctx>,
+    /// For a repeat: where its copies fall.
+    pub plan: Option<Plan>,
 }
 
 /// Lays `o` out in `ctx` for device `ov`.
@@ -230,9 +253,24 @@ pub fn place_object(o: &Object, ctx: &Ctx, ov: Option<&str>) -> Placing {
     let (frame, angle) = ctx.place(local, rot);
     // A group's contents are mapped from the box round them onto its override box first, then
     // through the groups round it.
-    let inner = o
-        .is_group()
-        .then(|| ctx.child(local, rot).with_fit(Fit::between(&base, &unfit)));
+    let mut plan = None;
+    let inner = match &o.kind {
+        ObjectKind::Group(_) => Some(ctx.child(local, rot).with_fit(Fit::between(&base, &unfit))),
+        ObjectKind::Repeat(r) => {
+            // The source keeps the design of the primary page; the cell moves it, rigidly.
+            let from = ctx.holder.from;
+            let p = crate::repeat::plan(r, local, from, &ctx.env);
+            let t = ctx.xf.apply(p.shift0);
+            plan = Some(p);
+            Some(Ctx {
+                holder: Holder { from, to: from },
+                xf: Rigid { deg: ctx.xf.deg, t },
+                fit: Fit::IDENTITY,
+                env: ctx.env,
+            })
+        }
+        _ => None,
+    };
     Placing {
         base,
         unfit,
@@ -240,6 +278,7 @@ pub fn place_object(o: &Object, ctx: &Ctx, ov: Option<&str>) -> Placing {
         frame,
         angle,
         inner,
+        plan,
     }
 }
 
@@ -254,8 +293,12 @@ pub struct Node {
     pub parent: Option<Uuid>,
     /// How many groups it is inside.
     pub depth: usize,
-    /// Whether it is a group.
+    /// Whether it holds other objects: a group, or a repeat (which holds its source).
     pub group: bool,
+    /// Whether it is a repeat.
+    pub repeat: bool,
+    /// For a repeat: where its copies fall on this device.
+    pub plan: Option<Plan>,
     /// Its constraints.
     pub constraints: Constraints,
     /// Its frame resolved in its holder's space (before the holder's turns), overrides included.
@@ -296,6 +339,22 @@ pub fn resolve_nodes_on(
     to: (f64, f64),
     ov: Option<&str>,
 ) -> Vec<Node> {
+    resolve_nodes_env(doc, from, to, ov, None)
+}
+
+/// [`resolve_nodes_on`] for a device's pixels: a repeat's step between copies is then whole device
+/// pixels, as drawn (`px` says what the device's pixels are; `None` lays the copies out in mm).
+pub fn resolve_nodes_env(
+    doc: &Document,
+    from: (f64, f64),
+    to: (f64, f64),
+    ov: Option<&str>,
+    px: Option<crate::repeat::PxScale>,
+) -> Vec<Node> {
+    let ctx = Ctx::page(from, to).with_env(RepeatEnv {
+        steps_mm: doc.rhythm.steps_mm(),
+        px,
+    });
     let mut out = Vec::new();
     for (li, layer) in doc.layers.iter().enumerate() {
         walk(
@@ -303,7 +362,7 @@ pub fn resolve_nodes_on(
             li,
             None,
             0,
-            &Ctx::page(from, to),
+            &ctx,
             !layer.visible,
             layer.locked,
             ov,
@@ -333,6 +392,7 @@ fn walk(
             frame,
             angle,
             inner,
+            plan,
         } = place_object(o, ctx, ov);
         // A kind that cannot turn is not turned by a group round it either (a hand-made file).
         let angle = if o.kind.can_rotate() { angle } else { 0.0 };
@@ -346,7 +406,9 @@ fn walk(
             layer,
             parent,
             depth,
-            group: o.is_group(),
+            group: o.is_container(),
+            repeat: o.is_repeat(),
+            plan,
             constraints: o.constraints,
             local,
             base,
@@ -359,9 +421,11 @@ fn walk(
             hidden,
             locked,
         });
-        if let (ObjectKind::Group(g), Some(inner)) = (&o.kind, &inner) {
+        if let Some(inner) = &inner {
+            // A repeat's source has no overrides of its own: the box carries them (rung 10).
+            let ov = if o.is_repeat() { None } else { ov };
             walk(
-                &g.children,
+                o.children(),
                 layer,
                 Some(o.id),
                 depth + 1,

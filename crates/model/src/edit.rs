@@ -212,6 +212,13 @@ pub enum EditError {
     MixedParents,
     /// Fewer than two objects to group.
     TooFew,
+    /// Nothing is picked to repeat.
+    NothingToRepeat,
+    /// The object with this id is not a repeat.
+    NotARepeat(Uuid),
+    /// The source of a repeat cannot be taken out of it or deleted (this repeat's): Expand the
+    /// repeat, or delete the repeat itself.
+    SourceStays(Uuid),
 }
 
 impl std::fmt::Display for EditError {
@@ -230,6 +237,11 @@ impl std::fmt::Display for EditError {
             }
             EditError::MixedParents => write!(f, "the objects are in different groups"),
             EditError::TooFew => write!(f, "a group needs two or more objects"),
+            EditError::NothingToRepeat => write!(f, "nothing is picked to repeat"),
+            EditError::NotARepeat(id) => write!(f, "object {id} is not a repeat"),
+            EditError::SourceStays(id) => {
+                write!(f, "the source of repeat {id} cannot be taken out of it")
+            }
         }
     }
 }
@@ -242,9 +254,7 @@ fn locate_in(objs: &[Object], id: Uuid, path: &mut Vec<usize>) -> bool {
         if o.id == id {
             return true;
         }
-        if let ObjectKind::Group(g) = &o.kind
-            && locate_in(&g.children, id, path)
-        {
+        if locate_in(o.children(), id, path) {
             return true;
         }
         path.pop();
@@ -266,20 +276,18 @@ fn object_in_mut<'a>(objs: &'a mut [Object], path: &[usize]) -> Option<&'a mut O
     if path.len() == 1 {
         Some(o)
     } else {
-        match &mut o.kind {
-            ObjectKind::Group(g) => object_in_mut(&mut g.children, &path[1..]),
-            _ => None,
-        }
+        object_in_mut(o.children_mut(), &path[1..])
     }
 }
 
-/// Adds to `out` the id of `o` if it is a group, and of every group inside it.
+/// Adds to `out` the id of `o` if it is a group or a repeat, and of every one inside it: a
+/// container set whole is refitted, and so are the ones in it.
 fn collect_groups(o: &Object, out: &mut Vec<Uuid>) {
-    if o.is_group() {
+    if o.is_container() {
         out.push(o.id);
-        for c in o.children() {
-            collect_groups(c, out);
-        }
+    }
+    for c in o.children() {
+        collect_groups(c, out);
     }
 }
 
@@ -469,7 +477,7 @@ impl Document {
         dirty.dedup();
         let mut groups: Vec<(usize, Uuid)> = dirty
             .into_iter()
-            .filter(|id| self.object(*id).is_some_and(Object::is_group))
+            .filter(|id| self.object(*id).is_some_and(Object::is_container))
             .map(|id| (self.ancestors(id).len(), id))
             .collect();
         groups.sort_by_key(|&(depth, _)| std::cmp::Reverse(depth));
@@ -478,6 +486,16 @@ impl Document {
             let Some(o) = self.object(id) else {
                 continue;
             };
+            if o.is_repeat() {
+                let steps = self.rhythm.steps_mm();
+                let before = o.clone();
+                if let Some(o) = self.object_mut(id)
+                    && refit_repeat(o, steps)
+                {
+                    undo.push(Command::SetObject(before));
+                }
+                continue;
+            }
             if o.children().is_empty() {
                 if let Some((place, index)) = self.place_of(id)
                     && let Ok((object, ..)) = self.take(id)
@@ -499,6 +517,11 @@ impl Document {
     /// Takes an object out of its container, giving it back with where it was.
     fn take(&mut self, id: Uuid) -> Result<(Object, Place, usize), EditError> {
         let (place, index) = self.place_of(id).ok_or(EditError::NoSuchObject(id))?;
+        if let Place::Group(p) = &place
+            && self.object(*p).is_some_and(Object::is_repeat)
+        {
+            return Err(EditError::SourceStays(*p));
+        }
         let list = self
             .children_mut(&place)
             .ok_or(EditError::NoSuchObject(id))?;
@@ -599,7 +622,16 @@ impl Document {
                 profiles: std::mem::replace(&mut self.profiles, profiles),
                 layers: std::mem::replace(&mut self.layers, layers),
             }),
-            Command::SetRhythm(r) => Ok(Command::SetRhythm(std::mem::replace(&mut self.rhythm, r))),
+            Command::SetRhythm(r) => {
+                // A repeat's Auto step follows the rhythm, so its box is refitted (rung 10 bbq, Q4).
+                let repeats: Vec<Uuid> = self
+                    .objects()
+                    .filter(|o| o.is_repeat())
+                    .map(|o| o.id)
+                    .collect();
+                dirty.extend(repeats);
+                Ok(Command::SetRhythm(std::mem::replace(&mut self.rhythm, r)))
+            }
             Command::SetMetadata(m) => Ok(Command::SetMetadata(std::mem::replace(
                 &mut self.metadata,
                 m,
@@ -767,6 +799,20 @@ fn refit_group(g: &mut Object) -> bool {
         return false;
     }
     g.frame = union;
+    true
+}
+
+/// Refits a repeat's box to its source as it stands (rung 10 bbq, Q3 and Defaulted "The source's
+/// place"): the box's top-left corner is the source's, and in Count mode its size is the copies'
+/// outer box; false if it already is.
+fn refit_repeat(o: &mut Object, steps: (f64, f64)) -> bool {
+    let Some(f) = o.repeat_fit(steps) else {
+        return false;
+    };
+    if f.near(&o.frame) {
+        return false;
+    }
+    o.frame = f;
     true
 }
 
@@ -947,10 +993,8 @@ impl History {
 /// Gives `o` and everything inside it new ids from `new_id`.
 pub fn renew_ids(o: &mut Object, new_id: &mut impl FnMut() -> Uuid) {
     o.id = new_id();
-    if let ObjectKind::Group(g) = &mut o.kind {
-        for c in &mut g.children {
-            renew_ids(c, new_id);
-        }
+    for c in o.children_mut() {
+        renew_ids(c, new_id);
     }
 }
 
@@ -1090,6 +1134,22 @@ pub fn map_contents(o: &mut Object, map: &GroupMap) {
             let ang = deg + c.rotation();
             if c.is_group() {
                 walk(c, map, holder, ang);
+                continue;
+            }
+            if c.is_repeat() {
+                // A repeat in the group moves with it; its box and source are refitted after.
+                let at = match holder {
+                    Some(h) => h.resolve(c.frame, c.constraints),
+                    None => c.frame,
+                };
+                let to = map_frame(at, 0.0, false, &map.old, &map.new);
+                let to = match holder {
+                    Some(h) => h.unresolve(to, c.constraints),
+                    None => to,
+                };
+                if !to.near(&c.frame) {
+                    reframe(c, to);
+                }
                 continue;
             }
             let text = matches!(c.kind, ObjectKind::Text(_));
@@ -1239,10 +1299,8 @@ pub fn translate_overrides(o: &mut Object, dx: f64, dy: f64) {
             p.y_mm += dy;
         }
     }
-    if let ObjectKind::Group(g) = &mut o.kind {
-        for c in &mut g.children {
-            translate_overrides(c, dx, dy);
-        }
+    for c in o.children_mut() {
+        translate_overrides(c, dx, dy);
     }
 }
 
@@ -1265,10 +1323,8 @@ impl Document {
 pub fn strip_overrides(layers: &mut [Layer], profile: &str) {
     fn strip(o: &mut Object, profile: &str) {
         o.overrides.remove(profile);
-        if let ObjectKind::Group(g) = &mut o.kind {
-            for c in &mut g.children {
-                strip(c, profile);
-            }
+        for c in o.children_mut() {
+            strip(c, profile);
         }
     }
     for l in layers {
@@ -1284,6 +1340,23 @@ pub fn strip_overrides(layers: &mut [Layer], profile: &str) {
 /// round its children again.
 pub fn reframe(o: &mut Object, new: Frame) {
     let old = o.frame;
+    if o.is_repeat() {
+        // Its source goes with the box's corner; in Fill mode the box takes the new size, in Count
+        // mode the size is the copies' (refitted after).
+        let (dx, dy) = (new.x_mm - old.x_mm, new.y_mm - old.y_mm);
+        if dx != 0.0 || dy != 0.0 {
+            for c in o.children_mut() {
+                c.translate(dx, dy);
+            }
+        }
+        let fill = o.repeat().is_some_and(|r| r.fill);
+        o.frame = if fill {
+            new
+        } else {
+            Frame::new(new.x_mm, new.y_mm, old.w_mm, old.h_mm)
+        };
+        return;
+    }
     if o.is_group() {
         if (old.w_mm - new.w_mm).abs() < 1e-9 && (old.h_mm - new.h_mm).abs() < 1e-9 {
             let (dx, dy) = (new.x_mm - old.x_mm, new.y_mm - old.y_mm);
@@ -1481,6 +1554,100 @@ pub fn group(doc: &Document, ids: &[Uuid], new_id: Uuid, name: &str) -> Result<C
             parent: new_id,
             index: n,
         });
+    }
+    Ok(Command::Batch(cmds))
+}
+
+/// A plain object to build a group or a repeat on.
+fn container_object(id: Uuid, name: &str, frame: Frame, kind: ObjectKind) -> Object {
+    Object {
+        id,
+        name: name.into(),
+        frame,
+        constraints: Constraints::default(),
+        visible: true,
+        locked: false,
+        style: Style::None,
+        fill: None,
+        dash: crate::DashStyle::Solid,
+        cap: crate::LineCap::Butt,
+        rotation_deg: 0.0,
+        opacity_pct: crate::OPACITY_MAX,
+        overrides: Default::default(),
+        kind,
+        extra: crate::Extra::new(),
+    }
+}
+
+/// The command that puts `with` where the object `id` is: in the same place of its layer or group,
+/// or, when `id` is the source of a repeat, as that repeat's new source. The old object goes (its
+/// ids may be used again inside `with`).
+pub fn replace_object(doc: &Document, id: Uuid, with: Object) -> Result<Command, EditError> {
+    let (place, index) = doc.place_of(id).ok_or(EditError::NoSuchObject(id))?;
+    if let Place::Group(p) = &place
+        && let Some(parent) = doc.object(*p)
+        && parent.is_repeat()
+    {
+        let mut np = parent.clone();
+        if let Some(r) = np.repeat_mut() {
+            *r.source = with;
+        }
+        return Ok(Command::SetObject(np));
+    }
+    Ok(Command::Batch(vec![
+        Command::Remove(id),
+        Command::insert_at(&place, index, with),
+    ]))
+}
+
+/// The command that turns the picked objects into a repeat `repeat_id` called `name` (rung 10 bbq,
+/// Defaulted "Making a repeat"): one object becomes the source; several are grouped first, into
+/// group `group_id` called `group_name`, and the group is the source. The repeat is across, a
+/// count of 4, Auto pitch, from the start, and goes where the source was. One step.
+pub fn make_repeat(
+    doc: &Document,
+    ids: &[Uuid],
+    repeat_id: Uuid,
+    group_id: Uuid,
+    name: &str,
+    group_name: &str,
+) -> Result<Command, EditError> {
+    let found = outermost(doc, ids);
+    let mut cmds = Vec::new();
+    let (source_id, source) = match found.len() {
+        0 => return Err(EditError::NothingToRepeat),
+        1 => {
+            let (loc, id) = &found[0];
+            (*id, doc.at(loc).expect("just located").clone())
+        }
+        _ => {
+            let g = group(doc, ids, group_id, group_name)?;
+            let mut scratch = doc.clone();
+            scratch.apply(g.clone())?;
+            let made = scratch
+                .object(group_id)
+                .ok_or(EditError::NoSuchObject(group_id))?
+                .clone();
+            cmds.push(g);
+            (group_id, made)
+        }
+    };
+    let mut repeat = container_object(
+        repeat_id,
+        name,
+        source.outer_box(),
+        ObjectKind::Repeat(crate::RepeatShape::new(source)),
+    );
+    if let Some(f) = repeat.repeat_fit(doc.rhythm.steps_mm()) {
+        repeat.frame = f;
+    }
+    // The grouping is part of this command: the group is replaced by the repeat that holds it.
+    if cmds.is_empty() {
+        cmds.push(replace_object(doc, source_id, repeat)?);
+    } else {
+        let mut scratch = doc.clone();
+        scratch.apply(cmds[0].clone())?;
+        cmds.push(replace_object(&scratch, source_id, repeat)?);
     }
     Ok(Command::Batch(cmds))
 }

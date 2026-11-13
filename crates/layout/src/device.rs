@@ -132,11 +132,15 @@ pub fn ungroup_overrides(
 }
 
 /// Takes the profile `new_id`'s layout for the stored design, bottom up.
-fn rebase(o: &mut Object, new_id: &str, old_id: &str, nodes: &HashMap<Uuid, Node>) {
-    if let ObjectKind::Group(g) = &mut o.kind {
-        for c in &mut g.children {
-            rebase(c, new_id, old_id, nodes);
-        }
+fn rebase(
+    o: &mut Object,
+    new_id: &str,
+    old_id: &str,
+    nodes: &HashMap<Uuid, Node>,
+    steps: (f64, f64),
+) {
+    for c in o.children_mut() {
+        rebase(c, new_id, old_id, nodes, steps);
     }
     o.visible = o.visible_on(new_id);
     if let (ObjectKind::Text(t), Some(pt)) = (
@@ -157,10 +161,44 @@ fn rebase(o: &mut Object, new_id: &str, old_id: &str, nodes: &HashMap<Uuid, Node
                 o.frame = b;
             }
         }
+        ObjectKind::Repeat(_) => {
+            if let Some(l) = local {
+                settle_repeat(o, l, steps);
+            }
+        }
         _ => {
             if let Some(l) = local {
                 o.frame = l;
             }
+        }
+    }
+}
+
+/// A repeat takes the box `to`: its source goes with the box's corner, and in Count mode the box is
+/// the copies' outer box again (rung 10).
+fn settle_repeat(o: &mut Object, to: quadrule_model::Frame, steps: (f64, f64)) {
+    quadrule_model::edit::reframe(o, to);
+    if let Some(f) = o.repeat_fit(steps) {
+        o.frame = f;
+    }
+}
+
+/// Takes the overrides out of every repeat's source (it has none of its own; the repeat's box
+/// carries them).
+fn clear_source_overrides(objs: &mut [Object]) {
+    fn clear(o: &mut Object) {
+        o.overrides.clear();
+        for c in o.children_mut() {
+            clear(c);
+        }
+    }
+    for o in objs {
+        if o.is_repeat() {
+            for c in o.children_mut() {
+                clear(c);
+            }
+        } else {
+            clear_source_overrides(o.children_mut());
         }
     }
 }
@@ -184,19 +222,15 @@ fn drop_group_boxes(o: &mut Object, dev: &str) {
         }
         prune_override(o, dev);
     }
-    if let ObjectKind::Group(g) = &mut o.kind {
-        for c in &mut g.children {
-            drop_group_boxes(c, dev);
-        }
+    for c in o.children_mut() {
+        drop_group_boxes(c, dev);
     }
 }
 
 fn walk_mut(objs: &mut [Object], f: &mut impl FnMut(&mut Object)) {
     for o in objs {
         f(o);
-        if let ObjectKind::Group(g) = &mut o.kind {
-            walk_mut(&mut g.children, f);
-        }
+        walk_mut(o.children_mut(), f);
     }
 }
 
@@ -272,9 +306,10 @@ pub fn make_primary(doc: &Document, new_id: &str) -> Result<Command, DeviceError
         }
     }
     next.profiles = profiles;
+    let steps = doc.rhythm.steps_mm();
     for l in &mut next.layers {
         for o in &mut l.objects {
-            rebase(o, new_id, &old_id, &q_nodes);
+            rebase(o, new_id, &old_id, &q_nodes, steps);
         }
     }
 
@@ -316,6 +351,9 @@ pub fn make_primary(doc: &Document, new_id: &str) -> Result<Command, DeviceError
         }
     }
 
+    for l in &mut next.layers {
+        clear_source_overrides(&mut l.objects);
+    }
     Ok(Command::SetDesign {
         primary_profile_id: next.primary_profile_id,
         profiles: next.profiles,
@@ -359,17 +397,20 @@ pub fn set_targets(doc: &Document, ids: &[&str]) -> Result<Command, DeviceError>
 
 /// Puts a frame where the design's constraints put it when the page turns: bottom up, a group
 /// takes the box round its children.
-fn refit(o: &mut Object, nodes: &HashMap<Uuid, Node>) {
-    if let ObjectKind::Group(g) = &mut o.kind {
-        for c in &mut g.children {
-            refit(c, nodes);
-        }
+fn refit(o: &mut Object, nodes: &HashMap<Uuid, Node>, steps: (f64, f64)) {
+    for c in o.children_mut() {
+        refit(c, nodes, steps);
     }
     let local = nodes.get(&o.id).map(|n| n.local);
     match &mut o.kind {
         ObjectKind::Group(g) => {
             if let Some(b) = children_box(&g.children).or(local) {
                 o.frame = b;
+            }
+        }
+        ObjectKind::Repeat(_) => {
+            if let Some(l) = local {
+                settle_repeat(o, l, steps);
             }
         }
         _ => {
@@ -397,10 +438,8 @@ fn scale_overrides(o: &mut Object, scales: &BTreeMap<String, (f64, f64)>) {
             *h_mm *= sy;
         }
     }
-    if let ObjectKind::Group(g) = &mut o.kind {
-        for c in &mut g.children {
-            scale_overrides(c, scales);
-        }
+    for c in o.children_mut() {
+        scale_overrides(c, scales);
     }
 }
 
@@ -444,9 +483,10 @@ pub fn set_orientation(doc: &Document, to: Orientation) -> Result<Command, Devic
         scales.insert(id.to_string(), (b.0 / a.0, b.1 / a.1));
     }
     let mut layers = doc.layers.clone();
+    let steps = doc.rhythm.steps_mm();
     for l in &mut layers {
         for o in &mut l.objects {
-            refit(o, &nodes);
+            refit(o, &nodes, steps);
             scale_overrides(o, &scales);
         }
     }

@@ -33,6 +33,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.6.0", "0.7.0", v0_6_to_v0_7),
     ("0.7.0", "0.8.0", v0_7_to_v0_8),
     ("0.8.0", "0.9.0", v0_8_to_v0_9),
+    ("0.9.0", "0.10.0", v0_9_to_v0_10),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -98,6 +99,14 @@ fn v0_7_to_v0_8(_scene: &mut Value) -> Result<(), FormatError> {
 /// nothing to rewrite. A 0.8 build cannot read a 0.9 file that uses the new patterns; it reports an
 /// error rather than guessing.
 fn v0_8_to_v0_9(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.10 adds the repeat kind (`Repeat`, holding its `source` and its settings; rung 10 bbq, Defaulted
+/// "File format 0.10.0"). It is a new choice only: every 0.9 scene is already a valid 0.10 scene,
+/// nothing is rewritten (as 0.6 to 0.7 added the group). A 0.9 build cannot read a 0.10 file that
+/// holds a repeat; it reports an error rather than guessing.
+fn v0_9_to_v0_10(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 
