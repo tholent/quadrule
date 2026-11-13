@@ -1419,3 +1419,13 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   end, and isometric's butt caps reach half a stroke diagonally; so "cut exactly" holds to the line's centre, not its
   ink. Under an isometric rhythm the overlay does not draw the half-side rows that snapping also catches.
 - Waits on chris: the second look.
+
+## 2026-11-13 — rung 9 approved; v0.9.0
+
+- chris at the second look, word for word: "approved. everything looks great". Written into the rung 9 record
+  (Amendments); the two leftovers shown to him were approved as built (debt list, rung 9 line).
+- Paid: the rung 8a debt "drawing a pattern region on the shapes page on the chip canvas is over 50 ms" (now 41.1–41.5
+  ms, `--shapes-page --bench-draw 150 --canvas chip`), removed from `docs/STATUS-debt.md`.
+- Version 0.9.0 (`Cargo.toml`, `Cargo.lock`); notes `docs/arcs/v1/release-notes/v0.9.0.md`; board re-planned (rung 9
+  done, rung 10 next, lessons; Paper, Notes and Creative starters buildable); next lead's prompt
+  `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`.

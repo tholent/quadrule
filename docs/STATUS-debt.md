@@ -132,12 +132,21 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   change made by a drag on a secondary changes the shared design without the status-bar note (only field edits say it).
   L15's "squeezed" check uses a text box's stored height, not its laid-out height. Override keys for a device no longer
   targeted stay only when they came from a file. The strip's pictures and the Ctrl + scroll anchor have no pointer test.
-  The overrides dot is the accent colour (kept, chris 2026-11-13; clicking it to open the Overrides tab is v1.1). Drawing a pattern region on the shapes page on the chip
-  canvas is over 50 ms at the 90th percentile (8a lead, strip on: 50.8–51.1 ms; first timed in 8a, rung 6a timed only
-  rectangle, ellipse and polygon there); chris, 2026-11-13: "Leave it for later" (rung 17's sweep, or sooner if a rung touches it) (`docs/STATUS-log.md`, 2026-11-12/13 rung 8a).
+  The overrides dot is the accent colour (kept, chris 2026-11-13; clicking it to open the Overrides tab is v1.1).
 - Rung 8b, owed (`crates/layout/src/device.rs`, `crates/ui/src/strip.rs`, `crates/ui/tests/landscape.rs`): landscape is
   tested on the Nomad only; the Manta is ruled the same, not tried on the device. Turning a page maps every override
   box in proportion to the turned page (as a Scale constraint would), and margins stay the numbers typed, so L06 may
   fire after a turn: both approved as built by chris, 2026-11-13. The strip's
   placeholder, shown until a device's first picture is made, is portrait-shaped. The Page tab's and New…'s
   Orientation controls have no pointer test (the tests call the same functions).
+- Rung 9, owed (`crates/layout/src/pattern.rs`, `crates/ui/src/panels.rs`, `crates/ui/src/canvas.rs`): a cut pattern line
+  is cut at the frame along its centre, so its stroke still reaches past it (hex slanted edges' round caps about 1.5 px,
+  isometric's butt caps half a stroke diagonally); approved as built by chris 2026-11-13. Under an isometric rhythm the
+  overlay does not draw the half-side rows that snapping also catches (approved as built). Pixel-locked isometric rounds
+  the half side and the column to whole pixels, so the slope is close to, not exactly, 30°. A music staff is drawn
+  only when all five lines (both staves for a grand staff) fit in the region. The inspector's Cornell fields show the
+  computed default, so editing one fixes the value and it stops following the region's size. The staff gap has no `u`
+  handling beyond the plain length field. Unbound spacing is floored at 4 px and a pattern stops above 600,000 cells.
+  The merged chip-canvas path could differ from separate fills where anti-aliased edges overlap (screen only; export
+  unaffected; `crates/ui/tests/canvas.rs` checks 1:1). The inspector's pattern settings have no pointer test (the tests
+  call the same functions). Some rung 9 commits do not build alone (steps 3 and 5 share `panels.rs`).

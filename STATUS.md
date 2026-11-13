@@ -134,6 +134,19 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `landscape_*`); the eight older sums unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th
   percentile, strip on: landscape page drag 25–26 ms export, 29 ms chip; draw 24–26 ms export, 38 ms chip
   (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --devices-page` or `-- --landscape-page`.
+- Rung 9, the pattern library, is done: approved by chris 2026-11-13 ("approved. everything looks great") after three
+  changes at his first look, and shipped as `v0.9.0` (record `docs/bbq/2026-11-13-rung-9-pattern-library.md`, with its
+  Amendments). New patterns: isometric lines and dots (axes 30°, 90°, 150°; spec §6.3 note), hex with a flat or pointy
+  top, Cornell, music staff and grand staff; lines crossing a region's border are cut there (ADR-014 amended
+  2026-11-13). Major lines: "Major every N" on the rhythm, adjusted per region, major dots one pixel bigger. A region
+  can be unbound from the rhythm with its own spacing; lint L17 notes a mixed rhythm. The rhythm has a Type,
+  Rectangular or Isometric (snapping a column across and half a side down); New… has "Isometric 5 mm"; file format 0.9.0
+  (`crates/layout/src/pattern.rs`, `crates/model/src/lib.rs`, `crates/lint/src/lib.rs`,
+  `crates/render/tests/fixtures/v0.8/`). Four golden lines added (`patterns_*`, `patterns-landscape_*`); the twelve older
+  ones unchanged (`crates/render/tests/golden/SHA256SUMS`). The chip canvas now merges same-gray rectangles into one
+  path, which paid the rung 8a pattern-draw debt (51 → 41 ms) (`crates/ui/src/canvas.rs`). Speed on the Pi, pattern
+  page, 90th percentile: drag 21–22 ms export, 34 ms chip; draw 22–24 ms export, 41 ms chip (`docs/STATUS-log.md`).
+  Try it: `cargo run --release -p quadrule-app -- --patterns-page`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -178,8 +191,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   6a all the shapes with fill (Shade and Block roles), dashes and caps; 6b rotation, lines any way, opacity. **Rung 6 is
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
-  align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). Next: rung 9,
-  the pattern library; the next lead's prompt is `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`.
+  align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
+  done** (`v0.9.0`). Next: rung 10, the repeat tool; the next lead's prompt is `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`.
+  The Paper, Notes and Creative starters are buildable now; chris designs one per category (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
@@ -247,3 +261,6 @@ skill's `scripts/status-check.py` checks both.
   chris; 8b finished, tested and measured by the lead; both wait for chris's look (`docs/STATUS-log.md`).
 - 2026-11-13: rung 8 approved by chris (8a and 8b); version 0.8.0, one release `v0.8.0`; board re-planned; rung 9
   prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`).
+- 2026-11-13: rung 9 planned (bbq, 8 questions; one rung, one look), built (Sonnet 5.5, high), changed at chris's look
+  (isometric turned 90°, hex cut at the frame, bigger major dots; ADR-014 amended), approved; `v0.9.0`; board
+  re-planned; rung 10 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`).

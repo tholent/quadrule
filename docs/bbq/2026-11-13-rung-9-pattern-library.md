@@ -153,3 +153,8 @@ expected." Then three questions, answered:
   answered "One px bigger, major gray (Recommended)": a major dot is the Dot grid dot's size in device pixels plus 1,
   in the major role's gray. The first build drew them at Structure's 2 px, smaller than the 3 px ordinary dot, because
   the Defaulted line said "at the major role's width" (the lead's brief).
+
+2026-11-13, chris at the second look (after the three changes above were built, `1dfebaa`, `5fff8c9`), word for word:
+"approved. everything looks great". Rung 9 is done and ships as `v0.9.0`. The two leftovers shown to him (a cut
+line's stroke reaching up to about 1.5 px past the frame; the isometric overlay not drawing the half-side snap rows)
+were approved as built.

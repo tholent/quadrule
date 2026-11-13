@@ -23,8 +23,8 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 | 6 | Shapes: rectangle (corner radius), ellipse, polygon and star; fill and stroke; line dashes and caps; lines that point any way; rotation (handle and field); opacity. Split (bbq Q1, `docs/bbq/2026-11-10-rung-6-shapes.md`): **6a** all the shapes, fill (Shade and Block roles), dashes and caps; **6b** rotation, lines any way, opacity | large: 6a + 6b | done: 6a `v0.6.0`, 6b `v0.6.1`, both approved by chris 2026-11-11 |
 | 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3); how a group turns (6b debt) | medium | done: 7a `v0.7.0`, 7b `v0.7.1`, both approved by chris 2026-11-12 (7a with the Figma constraints change) |
 | 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (a landscape design exports turned into portrait pixels: chris's Nomad check, 2026-11-12, below) | large: 8a + 8b | done: `v0.8.0` (8a and 8b in one release), approved by chris 2026-11-13 |
-| 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | next: `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md` |
-| 10 | Repeat tool: linear and grid, pitch or gap, fill to bounds, alternation, Expand (§6.4) | large | — |
+| 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | done: `v0.9.0`, approved by chris 2026-11-13 (with the isometric turned 90°, hex edges cut at the frame, bigger major dots) |
+| 10 | Repeat tool: linear and grid, pitch or gap, fill to bounds, alternation, Expand (§6.4) | large | next: `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md` |
 | 11 | Text and fonts: the bundled set with its OFL texts, system fonts on all three systems, the font picker, fixed-size boxes and L08, paragraph spacing, vertical alignment, baselines on the rhythm; monochrome emoji and its picker | large | — |
 | 12 | The missing-font flow (§7.3: saved outlines, substitute, locate), L11, the system-font lint (ADR-002), embedded fonts in `assets/fonts/` | medium | — |
 | 13 | Profile system: user profiles in the config folder, the profile editor, local override and Reset to built-in, `.ron` import and export | medium | — |
@@ -57,11 +57,11 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
   - Not needed: the Manta's pen shades. chris ruled them equal to the Nomad's (Q8).
 - **Starters (Q11, Q13):** chris designs one starter per category in the app as the features land; agents follow
   his example for the rest of that category. The lead says when each becomes buildable:
-  - Paper (ruled, dot, grid, isometric, hex, blank): buildable after rung 9.
-  - Notes (Cornell, meeting, lecture): after rungs 7 and 9.
+  - Paper (ruled, dot, grid, isometric, hex, blank): **buildable now** (rung 9 done, 2026-11-13).
+  - Notes (Cornell, meeting, lecture): **buildable now** (rungs 7 and 9 done).
   - Planning (daily, weekly, monthly, to-do): after rung 10.
   - Bullet journal (rapid log, habit tracker, future log, index): after rung 10.
-  - Creative (storyboard, music staff, handwriting practice): after rung 9.
+  - Creative (storyboard, music staff, handwriting practice): **buildable now** (rung 9 done).
 - **Looks:** one per rung or part (ADR-007).
 
 ## Standing rules for every rung
@@ -121,3 +121,13 @@ above (which chris approves before it counts).
   but drawing a pattern region on the shapes page is 51 ms, left for later by chris, and rung 9 adds heavier patterns
   (isometric, hex), so rung 9 must time pattern drawing on its heaviest pattern page, both canvases. No change to the
   rungs is proposed. Next lead's prompt: `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`.
+- 2026-11-13, after rung 9: rung 9 took one lead session and one builder subagent (Sonnet 5.5 high; 0.42M tokens for
+  the build, 0.48M reported at the end of its look-change leg) and was planned, built, looked at, changed and approved
+  in one day as one rung (chris overruled the 9a/9b split). Lessons: (1) a picture beats a word for geometry: chris
+  answered "horizontal rows" for isometric in the bbq and, seeing it, wanted vertical lines; for a shape question, show
+  a sketch or a rendered sample in the question; (2) a Defaulted rule that names a value from another table (major dots
+  "at the major role's width") needs a check that the value makes sense there (Structure's 2 px was smaller than the
+  3 px dot); (3) the chip canvas's per-rectangle cost was the 8a debt's cause, and merging same-gray rectangles into one
+  path took it from 51 to 41 ms, which leaves room for rung 10's repeats. The Paper, Notes and Creative starters are now
+  buildable (chris designs one per category). No change to the rungs is proposed. Next lead's prompt:
+  `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`.
