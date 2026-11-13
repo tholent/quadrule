@@ -39,7 +39,7 @@ command it runs, so you can always run that directly.
 | `make check` | rustfmt, clippy and tests on the default members (quick) |
 | `make check-all` | The same on the whole workspace; this is what CI runs, so run it before you push |
 | `make run` | Open the app (`FILE=page.quad` to open a file) |
-| `make bench-drag`, `make bench-draw`, `make bench-rotate` | Time dragging, drawing and turning in a release build (`SHAPES=1`, `TRANSFORMS=1`, `GROUPS=1`, `DEVICES=1` or `LANDSCAPE=1` over the shapes, transforms, groups, overrides or landscape page, `NOMAD=1` to run on the Nomad so a drag writes overrides, `NOSTRIP=1` to fold the device previews strip shut (it is open in a bench otherwise), `TOOL=rect` to draw with another tool) |
+| `make bench-drag`, `make bench-draw`, `make bench-rotate` | Time dragging, drawing and turning in a release build (`SHAPES=1`, `TRANSFORMS=1`, `GROUPS=1`, `DEVICES=1`, `LANDSCAPE=1` or `PATTERNS=1` over the shapes, transforms, groups, overrides, landscape or pattern page, `NOMAD=1` to run on the Nomad so a drag writes overrides, `NOSTRIP=1` to fold the device previews strip shut (it is open in a bench otherwise), `TOOL=rect` to draw with another tool) |
 | `make lint` | Lint a document from the command line |
 | `make fuzz` | Fuzz the `.quad` reader (needs nightly Rust and `cargo-fuzz`) |
 
@@ -66,15 +66,15 @@ numbers refer to the design spec.
 
 | Crate | What it holds |
 |---|---|
-| `model` | The document model: objects (lines, text, patterns, rectangles, ellipses, polygons and stars, each with an angle and an opacity; a line's diagonal; groups, which hold other objects, to any depth) and geometry in millimetres, with the constraint maths and the editing commands, no graphics or UI (§5) |
+| `model` | The document model: objects (lines, text, patterns with their own settings, rectangles, ellipses, polygons and stars, each with an angle and an opacity; a line's diagonal; groups, which hold other objects, to any depth) and geometry in millimetres, with the constraint maths and the editing commands, no graphics or UI (§5) |
 | `profiles` | Device profiles (the Manta and the Nomad) as RON data: line roles, fill roles, safe zones (§3), and each profile as a landscape design sees it (`oriented`: the page turned, the zones turned into its frame) |
-| `layout` | Constraints, the rhythm, pixel snapping, the snapping rules, shapes with their dashes and caps, rotation and line direction (`rotate`), the tree of groups laid out (`tree`: every object resolves against the page by its own constraints, a group's box is round its children), align and distribute (`align`: the maths on the objects' turned boxes, on the pixel grid or in millimetres), the display list with its opacity groups (§10), per-device overrides (`tree` reads them, a group's override scales what is in it into its box), and `device` (Make primary, which devices a page targets, what Ungroup bakes in, turning the page between portrait and landscape) |
+| `layout` | Constraints, the rhythm (rectangular or isometric), pixel snapping, the patterns drawn (`pattern`: lines, dots, grid, isometric, hex, Cornell and music staff, their major lines and unbound spacing, one path for all of a region's slanted lines), the snapping rules, shapes with their dashes and caps, rotation and line direction (`rotate`), the tree of groups laid out (`tree`: every object resolves against the page by its own constraints, a group's box is round its children), align and distribute (`align`: the maths on the objects' turned boxes, on the pixel grid or in millimetres), the display list with its opacity groups (§10), per-device overrides (`tree` reads them, a group's override scales what is in it into its box), and `device` (Make primary, which devices a page targets, what Ungroup bakes in, turning the page between portrait and landscape) |
 | `format` | The `.quad` file: a ZIP of CBOR entries (§12, ADR-001) |
 | `text` | Fonts and text layout in millimetres, drawn as plain outlines (§7, ADR-002) |
 | `render` | The export renderer: `vello_cpu` to an 8-bit grayscale PNG (ADR-003), and the exact quarter turn a landscape page is exported with (`turn_clockwise`) |
 | `lint` | The linter: rules that recommend and explain, never block (§8.3) |
 | `i18n` | Every string on screen, through Project Fluent; English first (§14) |
-| `ui` | The egui widgets and the editor's state: canvas, panels, dragging, the tools bar and drawing, the shapes' inspector fields, the Arrange tab's align and distribute commands (`arrange`) (§15.1) |
+| `ui` | The egui widgets and the editor's state: canvas, panels, dragging, the tools bar and drawing, the shapes' and patterns' inspector fields, the rhythm overlay, the Arrange tab's align and distribute commands (`arrange`) (§15.1) |
 | `app` | The program itself: window setup and preferences |
 | `xtask` | Maintainer tools, run as `cargo xtask` |
 

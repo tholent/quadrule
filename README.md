@@ -43,7 +43,7 @@ and error.
 ## What works today
 
 - Start a blank page (New…, Ctrl+N): pick the device (Manta or Nomad), a rhythm (handwriting 6 mm, narrow, college
-  or wide ruled, a 5 mm or 1/4 in grid) and a title. The margins clear the tablet's docked toolbars and footers.
+  or wide ruled, a 5 mm or 1/4 in grid, or an isometric rhythm with a 5 mm side) and a title. The margins clear the tablet's docked toolbars and footers.
 - Open a `.quad` file (Quadrule's own format) or the built-in sample page, and save changes.
 - Draw with the tools bar on the left: a line (L), a text box (T), a pattern region (P), a rectangle (R), an ellipse
   (E) or a polygon (Y); V goes back to Select. Drag to draw (sizes snap to whole rhythm units), or click for a default
@@ -55,7 +55,7 @@ and error.
 - Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock and reorder layers;
   unlimited undo and redo; autosave with recovery after a crash.
 - Export a PNG for the Manta or the Nomad, named like `{title}_{manta|nomad}_{w}x{h}.png`.
-- Check a page with the linter (eight rules so far).
+- Check a page with the linter (nine rules so far).
 - Turn a line or a shape with the round handle above its top edge (it catches at 0, 90, 180 and 270 degrees; Shift
   holds 15-degree steps) or type an angle in the Arrange tab; a turned shape resizes along its own sides. Lines point any
   way (draw one up and to the right, or drag its ends past each other). Opacity, 0 to 100 percent, is in the Style tab;
@@ -89,13 +89,24 @@ and error.
   it); click a picture to put that device on screen, or fold the strip shut. The Page tab lists the devices: tick them
   in and out (taking one out asks first if it has changes), and **Make primary** makes a device's layout the design
   without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
-  top of another object or squeezed thin on a secondary device. Files are saved as format 0.8.0; older files open
+  top of another object or squeezed thin on a secondary device. Files are saved as format 0.9.0; older files open
   unchanged.
 - Landscape pages. Pick **Portrait** or **Landscape** in New… or in the Page tab (one undo step: objects follow their
   own constraints onto the turned page). A landscape page is designed upright on screen and exported turned a quarter
   turn clockwise into the tablet's ordinary portrait PNG, the design's top along the tablet's right edge: read it in
   portrait mode with the tablet's right edge up. The tablet's toolbars and footers are shown, snapped to and linted
   where they fall on the turned page (its left toolbar along the design's bottom, and so on).
+- A pattern library. A pattern region can be ruled lines, dots, a square grid, **isometric** (the triangle grid, as
+  lines or as dots), **hexagons** (flat top or pointy top, a whole number of rhythm units high), a **Cornell** page (a
+  cue column and a summary band) or **music staves** (five lines with a gap of their own, one staff every N rhythm
+  units, optionally paired as a grand staff with a brace line). Each pattern's own settings are in the inspector's
+  Style tab under the pattern choice. The rhythm has a **Type** in the Page tab: Rectangular, or Isometric with one
+  side length, which snaps, nudges (Shift+arrow) and sizes drawn shapes on half a side across and one row down, and
+  whose overlay draws the triangles. The rhythm also has **Major every N** (off by default): the pattern regions that
+  follow the rhythm draw every Nth line, row or dot in a stronger role (Structure unless you change it), a region can turn
+  them off or use its own N, and the overlay draws them stronger. A region can be **unbound** from the rhythm to have
+  spacing of its own (the linter's L17 says when that spacing is not a whole multiple or fraction of the rhythm). The
+  pattern page opens from the command line with `--patterns-page`.
 
 Not yet: the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).
@@ -124,7 +135,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote
