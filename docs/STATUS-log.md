@@ -1352,5 +1352,5 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   --landscape-page --bench-drag|--bench-draw 150 --canvas export|chip`): drag export 25.0, 25.7, 26.3 ms; drag chip
   29.0, 28.9, 28.9; draw (pattern) export 24.4, 25.5, 25.5; draw chip 37.7, 37.6, 37.6; drag on the Nomad
   (`--bench-secondary`) export 17.0, chip 24.2. All under 50 ms.
-- Usage meter not read this session.
+- Meter after finishing 8b: 74 % (chris, `/usage`, 2026-11-13 15:39 UTC; logged with `spend-ledger.py reading 74 --meter weekly`): 2 points for this session, 7 of rung 8's 20-point share so far; hard stop 90 % until Saturday's reset.
 - Waits on chris: the look at 8a and 8b together. `v0.8.0` and `v0.8.1` are not tagged until he approves.
