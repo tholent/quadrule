@@ -1957,7 +1957,7 @@ fn repeats_page(landscape: bool) -> Document {
     let mut hatch_line = object(
         repeat_ids::nth(104),
         "Line",
-        Frame::new(30.0, 46.0, 14.0, 0.0),
+        Frame::new(30.0, 53.0, 14.0, 0.0),
         pinned,
         Style::Role(LineRole::Structure),
         ObjectKind::Line(Line::default()),

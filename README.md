@@ -107,6 +107,17 @@ and error.
   them off or use its own N, and the overlay draws them stronger. A region can be **unbound** from the rhythm to have
   spacing of its own (the linter's L17 says when that spacing is not a whole multiple or fraction of the rhythm). The
   pattern page opens from the command line with `--patterns-page`.
+- A **repeat** draws one object, or a group, again in a row, a column or a grid (the **Repeat** button beside Group and
+  Ungroup). It is live: edit the first one and every copy follows, and **Expand** in the Repeat tab turns the copies into
+  plain objects in one group. A repeat counts a set number of copies, or **fills** its box with as many as fit (so a box
+  pinned to the margins gives each device its own count; drag its handles to add or take away copies). The step between
+  copies is **Auto** by default (the object's size rounded up to whole rhythm steps), or a pitch (centre to centre) or a
+  gap (edge to edge) in `u` (follows the rhythm) or any length, and it is worked out in whole device pixels, so every
+  copy is the first one moved by whole pixels. Copies sit from the start of the box or are centred. **Alternation rules**
+  pick copies by column, row or cell ("every 7th", or a list like "3, 7") and skip them, or give them another line or
+  fill role. Click any copy to pick the whole repeat; double-click goes into it to edit the source; Escape comes back out.
+  A repeat draws at most 5,000 copies. The linter judges every copy for the safe areas and the page edge (one finding
+  per repeat) and the pitch for the rhythm. The repeat page opens from the command line with `--repeats-page`.
 
 Not yet: the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).
@@ -135,7 +146,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --repeats-page` for rows, grids and a Fill repeat). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

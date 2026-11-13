@@ -150,3 +150,13 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   The merged chip-canvas path could differ from separate fills where anti-aliased edges overlap (screen only; export
   unaffected; `crates/ui/tests/canvas.rs` checks 1:1). The inspector's pattern settings have no pointer test (the tests
   call the same functions). Some rung 9 commits do not build alone (steps 3 and 5 share `panels.rs`).
+- Rung 10, owed (`crates/layout/src/repeat.rs`, `crates/layout/src/device.rs`, `crates/lint/src/lib.rs`, `crates/ui/src/repeat_tab.rs`):
+  a copy is the source's pixels moved by whole pixels, but a curved edge can differ by one gray level where the
+  drawing starts on another fraction of a pixel (24 pixels in a group source, `crates/render/tests/repeats.rs`); boxes on
+  whole pixels are exact. A repeat in a group that has a size override is placed by its scaled box only (its pitch is not
+  scaled). A repeat has no rotate handle, so a group holding one cannot turn. A counted repeat shows no resize handles
+  (only Fill has a box to pull). Make primary and turning the page settle a repeat's source to its box's corner, and are
+  tested only for a source that stays on its box's corner (`crates/layout/tests/repeat.rs`). L06 judges a turned shape in a repeat by its box, not its turned corners. The
+  Repeat tab edits only the first selected repeat, and has no pointer test (the tests call the same functions). The
+  Fluent plural in `notice-expanded` is English only. Some rung 10 commits do not build alone (steps 1 and 2, and 3 and
+  5, share files).

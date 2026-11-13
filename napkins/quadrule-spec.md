@@ -320,6 +320,12 @@ Every document has its own **rhythm**: a horizontal unit and a vertical unit tha
 - **Snapping:** Object edges, line endpoints and sizes snap to rhythm units or subdivisions.
 - **Pattern regions:** Spacing bound to the rhythm (or a multiple of it).
 - **Repeat tool:** Pitch defaults to one rhythm unit; values can be set as multiples ("3u").
+
+  Amended 2026-11-13 by chris in the rung 10 bbq, Q4: "The default pitch is the source's size rounded up to whole
+  rhythm steps on each axis (a 1-unit source gets 1u, a 2.3-unit source 3u): copies never overlap and land on the
+  rhythm. It is called Auto and follows the source as it is edited. Pitch (centre to centre) or Gap (edge to edge), in
+  any unit, stay editable per axis." (Record `docs/bbq/2026-11-13-rung-10-repeat-tool.md`.) This replaces "Pitch
+  defaults to one rhythm unit" above.
 - **New shapes:** Drawn sizes snap to whole units.
 - **Text:** Text box positions snap to the rhythm. An "Align baselines to rhythm" setting sets line height to a rhythm multiple so text sits on the ruling. It is **off** for blank documents and **on** in ruled starter templates.
 - **Units in fields:** `u` is accepted as a unit anywhere (`2u`, `0.5u`), alongside mm, px and %.

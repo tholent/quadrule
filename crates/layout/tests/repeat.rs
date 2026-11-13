@@ -424,3 +424,32 @@ fn every_copy_is_found_by_the_pointer_and_stands_for_the_source() {
     );
     assert!(ok);
 }
+
+#[test]
+fn turning_the_page_and_making_another_device_primary_keep_the_source_on_the_box() {
+    let doc = repeats_document();
+    let corner_ok = |d: &Document| {
+        d.objects().filter(|o| o.is_repeat()).all(|o| {
+            let sb = o.repeat().unwrap().source.outer_box();
+            (sb.x_mm - o.frame.x_mm).abs() < 1e-6 && (sb.y_mm - o.frame.y_mm).abs() < 1e-6
+        })
+    };
+    let mut turned = doc.clone();
+    let cmd = device::set_orientation(&doc, Orientation::Landscape).unwrap();
+    turned.apply(cmd).unwrap();
+    let a = corner_ok(&turned) && turned.page.orientation == Orientation::Landscape;
+    let mut moved = doc.clone();
+    let cmd = device::make_primary(&doc, NOMAD_ID).unwrap();
+    moved.apply(cmd).unwrap();
+    let b = corner_ok(&moved) && moved.primary_profile_id == NOMAD_ID;
+    // No override was written on a source.
+    let c = moved
+        .objects()
+        .filter(|o| o.is_repeat())
+        .all(|o| o.children().iter().all(|s| s.overrides.is_empty()));
+    println!(
+        "\nCHECK crate=layout name=repeat_page_turn_and_primary result={} turn_keeps_corner={a} primary_keeps_corner={b} no_source_overrides={c}",
+        pass(a && b && c)
+    );
+    assert!(a && b && c);
+}
