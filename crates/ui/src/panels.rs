@@ -30,7 +30,7 @@ use quadrule_lint::Severity;
 use quadrule_model::edit::{Command, OverrideField, Place, reframe};
 use quadrule_model::{
     DashStyle, Document, Fill, FillRole, Frame, HConstraint, LineCap, LineRole, Object, ObjectKind,
-    POLYGON_SIDES_MAX, POLYGON_SIDES_MIN, Pattern, RhythmOrigin, RhythmResolution,
+    Orientation, POLYGON_SIDES_MAX, POLYGON_SIDES_MIN, Pattern, RhythmOrigin, RhythmResolution,
     STAR_INNER_DEFAULT, STAR_INNER_MAX, STAR_INNER_MIN, Style, TextAlign, Unit, Uuid, VConstraint,
 };
 
@@ -612,6 +612,25 @@ impl ViewerUi {
             }
             ui.end_row();
 
+            // Orientation (rung 8b): one undo step; the pages turn, objects follow their own
+            // constraints and override boxes scale with the page.
+            let label = ui.label(self.t("app-page-orientation"));
+            let mut orientation = doc.page.orientation;
+            let options = [
+                (Orientation::Portrait, "app-orientation-portrait"),
+                (Orientation::Landscape, "app-orientation-landscape"),
+            ];
+            self.combo(ui, "orientation", label.id, &mut orientation, &options);
+            if orientation != doc.page.orientation {
+                let _ = self.viewer.set_orientation(orientation);
+            }
+            ui.end_row();
+            if doc.page.orientation == Orientation::Landscape {
+                ui.label("");
+                ui.label(RichText::new(self.t("app-orientation-landscape-tip")).small());
+                ui.end_row();
+            }
+
             // Background.
             let label = ui.label(self.t("app-page-background"));
             let mut gray = doc.page.background_gray;
@@ -770,7 +789,7 @@ impl ViewerUi {
             });
         // The unit as each device resolves it (napkin §6.3: "5 mm → 59 px (Manta)").
         for id in doc.profile_ids() {
-            if let Ok(p) = quadrule_profiles::builtin(id) {
+            if let Ok(p) = quadrule_profiles::builtin_for(id, doc.page.orientation) {
                 let rp = RhythmPx::new(&doc, &p);
                 let px = if rp.unit_x == rp.unit_y {
                     trim_number(rp.unit_x, 2)

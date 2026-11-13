@@ -15,8 +15,9 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   fine-grained tokens); read CI with `gh run view <id> --log` instead.
 - ADR build status is in each ADR's `built` and `owed` header fields (`docs/decisions/INDEX.md`): ADR-001 and
   ADR-002 partial, ADR-003 landed; of the proposed ADR-004 to ADR-014, ADR-009, ADR-011 and ADR-012 are partial.
-- Safe zones still to capture (screenshots, chris): landscape, a collapsed toolbar, other floating positions
-  (`docs/device-measurements/README.md`).
+- Safe zones still to capture (screenshots, chris): a collapsed toolbar, other floating positions
+  (`docs/device-measurements/README.md`). Landscape is no longer owed: a landscape template is read in portrait mode,
+  so the portrait zones apply, turned (rung 8 record, Defaulted "Landscape safe zones"; built in 8b).
 - The slice page's 8 mm margin (94 px) is narrower than a docked toolbar (Manta 116 px, Nomad 99 px), so a toolbar
   docked left or right covers the edge of its title and rules; lint L06 flags it (`cargo xtask lint`). The slice
   itself is left as is (`crates/model/src/sample.rs`).
@@ -134,3 +135,9 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   The overrides dot is the accent colour (chris's look decides). Drawing a pattern region on the shapes page on the chip
   canvas is over 50 ms at the 90th percentile (8a lead, strip on: 50.8–51.1 ms; first timed in 8a, rung 6a timed only
   rectangle, ellipse and polygon there); chris, 2026-11-13: "Leave it for later" (rung 17's sweep, or sooner if a rung touches it) (`docs/STATUS-log.md`, 2026-11-12/13 rung 8a).
+- Rung 8b, owed (`crates/layout/src/device.rs`, `crates/ui/src/strip.rs`, `crates/ui/tests/landscape.rs`): landscape is
+  tested on the Nomad only; the Manta is ruled the same, not tried on the device. Turning a page maps every override
+  box in proportion to the turned page (as a Scale constraint would), a choice the rung 8 record does not make; chris's
+  look decides. Margins stay the numbers typed when the page turns, so L06 may fire after a turn. The strip's
+  placeholder, shown until a device's first picture is made, is portrait-shaped. The Page tab's and New…'s
+  Orientation controls have no pointer test (the tests call the same functions).

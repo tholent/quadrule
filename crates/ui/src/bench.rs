@@ -64,6 +64,8 @@ pub struct DragBench {
     pub rotate: bool,
     /// Opens the rung 8a overrides page when nothing is open yet (`--devices-page`).
     pub devices: bool,
+    /// Opens the rung 8b landscape page when nothing is open yet (`--landscape-page`).
+    pub landscape: bool,
     /// Runs on the document's first secondary device, not the primary one (`--bench-secondary`), so
     /// a drag writes overrides (rung 8a).
     pub secondary: bool,
@@ -86,6 +88,7 @@ impl DragBench {
             groups: false,
             rotate: false,
             devices: false,
+            landscape: false,
             secondary: false,
             no_strip: false,
         }
@@ -95,6 +98,14 @@ impl DragBench {
     pub fn with_devices(self) -> Self {
         DragBench {
             devices: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark over the rung 8b landscape page.
+    pub fn with_landscape(self) -> Self {
+        DragBench {
+            landscape: true,
             ..self
         }
     }

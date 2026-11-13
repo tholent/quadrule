@@ -19,13 +19,16 @@
 //! editor to do as one undo step.
 
 use crate::override_key;
-use crate::tree::{Node, resolve_nodes_on};
+use crate::tree::{Node, resolve_nodes, resolve_nodes_on};
 use quadrule_model::edit::{
     Command, children_box, prune_override, set_font_size_override, set_frame_override,
     set_visible_override, strip_overrides,
 };
-use quadrule_model::{Document, Layer, Object, ObjectKind, Override, ProfileContext, Uuid};
-use quadrule_profiles::{Profile, builtin};
+use quadrule_model::{
+    Document, Layer, Object, ObjectKind, Orientation, Override, Position, ProfileContext, Size,
+    Uuid,
+};
+use quadrule_profiles::{Profile, builtin_for};
 use std::collections::{BTreeMap, HashMap};
 
 /// Why a device change could not be made.
@@ -37,6 +40,8 @@ pub enum DeviceError {
     Unknown(String),
     /// The primary device cannot be taken out of the document.
     IsPrimary(String),
+    /// The device's profile does not list the orientation (rung 8b).
+    OrientationNotSupported(String),
 }
 
 impl std::fmt::Display for DeviceError {
@@ -45,14 +50,18 @@ impl std::fmt::Display for DeviceError {
             DeviceError::NotATarget(id) => write!(f, "{id} is not one of the document's devices"),
             DeviceError::Unknown(id) => write!(f, "no profile {id}"),
             DeviceError::IsPrimary(id) => write!(f, "{id} is the primary device"),
+            DeviceError::OrientationNotSupported(id) => {
+                write!(f, "{id} does not support that orientation")
+            }
         }
     }
 }
 
 impl std::error::Error for DeviceError {}
 
-fn profile(id: &str) -> Result<Profile, DeviceError> {
-    builtin(id).map_err(|_| DeviceError::Unknown(id.to_string()))
+/// Device `id` as a design held `orientation` sees it.
+fn profile(id: &str, orientation: Orientation) -> Result<Profile, DeviceError> {
+    builtin_for(id, orientation).map_err(|_| DeviceError::Unknown(id.to_string()))
 }
 
 fn index_nodes(nodes: Vec<Node>) -> HashMap<Uuid, Node> {
@@ -77,7 +86,7 @@ pub fn ungroup_overrides(
         if dev == primary.id {
             continue;
         }
-        let Ok(target) = profile(dev) else {
+        let Ok(target) = profile(dev, doc.page.orientation) else {
             continue;
         };
         let nodes = index_nodes(resolve_nodes_on(
@@ -208,8 +217,8 @@ pub fn make_primary(doc: &Document, new_id: &str) -> Result<Command, DeviceError
     if new_id == old_id {
         return Err(DeviceError::IsPrimary(new_id.to_string()));
     }
-    let old_primary = profile(&old_id)?;
-    let new_primary = profile(new_id)?;
+    let old_primary = profile(&old_id, doc.page.orientation)?;
+    let new_primary = profile(new_id, doc.page.orientation)?;
 
     // What each device shows now.
     let mut before: BTreeMap<String, HashMap<Uuid, Before>> = BTreeMap::new();
@@ -217,7 +226,7 @@ pub fn make_primary(doc: &Document, new_id: &str) -> Result<Command, DeviceError
         if dev == new_id {
             continue;
         }
-        let target = profile(dev)?;
+        let target = profile(dev, doc.page.orientation)?;
         let key = override_key(&old_primary, &target);
         let nodes = resolve_nodes_on(doc, old_primary.page_mm(), target.page_mm(), key);
         let mut map = HashMap::new();
@@ -274,7 +283,7 @@ pub fn make_primary(doc: &Document, new_id: &str) -> Result<Command, DeviceError
         if dev == new_id {
             continue;
         }
-        let target = profile(dev)?;
+        let target = profile(dev, doc.page.orientation)?;
         for l in &mut next.layers {
             for o in &mut l.objects {
                 drop_group_boxes(o, dev);
@@ -330,7 +339,7 @@ pub fn set_targets(doc: &Document, ids: &[&str]) -> Result<Command, DeviceError>
         .collect();
     for id in ids {
         if !profiles.iter().any(|c| c.profile_id == *id) {
-            profile(id)?;
+            profile(id, doc.page.orientation)?;
             profiles.push(ProfileContext {
                 profile_id: (*id).to_string(),
                 extra: Default::default(),
@@ -346,4 +355,109 @@ pub fn set_targets(doc: &Document, ids: &[&str]) -> Result<Command, DeviceError>
         profiles,
         layers,
     })
+}
+
+/// Puts a frame where the design's constraints put it when the page turns: bottom up, a group
+/// takes the box round its children.
+fn refit(o: &mut Object, nodes: &HashMap<Uuid, Node>) {
+    if let ObjectKind::Group(g) = &mut o.kind {
+        for c in &mut g.children {
+            refit(c, nodes);
+        }
+    }
+    let local = nodes.get(&o.id).map(|n| n.local);
+    match &mut o.kind {
+        ObjectKind::Group(g) => {
+            if let Some(b) = children_box(&g.children).or(local) {
+                o.frame = b;
+            }
+        }
+        _ => {
+            if let Some(l) = local {
+                o.frame = l;
+            }
+        }
+    }
+}
+
+/// Maps every override box of `o` (and of what is inside it) onto the turned page: a device's page
+/// goes from w by h to h by w, and a place or size on it scales with the page, as a Scale
+/// constraint would carry it.
+fn scale_overrides(o: &mut Object, scales: &BTreeMap<String, (f64, f64)>) {
+    for (dev, ov) in &mut o.overrides {
+        let Some(&(sx, sy)) = scales.get(dev) else {
+            continue;
+        };
+        if let Some(Position { x_mm, y_mm }) = &mut ov.position {
+            *x_mm *= sx;
+            *y_mm *= sy;
+        }
+        if let Some(Size { w_mm, h_mm }) = &mut ov.size {
+            *w_mm *= sx;
+            *h_mm *= sy;
+        }
+    }
+    if let ObjectKind::Group(g) = &mut o.kind {
+        for c in &mut g.children {
+            scale_overrides(c, scales);
+        }
+    }
+}
+
+/// The command that holds the page `to` (rung 8b, Q6; Page tab), as one undo step. The page turns
+/// from the device's width by height to its height by width (or back), and:
+///
+/// - the stored design follows each object's own constraints onto the turned page, exactly as
+///   another device's page of that size would lay it out (a Scale object scales to the new
+///   proportions, a Left object stays at its distance from the left, and so on);
+/// - every override box on every device maps proportionally onto that device's turned page, as a
+///   Scale constraint would, so a place or size that was one fifth across stays one fifth across;
+///   font sizes and eyes are untouched;
+/// - the margins, the rhythm, the objects' rotation and the document's devices are left as they
+///   are (the margins stay the numbers the person typed; lint L06 says if a turned zone is not
+///   cleared).
+///
+/// Turning to the orientation the page already has gives an empty batch. A device whose profile
+/// does not list the orientation refuses it.
+pub fn set_orientation(doc: &Document, to: Orientation) -> Result<Command, DeviceError> {
+    let from = doc.page.orientation;
+    if from == to {
+        return Ok(Command::Batch(Vec::new()));
+    }
+    for id in doc.profile_ids() {
+        if !profile(id, to)?.orientations.contains(&to) {
+            return Err(DeviceError::OrientationNotSupported(id.to_string()));
+        }
+    }
+    let (old_primary, new_primary) = (
+        profile(&doc.primary_profile_id, from)?,
+        profile(&doc.primary_profile_id, to)?,
+    );
+    let nodes = index_nodes(resolve_nodes(
+        doc,
+        old_primary.page_mm(),
+        new_primary.page_mm(),
+    ));
+    let mut scales: BTreeMap<String, (f64, f64)> = BTreeMap::new();
+    for id in doc.profile_ids() {
+        let (a, b) = (profile(id, from)?.page_mm(), profile(id, to)?.page_mm());
+        scales.insert(id.to_string(), (b.0 / a.0, b.1 / a.1));
+    }
+    let mut layers = doc.layers.clone();
+    for l in &mut layers {
+        for o in &mut l.objects {
+            refit(o, &nodes);
+            scale_overrides(o, &scales);
+        }
+    }
+    let mut page = doc.page.clone();
+    page.orientation = to;
+    Ok(Command::Batch(vec![
+        Command::SetPage(page),
+        Command::SetDesign {
+            primary_profile_id: doc.primary_profile_id.clone(),
+            profiles: doc.profiles.clone(),
+            layers,
+        },
+    ]))
 }

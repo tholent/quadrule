@@ -1328,3 +1328,29 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - chris, word for word: "Move forward with 8b without the checks. I can't look now and I'd rather you kept working".
   So 8a's look is deferred (not skipped): `v0.8.0` is not tagged until chris approves 8a; 8b is built on top of it now,
   and both wait for his look.
+
+## 2026-11-13 — rung 8b finished and judged (lead: Opus 5.5, no builder)
+
+- Found at session start: about 555 lines of 8b work uncommitted in 21 files, last touched 2026-11-12 19:45 (five
+  minutes after `2dd41f2`), with no log entry and nothing running (`pgrep -af 'cargo|rustc|claude'` → this session
+  only). `make build-proof` → `BUILD head=2dd41f2 dirty=yes rebuilt=1`. `make check-all` on it stopped at `fmt-check`;
+  `cargo fmt --all` fixed it. Present: `Profile::oriented` and `builtin_for` (the page turned, the safe zones turned into
+  the design's frame), `turn_clockwise` in render, export through it with the portrait size in the name,
+  `set_orientation` (one undo step, objects by their constraints, override boxes in proportion), the Orientation choice
+  in New… and the Page tab, New…'s margins clearing the turned zones, Landscape in both profiles' `orientations`, the
+  landscape sample page and `--landscape-page` / `LANDSCAPE=1`. Missing: every 8b test, the goldens, the docs.
+- Added: `crates/render/tests/landscape.rs` (a landscape golden page per device; the exact clockwise turn; orientation
+  through save) and `crates/ui/tests/landscape.rs` (turned zones agree with the device's through the export turn, pixel
+  for pixel; New… in landscape clears them on both devices; L06 sees them; the Page tab switch as one undo step; export
+  names and bytes). Two lines added to `crates/render/tests/golden/SHA256SUMS`; the ten before them unchanged.
+- The landscape sample page was changed before blessing: its star, markers and dot strip had the default Scale
+  constraints, so on the Nomad they scaled up into the header band (looked at by eye: the first bless's Nomad image).
+  Each is now pinned to the edge it marks (`crates/model/src/sample.rs`); the Manta image did not change.
+- README ("what works today") and DEVELOPMENT (bench flag, crate map, safe zones) updated.
+- `make check-all` → `TESTS scope=workspace checks=356 check_fail=0 passed=331 failed=0 status=ok`.
+- Speed, release build on the Pi, landscape page, strip on, 90th percentile (`./target/release/quadrule
+  --landscape-page --bench-drag|--bench-draw 150 --canvas export|chip`): drag export 25.0, 25.7, 26.3 ms; drag chip
+  29.0, 28.9, 28.9; draw (pattern) export 24.4, 25.5, 25.5; draw chip 37.7, 37.6, 37.6; drag on the Nomad
+  (`--bench-secondary`) export 17.0, chip 24.2. All under 50 ms.
+- Usage meter not read this session.
+- Waits on chris: the look at 8a and 8b together. `v0.8.0` and `v0.8.1` are not tagged until he approves.

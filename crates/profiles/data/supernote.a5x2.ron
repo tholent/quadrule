@@ -33,8 +33,9 @@
     ],
     // ESTIMATE.
     default_margins_mm: (top: 8.0, right: 8.0, bottom: 8.0, left: 8.0),
-    // Landscape is unverified (napkin §17.1 item 3).
-    orientations: [Portrait],
+    // Landscape (rung 8b): a landscape design is exported turned a quarter turn clockwise into the portrait
+    // template (docs/device-measurements/supernote.a6x2/landscape-test.md), so the portrait zones above apply.
+    orientations: [Portrait, Landscape],
     // Calibrated 2026-11-09 by chris on the device: "the same preferences and findings on the nomad
     // hold true for the manta" (docs/device-measurements/supernote.a5x2/calibration.md), so these
     // are the Nomad's values. Widths in device pixels, grays 0 = black .. 255 = white.

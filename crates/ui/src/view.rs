@@ -43,6 +43,7 @@ use quadrule_layout::newpage::NewPage;
 use quadrule_layout::snap::{Handle, Mark, PxRect, SnapKind, union_fill, union_outline};
 use quadrule_layout::units::Axis;
 use quadrule_lint::Toolbar;
+use quadrule_model::Orientation;
 use quadrule_model::blank::RhythmPreset;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -610,6 +611,7 @@ impl ViewerUi {
             title: self.t("new-default-title"),
             device_id: self.new_device.clone(),
             rhythm: RhythmPreset::Handwriting,
+            orientation: quadrule_model::Orientation::Portrait,
         });
     }
 
@@ -672,6 +674,21 @@ impl ViewerUi {
                                 &mut spec.rhythm,
                                 preset,
                                 self.t(preset.message_id()),
+                            );
+                        }
+                    })
+                    .response
+                    .labelled_by(label.id);
+                ui.end_row();
+                let label = ui.label(self.t("new-orientation"));
+                egui::ComboBox::from_id_salt("new-orientation")
+                    .selected_text(self.t(orientation_message(spec.orientation)))
+                    .show_ui(ui, |ui| {
+                        for o in [Orientation::Portrait, Orientation::Landscape] {
+                            ui.selectable_value(
+                                &mut spec.orientation,
+                                o,
+                                self.t(orientation_message(o)),
                             );
                         }
                     })
@@ -1135,7 +1152,9 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    if b.devices {
+                    if b.landscape {
+                        self.viewer.open_landscape();
+                    } else if b.devices {
                         self.viewer.open_devices();
                     } else if b.groups {
                         self.viewer.open_groups();
@@ -1263,7 +1282,9 @@ impl ViewerUi {
                     } else {
                         "release"
                     },
-                    if b.devices {
+                    if b.landscape {
+                        "landscape"
+                    } else if b.devices {
                         "devices"
                     } else if b.groups {
                         "groups"
@@ -2120,8 +2141,14 @@ impl ViewerUi {
     }
 }
 
-/// The backdrop round the page (napkin §14: it follows the theme; the page never does).
-/// The mouse cursor over a handle.
+/// The Fluent message that names an orientation (the New dialog and the Page tab).
+fn orientation_message(o: quadrule_model::Orientation) -> &'static str {
+    match o {
+        quadrule_model::Orientation::Portrait => "app-orientation-portrait",
+        quadrule_model::Orientation::Landscape => "app-orientation-landscape",
+    }
+}
+
 /// A built-in device's name for the pickers; its id when it is not one.
 fn device_name(id: &str) -> String {
     quadrule_profiles::builtin(id)
@@ -2134,6 +2161,7 @@ const OUTLINE_PAD_POINTS: f64 = 2.0;
 
 type Outline = ((f64, f64, f64, f64), Option<[(f64, f64); 4]>);
 
+/// The mouse cursor over a handle.
 fn handle_cursor(h: HandleHit) -> CursorIcon {
     match h {
         HandleHit::Box(Handle::NW | Handle::SE) => CursorIcon::ResizeNwSe,

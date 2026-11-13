@@ -36,6 +36,7 @@ fn spec(device: &str, rhythm: RhythmPreset) -> NewPage {
         title: "Test page".into(),
         device_id: device.into(),
         rhythm,
+        orientation: quadrule_model::Orientation::Portrait,
     }
 }
 

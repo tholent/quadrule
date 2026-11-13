@@ -39,7 +39,7 @@ command it runs, so you can always run that directly.
 | `make check` | rustfmt, clippy and tests on the default members (quick) |
 | `make check-all` | The same on the whole workspace; this is what CI runs, so run it before you push |
 | `make run` | Open the app (`FILE=page.quad` to open a file) |
-| `make bench-drag`, `make bench-draw`, `make bench-rotate` | Time dragging, drawing and turning in a release build (`SHAPES=1`, `TRANSFORMS=1`, `GROUPS=1` or `DEVICES=1` over the shapes, transforms, groups or overrides page, `NOMAD=1` to run on the Nomad so a drag writes overrides, `NOSTRIP=1` to fold the device previews strip shut (it is open in a bench otherwise), `TOOL=rect` to draw with another tool) |
+| `make bench-drag`, `make bench-draw`, `make bench-rotate` | Time dragging, drawing and turning in a release build (`SHAPES=1`, `TRANSFORMS=1`, `GROUPS=1`, `DEVICES=1` or `LANDSCAPE=1` over the shapes, transforms, groups, overrides or landscape page, `NOMAD=1` to run on the Nomad so a drag writes overrides, `NOSTRIP=1` to fold the device previews strip shut (it is open in a bench otherwise), `TOOL=rect` to draw with another tool) |
 | `make lint` | Lint a document from the command line |
 | `make fuzz` | Fuzz the `.quad` reader (needs nightly Rust and `cargo-fuzz`) |
 
@@ -67,11 +67,11 @@ numbers refer to the design spec.
 | Crate | What it holds |
 |---|---|
 | `model` | The document model: objects (lines, text, patterns, rectangles, ellipses, polygons and stars, each with an angle and an opacity; a line's diagonal; groups, which hold other objects, to any depth) and geometry in millimetres, with the constraint maths and the editing commands, no graphics or UI (§5) |
-| `profiles` | Device profiles (the Manta and the Nomad) as RON data: line roles, fill roles, safe zones (§3) |
-| `layout` | Constraints, the rhythm, pixel snapping, the snapping rules, shapes with their dashes and caps, rotation and line direction (`rotate`), the tree of groups laid out (`tree`: every object resolves against the page by its own constraints, a group's box is round its children), align and distribute (`align`: the maths on the objects' turned boxes, on the pixel grid or in millimetres), the display list with its opacity groups (§10), per-device overrides (`tree` reads them, a group's override scales what is in it into its box), and `device` (Make primary, which devices a page targets, what Ungroup bakes in) |
+| `profiles` | Device profiles (the Manta and the Nomad) as RON data: line roles, fill roles, safe zones (§3), and each profile as a landscape design sees it (`oriented`: the page turned, the zones turned into its frame) |
+| `layout` | Constraints, the rhythm, pixel snapping, the snapping rules, shapes with their dashes and caps, rotation and line direction (`rotate`), the tree of groups laid out (`tree`: every object resolves against the page by its own constraints, a group's box is round its children), align and distribute (`align`: the maths on the objects' turned boxes, on the pixel grid or in millimetres), the display list with its opacity groups (§10), per-device overrides (`tree` reads them, a group's override scales what is in it into its box), and `device` (Make primary, which devices a page targets, what Ungroup bakes in, turning the page between portrait and landscape) |
 | `format` | The `.quad` file: a ZIP of CBOR entries (§12, ADR-001) |
 | `text` | Fonts and text layout in millimetres, drawn as plain outlines (§7, ADR-002) |
-| `render` | The export renderer: `vello_cpu` to an 8-bit grayscale PNG (ADR-003) |
+| `render` | The export renderer: `vello_cpu` to an 8-bit grayscale PNG (ADR-003), and the exact quarter turn a landscape page is exported with (`turn_clockwise`) |
 | `lint` | The linter: rules that recommend and explain, never block (§8.3) |
 | `i18n` | Every string on screen, through Project Fluent; English first (§14) |
 | `ui` | The egui widgets and the editor's state: canvas, panels, dragging, the tools bar and drawing, the shapes' inspector fields, the Arrange tab's align and distribute commands (`arrange`) (§15.1) |
@@ -143,7 +143,9 @@ Quadrule's line widths and grays are measured on real Supernote devices, not gue
   [docs/calibration.md](docs/calibration.md).
 - **Safe zones.** The areas the tablet's own toolbar and footer cover were measured from screenshots.
   [docs/device-measurements/README.md](docs/device-measurements/README.md) says how to take the screenshots and what
-  `cargo xtask safe-zones` does with them. Landscape and other toolbar positions are still to be measured.
+  `cargo xtask safe-zones` does with them. A landscape page is read in portrait mode, so the portrait zones apply,
+  turned into the design's frame; the landscape toolbar screenshots in `landscape/` show a zoomed view, not template
+  pixels, and are kept as records only. Other toolbar positions are still to be measured.
 
 Send findings in an issue. A different model or a firmware update can change the numbers, which is why the raw
 screenshots are kept in `docs/device-measurements/`.

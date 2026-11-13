@@ -30,7 +30,7 @@ use quadrule_model::edit::{
     set_position_override, set_visible_override, ungroup_with,
 };
 use quadrule_model::{Document, Extra, Frame, Object, ObjectKind, Uuid};
-use quadrule_profiles::{Profile, builtin};
+use quadrule_profiles::{Profile, builtin_for};
 use quadrule_text::BundledFont;
 use std::path::Path;
 
@@ -140,8 +140,8 @@ impl Viewer {
     pub fn profiles(&self) -> Option<(Profile, Profile)> {
         let doc = self.doc()?;
         Some((
-            builtin(&doc.primary_profile_id).ok()?,
-            builtin(&self.profile_id).ok()?,
+            builtin_for(&doc.primary_profile_id, doc.page.orientation).ok()?,
+            builtin_for(&self.profile_id, doc.page.orientation).ok()?,
         ))
     }
 
@@ -621,6 +621,28 @@ impl Viewer {
         }
     }
 
+    /// Holds the page `to` (the Page tab's Orientation, rung 8b): the design follows its objects'
+    /// own constraints onto the turned page and every override box maps onto it in proportion
+    /// ([`quadrule_layout::device::set_orientation`]). One undo step.
+    pub fn set_orientation(&mut self, to: quadrule_model::Orientation) -> Result<(), EditError> {
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        if doc.page.orientation == to {
+            return Ok(());
+        }
+        match quadrule_layout::device::set_orientation(doc, to) {
+            Ok(cmd) => self.edit(cmd, None),
+            Err(e) => {
+                self.notice = Some(crate::viewer::Notice {
+                    message: Message::new("notice-edit-failed").text("error", e.to_string()),
+                    error: true,
+                });
+                Ok(())
+            }
+        }
+    }
+
     /// Makes the document target exactly the devices `ids` (the Page tab's ticks); a device taken
     /// out loses its overrides, and undo brings them back. If the device on screen goes, the
     /// primary one is shown.
@@ -970,10 +992,11 @@ impl Viewer {
             return Err(format!("{r:?}"));
         }
         let doc = &open.doc;
-        let primary = builtin(&doc.primary_profile_id).map_err(|e| e.to_string())?;
+        let primary = builtin_for(&doc.primary_profile_id, doc.page.orientation)
+            .map_err(|e| e.to_string())?;
         let mut outlines = Vec::new();
         for id in doc.profile_ids() {
-            let target = builtin(id).map_err(|e| e.to_string())?;
+            let target = builtin_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
             let laid = lay_out_text(doc, &primary, &target, fonts);
             let missing = laid.as_ref().map_or(true, |l| l.missing_glyphs > 0);
             match open.saved.get(id) {

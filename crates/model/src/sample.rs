@@ -1435,3 +1435,165 @@ pub fn devices_document() -> Document {
     ];
     doc
 }
+
+/// Fixed ids for the landscape page's objects.
+pub mod landscape_ids {
+    use crate::Uuid;
+    /// The `n`th object of the landscape page (1-based); the dot grid is [`super::ids::DOTS`].
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_000B_4000_8000_0000_0000_0000 + n)
+    }
+    /// The band across the design's top (the device's right edge, once exported).
+    pub const HEADER: Uuid = nth(1);
+    /// The title in the band.
+    pub const HEADLINE: Uuid = nth(2);
+    /// The ruled region.
+    pub const RULED: Uuid = nth(3);
+    /// The star near the top-right corner: the one shape that shows which way is up.
+    pub const STAR: Uuid = nth(4);
+    /// A marker along the design's left edge (the device's top toolbar, once exported).
+    pub const MARK_LEFT: Uuid = nth(5);
+    /// A marker along the design's right edge (the device's footers).
+    pub const MARK_RIGHT: Uuid = nth(6);
+    /// A marker along the design's bottom edge (the device's left toolbar).
+    pub const MARK_BOTTOM: Uuid = nth(7);
+}
+
+/// The landscape page (rung 8b, docs/bbq/2026-11-12-rung-8-several-devices.md, Defaulted "8b,
+/// orientation" and "Goldens (8b)"): a design that shows clearly which way is up, for the look, the
+/// benchmarks (`--landscape-page`) and the goldens. A band with a headline across the top, a dot
+/// grid under it, a ruled region, a star near the top-right corner, and a marker just inside each
+/// of the left, right and bottom edges, where the device's top toolbar, footers and left toolbar
+/// fall once the page is turned (the band is by the right toolbar). Designed on the Manta, also
+/// targeting the Nomad, held landscape; the margins (12 mm) clear every turned zone on both.
+pub fn landscape_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 8b landscape".into();
+    doc.metadata.description =
+        "The rung 8b landscape page: a band and headline at the top, a ruled region, a star near the top-right corner and a marker by three of the edges."
+            .into();
+    doc.page.orientation = Orientation::Landscape;
+    let margin = 12.0;
+    doc.page.margins_mm = Margins::all(margin);
+    // The design's page is the Manta's turned: its height by its width.
+    let (w, h) = (MANTA_H_MM, MANTA_W_MM);
+    let rule = doc.layers[1].objects[1].clone();
+    let dots = doc.layers[0].objects[0].clone();
+    let lines = doc.layers[0].objects[1].clone();
+    let title = doc.layers[1].objects[0].clone();
+    let structure = Style::Role(LineRole::Structure);
+    let top_wide = Constraints {
+        h: HConstraint::LeftRight,
+        v: VConstraint::Top,
+    };
+    let mk =
+        |n: u128, name: &str, frame: Frame, style: Style, fill: Option<Fill>, kind: ObjectKind| {
+            let mut o = rule.clone();
+            o.id = landscape_ids::nth(n);
+            o.name = name.into();
+            o.frame = frame;
+            o.constraints = Constraints::default();
+            o.style = style;
+            o.fill = fill;
+            o.kind = kind;
+            o
+        };
+    let mut band = mk(
+        1,
+        "Header band",
+        Frame::new(margin, margin, w - 2.0 * margin, 12.0),
+        structure,
+        Some(Fill::Role(FillRole::Shade)),
+        ObjectKind::Rect(RectShape::default()),
+    );
+    band.constraints = top_wide;
+    let mut headline = title;
+    headline.id = landscape_ids::HEADLINE;
+    headline.name = "Headline".into();
+    headline.frame = Frame::new(margin + 3.0, margin + 2.5, w - 2.0 * margin - 6.0, 8.0);
+    headline.constraints = top_wide;
+    if let ObjectKind::Text(t) = &mut headline.kind {
+        t.content = "Landscape: this edge is the top".into();
+        t.size_pt = 14.0;
+    }
+    let mut ruled = lines;
+    ruled.id = landscape_ids::RULED;
+    ruled.name = "Ruled region".into();
+    ruled.frame = Frame::new(
+        margin + 12.0,
+        62.0,
+        w - 2.0 * margin - 24.0,
+        h - 62.0 - margin - 12.0,
+    );
+    ruled.constraints = Constraints {
+        h: HConstraint::LeftRight,
+        v: VConstraint::TopBottom,
+    };
+    let star = mk(
+        4,
+        "Star",
+        Frame::new(w - margin - 6.0 - 4.0 - 18.0, margin + 16.0, 18.0, 18.0),
+        Style::Role(LineRole::Emphasis),
+        Some(Fill::Role(FillRole::Block)),
+        ObjectKind::Polygon(PolygonShape::star(5)),
+    );
+    // Each piece is pinned to the edge it marks, so on the Nomad's smaller page it keeps its
+    // distance from that edge and clear of the band, instead of scaling up into it.
+    let pinned = |h, v| Constraints { h, v };
+    let mut star = star;
+    star.constraints = pinned(HConstraint::Right, VConstraint::Top);
+    let marker = |n: u128, name: &str, x: f64, y: f64, c: Constraints| {
+        let mut o = mk(
+            n,
+            name,
+            Frame::new(x, y, 6.0, 6.0),
+            structure,
+            Some(Fill::Role(FillRole::Block)),
+            ObjectKind::Rect(RectShape::default()),
+        );
+        o.constraints = c;
+        o
+    };
+    // Footers sit at the device's bottom: along the design's right edge, near its top-right corner.
+    let mark_right = marker(
+        6,
+        "Marker, right edge",
+        w - margin - 6.0,
+        margin + 18.0,
+        pinned(HConstraint::Right, VConstraint::Top),
+    );
+    let mark_left = marker(
+        5,
+        "Marker, left edge",
+        margin,
+        h / 2.0 - 3.0,
+        pinned(HConstraint::Left, VConstraint::Center),
+    );
+    let mark_bottom = marker(
+        7,
+        "Marker, bottom edge",
+        w / 2.0 - 3.0,
+        h - margin - 6.0,
+        pinned(HConstraint::Center, VConstraint::Bottom),
+    );
+    let mut dot_strip = dots;
+    dot_strip.frame = Frame::new(margin, margin + 16.0, 120.0, 30.0);
+    dot_strip.constraints = pinned(HConstraint::Left, VConstraint::Top);
+    doc.layers = vec![
+        Layer {
+            name: "Grid".into(),
+            visible: true,
+            locked: false,
+            objects: vec![dot_strip, ruled],
+            extra: Extra::new(),
+        },
+        Layer {
+            name: "Marks".into(),
+            visible: true,
+            locked: false,
+            objects: vec![band, headline, star, mark_left, mark_right, mark_bottom],
+            extra: Extra::new(),
+        },
+    ];
+    doc
+}

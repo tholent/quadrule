@@ -19,16 +19,22 @@
 //! rule L06. The floating toolbar moves, so it is neither cleared nor linted.
 
 use quadrule_model::blank::{RhythmPreset, blank_document};
-use quadrule_model::{Document, Margins};
+use quadrule_model::{Document, Margins, Orientation};
 use quadrule_profiles::{Profile, ProfileError, builtin, builtin_ids};
 
 /// The thickness each side of the page must clear on `p`, in device pixels: the docked toolbars
 /// on the left, right and top, and the footers at the bottom (`Margins` order: top, right,
 /// bottom, left).
+///
+/// For a profile made by [`Profile::oriented`] for a landscape design (rung 8b) the sides are the
+/// design's, with the device's zones turned into its frame: the design's top clears the device's
+/// right toolbar, its right the footers, its bottom the left toolbar and its left the top toolbar.
 pub fn zone_thickness_px(p: &Profile) -> Margins {
-    let (w, h) = (f64::from(p.width_px), f64::from(p.height_px));
+    // The device's own frame first, whichever way the design is held.
+    let dev = p.oriented(Orientation::Portrait);
+    let (w, h) = (f64::from(dev.width_px), f64::from(dev.height_px));
     let mut m = Margins::all(0.0);
-    for z in &p.safe_zones {
+    for z in &dev.safe_zones {
         let (x, y, zw, zh) = z.rect;
         let (x, y, zw, zh) = (f64::from(x), f64::from(y), f64::from(zw), f64::from(zh));
         match z.name.as_str() {
@@ -39,7 +45,16 @@ pub fn zone_thickness_px(p: &Profile) -> Margins {
             _ => {}
         }
     }
-    m
+    if p.turned {
+        Margins {
+            top: m.right,
+            right: m.bottom,
+            bottom: m.left,
+            left: m.top,
+        }
+    } else {
+        m
+    }
 }
 
 /// Margins, in mm, that clear the docked toolbars and the footers of every profile in
@@ -74,6 +89,9 @@ pub struct NewPage {
     pub device_id: String,
     /// The rhythm to start from.
     pub rhythm: RhythmPreset,
+    /// Which way the page is held (rung 8b): portrait, or landscape, whose margins clear the
+    /// device's zones turned into the design's frame.
+    pub orientation: Orientation,
 }
 
 /// The blank template for `spec`: designed on the chosen device and also targeting every other
@@ -85,19 +103,14 @@ pub fn new_document(spec: &NewPage, now: &str) -> Result<Document, ProfileError>
         .filter(|id| *id != primary.id)
         .map(String::from)
         .collect();
-    let mut profiles = vec![primary.clone()];
+    let mut profiles = vec![primary.oriented(spec.orientation)];
     for id in &others {
-        profiles.push(builtin(id)?);
+        profiles.push(builtin(id)?.oriented(spec.orientation));
     }
     let unit = spec.rhythm.unit_mm();
     let margins = clearing_margins(&profiles, unit, unit);
     let others: Vec<&str> = others.iter().map(String::as_str).collect();
-    Ok(blank_document(
-        &spec.title,
-        &primary.id,
-        &others,
-        unit,
-        margins,
-        now,
-    ))
+    let mut doc = blank_document(&spec.title, &primary.id, &others, unit, margins, now);
+    doc.page.orientation = spec.orientation;
+    Ok(doc)
 }

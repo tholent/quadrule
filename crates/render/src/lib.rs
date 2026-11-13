@@ -45,6 +45,29 @@ impl Gray {
     }
 }
 
+/// The image turned a quarter turn clockwise, exactly: no resampling, only a permutation of the
+/// pixels (rung 8b, Q6). The pixel at (x, y) of an image of height `H` goes to (`H - 1 - y`, x) of
+/// the result, whose width is `H` and whose height is the old width. A landscape design is exported
+/// this way into the device's portrait PNG: the design's top edge lands on the device's right edge.
+pub fn turn_clockwise(img: &Gray) -> Gray {
+    let (w, h) = (img.width as usize, img.height as usize);
+    let mut data = vec![0u8; w * h];
+    // The result has `h` columns and `w` rows; result row `x` is the old column `x`, read from the
+    // bottom row up.
+    for y in 0..h {
+        let src = &img.data[y * w..(y + 1) * w];
+        let col = h - 1 - y;
+        for (x, &v) in src.iter().enumerate() {
+            data[x * h + col] = v;
+        }
+    }
+    Gray {
+        width: img.height,
+        height: img.width,
+        data,
+    }
+}
+
 /// Which arithmetic vello_cpu uses.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Math {

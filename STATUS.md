@@ -1,6 +1,6 @@
 # STATUS — quadrule
 
-_Last updated: 2026-11-12_
+_Last updated: 2026-11-13_
 
 The project's live state. Update it when work lands. Every claim cites at least one file that exists.
 
@@ -120,6 +120,18 @@ The project's live state. Update it when work lands. Every claim cites at least 
   Width, Height and Rotation read "mixed" where they differ (`crates/layout/src/align.rs`, `crates/ui/src/arrange.rs`,
   `crates/ui/src/panels.rs`). No export change: all eight golden sums unchanged
   (`crates/render/tests/golden/SHA256SUMS`).
+- Rung 8, several devices, is built in two parts and **waits for chris's look** (record
+  `docs/bbq/2026-11-12-rung-8-several-devices.md`); chris deferred 8a's look so 8b could go ahead, and neither is tagged.
+  **8a**: per-device overrides of position, size, font size and the eye on a secondary device, the previews strip, the
+  Overrides tab, Make primary, device ticks in the Page tab, lint L15, file format 0.8.0
+  (`crates/layout/src/device.rs`, `crates/ui/src/strip.rs`, `crates/lint/src/lib.rs`). **8b**: Portrait or Landscape in
+  New… and the Page tab (one undo step); a landscape page is designed upright and exported turned a quarter turn
+  clockwise into the device's portrait PNG, an exact pixel turn; the safe zones are turned with it for the overlay,
+  snapping, L06 and New…'s margins (`crates/profiles/src/lib.rs`, `crates/render/src/lib.rs`,
+  `crates/render/tests/landscape.rs`, `crates/ui/tests/landscape.rs`). Two golden pages each (`devices_*`,
+  `landscape_*`); the eight older sums unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th
+  percentile, strip on: landscape page drag 25–26 ms export, 29 ms chip; draw 24–26 ms export, 38 ms chip
+  (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --devices-page` or `-- --landscape-page`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -164,8 +176,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   6a all the shapes with fill (Shade and Block roles), dashes and caps; 6b rotation, lines any way, opacity. **Rung 6 is
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
-  align and distribute `v0.7.1`). Next: rung 8, several devices; the next lead's prompt is
-  `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`.
+  align and distribute `v0.7.1`). Rung 8, several devices, is built (8a and 8b) and waits for chris's look; after it,
+  `v0.8.0` and `v0.8.1` are tagged, the board is re-planned and the rung 9 prompt is written
+  (`docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
@@ -229,3 +242,5 @@ skill's `scripts/status-check.py` checks both.
 - 2026-11-12: rung 7b built (Sonnet 5.5, high): align and distribute, "mixed" fields; approved by chris; `v0.7.1`
   tagged; rung 7 done; board re-planned; rung 8 prompt written (`docs/STATUS-log.md`,
   `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`).
+- 2026-11-12/13: rung 8 planned (bbq, 8 questions), split 8a/8b; 8a built (Sonnet 5.5, high); its look deferred by
+  chris; 8b finished, tested and measured by the lead; both wait for chris's look (`docs/STATUS-log.md`).

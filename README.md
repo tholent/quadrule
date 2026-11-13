@@ -91,8 +91,13 @@ and error.
   without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
   top of another object or squeezed thin on a secondary device. Files are saved as format 0.8.0; older files open
   unchanged.
+- Landscape pages. Pick **Portrait** or **Landscape** in New… or in the Page tab (one undo step: objects follow their
+  own constraints onto the turned page). A landscape page is designed upright on screen and exported turned a quarter
+  turn clockwise into the tablet's ordinary portrait PNG, the design's top along the tablet's right edge: read it in
+  portrait mode with the tablet's right edge up. The tablet's toolbars and footers are shown, snapped to and linted
+  where they fall on the turned page (its left toolbar along the design's bottom, and so on).
 
-Not yet: landscape pages, the starter gallery and wallpapers. The plan is in the design spec,
+Not yet: the starter gallery and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).
 
 ## Download

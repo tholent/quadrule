@@ -51,6 +51,7 @@ fn page(device: &str) -> Viewer {
         title: "Align".into(),
         device_id: device.into(),
         rhythm: RhythmPreset::Handwriting,
+        orientation: quadrule_model::Orientation::Portrait,
     })
     .unwrap();
     v.snap.pixel_grid = false;

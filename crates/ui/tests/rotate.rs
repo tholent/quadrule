@@ -57,6 +57,7 @@ fn page() -> Viewer {
         title: "Rotate".into(),
         device_id: MANTA_ID.into(),
         rhythm: RhythmPreset::Handwriting,
+        orientation: quadrule_model::Orientation::Portrait,
     })
     .unwrap();
     v.rotate_stalk_px = 60.0;

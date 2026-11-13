@@ -209,12 +209,14 @@ fn lint(args: &[String]) -> Result<(), String> {
         }
     };
     println!("toolbar positions checked: {toolbars}");
-    let primary = quadrule_profiles::builtin(&doc.primary_profile_id).map_err(|e| e.to_string())?;
+    let primary = quadrule_profiles::builtin_for(&doc.primary_profile_id, doc.page.orientation)
+        .map_err(|e| e.to_string())?;
     let mut reg = FontRegistry::bundled_only();
     let strings = quadrule_i18n::Strings::english();
     let mut count = 0;
     for id in doc.profile_ids() {
-        let target = quadrule_profiles::builtin(id).map_err(|e| e.to_string())?;
+        let target =
+            quadrule_profiles::builtin_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
         let laid = quadrule_layout::lay_out_text(&doc, &primary, &target, &mut reg)
             .map_err(|e| e.to_string())?;
         for f in quadrule_lint::lint_with(&doc, &primary, &target, &laid.outlines, &opts) {

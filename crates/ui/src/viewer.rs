@@ -24,8 +24,8 @@ use quadrule_lint::{Finding, Options, Toolbar, lint_with};
 use quadrule_model::edit::History;
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Uuid};
-use quadrule_profiles::{Profile, builtin};
-use quadrule_render::{Gray, Math, encode_png, render};
+use quadrule_profiles::{Profile, builtin, builtin_for};
+use quadrule_render::{Gray, Math, encode_png, render, turn_clockwise};
 use quadrule_text::FontRegistry;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -278,6 +278,14 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 8b landscape page: a band and headline across the top, a ruled region, a star
+    /// near the top-right corner and markers by the edges, and the sample's dot grid (for the
+    /// benchmarks). Like the sample, it has no file.
+    pub fn open_landscape(&mut self) {
+        let doc = quadrule_model::sample::landscape_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens a new blank document from the New dialog's choices (rung 5): the chosen device is
     /// the one shown. It has no file until Save, and no unsaved changes until it is edited.
     pub fn open_new(&mut self, spec: &quadrule_layout::newpage::NewPage) -> Result<(), String> {
@@ -417,7 +425,8 @@ impl Viewer {
     }
 
     /// The export file name for device `id` (napkin §11.2's default scheme,
-    /// `{title}_{profile}_{width}x{height}.png`, slugified per §11.3).
+    /// `{title}_{profile}_{width}x{height}.png`, slugified per §11.3). The size is the PNG's, the
+    /// device's own portrait size, for a landscape design too (rung 8b, ADR-013).
     pub fn export_name(&self, profile: &Profile) -> String {
         let title = slug(
             self.title()
@@ -429,8 +438,8 @@ impl Viewer {
         format!(
             "{title}_{}_{}x{}.png",
             profile_token(profile),
-            profile.width_px,
-            profile.height_px
+            profile.device_size().0,
+            profile.device_size().1
         )
     }
 
@@ -457,7 +466,7 @@ impl Viewer {
         for id in ids {
             let page = self.page_for(&id)?.clone();
             let path = dir.join(self.export_name(&page.profile));
-            std::fs::write(&path, encode_png(&page.image, None))
+            std::fs::write(&path, encode_png(&export_pixels(&page), None))
                 .map_err(|e| format!("{}: {e}", path.display()))?;
             written.push(path);
         }
@@ -501,6 +510,16 @@ impl Viewer {
     }
 }
 
+/// The pixels a page's PNG holds: the page as it was drawn, and for a landscape design turned a
+/// quarter turn clockwise into the device's portrait size, exactly (rung 8b, Q6).
+pub fn export_pixels(page: &Page) -> std::borrow::Cow<'_, Gray> {
+    if page.profile.turned {
+        std::borrow::Cow::Owned(turn_clockwise(&page.image))
+    } else {
+        std::borrow::Cow::Borrowed(&page.image)
+    }
+}
+
 /// Screen points per device pixel. `Scale(s)` means `s` physical screen pixels per device pixel;
 /// real size uses the profile's PPI and the ruler check (falling back to 1:1 until it is done).
 pub fn points_per_device_px(
@@ -538,8 +557,9 @@ fn make_page(
     fonts: &mut FontRegistry,
     known_findings: Option<Vec<Finding>>,
 ) -> Result<Page, String> {
-    let primary = builtin(&doc.primary_profile_id).map_err(|e| e.to_string())?;
-    let target = builtin(id).map_err(|e| e.to_string())?;
+    let primary =
+        builtin_for(&doc.primary_profile_id, doc.page.orientation).map_err(|e| e.to_string())?;
+    let target = builtin_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
     let laid = lay_out_text(doc, &primary, &target, fonts).map_err(|e| e.to_string())?;
     // Live layout is what export would make; when a font is missing here, the outlines the file
     // saved show the text as it was designed (ADR-001 item 2).

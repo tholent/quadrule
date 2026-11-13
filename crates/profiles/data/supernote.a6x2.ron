@@ -34,8 +34,9 @@
     ],
     // ESTIMATE.
     default_margins_mm: (top: 6.0, right: 6.0, bottom: 6.0, left: 6.0),
-    // Landscape is unverified (napkin §17.1 item 3).
-    orientations: [Portrait],
+    // Landscape (rung 8b): a landscape design is exported turned a quarter turn clockwise into the portrait
+    // template (docs/device-measurements/supernote.a6x2/landscape-test.md), so the portrait zones above apply.
+    orientations: [Portrait, Landscape],
     // Calibrated 2026-11-09 by chris on the device, from the calibration sheets; codes and
     // rulings in docs/device-measurements/supernote.a6x2/calibration.md. Widths in device
     // pixels, grays 0 = black .. 255 = white.
