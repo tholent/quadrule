@@ -1435,3 +1435,21 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   pattern library") at `8a22065` and pushed; release run 43492215541: linux-x86_64, linux-aarch64, macos-universal,
   windows-x86_64 and "Draft, attach, publish" all success. Published as a pre-release with 7 files:
   https://github.com/tholent/quadrule/releases/tag/v0.9.0 (`gh release view v0.9.0`).
+
+## 2026-11-13 — rung 10, the repeat tool (lead Opus 5.5 high)
+
+- Kickoff: `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` → `BUILD head=da6d45c dirty=no rebuilt=0`. Budget 16
+  points from 82 % (chris: "Still about 82 %"; "go for 16 points and ignore the cap for this week"), alone, no reserve.
+- Planned (bbq, 8 questions, every answer the recommended one): one rung, one look; source inside the repeat; Count or
+  Fill box; Auto pitch = source size rounded up to whole rhythm steps; alternation by Columns, Rows or Cells; Start or
+  Centre; Expand to one group (`docs/bbq/2026-11-13-rung-10-repeat-tool.md`, `ac0c773`).
+- Built by one Sonnet 5.5 high builder (470,695 tokens reported by the harness): `d2a8967`, `92ce91b`, `57f8345`,
+  `18aa6ee`. Judged by the lead: `make check-all` → `TESTS scope=workspace checks=423 check_fail=0 passed=394 failed=0
+  status=ok`; `git diff da6d45c -- crates/render/tests/golden/SHA256SUMS` → two lines added (`repeats_*`), the sixteen
+  old lines unchanged; fixtures `v0.4/`–`v0.8/` unchanged, `v0.9/` added. Both new goldens looked at by eye: Fill draws
+  29 stars on the Manta and 20 on the Nomad, every 7th habit column heavier, row 2 skipped.
+- Speed on the Pi, release build, repeat page, strip on, 150 frames, 90th percentile (`target/release/quadrule
+  --bench-drag|--bench-draw 150 --repeats-page --canvas export|chip`): drag export 22.8, 22.6, 22.8 ms; drag chip 42.2,
+  42.6, 42.5; draw export 20.4, 20.3, 21.3; **draw chip 49.7, 49.6, 50.1** (the third run over the 50 ms line). A trial
+  merging same-style outlines into one chip path changed nothing (49.6–49.7), so the object count is not the cost; it
+  was undone, not committed. Put to chris before the look.
