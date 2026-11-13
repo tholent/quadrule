@@ -17,9 +17,10 @@
 //! A pattern region draws every line and dot whose centre lies in it, whole (ADR-014). Horizontal
 //! and vertical lines and dots sit on whole pixels, as hard-edged rectangles ([`Item::Rect`]); the
 //! slanted lines of an isometric grid or a honeycomb are anti-aliased strokes, one path for all of
-//! a region's slanted lines ([`Item::StrokePath`]). A slanted isometric line runs edge to edge of
-//! the region, ending where it meets its frame; a hexagon's edge is drawn once, whichever
-//! hexagons share it.
+//! a region's slanted lines ([`Item::StrokePath`]). An isometric grid has vertical lines one
+//! column apart (axes at 30, 90 and 150 degrees). Its slanted lines, and every edge of a
+//! honeycomb, run only as far as the region's frame, ending where they meet it; a hexagon's edge
+//! is drawn once, whichever hexagons share it.
 //!
 //! Lines, dots and the square grid are the rung 1 patterns and draw exactly as they did (the
 //! goldens depend on it); the rest arrived with rung 9.
@@ -125,13 +126,14 @@ pub fn region_grid(pr: &PatternRegion, env: &Env, region: (f64, f64, f64, f64)) 
 }
 
 /// Half a side of an isometric grid in pixels, given its grid. Under an isometric rhythm the
-/// bound region's half side is the rhythm's horizontal step; otherwise the row is the vertical
-/// step and the side is the row times 2 over the square root of three.
+/// bound region's half side is the rhythm's vertical step; otherwise the column is the horizontal
+/// step and the side is the column times 2 over the square root of three, so half a side is the
+/// column over the square root of three.
 pub fn iso_half(pr: &PatternRegion, env: &Env, g: &Grid) -> f64 {
     if pr.bound && env.rhythm.is_isometric() {
-        g.ux
+        g.uy
     } else {
-        g.uy / SQRT_3
+        g.ux / SQRT_3
     }
 }
 
@@ -181,6 +183,8 @@ struct Ctx<'a> {
     pen: Pen,
     /// The major lines' role.
     major_pen: Pen,
+    /// A major dot: one pixel bigger than a Dot grid dot, in the major role's gray.
+    major_dot: Pen,
     /// The Structure role: Cornell's dividers and a grand staff's brace.
     divider: Pen,
     /// Every Nth line is major.
@@ -194,10 +198,6 @@ impl Ctx<'_> {
         } else {
             self.pen
         }
-    }
-
-    fn inside(&self, x: f64, y: f64) -> bool {
-        x >= self.reg.0 && x <= self.reg.2 && y >= self.reg.1 && y <= self.reg.3
     }
 
     /// A horizontal line across `xa..xb`, centred on the rhythm position `y`.
@@ -266,12 +266,18 @@ pub fn pattern_items(
     let g = region_grid(pr, env, region);
     let (major_w, major_gray) = stroke(Style::Role(pr.major_role), env.target);
     let (div_w, div_gray) = stroke(Style::Role(LineRole::Structure), env.target);
+    // A major dot is a Dot grid dot one device pixel bigger (rung 9, chris's look).
+    let (dot_w, _) = stroke(Style::Role(LineRole::DotGrid), env.target);
     let mut c = Ctx {
         items,
         reg: region,
         pen,
         major_pen: Pen {
             w: major_w,
+            gray: major_gray,
+        },
+        major_dot: Pen {
+            w: dot_w + 1,
             gray: major_gray,
         },
         divider: Pen {
@@ -324,7 +330,7 @@ fn dots(c: &mut Ctx, g: &Grid) {
     for (ky, y) in indexed(g.oy, g.uy, y0, y1) {
         for &(kx, x) in &cols {
             let pen = if is_major(kx, c.major) && is_major(ky, c.major) {
-                c.major_pen
+                c.major_dot
             } else {
                 c.pen
             };
@@ -349,21 +355,44 @@ fn grid(c: &mut Ctx, g: &Grid) {
 /// One slanted line of an isometric grid.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct IsoSegment {
-    /// -1 for "/" (x falls as y grows), 1 for "\".
+    /// -1 for "/" (y falls as x grows), 1 for "\".
     pub dir: i8,
-    /// Which line of its family: the one through the crossing `index` full sides right of the
-    /// origin on the origin row.
+    /// Which line of its family: the one through the crossing `index` full sides below the origin
+    /// on the origin column.
     pub index: i64,
-    /// Where it starts (the upper end).
+    /// Where it starts (the left end).
     pub from: (f64, f64),
-    /// Where it ends (the lower end).
+    /// Where it ends (the right end).
     pub to: (f64, f64),
 }
 
-/// The slanted lines of the isometric grid with origin (`ox`, `oy`), rows `row` apart and half a
-/// side `half` across, each running edge to edge of `region` (left, top, right, bottom): both
-/// families, "/" first. Empty when the grid is degenerate or would hold too many lines.
+/// The slanted lines of the isometric grid with origin (`ox`, `oy`), vertical lines `col` apart and
+/// half a side `half` between crossings down a column, each running edge to edge of `region`
+/// (left, top, right, bottom): both families, "/" first. Empty when the grid is degenerate or
+/// would hold too many lines.
 pub fn iso_segments(
+    (ox, oy): (f64, f64),
+    col: f64,
+    half: f64,
+    region: (f64, f64, f64, f64),
+) -> Vec<IsoSegment> {
+    // The same lines as for a grid turned a quarter turn, with the two axes swapped: work in
+    // (v, u) = (y, x), then swap each point back.
+    let (x0, y0, x1, y1) = region;
+    iso_segments_turned((oy, ox), col, half, (y0, x0, y1, x1))
+        .into_iter()
+        .map(|s| IsoSegment {
+            dir: s.dir,
+            index: s.index,
+            from: (s.from.1, s.from.0),
+            to: (s.to.1, s.to.0),
+        })
+        .collect()
+}
+
+/// The slanted lines of a grid whose horizontal rows are `row` apart (the turned grid): see
+/// [`iso_segments`], which swaps its axes.
+fn iso_segments_turned(
     (ox, oy): (f64, f64),
     row: f64,
     half: f64,
@@ -415,19 +444,19 @@ pub fn iso_segments(
     out
 }
 
-/// The triangle grid: horizontal rows one `g.uy` apart, and the two slanted families through the
-/// crossings, `2 * half` apart along a row, each running edge to edge of the region.
+/// The triangle grid: vertical lines one column (`g.ux`) apart, and the two slanted families
+/// through the crossings, half a side apart down a column, each running edge to edge of the region.
 fn isometric_lines(c: &mut Ctx, g: &Grid, half: f64) {
     let (x0, y0, x1, y1) = c.reg;
-    if !(half.is_finite() && half > 0.0 && g.uy > 0.0) {
+    if !(half.is_finite() && half > 0.0 && g.ux > 0.0) {
         return;
     }
-    for (k, y) in indexed(g.oy, g.uy, y0, y1) {
+    for (k, x) in indexed(g.ox, g.ux, x0, x1) {
         let pen = c.pen_for(k);
-        c.hline(x0, x1, y, pen);
+        c.vline(x, y0, y1, pen);
     }
     let (mut normal, mut major) = (BezPath::new(), BezPath::new());
-    for seg in iso_segments((g.ox, g.oy), g.uy, half, c.reg) {
+    for seg in iso_segments((g.ox, g.oy), g.ux, half, c.reg) {
         let path = if is_major(seg.index, c.major) {
             &mut major
         } else {
@@ -439,28 +468,28 @@ fn isometric_lines(c: &mut Ctx, g: &Grid, half: f64) {
     c.slanted(normal, major, LineCap::Butt);
 }
 
-/// A dot at each crossing of the isometric grid: in row `k`, at `ox + half * m` for `m` of the
-/// row's parity.
+/// A dot at each crossing of the isometric grid: on column `k`, at `oy + half * m` for `m` of the
+/// column's parity.
 fn isometric_dots(c: &mut Ctx, g: &Grid, half: f64) {
     let (x0, y0, x1, y1) = c.reg;
     if !(half.is_finite() && half > 0.0) {
         return;
     }
-    let m_lo = ((x0 - g.ox) / half - 1e-9).ceil() as i64;
-    let m_hi = ((x1 - g.ox) / half + 1e-9).floor() as i64;
-    let rows = indexed(g.oy, g.uy, y0, y1);
-    if (m_hi - m_lo) as f64 * rows.len() as f64 / 2.0 > MAX_CELLS {
+    let m_lo = ((y0 - g.oy) / half - 1e-9).ceil() as i64;
+    let m_hi = ((y1 - g.oy) / half + 1e-9).floor() as i64;
+    let cols = indexed(g.ox, g.ux, x0, x1);
+    if (m_hi - m_lo) as f64 * cols.len() as f64 / 2.0 > MAX_CELLS {
         return;
     }
-    for (k, y) in rows {
+    for (k, x) in cols {
         for m in m_lo..=m_hi {
             if m.rem_euclid(2) != k.rem_euclid(2) {
                 continue;
             }
-            let x = (g.ox + half * m as f64).round();
-            // A major dot: on a major row, at a major place along it (every Nth pair of steps).
+            let y = (g.oy + half * m as f64).round();
+            // A major dot: on a major column, at a major place down it (every Nth pair of steps).
             let pen = if is_major(k, c.major) && is_major(m.div_euclid(2), c.major) {
-                c.major_pen
+                c.major_dot
             } else {
                 c.pen
             };
@@ -469,10 +498,46 @@ fn isometric_dots(c: &mut Ctx, g: &Grid, half: f64) {
     }
 }
 
+/// The part of the segment `a`-`b` inside the box (left, top, right, bottom), or `None` when
+/// nothing of it is (or only a point).
+fn clip_segment(
+    a: (f64, f64),
+    b: (f64, f64),
+    (x0, y0, x1, y1): (f64, f64, f64, f64),
+) -> Option<((f64, f64), (f64, f64))> {
+    let (dx, dy) = (b.0 - a.0, b.1 - a.1);
+    let (mut t0, mut t1) = (0.0_f64, 1.0_f64);
+    for (p, q) in [
+        (-dx, a.0 - x0),
+        (dx, x1 - a.0),
+        (-dy, a.1 - y0),
+        (dy, y1 - a.1),
+    ] {
+        if p == 0.0 {
+            if q < 0.0 {
+                return None;
+            }
+        } else {
+            let t = q / p;
+            if p < 0.0 {
+                t0 = t0.max(t);
+            } else {
+                t1 = t1.min(t);
+            }
+        }
+    }
+    if t1 - t0 < 1e-9 {
+        return None;
+    }
+    let at = |t: f64| (a.0 + t * dx, a.1 + t * dy);
+    let (p0, p1) = (at(t0), at(t1));
+    ((p1.0 - p0.0).hypot(p1.1 - p0.1) > 1e-6).then_some((p0, p1))
+}
+
 /// A honeycomb. In the frame (u along the columns, v across the flats) a flat-top hexagon has its
 /// flats horizontal; a pointy-top one is the same drawn with the two axes swapped. Each hexagon
 /// owns three of its edges (the top, and the two on its left), so an edge two hexagons share is
-/// drawn once.
+/// drawn once, and cut at the region's frame.
 fn hex(c: &mut Ctx, g: &Grid, orientation: HexOrientation, height_units: u32) {
     let flat = orientation == HexOrientation::Flat;
     let (x0, y0, x1, y1) = c.reg;
@@ -505,24 +570,25 @@ fn hex(c: &mut Ctx, g: &Grid, orientation: HexOrientation, height_units: u32) {
         for j in j_lo..=j_hi {
             // The hexagon's centre; its top is on the rhythm for the even columns.
             let cv = ov + h * (j as f64 + 0.5) + off;
-            // The top edge, flat: sharp, on whole pixels.
-            let top = cv - h / 2.0;
-            let (mx, my) = xy(cu, top);
-            if c.inside(mx, my) {
-                let (ua, ub) = ((cu - s / 2.0).round(), (cu + s / 2.0).round());
-                if flat {
-                    c.hline(ua, ub, top.round(), pen);
-                } else {
-                    c.vline(top.round(), ua, ub, pen);
+            // The top edge, flat: sharp, on whole pixels, cut at the region's frame.
+            let top = (cv - h / 2.0).round();
+            if top >= v0 && top <= v1 {
+                let ua = (cu - s / 2.0).round().max(u0);
+                let ub = (cu + s / 2.0).round().min(u1);
+                if ub > ua {
+                    if flat {
+                        c.hline(ua, ub, top, pen);
+                    } else {
+                        c.vline(top, ua, ub, pen);
+                    }
                 }
             }
-            // The two edges at the left corner, slanted.
+            // The two edges at the left corner, slanted, each cut at the frame.
             let corner = (cu - s, cv);
             for far in [(cu - s / 2.0, cv - h / 2.0), (cu - s / 2.0, cv + h / 2.0)] {
-                let mid = xy((corner.0 + far.0) / 2.0, (corner.1 + far.1) / 2.0);
-                if c.inside(mid.0, mid.1) {
-                    slanted.move_to(xy(corner.0, corner.1));
-                    slanted.line_to(xy(far.0, far.1));
+                if let Some((a, b)) = clip_segment(corner, far, (u0, v0, u1, v1)) {
+                    slanted.move_to(xy(a.0, a.1));
+                    slanted.line_to(xy(b.0, b.1));
                 }
             }
         }

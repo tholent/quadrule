@@ -108,8 +108,8 @@ pub fn new_document(spec: &NewPage, now: &str) -> Result<Document, ProfileError>
         profiles.push(builtin(id)?.oriented(spec.orientation));
     }
     let unit = spec.rhythm.unit_mm();
-    // The margins are whole steps of what snapping uses: for an isometric rhythm, half a side
-    // across and a row down.
+    // The margins are whole steps of what snapping uses: for an isometric rhythm, a column
+    // across and half a side down.
     let (step_x, step_y) = spec.rhythm.steps_mm();
     let margins = clearing_margins(&profiles, step_x, step_y);
     let others: Vec<&str> = others.iter().map(String::as_str).collect();

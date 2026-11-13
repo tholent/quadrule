@@ -96,14 +96,14 @@ and error.
   turn clockwise into the tablet's ordinary portrait PNG, the design's top along the tablet's right edge: read it in
   portrait mode with the tablet's right edge up. The tablet's toolbars and footers are shown, snapped to and linted
   where they fall on the turned page (its left toolbar along the design's bottom, and so on).
-- A pattern library. A pattern region can be ruled lines, dots, a square grid, **isometric** (the triangle grid, as
+- A pattern library. A pattern region can be ruled lines, dots, a square grid, **isometric** (the triangle grid with vertical lines, as
   lines or as dots), **hexagons** (flat top or pointy top, a whole number of rhythm units high), a **Cornell** page (a
   cue column and a summary band) or **music staves** (five lines with a gap of their own, one staff every N rhythm
   units, optionally paired as a grand staff with a brace line). Each pattern's own settings are in the inspector's
   Style tab under the pattern choice. The rhythm has a **Type** in the Page tab: Rectangular, or Isometric with one
-  side length, which snaps, nudges (Shift+arrow) and sizes drawn shapes on half a side across and one row down, and
+  side length, which snaps, nudges (Shift+arrow) and sizes drawn shapes on one column across and half a side down, and
   whose overlay draws the triangles. The rhythm also has **Major every N** (off by default): the pattern regions that
-  follow the rhythm draw every Nth line, row or dot in a stronger role (Structure unless you change it), a region can turn
+  follow the rhythm draw every Nth line, row or dot in a stronger role (Structure unless you change it; a major dot is also one pixel bigger than an ordinary one), a region can turn
   them off or use its own N, and the overlay draws them stronger. A region can be **unbound** from the rhythm to have
   spacing of its own (the linter's L17 says when that spacing is not a whole multiple or fraction of the rhythm). The
   pattern page opens from the command line with `--patterns-page`.

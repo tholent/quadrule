@@ -108,7 +108,7 @@ fn region_px() -> (f64, f64, f64, f64) {
 }
 
 #[test]
-fn isometric_lines_have_sharp_rows_and_slanted_lines_edge_to_edge() {
+fn isometric_lines_have_sharp_columns_and_slanted_lines_edge_to_edge() {
     let doc = page_with(
         PatternRegion::new(Pattern::Isometric {
             style: IsoStyle::Lines,
@@ -118,18 +118,18 @@ fn isometric_lines_have_sharp_rows_and_slanted_lines_edge_to_edge() {
     );
     let items = items_of(&doc);
     let (x0, y0, x1, y1) = region_px();
-    let rows = rects(&items);
-    let rows_sharp = !rows.is_empty()
-        && rows
+    let cols = rects(&items);
+    let cols_sharp = !cols.is_empty()
+        && cols
             .iter()
-            .all(|r| [r.0, r.1, r.2, r.3].iter().all(|v| whole(*v)) && r.0 == x0 && r.2 == x1);
+            .all(|r| [r.0, r.1, r.2, r.3].iter().all(|v| whole(*v)) && r.1 == y0 && r.3 == y1);
     let segs = segments(&items);
-    // Every slanted line is on the 60 degree axes: |dy / dx| = tan 60 (the row 59 px, half a side
-    // 59 / sqrt 3), and its ends are on the region's frame.
-    let ratio = 3f64.sqrt();
+    // Every slanted line is 30 degrees from horizontal: |dy / dx| = tan 30 (half a side 59 / sqrt 3
+    // down a column 59 px wide), and its ends are on the region's frame.
+    let ratio = 1.0 / 3f64.sqrt();
     let angles = segs
         .iter()
-        .all(|((ax, ay), (bx, by))| ((by - ay) / (bx - ax)).abs() - ratio < 1e-6);
+        .all(|((ax, ay), (bx, by))| (((by - ay) / (bx - ax)).abs() - ratio).abs() < 1e-6);
     let on_frame = segs.iter().all(|((ax, ay), (bx, by))| {
         let end = |x: f64, y: f64| {
             (x - x0).abs() < 1e-6
@@ -144,14 +144,14 @@ fn isometric_lines_have_sharp_rows_and_slanted_lines_edge_to_edge() {
         .filter(|i| matches!(i, Item::StrokePath { .. }))
         .count()
         == 1;
-    // Rows: one per 59 px.
-    let ys: Vec<f64> = rows.iter().map(|r| (r.1 + r.3) / 2.0).collect();
-    let even = ys.windows(2).all(|w| (w[1] - w[0] - 59.0).abs() < 1.0);
-    let ok = rows_sharp && angles && on_frame && one_path && even && segs.len() > 20;
+    // Columns: one per 59 px.
+    let xs: Vec<f64> = cols.iter().map(|r| (r.0 + r.2) / 2.0).collect();
+    let even = xs.windows(2).all(|w| (w[1] - w[0] - 59.0).abs() < 1.0);
+    let ok = cols_sharp && angles && on_frame && one_path && even && segs.len() > 20;
     println!(
-        "\nCHECK crate=layout name=isometric_lines result={} rows={} slanted={} rows_sharp={rows_sharp} sixty_degrees={angles} ends_on_frame={on_frame} one_path={one_path} rows_even={even}",
+        "\nCHECK crate=layout name=isometric_lines result={} columns={} slanted={} columns_sharp={cols_sharp} thirty_degrees={angles} ends_on_frame={on_frame} one_path={one_path} columns_even={even}",
         pass(ok),
-        rows.len(),
+        cols.len(),
         segs.len()
     );
     assert!(ok);
@@ -179,30 +179,30 @@ fn isometric_dots_sit_at_the_crossings_of_the_lines() {
     let square = d.iter().all(|r| {
         (r.2 - r.0 - f64::from(w)).abs() < 1e-9 && (r.3 - r.1 - f64::from(w)).abs() < 1e-9
     });
-    // Each dot's centre lies on a horizontal row, and where the row meets a slanted line: take
-    // the row's rhythm y, and the slanted lines' x there.
+    // Each dot's centre lies on a vertical column, and where the column meets a slanted line: take
+    // the column's rhythm x, and the slanted lines' y there.
     let segs = segments(&items_of(&lines));
-    let rows_y: Vec<f64> = rects(&items_of(&lines))
+    let cols_x: Vec<f64> = rects(&items_of(&lines))
         .iter()
-        .map(|r| ((r.1 + r.3) / 2.0).floor())
+        .map(|r| ((r.0 + r.2) / 2.0).floor())
         .collect();
     let on_line = |cx: f64, cy: f64| {
         segs.iter().any(|((ax, ay), (bx, by))| {
-            let t = (cy - ay) / (by - ay);
-            (0.0..=1.0).contains(&t) && (ax + t * (bx - ax) - cx).abs() <= 1.0
+            let t = (cx - ax) / (bx - ax);
+            (0.0..=1.0).contains(&t) && (ay + t * (by - ay) - cy).abs() <= 1.0
         })
     };
     let centres: Vec<(f64, f64)> = d
         .iter()
         .map(|r| ((r.0 + r.2) / 2.0, (r.1 + r.3) / 2.0))
         .collect();
-    let on_rows = centres
+    let on_cols = centres
         .iter()
-        .all(|c| rows_y.iter().any(|y| (y - c.1.floor()).abs() < 1.0));
+        .all(|c| cols_x.iter().any(|x| (x - c.0.floor()).abs() < 1.0));
     let crossings = centres.iter().filter(|c| on_line(c.0, c.1)).count();
-    let ok = square && on_rows && crossings * 10 >= centres.len() * 9 && centres.len() > 30;
+    let ok = square && on_cols && crossings * 10 >= centres.len() * 9 && centres.len() > 30;
     println!(
-        "\nCHECK crate=layout name=isometric_dots result={} dots={} square={square} on_rows={on_rows} on_a_line={crossings}",
+        "\nCHECK crate=layout name=isometric_dots result={} dots={} square={square} on_columns={on_cols} on_a_line={crossings}",
         pass(ok),
         centres.len()
     );
@@ -256,13 +256,53 @@ fn a_hex_edge_two_hexagons_share_is_drawn_once() {
         // Orientation: flat top has wide sharp edges, pointy top tall ones.
         let shape = sharp.iter().all(|r| {
             if orientation == HexOrientation::Flat {
-                r.2 - r.0 > r.3 - r.1
+                r.2 - r.0 >= r.3 - r.1
             } else {
-                r.3 - r.1 > r.2 - r.0
+                r.3 - r.1 >= r.2 - r.0
             }
         });
-        // A slanted edge is 60 degrees from the sharp ones: |dy / dx| is tan 60 (flat) or
-        // tan 30 (pointy).
+        // Every edge is cut at the region's frame: a flat edge's length and centre line, and a
+        // slanted edge's two ends, lie inside it (chris's look: no stubs past the frame).
+        let (fx0, fy0, fx1, fy1) = region_px();
+        let eps = 1e-6;
+        let sharp_in = sharp.iter().all(|r| {
+            let (cx, cy) = ((r.0 + r.2) / 2.0, (r.1 + r.3) / 2.0);
+            if orientation == HexOrientation::Flat {
+                r.0 >= fx0 && r.2 <= fx1 && cy >= fy0 && cy <= fy1
+            } else {
+                r.1 >= fy0 && r.3 <= fy1 && cx >= fx0 && cx <= fx1
+            }
+        });
+        let slanted_in = segs.iter().all(|(a, b)| {
+            [a, b].iter().all(|p| {
+                p.0 >= fx0 - eps && p.0 <= fx1 + eps && p.1 >= fy0 - eps && p.1 <= fy1 + eps
+            })
+        });
+        // And the frame is reached on every side, by a slanted edge or a flat one.
+        let min_x = segs
+            .iter()
+            .map(|(a, b)| a.0.min(b.0))
+            .chain(sharp.iter().map(|r| r.0))
+            .fold(f64::MAX, f64::min);
+        let max_x = segs
+            .iter()
+            .map(|(a, b)| a.0.max(b.0))
+            .chain(sharp.iter().map(|r| r.2))
+            .fold(f64::MIN, f64::max);
+        let min_y = segs
+            .iter()
+            .map(|(a, b)| a.1.min(b.1))
+            .chain(sharp.iter().map(|r| r.1))
+            .fold(f64::MAX, f64::min);
+        let max_y = segs
+            .iter()
+            .map(|(a, b)| a.1.max(b.1))
+            .chain(sharp.iter().map(|r| r.3))
+            .fold(f64::MIN, f64::max);
+        let touches =
+            min_x <= fx0 + 1.0 && max_x >= fx1 - 1.0 && min_y <= fy0 + 1.0 && max_y >= fy1 - 1.0;
+        // A slanted edge is 60 degrees from the flat ones: |dy / dx| is tan 60 (flat top) or
+        // tan 30 (pointy top).
         let want = if orientation == HexOrientation::Flat {
             3f64.sqrt()
         } else {
@@ -271,10 +311,18 @@ fn a_hex_edge_two_hexagons_share_is_drawn_once() {
         let angles = segs
             .iter()
             .all(|((ax, ay), (bx, by))| (((by - ay) / (bx - ax)).abs() - want).abs() < 1e-6);
-        let ok = slanted_once && sharp_whole && sharp_once && shape && angles;
+        let ok = slanted_once
+            && sharp_whole
+            && sharp_once
+            && shape
+            && angles
+            && sharp_in
+            && slanted_in
+            && touches;
         all_ok &= ok;
         parts.push(format!(
-            "{name}:slanted={n}:sharp={m}:slanted_once={slanted_once}:sharp_whole={sharp_whole}:sharp_once={sharp_once}:shape={shape}:angles={angles}"
+            "{name}:slanted={n}:sharp={m}:slanted_once={slanted_once}:sharp_whole={sharp_whole}:sharp_once={sharp_once}:shape={shape}:angles={angles}:cut_at_frame={}",
+            sharp_in && slanted_in && touches
         ));
     }
     println!(
@@ -523,11 +571,18 @@ fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
         LineRole::DotGrid,
         Some(4),
     )));
+    // A major dot is a Dot grid dot one device pixel bigger, in the major role's gray.
+    let (dot_w, dot_gray) = stroke(Style::Role(LineRole::DotGrid), &m);
+    let big_w = f64::from(dot_w + 1);
     let big = d
         .iter()
-        .filter(|r| r.4 == mgray && (r.2 - r.0) == f64::from(mw))
+        .filter(|r| r.4 == mgray && (r.2 - r.0) == big_w && (r.3 - r.1) == big_w)
         .count();
-    let dots_ok = big >= 4 && big * 8 < d.len();
+    let small = d
+        .iter()
+        .filter(|r| r.4 == dot_gray && (r.2 - r.0) == f64::from(dot_w))
+        .count();
+    let dots_ok = big >= 4 && big * 8 < d.len() && big + small == d.len() && dot_w + 1 == 4;
     // Isometric: every Nth line on each of the three axes; Cornell: its ruling; Hex and the
     // staff have none.
     let iso = items_of(&page_with(
@@ -543,7 +598,7 @@ fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
         .count();
     let iso_rows_major = rects(&iso)
         .iter()
-        .filter(|r| (r.3 - r.1) == f64::from(mw))
+        .filter(|r| (r.2 - r.0) == f64::from(mw))
         .count();
     let iso_ok = iso_major_paths == 1 && iso_rows_major >= 2;
     let hex = items_of(&page_with(

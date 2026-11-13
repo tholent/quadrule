@@ -57,9 +57,9 @@ pub enum OverlayLine {
 /// The rhythm overlay's lines on the device shown, in device pixels.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RhythmOverlay {
-    /// Vertical lines: x and strength (none under an isometric rhythm).
+    /// Vertical lines: x and strength.
     pub xs: Vec<(f64, OverlayLine)>,
-    /// Horizontal lines: y and strength.
+    /// Horizontal lines: y and strength (none under an isometric rhythm).
     pub ys: Vec<(f64, OverlayLine)>,
     /// Slanted lines of an isometric rhythm: start, end and strength.
     #[allow(clippy::type_complexity)]
@@ -1132,7 +1132,7 @@ impl Viewer {
     /// The rhythm to draw over the page for the device shown (rung 4 bbq Q9; rung 9 bbq, Q6 and
     /// Q7): the vertical lines' x positions and the horizontal lines' y positions, each with how
     /// strong it is (a subdivision, a unit or a major line), and under an isometric rhythm the
-    /// slanted lines of its triangles in place of the vertical ones. They are an overlay and never
+    /// slanted lines of its triangles with the vertical ones (and no horizontal ones). They are an overlay and never
     /// exported.
     pub fn rhythm_overlay(&mut self) -> Option<RhythmOverlay> {
         let (_, shown) = self.profiles()?;
@@ -1153,27 +1153,28 @@ impl Viewer {
             }
         };
         let iso = doc.rhythm.is_isometric();
-        let xs = if iso {
+        // Under an isometric rhythm the triangles are drawn: the vertical lines one column apart
+        // and the two slanted families; the half-side rows snapping also uses are not lines of the
+        // grid and are not drawn.
+        let xs = world
+            .lines(Axis::X, 0.0, w)
+            .into_iter()
+            .map(|(x, full)| (x, level(x, r.origin_x, r.unit_x, full)))
+            .collect();
+        let ys = if iso {
             Vec::new()
         } else {
             world
-                .lines(Axis::X, 0.0, w)
+                .lines(Axis::Y, 0.0, h)
                 .into_iter()
-                .map(|(x, full)| (x, level(x, r.origin_x, r.unit_x, full)))
+                .map(|(y, full)| (y, level(y, r.origin_y, r.unit_y, full)))
                 .collect()
         };
-        let ys = world
-            .lines(Axis::Y, 0.0, h)
-            .into_iter()
-            .map(|(y, full)| (y, level(y, r.origin_y, r.unit_y, full)))
-            .collect();
-        // The triangles: the two slanted families through the crossings, half a side apart across
-        // the rows the horizontal lines already draw.
         let slanted = if iso {
             quadrule_layout::pattern::iso_segments(
                 (r.origin_x, r.origin_y),
-                r.unit_y,
                 r.unit_x,
+                r.unit_y,
                 (0.0, 0.0, w, h),
             )
             .into_iter()

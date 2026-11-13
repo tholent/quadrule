@@ -72,11 +72,11 @@ impl RhythmPreset {
     }
 
     /// The steps snapping uses, in mm (across, down): the unit twice over, or for the isometric
-    /// preset half a side across and one row down.
+    /// preset one column across and half a side down.
     pub fn steps_mm(self) -> (f64, f64) {
         let u = self.unit_mm();
         if self.is_isometric() {
-            (u / 2.0, u * HALF_SQRT_3)
+            (u * HALF_SQRT_3, u / 2.0)
         } else {
             (u, u)
         }

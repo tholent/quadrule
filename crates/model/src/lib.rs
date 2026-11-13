@@ -249,8 +249,9 @@ pub enum RhythmType {
     /// Independent horizontal and vertical units (the default).
     #[default]
     Rectangular,
-    /// One side length; axes at 0, 60 and 120 degrees. Snapping uses half a side across and one
-    /// row (side times the square root of three over two) down.
+    /// One side length; axes at 30, 90 and 150 degrees: vertical lines one column apart, with the
+    /// slanted lines crossing on them. Snapping uses one column (side times the square root of
+    /// three over two) across and half a side down.
     Isometric,
 }
 
@@ -263,7 +264,7 @@ impl RhythmType {
 
 /// The side of an isometric rhythm when the file gives none (the "Isometric 5 mm" preset).
 pub const ISOMETRIC_SIDE_DEFAULT_MM: f64 = 5.0;
-/// Half the square root of three: a row of an isometric grid is its side times this.
+/// Half the square root of three: a column of an isometric grid is its side times this.
 pub const HALF_SQRT_3: f64 = 0.866_025_403_784_438_6;
 /// The fewest rhythm units between major lines (2: every other one).
 pub const MAJOR_MIN: u8 = 2;
@@ -303,12 +304,12 @@ impl Rhythm {
     }
 
     /// The steps snapping, Shift+arrow and drawn sizes use, in mm: (across, down). A rectangular
-    /// rhythm gives its two units; an isometric one half a side across and one row down, the
+    /// rhythm gives its two units; an isometric one a column across and half a side down, the
     /// rectangular grid that holds every isometric crossing (rung 9 bbq, Q7).
     pub fn steps_mm(&self) -> (f64, f64) {
         match self.rhythm_type {
             RhythmType::Rectangular => (self.h_unit_mm, self.v_unit_mm),
-            RhythmType::Isometric => (self.side() / 2.0, self.side() * HALF_SQRT_3),
+            RhythmType::Isometric => (self.side() * HALF_SQRT_3, self.side() / 2.0),
         }
     }
 }
@@ -1164,7 +1165,7 @@ impl MajorLines {
 /// How an isometric pattern is drawn (format 0.9; rung 9 bbq, Q2).
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum IsoStyle {
-    /// The triangle grid: horizontal rows and the two slanted families.
+    /// The triangle grid: vertical lines and the two slanted families.
     #[default]
     Lines,
     /// A dot at each crossing.
@@ -1192,7 +1193,7 @@ pub enum Pattern {
     Dots,
     /// A square grid: horizontal and vertical lines on the rhythm (format 0.2).
     Grid,
-    /// Horizontal rows with the two slanted families at 60 and 120 degrees, as lines or dots.
+    /// Vertical lines one column apart with the two slanted families at 30 and 150 degrees crossing on them, as lines or dots.
     Isometric {
         /// Lines or dots.
         #[serde(default)]
