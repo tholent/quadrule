@@ -43,6 +43,29 @@ use quadrule_model::geom::map_frame;
 use quadrule_model::{Constraints, Document, Frame, LineDir, ObjectKind, Uuid, normalize_deg};
 use quadrule_profiles::Profile;
 
+/// How strongly a line of the rhythm overlay is drawn (rung 9 bbq, Q6: major lines stronger).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OverlayLine {
+    /// A subdivision of a unit.
+    Sub,
+    /// A full unit.
+    Unit,
+    /// Every Nth unit, when the rhythm has "Major every N".
+    Major,
+}
+
+/// The rhythm overlay's lines on the device shown, in device pixels.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RhythmOverlay {
+    /// Vertical lines: x and strength (none under an isometric rhythm).
+    pub xs: Vec<(f64, OverlayLine)>,
+    /// Horizontal lines: y and strength.
+    pub ys: Vec<(f64, OverlayLine)>,
+    /// Slanted lines of an isometric rhythm: start, end and strength.
+    #[allow(clippy::type_complexity)]
+    pub slanted: Vec<((f64, f64), (f64, f64), OverlayLine)>,
+}
+
 /// A snap catches within this many screen points (rung 4 bbq, Defaulted "Snap distance"); the
 /// window turns it into device pixels with the zoom, so it does not grow when zoomed in.
 pub const SNAP_REACH_POINTS: f64 = 6.0;
@@ -1106,15 +1129,67 @@ impl Viewer {
         self.hide_preview();
     }
 
-    /// The rhythm lines to draw over the page for the device shown (rung 4 bbq Q9): the vertical
-    /// lines' x positions and the horizontal lines' y positions, each with whether it is a full
-    /// unit rather than a subdivision. They are an overlay and never exported.
-    #[allow(clippy::type_complexity)]
-    pub fn rhythm_overlay(&mut self) -> Option<(Vec<(f64, bool)>, Vec<(f64, bool)>)> {
+    /// The rhythm to draw over the page for the device shown (rung 4 bbq Q9; rung 9 bbq, Q6 and
+    /// Q7): the vertical lines' x positions and the horizontal lines' y positions, each with how
+    /// strong it is (a subdivision, a unit or a major line), and under an isometric rhythm the
+    /// slanted lines of its triangles in place of the vertical ones. They are an overlay and never
+    /// exported.
+    pub fn rhythm_overlay(&mut self) -> Option<RhythmOverlay> {
         let (_, shown) = self.profiles()?;
-        let world = SnapWorld::new(self.doc()?, &shown, &[]);
+        let doc = self.doc()?;
+        let world = SnapWorld::new(doc, &shown, &[]);
+        let r = quadrule_layout::RhythmPx::new(doc, &shown);
+        let major = doc.rhythm.major_on();
         let (w, h) = world.page();
-        Some((world.lines(Axis::X, 0.0, w), world.lines(Axis::Y, 0.0, h)))
+        let level = |pos: f64, origin: f64, unit: f64, full: bool| {
+            if !full {
+                return OverlayLine::Sub;
+            }
+            let k = ((pos - origin) / unit).round() as i64;
+            if major.is_some_and(|n| k.rem_euclid(i64::from(n)) == 0) {
+                OverlayLine::Major
+            } else {
+                OverlayLine::Unit
+            }
+        };
+        let iso = doc.rhythm.is_isometric();
+        let xs = if iso {
+            Vec::new()
+        } else {
+            world
+                .lines(Axis::X, 0.0, w)
+                .into_iter()
+                .map(|(x, full)| (x, level(x, r.origin_x, r.unit_x, full)))
+                .collect()
+        };
+        let ys = world
+            .lines(Axis::Y, 0.0, h)
+            .into_iter()
+            .map(|(y, full)| (y, level(y, r.origin_y, r.unit_y, full)))
+            .collect();
+        // The triangles: the two slanted families through the crossings, half a side apart across
+        // the rows the horizontal lines already draw.
+        let slanted = if iso {
+            quadrule_layout::pattern::iso_segments(
+                (r.origin_x, r.origin_y),
+                r.unit_y,
+                r.unit_x,
+                (0.0, 0.0, w, h),
+            )
+            .into_iter()
+            .map(|s| {
+                let strength = if major.is_some_and(|n| s.index.rem_euclid(i64::from(n)) == 0) {
+                    OverlayLine::Major
+                } else {
+                    OverlayLine::Unit
+                };
+                (s.from, s.to, strength)
+            })
+            .collect()
+        } else {
+            Vec::new()
+        };
+        Some(RhythmOverlay { xs, ys, slanted })
     }
 
     /// Objects a marquee box touches: visible, unlocked, in unlocked layers (what a click could

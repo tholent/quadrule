@@ -1104,6 +1104,44 @@ impl PatternRegion {
     }
 }
 
+impl Object {
+    /// Gives a pattern region `kind` with that pattern's default settings, and keeps its role in
+    /// step: the dot patterns draw in the Dot grid role, the line patterns in Guide (rung 9; the
+    /// role is only changed when it is the other pattern's own default). Does nothing to other
+    /// kinds.
+    pub fn set_pattern_kind(&mut self, kind: PatternKind) {
+        if let ObjectKind::Pattern(pr) = &mut self.kind {
+            pr.pattern = kind.default_pattern();
+            self.settle_pattern_role();
+        }
+    }
+
+    /// Makes a pattern region's role the default of its pattern when it holds the other kind's:
+    /// Guide for dots becomes Dot grid, Dot grid for lines becomes Guide.
+    pub fn settle_pattern_role(&mut self) {
+        let ObjectKind::Pattern(pr) = &self.kind else {
+            return;
+        };
+        match (pr.pattern.is_dotted(), self.style) {
+            (true, Style::Role(LineRole::Guide)) => self.style = Style::Role(LineRole::DotGrid),
+            (false, Style::Role(LineRole::DotGrid)) => self.style = Style::Role(LineRole::Guide),
+            _ => {}
+        }
+    }
+}
+
+impl PatternRegion {
+    /// Binds the region to the rhythm, or unbinds it. Unbinding keeps the look: the region's own
+    /// spacing starts as the rhythm's steps `steps_mm` (across, down) unless it already has one.
+    pub fn set_bound(&mut self, bound: bool, steps_mm: (f64, f64)) {
+        self.bound = bound;
+        if !bound {
+            self.h_spacing_mm.get_or_insert(steps_mm.0);
+            self.v_spacing_mm.get_or_insert(steps_mm.1);
+        }
+    }
+}
+
 /// What a region does about major lines (format 0.9; rung 9 bbq, Q6).
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MajorLines {

@@ -1071,3 +1071,35 @@ fn union_fill_covers_each_place_once() {
     );
     assert!(ok);
 }
+
+#[test]
+fn an_isometric_rhythm_snaps_to_half_a_side_across_and_a_row_down() {
+    // Rung 9 bbq, Q7: 5 mm side on the Manta: half a side is 29.53 -> 30 px across, a row is
+    // 4.33 mm = 51.15 -> 51 px down, from the margin corner (8 mm = 94 px). Today's snapping code
+    // runs on that rectangular grid unchanged.
+    let mut doc = slice_document();
+    doc.rhythm.rhythm_type = RhythmType::Isometric;
+    doc.rhythm.side_mm = Some(5.0);
+    let m = builtin(MANTA_ID).unwrap();
+    let w = SnapWorld::new(&doc, &m, &[]);
+    let xs: Vec<f64> = w.lines(Axis::X, 94.0, 214.0).iter().map(|l| l.0).collect();
+    let ys: Vec<f64> = w.lines(Axis::Y, 94.0, 247.0).iter().map(|l| l.0).collect();
+    let r = RhythmPx::new(&doc, &m);
+    // A box dragged to 4 px past the line at x = 154 and 3 px short of the row at 196 catches both.
+    let x = w.snap_span(Axis::X, 158.0, 200.0, REACH, ALL);
+    let y = w.snap_span(Axis::Y, 193.0, 230.0, REACH, ALL);
+    let ok = xs == vec![94.0, 124.0, 154.0, 184.0, 214.0]
+        && ys == vec![94.0, 145.0, 196.0, 247.0]
+        && (r.unit_x, r.unit_y) == (30.0, 51.0)
+        && close(x.delta, -4.0)
+        && close(y.delta, 3.0)
+        && x.guide.map(|g| g.kind) == Some(SnapKind::Rhythm)
+        && y.guide.map(|g| g.kind) == Some(SnapKind::Rhythm);
+    println!(
+        "\nCHECK crate=layout name=snap_isometric_rhythm result={} columns_px={xs:?} rows_px={ys:?} x_delta={} y_delta={}",
+        pass(ok),
+        x.delta,
+        y.delta
+    );
+    assert!(ok);
+}

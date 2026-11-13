@@ -169,8 +169,10 @@ fn each_preset_resolves_to_pixels_on_each_device() {
         for id in [MANTA_ID, NOMAD_ID] {
             let p = builtin(id).unwrap();
             let r = RhythmPx::new(&doc, &p);
-            let expect = p.mm_to_px(preset.unit_mm()).round();
-            ok &= r.unit_x == expect && r.unit_y == expect && expect >= 1.0;
+            // The isometric preset snaps to half a side across and a row down.
+            let (sx, sy) = preset.steps_mm();
+            let (ex, ey) = (p.mm_to_px(sx).round(), p.mm_to_px(sy).round());
+            ok &= r.unit_x == ex && r.unit_y == ey && ex >= 1.0 && ey >= 1.0;
             line.push_str(&format!(
                 " {}_{}={}",
                 preset.message_id().trim_start_matches("new-rhythm-"),

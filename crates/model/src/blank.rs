@@ -39,27 +39,46 @@ pub enum RhythmPreset {
     Grid5mm,
     /// A 1/4 in grid.
     GridQuarterInch,
+    /// An isometric rhythm with a 5 mm side (rung 9 bbq, Defaulted "New… presets").
+    Isometric5mm,
 }
 
 impl RhythmPreset {
     /// Every preset, the default first.
-    pub const ALL: [RhythmPreset; 6] = [
+    pub const ALL: [RhythmPreset; 7] = [
         RhythmPreset::Handwriting,
         RhythmPreset::NarrowRuled,
         RhythmPreset::CollegeRuled,
         RhythmPreset::WideRuled,
         RhythmPreset::Grid5mm,
         RhythmPreset::GridQuarterInch,
+        RhythmPreset::Isometric5mm,
     ];
 
-    /// The unit in mm; the same horizontally and vertically.
+    /// The unit in mm; the same horizontally and vertically. For the isometric preset, its side.
     pub fn unit_mm(self) -> f64 {
         match self {
             RhythmPreset::Handwriting => 6.0,
             RhythmPreset::NarrowRuled | RhythmPreset::GridQuarterInch => 0.25 * MM_PER_IN,
             RhythmPreset::CollegeRuled => 9.0 / 32.0 * MM_PER_IN,
             RhythmPreset::WideRuled => 11.0 / 32.0 * MM_PER_IN,
-            RhythmPreset::Grid5mm => 5.0,
+            RhythmPreset::Grid5mm | RhythmPreset::Isometric5mm => 5.0,
+        }
+    }
+
+    /// Whether the preset is an isometric rhythm.
+    pub fn is_isometric(self) -> bool {
+        self == RhythmPreset::Isometric5mm
+    }
+
+    /// The steps snapping uses, in mm (across, down): the unit twice over, or for the isometric
+    /// preset half a side across and one row down.
+    pub fn steps_mm(self) -> (f64, f64) {
+        let u = self.unit_mm();
+        if self.is_isometric() {
+            (u / 2.0, u * HALF_SQRT_3)
+        } else {
+            (u, u)
         }
     }
 
@@ -72,6 +91,7 @@ impl RhythmPreset {
             RhythmPreset::WideRuled => "new-rhythm-wide",
             RhythmPreset::Grid5mm => "new-rhythm-grid-5mm",
             RhythmPreset::GridQuarterInch => "new-rhythm-grid-quarter-inch",
+            RhythmPreset::Isometric5mm => "new-rhythm-isometric-5mm",
         }
     }
 }

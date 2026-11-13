@@ -346,6 +346,75 @@ fn grid(c: &mut Ctx, g: &Grid) {
     }
 }
 
+/// One slanted line of an isometric grid.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct IsoSegment {
+    /// -1 for "/" (x falls as y grows), 1 for "\".
+    pub dir: i8,
+    /// Which line of its family: the one through the crossing `index` full sides right of the
+    /// origin on the origin row.
+    pub index: i64,
+    /// Where it starts (the upper end).
+    pub from: (f64, f64),
+    /// Where it ends (the lower end).
+    pub to: (f64, f64),
+}
+
+/// The slanted lines of the isometric grid with origin (`ox`, `oy`), rows `row` apart and half a
+/// side `half` across, each running edge to edge of `region` (left, top, right, bottom): both
+/// families, "/" first. Empty when the grid is degenerate or would hold too many lines.
+pub fn iso_segments(
+    (ox, oy): (f64, f64),
+    row: f64,
+    half: f64,
+    region: (f64, f64, f64, f64),
+) -> Vec<IsoSegment> {
+    let (x0, y0, x1, y1) = region;
+    let mut out = Vec::new();
+    if !(half.is_finite() && half > 0.0 && row.is_finite() && row > 0.0) {
+        return out;
+    }
+    let slope = half / row;
+    let span = 2.0 * half;
+    // Down-left ("/", x falls as y grows) and down-right ("\", x grows with y).
+    for dir in [-1_i8, 1] {
+        let d = f64::from(dir);
+        // The line's x at y: `c0 + d * slope * (y - oy)`, with `c0 = ox + span * i`.
+        let (lo, hi) = (slope * (y0 - oy), slope * (y1 - oy));
+        let (c_min, c_max) = if dir > 0 {
+            (x0 - hi, x1 - lo)
+        } else {
+            (x0 + lo, x1 + hi)
+        };
+        let i_lo = ((c_min - ox) / span).ceil() as i64;
+        let i_hi = ((c_max - ox) / span).floor() as i64;
+        if (i_hi - i_lo) as f64 > MAX_CELLS {
+            return Vec::new();
+        }
+        for i in i_lo..=i_hi {
+            let c0 = ox + span * i as f64;
+            // The y range in which x lies inside the region.
+            let (ya, yb) = if dir > 0 {
+                (oy + (x0 - c0) / slope, oy + (x1 - c0) / slope)
+            } else {
+                (oy + (c0 - x1) / slope, oy + (c0 - x0) / slope)
+            };
+            let (ya, yb) = (ya.max(y0), yb.min(y1));
+            if yb - ya < 1e-6 {
+                continue;
+            }
+            let at = |y: f64| c0 + d * slope * (y - oy);
+            out.push(IsoSegment {
+                dir,
+                index: i,
+                from: (at(ya), ya),
+                to: (at(yb), yb),
+            });
+        }
+    }
+    out
+}
+
 /// The triangle grid: horizontal rows one `g.uy` apart, and the two slanted families through the
 /// crossings, `2 * half` apart along a row, each running edge to edge of the region.
 fn isometric_lines(c: &mut Ctx, g: &Grid, half: f64) {
@@ -357,44 +426,15 @@ fn isometric_lines(c: &mut Ctx, g: &Grid, half: f64) {
         let pen = c.pen_for(k);
         c.hline(x0, x1, y, pen);
     }
-    let slope = half / g.uy;
-    let span = 2.0 * half;
     let (mut normal, mut major) = (BezPath::new(), BezPath::new());
-    // Down-left ("/", x falls as y grows) and down-right ("\", x grows with y).
-    for dir in [-1.0_f64, 1.0] {
-        // The line's x at y: `c0 + dir * slope * (y - oy)`, with `c0 = ox + span * i`.
-        let (lo, hi) = (slope * (y0 - g.oy), slope * (y1 - g.oy));
-        let (c_min, c_max) = if dir > 0.0 {
-            (x0 - hi, x1 - lo)
+    for seg in iso_segments((g.ox, g.oy), g.uy, half, c.reg) {
+        let path = if is_major(seg.index, c.major) {
+            &mut major
         } else {
-            (x0 + lo, x1 + hi)
+            &mut normal
         };
-        let i_lo = ((c_min - g.ox) / span).ceil() as i64;
-        let i_hi = ((c_max - g.ox) / span).floor() as i64;
-        if (i_hi - i_lo) as f64 > MAX_CELLS {
-            return;
-        }
-        for i in i_lo..=i_hi {
-            let c0 = g.ox + span * i as f64;
-            // The y range in which x lies inside the region.
-            let (ya, yb) = if dir > 0.0 {
-                (g.oy + (x0 - c0) / slope, g.oy + (x1 - c0) / slope)
-            } else {
-                (g.oy + (c0 - x1) / slope, g.oy + (c0 - x0) / slope)
-            };
-            let (ya, yb) = (ya.max(y0), yb.min(y1));
-            if yb - ya < 1e-6 {
-                continue;
-            }
-            let at = |y: f64| c0 + dir * slope * (y - g.oy);
-            let path = if is_major(i, c.major) {
-                &mut major
-            } else {
-                &mut normal
-            };
-            path.move_to((at(ya), ya));
-            path.line_to((at(yb), yb));
-        }
+        path.move_to(seg.from);
+        path.line_to(seg.to);
     }
     c.slanted(normal, major, LineCap::Butt);
 }

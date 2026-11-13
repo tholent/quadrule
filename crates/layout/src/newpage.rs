@@ -19,7 +19,7 @@
 //! rule L06. The floating toolbar moves, so it is neither cleared nor linted.
 
 use quadrule_model::blank::{RhythmPreset, blank_document};
-use quadrule_model::{Document, Margins, Orientation};
+use quadrule_model::{Document, Margins, Orientation, RhythmType};
 use quadrule_profiles::{Profile, ProfileError, builtin, builtin_ids};
 
 /// The thickness each side of the page must clear on `p`, in device pixels: the docked toolbars
@@ -108,9 +108,16 @@ pub fn new_document(spec: &NewPage, now: &str) -> Result<Document, ProfileError>
         profiles.push(builtin(id)?.oriented(spec.orientation));
     }
     let unit = spec.rhythm.unit_mm();
-    let margins = clearing_margins(&profiles, unit, unit);
+    // The margins are whole steps of what snapping uses: for an isometric rhythm, half a side
+    // across and a row down.
+    let (step_x, step_y) = spec.rhythm.steps_mm();
+    let margins = clearing_margins(&profiles, step_x, step_y);
     let others: Vec<&str> = others.iter().map(String::as_str).collect();
     let mut doc = blank_document(&spec.title, &primary.id, &others, unit, margins, now);
     doc.page.orientation = spec.orientation;
+    if spec.rhythm.is_isometric() {
+        doc.rhythm.rhythm_type = RhythmType::Isometric;
+        doc.rhythm.side_mm = Some(unit);
+    }
     Ok(doc)
 }

@@ -29,8 +29,9 @@ use quadrule_layout::units::{Axis, UnitContext, format_length, parse_length, tri
 use quadrule_lint::Severity;
 use quadrule_model::edit::{Command, OverrideField, Place, reframe};
 use quadrule_model::{
-    DashStyle, Document, Fill, FillRole, Frame, HConstraint, LineCap, LineRole, Object, ObjectKind,
-    Orientation, POLYGON_SIDES_MAX, POLYGON_SIDES_MIN, Pattern, RhythmOrigin, RhythmResolution,
+    DashStyle, Document, Fill, FillRole, Frame, HConstraint, HexOrientation, IsoStyle, LineCap,
+    LineRole, MajorLines, Object, ObjectKind, Orientation, POLYGON_SIDES_MAX, POLYGON_SIDES_MIN,
+    Pattern, PatternKind, PatternRegion, RhythmOrigin, RhythmResolution, RhythmType,
     STAR_INNER_DEFAULT, STAR_INNER_MAX, STAR_INNER_MIN, Style, TextAlign, Unit, Uuid, VConstraint,
 };
 
@@ -692,41 +693,82 @@ impl ViewerUi {
         // Rhythm.
         ui.add_space(6.0);
         ui.strong(self.t("app-rhythm"));
-        let link = self.t("app-link-rhythm");
-        ui.checkbox(&mut self.link_rhythm, link);
         let r = doc.rhythm.clone();
         // Rhythm units are lengths, but `u` would be circular here: read them without it.
         let plain = |c: UnitContext| UnitContext {
             rhythm_mm: f64::NAN,
             ..c
         };
+        // The type first (rung 9 bbq, Q7): rectangular units, or one side length.
+        egui::Grid::new("rhythm-type-grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                let label = ui.label(self.t("app-rhythm-type"));
+                let mut ty = r.rhythm_type;
+                let types = [
+                    (RhythmType::Rectangular, "app-rhythm-type-rectangular"),
+                    (RhythmType::Isometric, "app-rhythm-type-isometric"),
+                ];
+                self.combo(ui, "rhythm-type", label.id, &mut ty, &types);
+                if ty != r.rhythm_type {
+                    let mut nr = r.clone();
+                    nr.rhythm_type = ty;
+                    let _ = self.viewer.edit(Command::SetRhythm(nr), None);
+                }
+                ui.end_row();
+            });
+        if !r.is_isometric() {
+            let link = self.t("app-link-rhythm");
+            ui.checkbox(&mut self.link_rhythm, link);
+        }
         egui::Grid::new("rhythm-grid")
             .num_columns(2)
             .show(ui, |ui| {
-                for (key, id, v, ctx, across) in [
-                    (
-                        "rhythm-h",
-                        "app-rhythm-across",
-                        r.h_unit_mm,
-                        plain(cx),
+                if r.is_isometric() {
+                    // One side; snapping runs on half a side across and a row down.
+                    if let Some(mm) = self.length_row(
+                        ui,
+                        "rhythm-side",
+                        "app-rhythm-side",
+                        r.side(),
+                        &plain(cx),
                         true,
-                    ),
-                    ("rhythm-v", "app-rhythm-down", r.v_unit_mm, plain(cy), false),
-                ] {
-                    if let Some(mm) = self.length_row(ui, key, id, v, &ctx, true)
-                        && mm.is_finite()
+                    ) && mm.is_finite()
                         && mm > 0.0
                     {
                         let mut nr = r.clone();
-                        if self.link_rhythm || across {
-                            nr.h_unit_mm = mm;
-                        }
-                        if self.link_rhythm || !across {
-                            nr.v_unit_mm = mm;
-                        }
-                        let _ = self.viewer.edit(Command::SetRhythm(nr), Some(key));
+                        nr.side_mm = Some(mm);
+                        let _ = self
+                            .viewer
+                            .edit(Command::SetRhythm(nr), Some("rhythm-side"));
                     }
                     ui.end_row();
+                } else {
+                    for (key, id, v, ctx, across) in [
+                        (
+                            "rhythm-h",
+                            "app-rhythm-across",
+                            r.h_unit_mm,
+                            plain(cx),
+                            true,
+                        ),
+                        ("rhythm-v", "app-rhythm-down", r.v_unit_mm, plain(cy), false),
+                    ] {
+                        if let Some(mm) = self.length_row(ui, key, id, v, &ctx, true)
+                            && mm.is_finite()
+                            && mm > 0.0
+                        {
+                            let mut nr = r.clone();
+                            if self.link_rhythm || across {
+                                nr.h_unit_mm = mm;
+                            }
+                            if self.link_rhythm || !across {
+                                nr.v_unit_mm = mm;
+                            }
+                            let _ = self.viewer.edit(Command::SetRhythm(nr), Some(key));
+                        }
+                        ui.end_row();
+                    }
                 }
 
                 let label = ui.label(self.t("app-rhythm-origin"));
@@ -784,6 +826,29 @@ impl ViewerUi {
                     let mut nr = r.clone();
                     nr.subdivisions = sub;
                     let _ = self.viewer.edit(Command::SetRhythm(nr), None);
+                }
+                ui.end_row();
+
+                // Major every N: every Nth unit is a major line, for the pattern regions that
+                // follow it and for the overlay (rung 9 bbq, Q6). Off by default.
+                let label = ui.label(self.t("app-rhythm-major"));
+                let mut n = r.major_on().map_or(0, i32::from);
+                let off = self.t("app-major-off");
+                let drag = egui::DragValue::new(&mut n)
+                    .range(0..=i32::from(quadrule_model::MAJOR_MAX))
+                    .custom_formatter(
+                        move |v, _| {
+                            if v < 2.0 { off.clone() } else { format!("{v}") }
+                        },
+                    )
+                    .custom_parser(|t| t.trim().parse::<f64>().ok());
+                if ui.add(drag).labelled_by(label.id).changed() {
+                    let mut nr = r.clone();
+                    nr.major_every = (n >= i32::from(quadrule_model::MAJOR_MIN))
+                        .then(|| u8::try_from(n).unwrap_or(quadrule_model::MAJOR_MAX));
+                    let _ = self
+                        .viewer
+                        .edit(Command::SetRhythm(nr), Some("rhythm-major"));
                 }
                 ui.end_row();
             });
@@ -1326,29 +1391,313 @@ impl ViewerUi {
 
                 if let ObjectKind::Pattern(pr) = &o.kind {
                     let label = ui.label(self.t("app-pattern"));
-                    let mut p = pr.pattern;
+                    let mut p = pr.pattern.kind();
                     let options = [
-                        (Pattern::Lines, "app-pattern-lines"),
-                        (Pattern::Dots, "app-pattern-dots"),
-                        (Pattern::Grid, "app-pattern-grid"),
+                        (PatternKind::Lines, "app-pattern-lines"),
+                        (PatternKind::Dots, "app-pattern-dots"),
+                        (PatternKind::Grid, "app-pattern-grid"),
+                        (PatternKind::Isometric, "app-pattern-isometric"),
+                        (PatternKind::Hex, "app-pattern-hex"),
+                        (PatternKind::Cornell, "app-pattern-cornell"),
+                        (PatternKind::MusicStaff, "app-pattern-staff"),
                     ];
                     self.combo(ui, "pattern", label.id, &mut p, &options);
-                    if p != pr.pattern {
-                        let _ = self.viewer.edit_selected(None, |x| {
-                            if let ObjectKind::Pattern(pr) = &mut x.kind {
-                                pr.pattern = p;
-                            }
-                        });
+                    if p != pr.pattern.kind() {
+                        let _ = self.viewer.edit_selected(None, |x| x.set_pattern_kind(p));
                     }
                     ui.end_row();
                 }
             });
+            if let ObjectKind::Pattern(pr) = &o.kind {
+                ui.add_space(6.0);
+                ui.strong(self.t("app-pattern-settings"));
+                self.pattern_rows(ui, &o, pr, &cx, enabled);
+            }
             if shape {
                 ui.add_space(6.0);
                 ui.strong(self.t("app-shape"));
                 self.shape_rows(ui, &o, &cx, enabled);
             }
         });
+    }
+
+    /// The settings of a pattern region (rung 9 bbq, Defaulted "Where the settings live"), below the
+    /// pattern choice: each pattern's own, whether it is bound to the rhythm and its own spacing
+    /// when it is not, and its major lines. Each edit is one undo step (typing in a field merges).
+    fn pattern_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        o: &Object,
+        pr: &PatternRegion,
+        cx: &UnitContext,
+        enabled: bool,
+    ) {
+        let Some(cy) = self.viewer.unit_context(Axis::Y) else {
+            return;
+        };
+        let Some(rhythm) = self.viewer.doc().map(|d| d.rhythm.clone()) else {
+            return;
+        };
+        let steps = rhythm.steps_mm();
+        // Edits one pattern setting on every selected region.
+        macro_rules! set {
+            ($key:expr, |$pr:ident| $body:expr) => {{
+                let _ = self.viewer.edit_selected($key, |x| {
+                    if let ObjectKind::Pattern($pr) = &mut x.kind {
+                        $body;
+                    }
+                });
+            }};
+        }
+        egui::Grid::new("pattern-grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                match pr.pattern {
+                    Pattern::Isometric { style } => {
+                        let label = ui.label(self.t("app-iso-style"));
+                        let mut st = style;
+                        let options = [
+                            (IsoStyle::Lines, "app-iso-lines"),
+                            (IsoStyle::Dots, "app-iso-dots"),
+                        ];
+                        self.combo(ui, "iso-style", label.id, &mut st, &options);
+                        if st != style {
+                            let _ = self.viewer.edit_selected(None, |x| {
+                                if let ObjectKind::Pattern(p) = &mut x.kind {
+                                    p.pattern = Pattern::Isometric { style: st };
+                                }
+                                x.settle_pattern_role();
+                            });
+                        }
+                        ui.end_row();
+                    }
+                    Pattern::Hex {
+                        orientation,
+                        height_units,
+                    } => {
+                        let label = ui.label(self.t("app-hex-orientation"));
+                        let mut or = orientation;
+                        let options = [
+                            (HexOrientation::Flat, "app-hex-flat"),
+                            (HexOrientation::Pointy, "app-hex-pointy"),
+                        ];
+                        self.combo(ui, "hex-orientation", label.id, &mut or, &options);
+                        if or != orientation {
+                            set!(
+                                None,
+                                |p| if let Pattern::Hex { orientation, .. } = &mut p.pattern {
+                                    *orientation = or;
+                                }
+                            );
+                        }
+                        ui.end_row();
+                        if let Some(v) = self.units_row(ui, "app-hex-height", height_units, enabled)
+                        {
+                            set!(Some("pattern-hex-height"), |p| if let Pattern::Hex {
+                                height_units,
+                                ..
+                            } = &mut p.pattern
+                            {
+                                *height_units = v;
+                            });
+                        }
+                        ui.end_row();
+                    }
+                    Pattern::Cornell {
+                        cue_units,
+                        summary_units,
+                    } => {
+                        // What the region has now: its own, or the default its size gives.
+                        let (cue, sum) = quadrule_layout::pattern::cornell_units(
+                            cue_units,
+                            summary_units,
+                            (o.frame.w_mm, o.frame.h_mm),
+                            (cx.rhythm_mm, cy.rhythm_mm),
+                        );
+                        if let Some(v) = self.units_row(ui, "app-cornell-cue", cue, enabled) {
+                            set!(Some("pattern-cornell-cue"), |p| if let Pattern::Cornell {
+                                cue_units,
+                                ..
+                            } = &mut p.pattern
+                            {
+                                *cue_units = Some(v);
+                            });
+                        }
+                        ui.end_row();
+                        if let Some(v) = self.units_row(ui, "app-cornell-summary", sum, enabled) {
+                            set!(
+                                Some("pattern-cornell-summary"),
+                                |p| if let Pattern::Cornell { summary_units, .. } = &mut p.pattern {
+                                    *summary_units = Some(v);
+                                }
+                            );
+                        }
+                        ui.end_row();
+                    }
+                    Pattern::MusicStaff {
+                        gap_mm,
+                        pitch_units,
+                        grand,
+                    } => {
+                        if let Some(mm) = self.length_row(
+                            ui,
+                            "pattern-staff-gap",
+                            "app-staff-gap",
+                            gap_mm,
+                            cx,
+                            enabled,
+                        ) && mm.is_finite()
+                            && mm > 0.0
+                        {
+                            set!(Some("pattern-staff-gap"), |p| if let Pattern::MusicStaff {
+                                gap_mm,
+                                ..
+                            } = &mut p.pattern
+                            {
+                                *gap_mm = mm;
+                            });
+                        }
+                        ui.end_row();
+                        if let Some(v) = self.units_row(ui, "app-staff-pitch", pitch_units, enabled)
+                        {
+                            set!(
+                                Some("pattern-staff-pitch"),
+                                |p| if let Pattern::MusicStaff { pitch_units, .. } = &mut p.pattern
+                                {
+                                    *pitch_units = v;
+                                }
+                            );
+                        }
+                        ui.end_row();
+                        let label = ui.label(self.t("app-staff-grand"));
+                        let mut g = grand;
+                        if ui.checkbox(&mut g, "").labelled_by(label.id).changed() {
+                            set!(
+                                None,
+                                |p| if let Pattern::MusicStaff { grand, .. } = &mut p.pattern {
+                                    *grand = g;
+                                }
+                            );
+                        }
+                        ui.end_row();
+                    }
+                    Pattern::Lines | Pattern::Dots | Pattern::Grid => {}
+                }
+
+                // Bound to the rhythm, or its own spacing (napkin §5.2).
+                let label = ui.label(self.t("app-pattern-bound"));
+                let mut bound = pr.bound;
+                if ui
+                    .add_enabled(enabled, egui::Checkbox::new(&mut bound, ""))
+                    .labelled_by(label.id)
+                    .changed()
+                {
+                    set!(None, |p| p.set_bound(bound, steps));
+                }
+                ui.end_row();
+                if !pr.bound {
+                    let own = |v: Option<f64>, step: f64| v.unwrap_or(step);
+                    for (key, id, v, ctx, across) in [
+                        (
+                            "pattern-h",
+                            "app-pattern-across",
+                            own(pr.h_spacing_mm, steps.0),
+                            *cx,
+                            true,
+                        ),
+                        (
+                            "pattern-v",
+                            "app-pattern-down",
+                            own(pr.v_spacing_mm, steps.1),
+                            cy,
+                            false,
+                        ),
+                    ] {
+                        if let Some(mm) = self.length_row(ui, key, id, v, &ctx, enabled)
+                            && mm.is_finite()
+                            && mm > 0.0
+                        {
+                            if across {
+                                set!(Some(key), |p| p.h_spacing_mm = Some(mm));
+                            } else {
+                                set!(Some(key), |p| p.v_spacing_mm = Some(mm));
+                            }
+                        }
+                        ui.end_row();
+                    }
+                }
+
+                // Major lines: follow the rhythm, off, or its own N; hex and the music staff have
+                // none, so the fields are greyed (Defaulted "Which patterns have major lines").
+                let has_major = pr.pattern.has_major();
+                let on = enabled && has_major;
+                let label = ui.label(self.t("app-pattern-major"));
+                let mode = |m: MajorLines| match m {
+                    MajorLines::Follow => 0,
+                    MajorLines::Off => 1,
+                    MajorLines::Every(_) => 2,
+                };
+                let mut want = mode(pr.major);
+                let options = [
+                    (0, "app-major-follow"),
+                    (1, "app-major-off"),
+                    (2, "app-major-own"),
+                ];
+                ui.add_enabled_ui(on, |ui| {
+                    self.combo(ui, "pattern-major", label.id, &mut want, &options);
+                });
+                if want != mode(pr.major) {
+                    let new = match want {
+                        0 => MajorLines::Follow,
+                        1 => MajorLines::Off,
+                        _ => MajorLines::Every(rhythm.major_on().unwrap_or(5)),
+                    };
+                    set!(None, |p| p.major = new);
+                }
+                ui.end_row();
+                if let MajorLines::Every(n) = pr.major {
+                    let label = ui.label(self.t("app-pattern-major-n"));
+                    let mut v = i32::from(n);
+                    let drag = egui::DragValue::new(&mut v).range(
+                        i32::from(quadrule_model::MAJOR_MIN)..=i32::from(quadrule_model::MAJOR_MAX),
+                    );
+                    if ui.add_enabled(on, drag).labelled_by(label.id).changed() {
+                        let n = u8::try_from(v).unwrap_or(quadrule_model::MAJOR_MAX);
+                        set!(Some("pattern-major-n"), |p| p.major = MajorLines::Every(n));
+                    }
+                    ui.end_row();
+                }
+                let label = ui.label(self.t("app-pattern-major-role"));
+                let mut role = pr.major_role;
+                ui.add_enabled_ui(on, |ui| {
+                    self.combo(ui, "pattern-major-role", label.id, &mut role, &ROLES);
+                });
+                if role != pr.major_role {
+                    set!(None, |p| p.major_role = role);
+                }
+                ui.end_row();
+            });
+    }
+
+    /// A row with a whole number of rhythm units (1 to 99) in a drag field; the new value when it
+    /// changed.
+    fn units_row(
+        &mut self,
+        ui: &mut egui::Ui,
+        label_id: &str,
+        value: u32,
+        enabled: bool,
+    ) -> Option<u32> {
+        let label = ui.label(self.t(label_id));
+        let mut v = value;
+        let drag = egui::DragValue::new(&mut v)
+            .range(1..=quadrule_model::PATTERN_UNITS_MAX)
+            .suffix(" u");
+        let changed = ui
+            .add_enabled(enabled, drag)
+            .labelled_by(label.id)
+            .changed();
+        changed.then_some(v)
     }
 
     /// The fill: none, a role (each device gives it a gray) or a gray of its own.
@@ -2188,7 +2537,7 @@ fn unit_symbol(u: Unit) -> &'static str {
 fn default_role(o: &Object) -> LineRole {
     match &o.kind {
         ObjectKind::Text(_) => LineRole::Text,
-        ObjectKind::Pattern(p) if p.pattern == Pattern::Dots => LineRole::DotGrid,
+        ObjectKind::Pattern(p) if p.pattern.is_dotted() => LineRole::DotGrid,
         ObjectKind::Rect(_) | ObjectKind::Ellipse(_) | ObjectKind::Polygon(_) => {
             LineRole::Structure
         }

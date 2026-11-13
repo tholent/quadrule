@@ -1576,31 +1576,37 @@ impl ViewerUi {
             // The rhythm, as a light blue guide that stays out of the way of the objects: units a little
             // stronger than subdivisions (rung 4 bbq Q9; chris, 2026-11-10: "much lighter and perhaps
             // light blue").
-            if let Some((xs, ys)) = &rhythm {
+            if let Some(ov) = &rhythm {
+                use crate::drag::OverlayLine;
                 let clip = painter.clip_rect().intersect(page_rect);
-                let line = |major: bool| {
+                // Major lines (rung 9 bbq, Q6) are drawn stronger: darker, and a little thicker.
+                let line = |l: OverlayLine| {
+                    let (alpha, width) = match l {
+                        OverlayLine::Sub => (26, 1.0),
+                        OverlayLine::Unit => (60, 1.0),
+                        OverlayLine::Major => (150, 2.0),
+                    };
                     Stroke::new(
-                        1.0 / ppp,
-                        Color32::from_rgba_unmultiplied(120, 180, 240, if major { 60 } else { 26 }),
+                        width / ppp,
+                        Color32::from_rgba_unmultiplied(120, 180, 240, alpha),
                     )
                 };
-                for &(x, major) in xs {
+                for &(x, l) in &ov.xs {
                     let sx = min.x + x as f32 * scale;
                     if sx >= clip.min.x && sx <= clip.max.x {
-                        painter.line_segment(
-                            [pos2(sx, clip.min.y), pos2(sx, clip.max.y)],
-                            line(major),
-                        );
+                        painter.line_segment([pos2(sx, clip.min.y), pos2(sx, clip.max.y)], line(l));
                     }
                 }
-                for &(y, major) in ys {
+                for &(y, l) in &ov.ys {
                     let sy = min.y + y as f32 * scale;
                     if sy >= clip.min.y && sy <= clip.max.y {
-                        painter.line_segment(
-                            [pos2(clip.min.x, sy), pos2(clip.max.x, sy)],
-                            line(major),
-                        );
+                        painter.line_segment([pos2(clip.min.x, sy), pos2(clip.max.x, sy)], line(l));
                     }
+                }
+                for &((ax, ay), (bx, by), l) in &ov.slanted {
+                    painter
+                        .with_clip_rect(clip)
+                        .line_segment([to_screen(ax, ay), to_screen(bx, by)], line(l));
                 }
             }
 
