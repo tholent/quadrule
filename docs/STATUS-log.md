@@ -1382,3 +1382,23 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   lines on the rhythm, adjustable per region; isometric rhythm snapping on the half-side × row grid.
 - One Sonnet 5.5 high builder started on `main`, committing each step locally; the lead judges and pushes. If this
   session stops before the judging entry below, the builder's commits after `1497146` are unjudged.
+
+## 2026-11-13 — rung 9 built (Sonnet 5.5 high builder, 0.42M tokens) and judged by the lead
+
+- Builder commits `3490dd4`..`25cc00d` (steps 1–7; some middle commits do not compile alone, since steps 3 and 5
+  share `crates/ui/src/panels.rs`). Pushed by the lead after judging.
+- Judged: `make build-proof` → `BUILD head=25cc00d dirty=no rebuilt=7`; `make check-all` → `TESTS scope=workspace
+  checks=387 check_fail=0 passed=360 failed=0 status=ok`. `git diff ace7aa1..HEAD --
+  crates/render/tests/golden/SHA256SUMS` adds four lines (`patterns_*`, `patterns-landscape_*`) and changes none;
+  fixtures v0.4–v0.7 unchanged; new fixture `crates/render/tests/fixtures/v0.8/`.
+- The four new golden images looked at by eye by the lead. Two points for chris's look: (1) hex edges whose middle
+  is inside the region are drawn whole, so stubs reach up to half an edge past the frame (isometric clips its lines
+  at the frame instead); ADR-014 says at most half a stroke; (2) major dots draw smaller than ordinary dots, because
+  the record said "at the major role's width" and Structure is 2 px against Dot grid's 3 px (the lead's brief, not
+  the builder).
+- Speed, release build on the Pi, strip on, 90th percentile (`./target/release/quadrule --patterns-page
+  --bench-drag|--bench-draw 150 --canvas export|chip`): drag export 24.0, 23.9, 24.1 ms; drag chip 33.3, 33.7, 33.7;
+  draw export 24.2, 25.1, 24.1; draw chip 40.9, 41.0, 40.9. The rung 8a debt is paid: `--shapes-page --bench-draw 150
+  --canvas chip` → 41.2, 41.2, 41.3 (was 50.8–51.1): the chip canvas now draws a run of same-gray rectangles as one
+  path (`crates/ui/src/canvas.rs`, `crates/ui/tests/canvas.rs`); export bytes unaffected.
+- Waits on chris: the look.
