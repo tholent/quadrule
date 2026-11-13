@@ -140,19 +140,19 @@ fn every_new_setting_round_trips() {
 }
 
 #[test]
-fn the_isometric_rhythm_steps_are_half_a_side_across_and_a_row_down() {
+fn the_isometric_rhythm_steps_are_a_column_across_and_half_a_side_down() {
     let mut r = slice_document().rhythm;
     let rect = r.steps_mm();
     r.rhythm_type = RhythmType::Isometric;
     r.side_mm = Some(5.0);
     let (across, down) = r.steps_mm();
-    let ok_iso = (across - 2.5).abs() < 1e-12 && (down - 5.0 * 3f64.sqrt() / 2.0).abs() < 1e-12;
+    let ok_iso = (across - 5.0 * 3f64.sqrt() / 2.0).abs() < 1e-12 && (down - 2.5).abs() < 1e-12;
     let ok_rect = rect == (6.0, 6.0);
     // Without a side, the default; a nonsense side reads as the default too.
     r.side_mm = None;
-    let dflt = r.steps_mm().0 == ISOMETRIC_SIDE_DEFAULT_MM / 2.0;
+    let dflt = r.steps_mm().1 == ISOMETRIC_SIDE_DEFAULT_MM / 2.0;
     r.side_mm = Some(-2.0);
-    let bad = r.steps_mm().0 == ISOMETRIC_SIDE_DEFAULT_MM / 2.0;
+    let bad = r.steps_mm().1 == ISOMETRIC_SIDE_DEFAULT_MM / 2.0;
     let ok = ok_iso && ok_rect && dflt && bad;
     println!(
         "\nCHECK crate=model name=isometric_rhythm_steps result={} across_mm={across:.4} down_mm={down:.4} rectangular_unchanged={ok_rect} default_side={dflt} bad_side_default={bad}",
