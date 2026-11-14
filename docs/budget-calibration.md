@@ -50,3 +50,11 @@ whether the second figure includes the first is not shown). Start 74 % (chris, 1
 `/usage`, logged with `spend-ledger.py reading 82 --meter weekly`): **8 points against a 16-point share.** No stop line
 fired; the hard stop was 90 % this week. Alone on the meter. K not refitted this session. Room left before Saturday's
 5 pm reset: 8 points (90 %).
+
+2026-11-13, rung 10 (repeat tool), one lead session (Opus 5.5 high) and one Sonnet 5.5 high builder, resumed once for
+the chip-canvas speed fix chris asked for (the harness reported 470,695 builder tokens at the build's end and 576,818
+at the fix's end; whether the second includes the first is not shown). Start 82 % (chris, 19:32 UTC: "Still about
+82 %"), end **92 %** (chris, `/usage`, logged with `spend-ledger.py reading 92 --meter weekly`): **10 points against a
+16-point share.** No stop line fired; chris set this week's 90 % hard stop aside for the rung ("go for 16 points and
+ignore the cap for this week"), and the meter passed 90 % under that ruling. Alone on the meter. K not refitted this
+session. Room left before Saturday's 5 pm EST reset: none under the normal stops; the reset brings them back.
