@@ -1462,3 +1462,7 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   drag 35.7, 35.7, 35.6; patterns page draw 23.7, 23.7, 23.9, drag 17.4, 17.3, 17.3; shapes page draw 23.1, 23.0,
   23.4; groups page drag 30.8, 31.0, 31.0. `make check-all` → `TESTS scope=workspace checks=423 check_fail=0
   passed=394 failed=0 status=ok`; no golden line changed.
+- chris at the look, word for word: "approved". Rung 10 is done. Version 0.10.0 (`Cargo.toml`), notes
+  `docs/arcs/v1/release-notes/v0.10.0.md`, the ruling in the record's Amendments, board re-planned (rung 10 row, Planning
+  and Bullet journal starters buildable, re-plan line), rung 11 prompt `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`.
+  Tag `v0.10.0` waits for CI on this commit.

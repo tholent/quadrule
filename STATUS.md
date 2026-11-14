@@ -147,6 +147,19 @@ The project's live state. Update it when work lands. Every claim cites at least 
   path, which paid the rung 8a pattern-draw debt (51 → 41 ms) (`crates/ui/src/canvas.rs`). Speed on the Pi, pattern
   page, 90th percentile: drag 21–22 ms export, 34 ms chip; draw 22–24 ms export, 41 ms chip (`docs/STATUS-log.md`).
   Try it: `cargo run --release -p quadrule-app -- --patterns-page`.
+- Rung 10, the repeat tool, is done: approved by chris 2026-11-13 ("approved") and shipped as `v0.10.0` (record
+  `docs/bbq/2026-11-13-rung-10-repeat-tool.md`, with its Amendments). A live repeat holds its source inside, like a
+  group: Linear (across or down) or Grid; Count or Fill its box (a box pinned to the margins gives each device its own
+  count); Auto pitch = the source's size rounded up to whole rhythm steps, or a pitch or gap in any unit; Start or
+  Centre; alternation rules by columns, rows or cells (skip, line role, fill role); double-click any copy to edit the
+  source; Expand to one group; a Repeat tab and a Repeat button beside Group; copies pixel-identical; L06 and L10 judge
+  every copy, L16 and L17 the pitch; file format 0.10.0 (`crates/model/src/repeat.rs`, `crates/layout/src/repeat.rs`,
+  `crates/ui/src/repeat_tab.rs`, `crates/lint/src/lib.rs`, `crates/render/tests/fixtures/v0.9/`). Two golden lines
+  added (`repeats_*`); the sixteen older ones unchanged (`crates/render/tests/golden/SHA256SUMS`). The chip canvas now
+  keeps the unchanged part of the page in its own texture and draws only what changed (chris: "Fix it now, in rung
+  10"; `crates/app/src/chip.rs`). Speed on the Pi, repeat page, 90th percentile: drag 22.6–22.8 ms export, 35.6–35.7
+  chip; draw 20.3–21.3 export, 23.6 chip (`docs/STATUS-log.md`). Try it:
+  `cargo run --release -p quadrule-app -- --repeats-page`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -192,8 +205,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
-  done** (`v0.9.0`). Next: rung 10, the repeat tool; the next lead's prompt is `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`.
-  The Paper, Notes and Creative starters are buildable now; chris designs one per category (`docs/arcs/v1/README.md`).
+  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). Next: rung 11, text and fonts; the next lead's prompt is
+  `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
+  buildable now; chris designs one per category (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
@@ -264,3 +278,6 @@ skill's `scripts/status-check.py` checks both.
 - 2026-11-13: rung 9 planned (bbq, 8 questions; one rung, one look), built (Sonnet 5.5, high), changed at chris's look
   (isometric turned 90°, hex cut at the frame, bigger major dots; ADR-014 amended), approved; `v0.9.0`; board
   re-planned; rung 10 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`).
+- 2026-11-13: rung 10 planned (bbq, 8 questions; one rung, one look), built (Sonnet 5.5, high), chip-canvas speed fix
+  at chris's word (draw 49.7 → 23.6 ms), approved; `v0.10.0`; board re-planned; rung 11 prompt written
+  (`docs/STATUS-log.md`, `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`).

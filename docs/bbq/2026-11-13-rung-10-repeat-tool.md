@@ -156,3 +156,14 @@ DEVELOPMENT and the spec §6.3 note. The lead then judges it (`make check-all`, 
 eye), measures on the Pi, and shows chris the window for his look. After his approval: version `0.10.0`, notes in
 `docs/arcs/v1/release-notes/v0.10.0.md`, tag `v0.10.0` (the tag push publishes), re-plan the board, write the next
 lead's prompt, and update `STATUS.md`, `docs/STATUS-log.md`, `docs/STATUS-debt.md` and `docs/budget-calibration.md`.
+
+## Amendments
+
+2026-11-13, chris before the look, on the lead's report that drawing on the graphics-chip canvas on the repeat page
+was 49.6–50.1 ms at the 90th percentile: asked "Fix it now, in rung 10, leave it as debt, or look first?", answered
+"Fix it now, in rung 10 (Recommended)". Built in `fa7ff7e` (the chip keeps the unchanged part of the page in its own
+texture; draw 23.6 ms), judged by the lead (`docs/STATUS-log.md`).
+
+2026-11-13, chris at the look (release build on the Pi, `--repeats-page`), word for word: "approved". Rung 10 is done
+and ships as `v0.10.0`, with every Defaulted line above as built and the builder's deviations listed in the "Rung 10,
+owed" line of `docs/STATUS-debt.md`.

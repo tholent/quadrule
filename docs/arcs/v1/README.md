@@ -24,8 +24,8 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 | 7 | Groups (nested, double-click to enter, group constraints); align and distribute (§6.3); how a group turns (6b debt) | medium | done: 7a `v0.7.0`, 7b `v0.7.1`, both approved by chris 2026-11-12 (7a with the Figma constraints change) |
 | 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (a landscape design exports turned into portrait pixels: chris's Nomad check, 2026-11-12, below) | large: 8a + 8b | done: `v0.8.0` (8a and 8b in one release), approved by chris 2026-11-13 |
 | 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | done: `v0.9.0`, approved by chris 2026-11-13 (with the isometric turned 90°, hex edges cut at the frame, bigger major dots) |
-| 10 | Repeat tool: linear and grid, pitch or gap, fill to bounds, alternation, Expand (§6.4) | large | next: `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md` |
-| 11 | Text and fonts: the bundled set with its OFL texts, system fonts on all three systems, the font picker, fixed-size boxes and L08, paragraph spacing, vertical alignment, baselines on the rhythm; monochrome emoji and its picker | large | — |
+| 10 | Repeat tool: linear and grid, pitch or gap, fill to bounds, alternation, Expand (§6.4) | large | done: `v0.10.0`, approved by chris 2026-11-13 (with the chip-canvas speed fix he asked for before the look) |
+| 11 | Text and fonts: the bundled set with its OFL texts, system fonts on all three systems, the font picker, fixed-size boxes and L08, paragraph spacing, vertical alignment, baselines on the rhythm; monochrome emoji and its picker | large | next: `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md` |
 | 12 | The missing-font flow (§7.3: saved outlines, substitute, locate), L11, the system-font lint (ADR-002), embedded fonts in `assets/fonts/` | medium | — |
 | 13 | Profile system: user profiles in the config folder, the profile editor, local override and Reset to built-in, `.ron` import and export | medium | — |
 | 14 | Lint and preflight: L03, L05, L07, L09, L13, L14 from measured values; quick fixes; Ignore for this document; Free placement; filter by device; the preflight sheet with Export anyway; Style tab gray swatches, "matches Guide", "Use recommended" (§8.2). L04 is v1.1 (Q7) | medium–large | — |
@@ -59,8 +59,8 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
   his example for the rest of that category. The lead says when each becomes buildable:
   - Paper (ruled, dot, grid, isometric, hex, blank): **buildable now** (rung 9 done, 2026-11-13).
   - Notes (Cornell, meeting, lecture): **buildable now** (rungs 7 and 9 done).
-  - Planning (daily, weekly, monthly, to-do): after rung 10.
-  - Bullet journal (rapid log, habit tracker, future log, index): after rung 10.
+  - Planning (daily, weekly, monthly, to-do): **buildable now** (rung 10 done, 2026-11-13).
+  - Bullet journal (rapid log, habit tracker, future log, index): **buildable now** (rung 10 done, 2026-11-13).
   - Creative (storyboard, music staff, handwriting practice): **buildable now** (rung 9 done).
 - **Looks:** one per rung or part (ADR-007).
 
@@ -131,3 +131,13 @@ above (which chris approves before it counts).
   path took it from 51 to 41 ms, which leaves room for rung 10's repeats. The Paper, Notes and Creative starters are now
   buildable (chris designs one per category). No change to the rungs is proposed. Next lead's prompt:
   `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`.
+- 2026-11-13, after rung 10: rung 10 took one lead session and one Sonnet 5.5 high builder, resumed once for a speed fix
+  (the harness reported 470,695 builder tokens at the build's end and 576,818 at the fix's end; whether the second
+  includes the first is not shown), and was planned, built, fixed and approved in one day as one rung. Lessons: (1) the
+  chip canvas's cost on the Pi follows how much outline it draws, not how many objects: merging objects did nothing,
+  while keeping the unchanged part of the page in its own texture took drawing on the repeat page from 49.7 to 23.6 ms
+  and dragging on the pattern page from 33.9 to 17.3 ms, which leaves room for the heavier starters of rung 16; (2) time
+  each frame's parts before choosing a fix (the lead's guess cost a build and a revert); (3) a bbq whose eight answers all
+  took the recommendation, with a long Defaulted list, needed no change at the look. The Planning and Bullet journal
+  starters are now buildable. No change to the rungs is proposed. Next lead's prompt:
+  `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`.
