@@ -1466,3 +1466,7 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   `docs/arcs/v1/release-notes/v0.10.0.md`, the ruling in the record's Amendments, board re-planned (rung 10 row, Planning
   and Bullet journal starters buildable, re-plan line), rung 11 prompt `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`.
   Tag `v0.10.0` waits for CI on this commit.
+- CI, Fuzz and Coverage for `26f552f` passed (runs 43545053682, 43545053573, 43545053558). Tagged `v0.10.0` (annotated,
+  "Rung 10: the repeat tool") at `26f552f` and pushed; release run 43546000731: linux-x86_64, linux-aarch64,
+  windows-x86_64, macos-universal and "Draft, attach, publish" all success. Published as a pre-release with 7 files:
+  https://github.com/tholent/quadrule/releases/tag/v0.10.0 (`gh release view v0.10.0`).
