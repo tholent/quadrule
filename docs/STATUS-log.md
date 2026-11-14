@@ -1453,3 +1453,12 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   42.6, 42.5; draw export 20.4, 20.3, 21.3; **draw chip 49.7, 49.6, 50.1** (the third run over the 50 ms line). A trial
   merging same-style outlines into one chip path changed nothing (49.6–49.7), so the object count is not the cost; it
   was undone, not committed. Put to chris before the look.
+- chris ruled "Fix it now, in rung 10". The builder, resumed (576,818 tokens reported at the end of that leg), timed
+  the chip frame: building the page, `screen_list` and scene encoding were each under 1 ms, the chip's own wait 40–48
+  ms, growing with the outline it processes, not with the object count. Fix `fa7ff7e` (`crates/app/src/chip.rs` only): the chip keeps
+  the unchanged lower part of the list in its own texture and draws only what changed over it, timed against a
+  whole draw so it is used only when faster; screen picture within one gray level of a whole draw. Re-measured by the lead
+  (release, strip on, 150 frames, 90th percentile, 3 runs each, `--canvas chip`): repeat page draw 23.6, 23.6, 23.6;
+  drag 35.7, 35.7, 35.6; patterns page draw 23.7, 23.7, 23.9, drag 17.4, 17.3, 17.3; shapes page draw 23.1, 23.0,
+  23.4; groups page drag 30.8, 31.0, 31.0. `make check-all` → `TESTS scope=workspace checks=423 check_fail=0
+  passed=394 failed=0 status=ok`; no golden line changed.
