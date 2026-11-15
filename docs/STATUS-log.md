@@ -1470,3 +1470,15 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   "Rung 10: the repeat tool") at `26f552f` and pushed; release run 43546000731: linux-x86_64, linux-aarch64,
   windows-x86_64, macos-universal and "Draft, attach, publish" all success. Published as a pre-release with 7 files:
   https://github.com/tholent/quadrule/releases/tag/v0.10.0 (`gh release view v0.10.0`).
+
+## 2026-11-14/15 — rung 11 kickoff (Opus 5.5, high)
+
+- Session start: `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` → `BUILD head=4cf4b04 dirty=no rebuilt=11` (the
+  0.10.0 bump in `Cargo.toml` was unbuilt), then `BUILD head=4cf4b04 dirty=no rebuilt=0`.
+- Budget (budget-select): 15 points, alone on the weekly meter, no reserve; start reading 1 % (chris: "0–2 %", 2026-11-15
+  00:32 UTC, after Saturday's 5 pm EST reset), logged with `spend-ledger.py reading 1 --meter weekly`; hard stop 75 %.
+- Open question asked again: text rotation (parked for v1.1). chris: "Pull into rung 11".
+- Rung 11 planned (bbq, 8 questions, all on the recommendation): split 11a fonts / 11b the box; the spec's bundled set
+  with italics and Caveat (+6.4 MB); typing on the canvas added (11b); bundled-only fallback until rung 12; overflow cuts
+  whole lines with a red mark; baselines stand on the rules; emoji are characters in text. Record
+  `docs/bbq/2026-11-14-rung-11-text-and-fonts.md`; board row updated (`docs/arcs/v1/README.md`).
