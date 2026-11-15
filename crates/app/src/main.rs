@@ -31,7 +31,8 @@
 //! overrides) and `--no-strip` (fold the device previews strip shut; it is open in a bench
 //! otherwise). Rung 8b adds `--landscape-page` (the landscape page; the benchmarks then run over it). Rung 9 adds
 //! `--patterns-page` (the pattern page: every new pattern; the benchmarks then run over it). Rung 10 adds
-//! `--repeats-page` (the repeat page; the benchmarks then run over it and the drag moves the habit tracker).
+//! `--repeats-page` (the repeat page; the benchmarks then run over it and the drag moves the habit tracker). Rung 11a adds
+//! `--fonts-page` (the fonts page: a page of text; the benchmarks then run over it and the drag moves its dot grid).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -133,6 +134,8 @@ impl App {
         }
         if let Some(p) = path {
             ui.open_file(&p);
+        } else if args.fonts_page {
+            ui.viewer.open_fonts();
         } else if args.repeats_page {
             ui.viewer.open_repeats();
         } else if args.patterns_page {
@@ -166,7 +169,9 @@ impl App {
                 b
             };
             let b = if args.no_strip { b.without_strip() } else { b };
-            if args.repeats_page {
+            if args.fonts_page {
+                b.with_fonts()
+            } else if args.repeats_page {
                 b.with_repeats()
             } else if args.patterns_page {
                 b.with_patterns()
@@ -395,6 +400,9 @@ struct Args {
     /// Open the rung 10 repeat page instead of the empty start (`--repeats-page`); the benchmarks
     /// then run over it, and the drag moves the habit tracker.
     repeats_page: bool,
+    /// Open the rung 11a fonts page instead of the empty start (`--fonts-page`); the benchmarks
+    /// then run over it, and the drag moves its dot grid.
+    fonts_page: bool,
     /// Run the benchmark on the first secondary device, so a drag writes overrides
     /// (`--bench-secondary`).
     bench_secondary: bool,
@@ -448,6 +456,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.patterns_page = true;
         } else if a == "--repeats-page" {
             out.repeats_page = true;
+        } else if a == "--fonts-page" {
+            out.fonts_page = true;
         } else if a == "--bench-secondary" {
             out.bench_secondary = true;
         } else if a == "--no-strip" {
@@ -611,6 +621,14 @@ mod tests {
                 Ok(Args {
                     bench_drag: Some(40),
                     repeats_page: true,
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--fonts-page", "--bench-drag", "40"]),
+                Ok(Args {
+                    bench_drag: Some(40),
+                    fonts_page: true,
                     ..Args::default()
                 }),
             ),

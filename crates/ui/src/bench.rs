@@ -71,6 +71,9 @@ pub struct DragBench {
     /// Opens the rung 10 repeat page when nothing is open yet (`--repeats-page`); the drag then
     /// moves its habit tracker.
     pub repeats: bool,
+    /// Opens the rung 11a fonts page when nothing is open yet (`--fonts-page`); a page that is
+    /// mostly text, whose dot grid the drag moves.
+    pub fonts: bool,
     /// Runs on the document's first secondary device, not the primary one (`--bench-secondary`), so
     /// a drag writes overrides (rung 8a).
     pub secondary: bool,
@@ -96,6 +99,7 @@ impl DragBench {
             landscape: false,
             patterns: false,
             repeats: false,
+            fonts: false,
             secondary: false,
             no_strip: false,
         }
@@ -121,6 +125,14 @@ impl DragBench {
     pub fn with_repeats(self) -> Self {
         DragBench {
             repeats: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark over the rung 11a fonts page.
+    pub fn with_fonts(self) -> Self {
+        DragBench {
+            fonts: true,
             ..self
         }
     }

@@ -1171,7 +1171,9 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    if b.repeats {
+                    if b.fonts {
+                        self.viewer.open_fonts();
+                    } else if b.repeats {
                         self.viewer.open_repeats();
                     } else if b.patterns {
                         self.viewer.open_patterns();
@@ -1308,7 +1310,9 @@ impl ViewerUi {
                     } else {
                         "release"
                     },
-                    if b.repeats {
+                    if b.fonts {
+                        "fonts"
+                    } else if b.repeats {
                         "repeats"
                     } else if b.patterns {
                         "patterns"

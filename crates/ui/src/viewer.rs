@@ -342,6 +342,13 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 11a fonts page: every bundled family upright and italic, weight ramps and
+    /// emoji (the benchmarks drag its dot grid). Like the sample, it has no file.
+    pub fn open_fonts(&mut self) {
+        let doc = quadrule_model::sample::fonts_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// The pattern page held sideways (rung 9).
     pub fn open_patterns_landscape(&mut self) {
         let doc = quadrule_model::sample::patterns_landscape_document();

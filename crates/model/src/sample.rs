@@ -1770,6 +1770,228 @@ fn patterns_page(landscape: bool) -> Document {
     doc
 }
 
+/// Fixed ids for the fonts page's objects.
+pub mod fonts_ids {
+    use crate::Uuid;
+    /// The `n`th object of the fonts page.
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_000E_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+}
+
+/// The fonts page (docs/bbq/2026-11-14-rung-11-text-and-fonts.md, Defaulted "Golden page 11a"): every
+/// bundled family upright and italic at two sizes, a weight ramp in Inter and in Literata, Atkinson
+/// Hyperlegible Mono, and a line of emoji, with Atkinson Hyperlegible Next's own text falling back to
+/// Noto Emoji mid-sentence. Only bundled fonts: no installed font is ever on a golden page. Designed
+/// on the Manta, also targeting the Nomad. A dot grid holds the sample's id, so the benchmarks drag
+/// it over a page that is mostly text.
+pub fn fonts_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 11a fonts".into();
+    doc.metadata.description =
+        "The rung 11a fonts page: every bundled family upright and italic, weight ramps and emoji."
+            .into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    let title = doc.layers[1].objects[0].clone();
+    let dots = doc.layers[0].objects[0].clone();
+    // Every box keeps its place and size in mm on each device, so the page reads the same on both.
+    let pinned = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+    // Laid out for the Nomad's smaller page (118.9 by 158.5 mm), so every box fits both devices.
+    let width = 102.8;
+    let col = width / 2.0;
+    let mut n = 0u128;
+    let mut objs: Vec<Object> = Vec::new();
+    let mut text = |objs: &mut Vec<Object>,
+                    name: &str,
+                    family: &str,
+                    content: &str,
+                    weight: u16,
+                    style: FontStyle,
+                    pt: f64,
+                    x: f64,
+                    y: f64,
+                    w: f64| {
+        n += 1;
+        let mut t = title.clone();
+        t.id = fonts_ids::nth(n);
+        t.name = name.into();
+        t.frame = Frame::new(x, y, w, pt * 0.3528 * 1.25);
+        t.constraints = pinned;
+        if let ObjectKind::Text(tb) = &mut t.kind {
+            tb.content = content.into();
+            tb.family = family.into();
+            tb.weight = weight;
+            tb.style = style;
+            tb.size_pt = pt;
+        }
+        objs.push(t);
+    };
+    let mut head = title.clone();
+    head.id = fonts_ids::TITLE;
+    head.name = "Title".into();
+    head.frame = Frame::new(margin, margin, width, 7.0);
+    head.constraints = pinned;
+    if let ObjectKind::Text(t) = &mut head.kind {
+        t.content = "Rung 11a: the bundled fonts".into();
+        t.size_pt = 12.0;
+    }
+    objs.push(head);
+    let sample = "Quartz sphinx 123";
+    let atkinson = "Atkinson Hyperlegible Next";
+    let mut y = margin + 9.0;
+    for family in [
+        atkinson,
+        "Atkinson Hyperlegible Mono",
+        "Inter",
+        "Literata",
+        "Caveat",
+    ] {
+        text(
+            &mut objs,
+            &format!("{family} label"),
+            atkinson,
+            &format!("{family}: upright, then italic"),
+            400,
+            FontStyle::Normal,
+            7.0,
+            margin,
+            y,
+            width,
+        );
+        y += 3.4;
+        // Upright in the left column, italic in the right, at two sizes.
+        for pt in [8.0, 12.0] {
+            for (i, (style, tag)) in [
+                (FontStyle::Normal, "upright"),
+                (FontStyle::Italic, "italic"),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                text(
+                    &mut objs,
+                    &format!("{family} {tag} {pt}"),
+                    family,
+                    sample,
+                    400,
+                    style,
+                    pt,
+                    margin + i as f64 * col,
+                    y,
+                    col,
+                );
+            }
+            y += pt * 0.3528 * 1.25;
+        }
+        y += 2.0;
+    }
+    for family in ["Inter", "Literata"] {
+        text(
+            &mut objs,
+            &format!("{family} ramp label"),
+            atkinson,
+            &format!("{family}, weight 100 to 900"),
+            400,
+            FontStyle::Normal,
+            7.0,
+            margin,
+            y,
+            width,
+        );
+        y += 3.4;
+        for (i, weight) in (100..=900).step_by(100).enumerate() {
+            text(
+                &mut objs,
+                &format!("{family} {weight}"),
+                family,
+                &format!("Ag {weight}"),
+                weight,
+                FontStyle::Normal,
+                8.0,
+                margin + i as f64 * 11.4,
+                y,
+                11.4,
+            );
+        }
+        y += 4.5;
+    }
+    // Large sizes, where Inter and Literata draw their optical-size (display) shapes.
+    for (i, family) in ["Inter", "Literata"].into_iter().enumerate() {
+        text(
+            &mut objs,
+            &format!("{family} display"),
+            family,
+            "Quartz 24",
+            400,
+            FontStyle::Normal,
+            24.0,
+            margin + i as f64 * col,
+            y,
+            col,
+        );
+    }
+    y += 24.0 * 0.3528 * 1.25;
+    text(
+        &mut objs,
+        "Emoji label",
+        atkinson,
+        "Noto Emoji, and Atkinson falling back to it",
+        400,
+        FontStyle::Normal,
+        7.0,
+        margin,
+        y,
+        width,
+    );
+    y += 3.4;
+    text(
+        &mut objs,
+        "Emoji",
+        "Noto Emoji",
+        "\u{1F600} \u{1F60E} \u{1F389} \u{2764} \u{2605} \u{2600} \u{2602}",
+        400,
+        FontStyle::Normal,
+        16.0,
+        margin,
+        y,
+        width,
+    );
+    y += 8.0;
+    text(
+        &mut objs,
+        "Fallback",
+        atkinson,
+        "Hello \u{1F600} world \u{2764} again",
+        400,
+        FontStyle::Normal,
+        12.0,
+        margin,
+        y,
+        width,
+    );
+    let mut grid = dots.clone();
+    grid.name = "Dots".into();
+    grid.frame = Frame::new(margin, y + 7.0, width, 10.0);
+    grid.constraints = pinned;
+    objs.push(grid);
+    doc.layers = vec![Layer {
+        name: "Fonts".into(),
+        visible: true,
+        locked: false,
+        objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}
+
 /// Fixed ids for the repeat page's objects.
 pub mod repeat_ids {
     use crate::Uuid;
