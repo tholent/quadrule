@@ -35,6 +35,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.8.0", "0.9.0", v0_8_to_v0_9),
     ("0.9.0", "0.10.0", v0_9_to_v0_10),
     ("0.10.0", "0.11.0", v0_10_to_v0_11),
+    ("0.11.0", "0.12.0", v0_11_to_v0_12),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -117,6 +118,18 @@ fn v0_9_to_v0_10(_scene: &mut Value) -> Result<(), FormatError> {
 /// what they drew before, so there is nothing to rewrite. A 0.10 build keeps the new fields as
 /// unknown ones on a save but would draw an italic box upright.
 fn v0_10_to_v0_11(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.12 adds four optional fields on a text box (`sizing`, `paragraph_spacing`, `v_align` and
+/// `baselines`) and `lines_hidden` on a saved text's outlines (rung 11b bbq, Defaulted "File format
+/// 0.12.0"), and lets a text box carry a rotation. Each is left out of a file when it holds its
+/// default, and a 0.11 text box has none, which reads as an Auto-height box with no paragraph space,
+/// at the top, with baselines off, none hidden: exactly what it drew before. A 0.11 text box carrying
+/// a stored `rotation_deg` (never set by the app, which ignored it) would now turn; no app-made file
+/// holds one. Nothing is rewritten. A 0.11 build keeps the new fields as unknown ones on a save but
+/// would lay a Fixed box out as tall as its text.
+fn v0_11_to_v0_12(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

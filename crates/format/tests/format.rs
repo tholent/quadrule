@@ -253,11 +253,11 @@ fn unknown_fields_survive_resave() {
 fn newer_minor_file_keeps_its_version() {
     // ADR-001 item 5: a resaved newer file keeps its own format_version; saved_by is updated.
     let (mut manifest, files) = split(&slice_file().to_bytes("0.1.0").unwrap());
-    *migrate::map_get_mut(&mut manifest, "format_version").unwrap() = Value::Text("0.11.0".into());
+    *migrate::map_get_mut(&mut manifest, "format_version").unwrap() = Value::Text("0.13.0".into());
     let opened = QuadFile::from_bytes(&raw_quad(manifest, &files)).unwrap();
     let again = QuadFile::from_bytes(&opened.to_bytes("0.1.0-older").unwrap()).unwrap();
     let ok = opened.read_only.is_none()
-        && again.manifest.format_version == "0.11.0"
+        && again.manifest.format_version == "0.13.0"
         && again.manifest.saved_by == "0.1.0-older";
     println!(
         "CHECK crate=format name=newer_minor_keeps_version result={} version={} saved_by={}",
@@ -464,6 +464,53 @@ fn a_0_3_file_opens_and_subdivisions_round_trip() {
         resaved.manifest.format_version,
         back.doc.rhythm.subdivisions,
         wild.doc.rhythm.subdivisions_on().is_none()
+    );
+    assert!(ok);
+}
+
+#[test]
+fn format_012_fields_are_left_out_at_their_defaults_and_round_trip() {
+    // Rung 11b, format 0.12: sizing, paragraph spacing, vertical alignment and the baselines tick on a
+    // text box, and lines_hidden on a saved text. A box that uses none of them is the file 0.11 wrote.
+    use quadrule_model::{ObjectKind, ParagraphSpacing, TextSizing, VerticalAlign};
+    let plain = quadrule_model::TextBox::default();
+    let keys = |t: &quadrule_model::TextBox| {
+        let v = Value::serialized(t).unwrap();
+        let names = ["sizing", "paragraph_spacing", "v_align", "baselines"];
+        names.map(|n| has(&v, n))
+    };
+    let left_out = keys(&plain) == [false; 4];
+    let mut set = plain.clone();
+    set.sizing = TextSizing::Fixed;
+    set.paragraph_spacing = ParagraphSpacing::Units(1.0);
+    set.v_align = VerticalAlign::Bottom;
+    set.baselines = true;
+    let written = keys(&set) == [true; 4];
+    // A box that is Fixed but otherwise plain writes only that.
+    let only = {
+        let mut t = plain.clone();
+        t.sizing = TextSizing::Fixed;
+        keys(&t) == [true, false, false, false]
+    };
+    // Saved and read again, a file with the choices set (and a turned box) is what was written.
+    let mut file = slice_file();
+    let id = quadrule_model::sample::ids::TITLE;
+    let o = file.doc.object_mut(id).unwrap();
+    o.kind = ObjectKind::Text(set.clone());
+    o.rotation_deg = 15.0;
+    let again = QuadFile::from_bytes(&file.to_bytes("0.12.0-test").unwrap()).unwrap();
+    let round = again.doc == file.doc && again.migrated_from.is_none();
+    // A text of the file that left a line out says so; one that left none is written without the field.
+    let mut outlines = file.outlines[MANTA_ID].clone();
+    outlines.texts[0].lines_hidden = 2;
+    let with = Value::serialized(&outlines.texts[0]).unwrap();
+    outlines.texts[0].lines_hidden = 0;
+    let without = Value::serialized(&outlines.texts[0]).unwrap();
+    let hidden = has(&with, "lines_hidden") && !has(&without, "lines_hidden");
+    let ok = left_out && written && only && round && hidden;
+    println!(
+        "CHECK crate=format name=format_012_fields result={} defaults_left_out={left_out} set_values_written={written} fixed_alone={only} set_values_round_trip={round} lines_hidden_left_out_at_zero={hidden}",
+        pass(ok)
     );
     assert!(ok);
 }
