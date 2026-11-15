@@ -2009,40 +2009,64 @@ impl ViewerUi {
             }
             ui.add_space(4.0);
             egui::Grid::new("text-grid").num_columns(2).show(ui, |ui| {
-                // Font: the families this build can lay out (bundled ones), and the one in use.
+                // Font: the family in use, and the button that opens the picker (rung 11a).
                 let label = ui.label(self.t("app-font"));
-                let mut fam = t.family.clone();
-                let mut families: Vec<String> = quadrule_text::BUNDLED
-                    .iter()
-                    .map(|b| b.family.to_string())
-                    .collect();
-                if !families.contains(&t.family) {
-                    families.push(t.family.clone());
-                }
-                egui::ComboBox::from_id_salt("family")
-                    .selected_text(&fam)
-                    .show_ui(ui, |ui| {
-                        for f in &families {
-                            ui.selectable_value(&mut fam, f.clone(), f);
-                        }
-                    })
-                    .response
-                    .labelled_by(label.id);
-                if fam != t.family {
-                    edit_text(&mut self.viewer, "text-family", &|t| {
-                        t.family.clone_from(&fam)
-                    });
-                }
+                ui.vertical(|ui| self.font_button(ui, label.id, &t.family));
                 ui.end_row();
 
+                let weights = self.viewer.fonts_weights(&t.family);
                 let label = ui.label(self.t("app-weight"));
                 let mut w = t.weight;
-                if ui
-                    .add(egui::DragValue::new(&mut w).range(100..=900).speed(5))
-                    .labelled_by(label.id)
-                    .changed()
-                {
-                    edit_text(&mut self.viewer, "text-weight", &|t| t.weight = w);
+                let (lo, hi) = weights
+                    .as_ref()
+                    .map_or((100, 900), |w| (w.min().min(w.max()), w.max()));
+                ui.vertical(|ui| {
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut w)
+                                .range(lo..=hi)
+                                .clamp_existing_to_range(false)
+                                .speed(5),
+                        )
+                        .labelled_by(label.id)
+                        .changed()
+                    {
+                        edit_text(&mut self.viewer, "text-weight", &|t| t.weight = w);
+                    }
+                    // A weight the family does not offer is drawn at the nearest one it does.
+                    if let Some(used) = weights.as_ref().map(|x| x.clamp(t.weight))
+                        && used != t.weight
+                    {
+                        ui.label(
+                            self.strings.format(
+                                &Message::new("app-weight-clamped")
+                                    .num("min", f64::from(lo), 0)
+                                    .num("max", f64::from(hi), 0)
+                                    .num("used", f64::from(used), 0),
+                            ),
+                        );
+                    }
+                });
+                ui.end_row();
+
+                // Style: the family's own italic face; a family without one stays upright.
+                let label = ui.label(self.t("app-style"));
+                let has_italic = self.viewer.fonts_has_italic(&t.family);
+                let mut st = t.style;
+                ui.vertical(|ui| {
+                    ui.add_enabled_ui(has_italic, |ui| {
+                        let options = [
+                            (quadrule_model::FontStyle::Normal, "app-style-normal"),
+                            (quadrule_model::FontStyle::Italic, "app-style-italic"),
+                        ];
+                        self.combo(ui, "font-style", label.id, &mut st, &options);
+                    });
+                    if !has_italic {
+                        ui.label(self.t("app-style-no-italic"));
+                    }
+                });
+                if st != t.style {
+                    edit_text(&mut self.viewer, "text-style", &|t| t.style = st);
                 }
                 ui.end_row();
 

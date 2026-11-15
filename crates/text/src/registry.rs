@@ -459,8 +459,10 @@ impl FontRegistry {
         })
     }
 
-    /// Opens the installed families among `names` in the layout store (one rebuild at most).
-    pub(crate) fn ensure_system<'a>(&mut self, names: impl IntoIterator<Item = &'a str>) {
+    /// Opens the installed families among `names` in the layout store, one rebuild at most, so
+    /// that laying out text in them afterwards does not stop to do it name by name. Laying text
+    /// out does this itself; a picker showing many families calls it with the ones in view.
+    pub fn ensure_open<'a>(&mut self, names: impl IntoIterator<Item = &'a str>) {
         let wanted: BTreeSet<String> = names
             .into_iter()
             .filter(|n| BundledFont::for_family(n).is_none() && self.catalog.find(n).is_some())

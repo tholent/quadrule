@@ -178,6 +178,8 @@ pub struct ViewerUi {
     /// Put the cursor in the Text tab's text field, with its text selected, on the next frame
     /// that shows it (a text box was just drawn).
     pub(crate) focus_text_content: bool,
+    /// The font picker window (rung 11a).
+    pub(crate) font_picker: crate::fonts::FontPicker,
     pub(crate) renaming: Option<Renaming>,
     /// Groups folded shut in the layers tree (rung 7a).
     pub(crate) folded: std::collections::HashSet<quadrule_model::Uuid>,
@@ -253,6 +255,7 @@ impl ViewerUi {
             offers: Vec::new(),
             autosave: Autosave::default(),
             was_focused: true,
+            font_picker: Default::default(),
             closing: false,
         }
     }
@@ -318,6 +321,7 @@ impl ViewerUi {
                 }
             });
         self.ruler_window(&ctx);
+        self.font_picker_window(&ctx);
         // The Text tab, if it showed, has taken the cursor by now; a request it could not use
         // (no text box selected) must not wait for a later selection.
         self.focus_text_content = false;

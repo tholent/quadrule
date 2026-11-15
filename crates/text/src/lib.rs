@@ -272,7 +272,7 @@ pub fn lay_out(
     let mut missing = 0;
     let mut rounded = 0;
     // Installed families first, so the layout store is rebuilt at most once for the page.
-    reg.ensure_system(requests.iter().map(|r| r.text.family.as_str()));
+    reg.ensure_open(requests.iter().map(|r| r.text.family.as_str()));
     // Family, italic flag and optical size of each face met, worked out once.
     let mut identities: HashMap<fontdb::ID, (String, bool, u16)> = HashMap::new();
     for req in requests {

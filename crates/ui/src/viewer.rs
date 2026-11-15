@@ -266,6 +266,16 @@ impl Viewer {
         scan
     }
 
+    /// The weights a family offers, or `None` when it cannot be laid out here.
+    pub fn fonts_weights(&mut self, family: &str) -> Option<quadrule_text::Weights> {
+        self.fonts.weights_of(family)
+    }
+
+    /// True when the family has an italic face of its own.
+    pub fn fonts_has_italic(&self, family: &str) -> bool {
+        self.fonts.has_italic(family)
+    }
+
     fn invalidate_pages(&mut self) {
         self.revision += 1;
         if let Some(o) = &mut self.open {

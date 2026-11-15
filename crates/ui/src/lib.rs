@@ -29,6 +29,7 @@ pub mod canvas;
 pub mod drag;
 pub mod draw;
 pub mod editor;
+pub mod fonts;
 pub mod panels;
 pub mod recovery;
 pub mod repeat_tab;
