@@ -34,6 +34,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.7.0", "0.8.0", v0_7_to_v0_8),
     ("0.8.0", "0.9.0", v0_8_to_v0_9),
     ("0.9.0", "0.10.0", v0_9_to_v0_10),
+    ("0.10.0", "0.11.0", v0_10_to_v0_11),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -107,6 +108,15 @@ fn v0_8_to_v0_9(_scene: &mut Value) -> Result<(), FormatError> {
 /// nothing is rewritten (as 0.6 to 0.7 added the group). A 0.9 build cannot read a 0.10 file that
 /// holds a repeat; it reports an error rather than guessing.
 fn v0_9_to_v0_10(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.11 adds `style` on a text box (Normal or Italic) and `italic` and `opsz` on the face of a saved
+/// glyph table (rung 11a bbq, Defaulted "File format 0.11.0"). A 0.10 text box has no style, which
+/// reads as Normal, and a 0.10 table has neither, which reads as upright and no optical size, exactly
+/// what they drew before, so there is nothing to rewrite. A 0.10 build keeps the new fields as
+/// unknown ones on a save but would draw an italic box upright.
+fn v0_10_to_v0_11(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 
