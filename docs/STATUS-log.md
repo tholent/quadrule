@@ -1564,3 +1564,19 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - Judged: `make check-all` → `TESTS scope=workspace checks=448 check_fail=0 passed=417 failed=0 status=ok`; `git diff 07875a9 --
   crates/render/tests/golden/SHA256SUMS` adds the two `fonts_*` lines and changes none. Debt: the emoji picker and chip lines of
   "Rung 11a, owed" are cleared; two smaller lines replace them (picker gaps; the 99 ms base frame is still a visible hiccup).
+
+## 2026-11-15 — rung 11a judged and approved (lead, Opus 5.5 high)
+
+- The lead checked the builder's landings: `git diff 07875a9 -- crates/render/tests/golden/SHA256SUMS` adds only the two
+  `fonts_*` lines; fixtures `v0.4/`–`v0.9/` unchanged; the Nomad fonts golden looked at by eye. CI: 14fc421 failed clippy
+  (fixed in 34b84e0); db0ef4e, 4a2170b and f827c6f passed (CI, Coverage, Fuzz). Installed fonts found in CI run
+  43666062914: `os=macos faces=675`, `os=windows faces=176`, `os=linux faces=53` (`name=system_faces`), so the T14/T15
+  debt is paid. Lead's own chip runs after the fix: `target/release/quadrule --fonts-page --bench-drag 150 --canvas chip`
+  → `canvas=chip p90_ms=18.4 first_ms=100.6`; `--bench-draw` → `canvas=chip p90_ms=25.2 first_ms=102.6`.
+- Rulings: the `emojis` crate allowed with the Unicode-3.0 notice; the chip first frame fixed in 11a; ADR-002 amended for
+  `unicode-script` ("amendment, go ahead"). Record `docs/bbq/2026-11-14-rung-11-text-and-fonts.md`, Amendments.
+- chris's look: "approved, but don't create a seperate release. Just do rung 11b and release 11a/b as v0.11.0". No tag
+  for 11a. Background font re-scan added to 11b (chris: "Yes, in 11b").
+- Meter: chris's reading "6–10 %" logged as 8 (`spend-ledger.py reading 8 --meter weekly`); about 7 of the 15-point
+  share spent on 11a (builder 450,380 tokens reported by the harness).
+- 2026-11-15: T14/T15 paid: installed fonts found on macOS (675 faces) and Windows (176) in CI run 43666062914; debt line removed.

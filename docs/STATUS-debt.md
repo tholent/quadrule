@@ -3,10 +3,6 @@
 Known debt and owed work. One line each. When an item is paid, remove it and note it in `STATUS-log.md`.
 
 - A lint/preflight rule for system-font use, at save and at export, is owed to the napkin's lint list (ADR-002).
-- Text spike T14/T15, what is left: system-font discovery on macOS and Windows. Layout and outlines with the bundled
-  font now match byte for byte there (CI run 42660403429). Rung 11a loads system fonts on all three systems
-  (`crates/text/src/registry.rs`) and `crates/text/tests/fonts.rs::installed_fonts_are_listed_and_a_bundled_name_is_never_shadowed`
-  requires at least one face on macOS and Windows; remove this line when CI shows its `CHECK ... name=system_faces` line there.
 - Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; the build-folder instruction the render worker
   reports (`spikes/render/FINDINGS.md`). (Canvas fallback to vello_cpu on weak GPUs: ruled yes, 2026-11-09.)
 - Calibration: the Manta's gray levels are ruled equal to the Nomad's, not measured (chris, 2026-11-12: "Same as the

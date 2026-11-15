@@ -1,6 +1,6 @@
 # STATUS — quadrule
 
-_Last updated: 2026-11-13_
+_Last updated: 2026-11-15_
 
 The project's live state. Update it when work lands. Every claim cites at least one file that exists.
 
@@ -160,6 +160,16 @@ The project's live state. Update it when work lands. Every claim cites at least 
   10"; `crates/app/src/chip.rs`). Speed on the Pi, repeat page, 90th percentile: drag 22.6–22.8 ms export, 35.6–35.7
   chip; draw 20.3–21.3 export, 23.6 chip (`docs/STATUS-log.md`). Try it:
   `cargo run --release -p quadrule-app -- --repeats-page`.
+- Rung 11a, fonts, is approved by chris 2026-11-15 and is not released alone: 11a and 11b ship together as `v0.11.0`
+  ("release 11a/b as v0.11.0"; record `docs/bbq/2026-11-14-rung-11-text-and-fonts.md`). Bundled: Atkinson Hyperlegible
+  Next and Mono, Inter, Literata (each with italic), Caveat and Noto Emoji, with their OFL texts and the Unicode-3.0
+  notice in the packages; a Style field (italic); weights per family; optical size follows the point size; installed
+  fonts on all three systems, re-scanned on focus; fallback from bundled fonts only until rung 12 (ADR-002 amended for
+  `unicode-script`); the font picker; the emoji picker; file format 0.11.0 (`crates/text/src/registry.rs`,
+  `crates/ui/src/fonts.rs`, `crates/ui/src/emoji.rs`, `crates/render/tests/fixtures/v0.10/`). Two golden lines added
+  (`fonts_*`); the eighteen older ones unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, fonts page,
+  90th percentile: drag 20 ms export, 18 ms chip; draw 20 ms export, 25 ms chip (`docs/STATUS-log.md`). Try it:
+  `cargo run --release -p quadrule-app -- --fonts-page`. 11b (the text box) is building.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -205,8 +215,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
-  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). Next: rung 11, text and fonts; the next lead's prompt is
-  `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
+  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). Rung 11 is in progress: 11a approved, 11b building (`docs/bbq/2026-11-14-rung-11-text-and-fonts.md`). The Paper, Notes, Creative, Planning and Bullet journal starters are
   buildable now; chris designs one per category (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by

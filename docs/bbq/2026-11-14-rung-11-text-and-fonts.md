@@ -223,3 +223,9 @@ look, `0.11.1`, release. Then re-plan the board and write the next lead's prompt
 - **2026-11-15, `unicode-script` (11a).** The builder added it directly to fill cosmic-text's `Fallback` trait for Q4.
   chris, after asking what it meant and hearing it explained: "amendment, go ahead". ADR-002 amended
   (`docs/decisions/ADR-002-text-stack.md`, Amendment — 2026-11-15).
+- **2026-11-15, 11a approved; one release.** After the look, chris, word for word: "approved", then "approved, but
+  don't create a seperate release. Just do rung 11b and release 11a/b as v0.11.0". So Q1's two releases become one:
+  11a is not tagged; 11a and 11b ship together as **`v0.11.0`** after 11b's look (as rung 8 did). Q1's two looks stand.
+- **2026-11-15, background re-scan (11b).** CI timed the full system-font re-scan at 1,500 ms on Windows and 449 ms on
+  macOS (debug build, run 43666062914, `name=system_faces`), and it runs while the window waits on focus. chris chose
+  "Yes, in 11b": the re-scan runs off the window's thread and the font list swaps in when it is done.
