@@ -229,3 +229,12 @@ look, `0.11.1`, release. Then re-plan the board and write the next lead's prompt
 - **2026-11-15, background re-scan (11b).** CI timed the full system-font re-scan at 1,500 ms on Windows and 449 ms on
   macOS (debug build, run 43666062914, `name=system_faces`), and it runs while the window waits on focus. chris chose
   "Yes, in 11b": the re-scan runs off the window's thread and the font list swaps in when it is done.
+- **2026-11-15, how high text sits on a rule (11b, amends Q6).** In the first 11b golden (Nomad), the rule covered rows
+  978–980 and letter bottoms reached row 980, so the rule read as an underline. chris: "I think perhaps that the text
+  should be slightly above the rhythm, but I'm not sure what typesetting best practices are in this regard". The lead
+  explained the practice (an invisible baseline grid puts the baseline on the line; with printed rules, text sits a
+  hair above it) and showed a mock of four lifts (A as built, B on the rule's top edge, C a 0.3 mm gap, D a 1 mm gap).
+  chris, word for word: "Let's have the default be 'B', but have a toggle that allows shifting the text up to 'C'". So:
+  with baselines on the rhythm, letters' flat bottoms end on the pixel row just above the rule (B); a per-box tick
+  (working label "Small gap above the line", the name chris's to change) lifts them by 0.3 mm rounded to whole pixels,
+  at least 1 px (C).
