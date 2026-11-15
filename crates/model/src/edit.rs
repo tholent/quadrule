@@ -1152,7 +1152,7 @@ pub fn map_contents(o: &mut Object, map: &GroupMap) {
                 }
                 continue;
             }
-            let text = matches!(c.kind, ObjectKind::Text(_));
+            let text = c.keeps_height();
             let at = match holder {
                 Some(h) => h.resolve(c.frame, c.constraints),
                 None => c.frame,
@@ -1414,6 +1414,9 @@ pub struct Placement {
     /// overrides of the groups round it), written as the device's override, and the stored frame
     /// is left alone. The rotation and a line's diagonal are still the shared design's.
     pub device: Option<DevicePlace>,
+    /// A text box that was as tall as its text and has had its top or bottom pulled: it is Fixed
+    /// from now on, with the height the drag gave it (rung 11b).
+    pub fixed: bool,
 }
 
 impl Placement {
@@ -1428,6 +1431,7 @@ impl Placement {
             },
             map: None,
             device: None,
+            fixed: false,
         }
     }
 
@@ -1462,6 +1466,9 @@ impl Placement {
         }
         if let (ObjectKind::Line(l), Some(d)) = (&mut o.kind, self.dir) {
             l.direction = d;
+        }
+        if let (true, ObjectKind::Text(t)) = (self.fixed, &mut o.kind) {
+            t.sizing = crate::TextSizing::Fixed;
         }
     }
 }

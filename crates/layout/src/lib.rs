@@ -38,6 +38,7 @@ use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, LineCap, ObjectKind, RhythmOrigin, RhythmResolution, Style, Uuid};
 use quadrule_profiles::Profile;
 use quadrule_text::{FontRegistry, Laid, TextError, TextRequest};
+use std::collections::HashMap;
 
 /// One drawing command in device pixels, shared by every renderer.
 #[derive(Clone, Debug, PartialEq)]
@@ -359,6 +360,27 @@ pub struct TextJob<'a> {
     pub text: std::borrow::Cow<'a, quadrule_model::TextBox>,
     /// The box width on this profile, in mm.
     pub width_mm: f64,
+    /// The box height on this profile, in mm, for a Fixed box (rung 11b); `None` for a box as tall
+    /// as its text.
+    pub height_mm: Option<f64>,
+    /// The space after each paragraph but the last, in mm, as this device resolves it (a `u` is one
+    /// rhythm step down here).
+    pub paragraph_mm: f64,
+    /// The rhythm lines this device has, as the box sees them, for a box that stands its baselines
+    /// on the rhythm.
+    pub grid: Option<quadrule_text::BaselineGrid>,
+}
+
+impl TextJob<'_> {
+    /// The request that lays this box out (see [`quadrule_text::lay_out`]).
+    pub fn request(&self) -> TextRequest<'_> {
+        TextRequest {
+            height_mm: self.height_mm,
+            paragraph_mm: self.paragraph_mm,
+            grid: self.grid,
+            ..TextRequest::new(self.object_id, &self.text, self.width_mm)
+        }
+    }
 }
 
 /// The text boxes of the document as they fall on `target`, ready for [`quadrule_text::lay_out`]
@@ -367,6 +389,9 @@ pub struct TextJob<'a> {
 pub fn text_jobs<'a>(doc: &'a Document, primary: &Profile, target: &Profile) -> Vec<TextJob<'a>> {
     let ov = override_key(primary, target);
     let nodes = tree::resolve_nodes_on(doc, primary.page_mm(), target.page_mm(), ov);
+    // One rhythm step down on this device, in mm: what a paragraph space in `u` is.
+    let rhythm = RhythmPx::new(doc, target);
+    let step_mm = rhythm.unit_y / target.mm_to_px(1.0);
     doc.objects()
         .filter_map(|o| match &o.kind {
             ObjectKind::Text(tb) => {
@@ -382,11 +407,21 @@ pub fn text_jobs<'a>(doc: &'a Document, primary: &Profile, target: &Profile) -> 
                     }
                     _ => std::borrow::Cow::Borrowed(tb),
                 };
+                let node = nodes.iter().find(|n| n.id == o.id)?;
                 Some(TextJob {
                     object_id: o.id,
                     text,
-                    // The width it falls at on this page.
-                    width_mm: nodes.iter().find(|n| n.id == o.id)?.local.w_mm,
+                    // The width it falls at on this page, and the height of a Fixed box.
+                    width_mm: node.local.w_mm,
+                    height_mm: (!o.keeps_height()).then_some(node.local.h_mm),
+                    paragraph_mm: tb.paragraph_spacing.mm(step_mm),
+                    // The box is drawn from its top left corner, on a whole pixel.
+                    grid: tb.baselines.then(|| quadrule_text::BaselineGrid {
+                        top_px: target.mm_to_px(node.frame.y_mm).round(),
+                        px_per_mm: target.mm_to_px(1.0),
+                        origin_px: rhythm.origin_y,
+                        unit_px: rhythm.unit_y,
+                    }),
                 })
             }
             _ => None,
@@ -402,15 +437,18 @@ pub fn lay_out_text(
     reg: &mut FontRegistry,
 ) -> Result<Laid, LayoutError> {
     let jobs = text_jobs(doc, primary, target);
-    let requests: Vec<TextRequest> = jobs
-        .iter()
-        .map(|j| TextRequest {
-            object_id: j.object_id,
-            text: &j.text,
-            width_mm: j.width_mm,
-        })
-        .collect();
+    let requests: Vec<TextRequest> = jobs.iter().map(TextJob::request).collect();
     Ok(quadrule_text::lay_out(reg, &target.id, &requests)?)
+}
+
+/// The laid-out height of every text box that is as tall as its text, from `outlines` (rung 11b):
+/// what the tree gives such a box wherever it reads a height ([`tree::Heights`]). A box the outlines
+/// do not hold is left out, and keeps its stored height.
+pub fn text_heights(doc: &Document, outlines: &ProfileOutlines) -> HashMap<Uuid, f64> {
+    doc.objects()
+        .filter(|o| o.keeps_height())
+        .filter_map(|o| Some((o.id, f64::from(outlines.text(o.id)?.height_mm))))
+        .collect()
 }
 
 /// Lays out the whole page on `target`. Text comes from `outlines`, which are either freshly
@@ -428,12 +466,14 @@ pub fn display_list(
         });
     }
     let rhythm = RhythmPx::new(doc, target);
+    let heights = text_heights(doc, outlines);
     let env = Env {
         target,
         rhythm,
         doc_rhythm: &doc.rhythm,
         outlines,
         ov: override_key(primary, target),
+        heights: tree::Heights::of(&heights),
     };
     let mut items = Vec::new();
     let ctx = tree::Ctx::page(primary.page_mm(), target.page_mm()).with_env(repeat::RepeatEnv {
@@ -461,6 +501,8 @@ struct Env<'a> {
     outlines: &'a ProfileOutlines,
     /// The device whose overrides are read; `None` for the primary profile.
     ov: Option<&'a str>,
+    /// The laid-out heights of the text boxes that are as tall as their text.
+    heights: tree::Heights<'a>,
 }
 
 /// Draws `objs` in order into `items`; a group's children are drawn inside it, and a group below
@@ -478,7 +520,7 @@ fn draw_objects(
         .iter()
         .filter(|o| env.ov.map_or(o.visible, |p| o.visible_on(p)))
     {
-        let placing = tree::place_object(o, ctx, env.ov);
+        let placing = tree::place_object_with(o, ctx, env.ov, env.heights);
         let (f, angle) = (placing.frame, placing.angle);
         let first_item = items.len();
         if let (ObjectKind::Group(g), Some(inner)) = (&o.kind, &placing.inner) {
@@ -561,13 +603,17 @@ fn draw_objects(
                 let Some((_, gray)) = stroke_opt(o.style, target) else {
                     continue;
                 };
-                let origin = Point::new(px(f.x_mm).round(), px(f.y_mm).round());
-                let path = text_path(
+                let (origin, centre) = text_box_origin(&f, target);
+                let mut path = text_path(
                     outlines,
                     text,
                     origin,
                     target.ppi / quadrule_model::MM_PER_IN,
                 )?;
+                // A turned text box turns about its middle (rung 11b), exactly at quarter turns.
+                if angle != 0.0 {
+                    path.apply_affine(shapes::rotation_about((centre.x, centre.y), angle));
+                }
                 items.push(Item::Fill { path, gray });
             }
             // Handled above: a group draws its children, a repeat its copies.
@@ -744,6 +790,16 @@ fn line_item(x0: f64, y0: f64, x1: f64, y1: f64, w: u32, gray: u8) -> Item {
             gray,
         }
     }
+}
+
+/// Where a text box is drawn from and turns about, in device pixels, for the box `f` on the page
+/// (laid-out height included): its top-left corner on a whole pixel, and the middle of the box from
+/// there. The export, the picking, the caret and the selection all take it from here, so they agree.
+pub fn text_box_origin(f: &quadrule_model::Frame, target: &Profile) -> (Point, Point) {
+    let px = |mm: f64| target.mm_to_px(mm);
+    let origin = Point::new(px(f.x_mm).round(), px(f.y_mm).round());
+    let centre = Point::new(origin.x + px(f.w_mm) / 2.0, origin.y + px(f.h_mm) / 2.0);
+    (origin, centre)
 }
 
 /// One text box's letters as a single path in device pixels. `origin` is the box's top-left
@@ -1012,12 +1068,14 @@ pub fn placed_objects(
     outlines: &ProfileOutlines,
 ) -> Vec<Placed> {
     let px = |mm: f64| target.mm_to_px(mm);
-    let nodes = tree::resolve_nodes_env(
+    let heights = text_heights(doc, outlines);
+    let nodes = tree::resolve_nodes_with(
         doc,
         primary.page_mm(),
         target.page_mm(),
         override_key(primary, target),
         Some(device_scale(doc, target)),
+        tree::Heights::of(&heights),
     );
     let mut out = Vec::with_capacity(nodes.len());
     for node in nodes {
@@ -1071,17 +1129,25 @@ pub fn placed_objects(
                 x1: x0.max(x1),
                 y1: y0.max(y1),
             },
-            ObjectKind::Text(_) => {
-                let h = outlines
-                    .text(o.id)
-                    .map_or(y1 - y0, |t| px(t.height_mm as f64));
-                Shape::Box {
-                    x0,
-                    y0,
-                    x1,
-                    y1: y0 + h,
+            // A text box is as tall as its laid-out text, or its frame when it has a height of its own
+            // (the node holds the right one).
+            ObjectKind::Text(_) if angle != 0.0 => {
+                // A turned text box is the box it is drawn in, turned about its middle.
+                let (origin, centre) = text_box_origin(&f, target);
+                Shape::Rotated {
+                    cx: centre.x,
+                    cy: centre.y,
+                    hw: (centre.x - origin.x).abs(),
+                    hh: (centre.y - origin.y).abs(),
+                    deg: angle,
                 }
             }
+            ObjectKind::Text(_) => Shape::Box {
+                x0: x0.min(x1),
+                y0: y0.min(y1),
+                x1: x0.max(x1),
+                y1: y0.max(y1),
+            },
         };
         out.push(Placed {
             id: o.id,

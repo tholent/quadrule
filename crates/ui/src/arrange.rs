@@ -21,7 +21,7 @@
 use crate::viewer::Viewer;
 use egui::{Color32, Pos2, Stroke, pos2};
 use quadrule_layout::align::{
-    AlignTo, Boxed, Edge, Grid, Spread, align_deltas, boxes_on, distribute_deltas, target_box,
+    AlignTo, Boxed, Edge, Grid, Spread, align_deltas, boxes_on_with, distribute_deltas, target_box,
     union_of,
 };
 use quadrule_layout::units::Axis;
@@ -155,10 +155,17 @@ impl Viewer {
         // The device on screen: its page, its pixels, its overrides.
         let grid = Grid::for_profile(&shown, self.snap.pixel_grid);
         let device = self.override_device();
+        let heights = self.laid_out_heights();
         let Some(doc) = self.doc() else {
             return Ok(());
         };
-        let boxed = boxes_on(doc, &primary, &shown, &ids);
+        let boxed = boxes_on_with(
+            doc,
+            &primary,
+            &shown,
+            &ids,
+            quadrule_layout::tree::Heights::of(&heights),
+        );
         let frames: Vec<Frame> = boxed.iter().map(|b| b.outer).collect();
         let steps: Vec<f64> = match op {
             ArrangeOp::Align(axis, edge) => {
@@ -179,6 +186,25 @@ impl Viewer {
         }
     }
 
+    /// The laid-out heights, in mm, of the text boxes on the device on screen that are as tall as
+    /// their text (rung 11b): what every height the app reads for them is (from the page's nodes).
+    pub fn laid_out_heights(&mut self) -> std::collections::HashMap<quadrule_model::Uuid, f64> {
+        let Some(page) = self.page() else {
+            return Default::default();
+        };
+        let tall: Vec<(quadrule_model::Uuid, f64)> = page
+            .placed
+            .iter()
+            .map(|p| (p.id, p.node.frame.h_mm))
+            .collect();
+        let Some(doc) = self.doc() else {
+            return Default::default();
+        };
+        tall.into_iter()
+            .filter(|(id, _)| doc.object(*id).is_some_and(|o| o.keeps_height()))
+            .collect()
+    }
+
     /// The boxes of `ids` as the device on screen shows them, in the mm of its page and the space
     /// they are in: the stored frame on the primary device, where the constraints and overrides put
     /// the object on a secondary one (the Arrange tab's X, Y, width and height; rung 8 bbq).
@@ -187,12 +213,21 @@ impl Viewer {
         ids: &[quadrule_model::Uuid],
     ) -> Vec<(quadrule_model::Uuid, Frame)> {
         if self.override_device().is_none() {
+            // A box as tall as its text shows that height, as laid out here (rung 11b).
+            let heights = self.laid_out_heights();
             let Some(doc) = self.doc() else {
                 return Vec::new();
             };
             return ids
                 .iter()
-                .filter_map(|id| doc.object(*id).map(|o| (*id, o.frame)))
+                .filter_map(|id| {
+                    let o = doc.object(*id)?;
+                    let mut f = o.frame;
+                    if let Some(h) = heights.get(id).filter(|_| o.keeps_height()) {
+                        f.h_mm = *h;
+                    }
+                    Some((*id, f))
+                })
                 .collect();
         }
         let Some(page) = self.page() else {
@@ -265,7 +300,7 @@ fn move_command(
                         y_mm: n.local.y_mm + sy,
                         ..n.local
                     };
-                    let text = matches!(o.kind, quadrule_model::ObjectKind::Text(_));
+                    let text = o.keeps_height();
                     let unfit = n.ctx.unfit(moved, o.rotation(), text);
                     quadrule_model::edit::set_position_override(
                         &mut o, dev, n.base, unfit.x_mm, unfit.y_mm,

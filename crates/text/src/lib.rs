@@ -39,13 +39,16 @@ use cosmic_text::skrifa::{
 use cosmic_text::{Align, Attrs, Buffer, Family, FontSystem, Metrics, Shaping, Weight, Wrap};
 use std::collections::HashMap;
 
+pub mod edit;
 pub mod opsz;
 pub mod registry;
 use quadrule_model::outlines::{
     FaceKey, GlyphShape, GlyphTable, PlacedGlyph, ProfileOutlines, TextOutlines,
 };
-use quadrule_model::{Extra, TextAlign, TextBox, Uuid, pt_to_mm};
-pub use registry::{FALLBACK_ORDER, FamilyInfo, FontRegistry, Scan, Weights};
+use quadrule_model::{Extra, TextAlign, TextBox, Uuid, VerticalAlign, pt_to_mm};
+pub use registry::{
+    FALLBACK_ORDER, FamilyInfo, Finished, FontRegistry, PendingScan, Scan, Weights, scans_started,
+};
 use std::collections::BTreeMap;
 
 /// A font that ships inside quadrule (napkin §7.2).
@@ -194,6 +197,70 @@ pub struct TextRequest<'a> {
     pub text: &'a TextBox,
     /// The box width on this profile, in mm.
     pub width_mm: f64,
+    /// The box height on this profile, in mm, when the box has a height of its own (a Fixed box,
+    /// rung 11b): lines that do not fully fit are left out. `None` for a box as tall as its text.
+    pub height_mm: Option<f64>,
+    /// The space after each paragraph but the last, in mm (rung 11b).
+    pub paragraph_mm: f64,
+    /// The rhythm the baselines stand on, when the box asks for it (`TextBox::baselines`).
+    pub grid: Option<BaselineGrid>,
+}
+
+/// The rhythm lines of a device, down the page, as a box whose top is at `top_px` sees them (rung
+/// 11b): a line `k` is where the rhythm puts it, rounded to a pixel as a ruled pattern region does,
+/// so a baseline on it lands on the very pixel row the region's line does.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BaselineGrid {
+    /// The box's top edge on the device, in whole pixels (where the text is drawn from).
+    pub top_px: f64,
+    /// Device pixels to the millimetre.
+    pub px_per_mm: f64,
+    /// The rhythm's first horizontal line, in pixels from the page's top.
+    pub origin_px: f64,
+    /// One rhythm step down, in pixels.
+    pub unit_px: f64,
+}
+
+impl BaselineGrid {
+    /// One rhythm step down, in mm.
+    pub fn step_mm(&self) -> f64 {
+        self.unit_px / self.px_per_mm
+    }
+
+    /// Rhythm line `k` on the page, in pixels (whole).
+    pub fn line_px(&self, k: i64) -> f64 {
+        (self.origin_px + k as f64 * self.unit_px).round()
+    }
+
+    /// Rhythm line `k`, in mm below the box's top.
+    pub fn line_mm(&self, k: i64) -> f64 {
+        (self.line_px(k) - self.top_px) / self.px_per_mm
+    }
+
+    /// The first rhythm line at least `min_mm` below the box's top: its number.
+    pub fn first_at_or_below(&self, min_mm: f64) -> i64 {
+        const EPS: f64 = 1e-6;
+        let want = self.top_px + min_mm * self.px_per_mm;
+        let mut k = ((want - self.origin_px) / self.unit_px).floor() as i64 - 1;
+        while self.line_mm(k) < min_mm - EPS {
+            k += 1;
+        }
+        k
+    }
+}
+
+impl<'a> TextRequest<'a> {
+    /// A box as tall as its text.
+    pub fn new(object_id: Uuid, text: &'a TextBox, width_mm: f64) -> Self {
+        TextRequest {
+            object_id,
+            text,
+            width_mm,
+            height_mm: None,
+            paragraph_mm: 0.0,
+            grid: None,
+        }
+    }
 }
 
 /// Why text could not be laid out.
@@ -280,12 +347,21 @@ pub fn lay_out(
         let resolved = reg
             .resolve(&tb.family, tb.weight, tb.style, tb.size_pt)
             .ok_or_else(|| TextError::MissingFamily(tb.family.clone()))?;
-        let size_mm = pt_to_mm(tb.size_pt) as f32;
-        let buf = paragraph(&mut reg.fs, tb, &resolved, size_mm, req.width_mm as f32);
+        let prep = prepare(reg, req, resolved)?;
+        let buf = paragraph(
+            &mut reg.fs,
+            tb,
+            &prep.resolved,
+            prep.size_mm,
+            prep.line_mm,
+            req.width_mm as f32,
+        );
+        let (_, arranged) = arrange_buffer(&buf, req, &prep);
         let mut glyphs = Vec::new();
-        let mut height_mm = 0.0f32;
-        for run in buf.layout_runs() {
-            height_mm += run.line_height;
+        for (run, line) in buf.layout_runs().zip(&arranged.lines) {
+            if !line.visible {
+                continue;
+            }
             for g in run.glyphs {
                 if g.glyph_id == 0 {
                     missing += 1;
@@ -326,14 +402,17 @@ pub fn lay_out(
                     continue; // a space: nothing to draw
                 }
                 let x = g.x + g.font_size * g.x_offset;
-                let y = run.line_y + g.y - g.font_size * g.y_offset;
+                let y = run.line_y + line.shift + g.y - g.font_size * g.y_offset;
                 glyphs.push(PlacedGlyph(table as u16, g.glyph_id, x, y));
             }
         }
+        let height_mm = arranged.height_mm;
+        let lines_hidden = arranged.hidden as u32;
         texts.push(TextOutlines {
             object_id: req.object_id,
-            size_mm,
+            size_mm: prep.size_mm,
             height_mm,
+            lines_hidden,
             glyphs,
             extra: Extra::new(),
         });
@@ -355,15 +434,253 @@ pub fn lay_out(
     })
 }
 
+/// What a box's layout needs worked out before its text is shaped (rung 11b).
+pub(crate) struct Prepared {
+    resolved: registry::Resolved,
+    size_mm: f32,
+    /// The line height in mm: the size times the box's line height, or on the rhythm a whole number
+    /// of its steps.
+    line_mm: f32,
+    grid: Option<BaselineGrid>,
+    /// A capital's height in mm, for the first baseline on the rhythm (0 when there is none).
+    cap_mm: f32,
+}
+
+fn prepare(
+    reg: &mut FontRegistry,
+    req: &TextRequest,
+    resolved: registry::Resolved,
+) -> Result<Prepared, TextError> {
+    let tb = req.text;
+    let size_mm = pt_to_mm(tb.size_pt) as f32;
+    // Baselines on the rhythm: the line height is a whole number of steps, at least one.
+    let grid = req.grid.filter(|_| tb.baselines);
+    let line_mm = match grid {
+        Some(g) => {
+            let step = g.step_mm() as f32;
+            (size_mm * tb.line_height as f32 / step).round().max(1.0) * step
+        }
+        None => size_mm * tb.line_height as f32,
+    };
+    let cap_mm = if grid.is_some() {
+        cap_height_mm(&mut reg.fs, &resolved, size_mm)
+    } else {
+        0.0
+    };
+    Ok(Prepared {
+        resolved,
+        size_mm,
+        line_mm,
+        grid,
+        cap_mm,
+    })
+}
+
+/// The lines of a shaped buffer, and where the box puts them.
+fn arrange_buffer(buf: &Buffer, req: &TextRequest, prep: &Prepared) -> (Vec<RunBox>, Arranged) {
+    let runs: Vec<RunBox> = buf
+        .layout_runs()
+        .map(|r| RunBox {
+            line_i: r.line_i,
+            line_top: r.line_top,
+            line_y: r.line_y,
+            line_height: r.line_height,
+        })
+        .collect();
+    let arranged = arrange(&runs, req, prep.grid, prep.cap_mm);
+    (runs, arranged)
+}
+
+/// One laid-out line (cosmic-text's "run") as the arrangement reads it.
+#[derive(Debug, Clone, Copy)]
+struct RunBox {
+    /// The paragraph it belongs to.
+    line_i: usize,
+    line_top: f32,
+    line_y: f32,
+    line_height: f32,
+}
+
+/// Where one line goes in the box.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LineSlot {
+    /// Added to the line's own baseline (mm).
+    pub shift: f32,
+    /// Top of the line, mm from the box's top.
+    pub top: f32,
+    /// Bottom of the line, mm from the box's top.
+    pub bottom: f32,
+    /// False when a Fixed box leaves the line out because it does not fully fit.
+    pub visible: bool,
+}
+
+/// How a box's lines are placed (rung 11b): where each goes, how many a Fixed box leaves out, and
+/// the height of the text.
+#[derive(Debug, Clone, PartialEq)]
+struct Arranged {
+    lines: Vec<LineSlot>,
+    hidden: usize,
+    height_mm: f32,
+}
+
+/// Places the lines of one box.
+fn arrange(
+    runs: &[RunBox],
+    req: &TextRequest,
+    grid: Option<BaselineGrid>,
+    cap_mm: f32,
+) -> Arranged {
+    if let (Some(g), false) = (grid, runs.is_empty()) {
+        return arrange_on_rhythm(runs, req, g, cap_mm);
+    }
+    let para = req.paragraph_mm as f32;
+    // Each paragraph after the first starts a paragraph's space lower.
+    let mut breaks = 0u32;
+    let mut lines: Vec<LineSlot> = Vec::with_capacity(runs.len());
+    for (j, r) in runs.iter().enumerate() {
+        if j > 0 && r.line_i != runs[j - 1].line_i {
+            breaks += 1;
+        }
+        let shift = breaks as f32 * para;
+        lines.push(LineSlot {
+            shift,
+            top: r.line_top + shift,
+            bottom: r.line_top + shift + r.line_height,
+            visible: true,
+        });
+    }
+    // The height of the text: every line's height added in turn, and the paragraphs' space.
+    let height_mm: f32 = runs.iter().map(|r| r.line_height).sum::<f32>() + breaks as f32 * para;
+    // Where a Fixed box puts the text between its top and bottom (never above the top).
+    if let Some(h) = req.height_mm {
+        let free = (h as f32 - height_mm).max(0.0);
+        let down = match req.text.v_align {
+            VerticalAlign::Top => 0.0,
+            VerticalAlign::Middle => free / 2.0,
+            VerticalAlign::Bottom => free,
+        };
+        if down != 0.0 {
+            for l in &mut lines {
+                l.shift += down;
+                l.top += down;
+                l.bottom += down;
+            }
+        }
+    }
+    let mut hidden = 0;
+    if let Some(h) = req.height_mm {
+        // Whole lines only: a line that does not fully fit is left out, and so is every line below.
+        let h = h as f32 + 1e-4;
+        for l in &mut lines {
+            l.visible = l.bottom <= h;
+            hidden += usize::from(!l.visible);
+        }
+    }
+    Arranged {
+        lines,
+        hidden,
+        height_mm,
+    }
+}
+
+/// Places the lines of a box whose baselines stand on the rhythm (rung 11b): the first on the first
+/// rhythm line at least a capital's height down, the others a whole number of steps below it (a
+/// paragraph's space rounded up to whole steps), and a Fixed box's Middle and Bottom moving the
+/// text by whole steps.
+fn arrange_on_rhythm(runs: &[RunBox], req: &TextRequest, g: BaselineGrid, cap_mm: f32) -> Arranged {
+    let step = g.step_mm();
+    let per_line = (f64::from(runs[0].line_height) / step).round().max(1.0) as i64;
+    let per_para = if req.paragraph_mm > 0.0 {
+        (req.paragraph_mm / step - 1e-6).ceil().max(0.0) as i64
+    } else {
+        0
+    };
+    let first = g.first_at_or_below(f64::from(cap_mm));
+    let mut ks = Vec::with_capacity(runs.len());
+    let mut k = first;
+    for (j, r) in runs.iter().enumerate() {
+        if j > 0 {
+            k += per_line;
+            if r.line_i != runs[j - 1].line_i {
+                k += per_para;
+            }
+        }
+        ks.push(k);
+    }
+    // The line box round a baseline: what is above it and below it.
+    let above = |r: &RunBox| r.line_y - r.line_top;
+    let below = |r: &RunBox| r.line_top + r.line_height - r.line_y;
+    let last = runs.len() - 1;
+    let text_bottom = g.line_mm(ks[last]) as f32 + below(&runs[last]);
+    let down = match req.height_mm {
+        Some(h) => {
+            let room = ((h as f32 - text_bottom).max(0.0)) as f64 / step;
+            match req.text.v_align {
+                VerticalAlign::Top => 0,
+                VerticalAlign::Middle => (room / 2.0).floor() as i64,
+                VerticalAlign::Bottom => room.floor() as i64,
+            }
+        }
+        None => 0,
+    };
+    let mut lines = Vec::with_capacity(runs.len());
+    let mut hidden = 0;
+    for (r, k) in runs.iter().zip(&ks) {
+        let baseline = g.line_mm(k + down) as f32;
+        let top = baseline - above(r);
+        let bottom = baseline + below(r);
+        let visible = req.height_mm.is_none_or(|h| bottom <= h as f32 + 1e-4);
+        hidden += usize::from(!visible);
+        lines.push(LineSlot {
+            shift: baseline - r.line_y,
+            top,
+            bottom,
+            visible,
+        });
+    }
+    Arranged {
+        lines,
+        hidden,
+        height_mm: text_bottom,
+    }
+}
+
+/// A capital's height in mm in the font a box uses, or 0.7 of the size when the font does not say.
+fn cap_height_mm(fs: &mut FontSystem, font: &registry::Resolved, size_mm: f32) -> f32 {
+    let guess = size_mm * 0.7;
+    let id = fs.db().query(&fontdb::Query {
+        families: &[fontdb::Family::Name(&font.family)],
+        weight: fontdb::Weight(font.weight),
+        style: font.style,
+        ..Default::default()
+    });
+    let Some(id) = id else {
+        return guess;
+    };
+    let index = fs.db().face(id).map(|f| f.index).unwrap_or(0);
+    let Some(loaded) = fs.get_font(id, Weight(font.weight)) else {
+        return guess;
+    };
+    let Ok(f) = font_ref(loaded.data(), index) else {
+        return guess;
+    };
+    let m = f.metrics(Size::unscaled(), LocationRef::default());
+    match m.cap_height {
+        Some(c) if m.units_per_em > 0 && c > 0.0 => c / f32::from(m.units_per_em) * size_mm,
+        _ => guess,
+    }
+}
+
 /// Lays one box out with cosmic-text, in millimetres.
 fn paragraph(
     fs: &mut FontSystem,
     tb: &TextBox,
     font: &registry::Resolved,
     size_mm: f32,
+    line_mm: f32,
     width_mm: f32,
 ) -> Buffer {
-    let mut buf = Buffer::new(fs, Metrics::new(size_mm, size_mm * tb.line_height as f32));
+    let mut buf = Buffer::new(fs, Metrics::new(size_mm, line_mm));
     buf.set_wrap(Wrap::WordOrGlyph);
     buf.set_size(Some(width_mm), None);
     let mut attrs = Attrs::new()

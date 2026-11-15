@@ -31,7 +31,8 @@ use cosmic_text::skrifa::{FontRef, MetadataProvider, Tag};
 use cosmic_text::{Fallback, FontSystem, fontdb};
 use quadrule_model::FontStyle;
 use std::collections::{BTreeMap, BTreeSet};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, OnceLock, mpsc};
 use std::time::{Duration, Instant};
 use unicode_script::Script;
 
@@ -147,6 +148,34 @@ pub struct Scan {
     pub elapsed: Duration,
     /// True when the list of families differs from before.
     pub changed: bool,
+}
+
+/// How many background scans have been started in this process (for a test that a second focus
+/// during a scan starts none).
+static SCANS_STARTED: AtomicUsize = AtomicUsize::new(0);
+
+/// How many background scans of the installed fonts this process has started.
+pub fn scans_started() -> usize {
+    SCANS_STARTED.load(Ordering::SeqCst)
+}
+
+/// A scan of the installed fonts running on a thread of its own (rung 11b).
+pub struct PendingScan {
+    rx: mpsc::Receiver<Finished>,
+}
+
+impl PendingScan {
+    /// The result, once the scan is done; `None` while it still runs. Never waits.
+    pub fn finished(&self) -> Option<Finished> {
+        self.rx.try_recv().ok()
+    }
+}
+
+/// A finished scan of the installed fonts, not yet taken in ([`FontRegistry::adopt`]).
+pub struct Finished {
+    catalog: Catalog,
+    /// How long the scan took, on its own thread.
+    elapsed: Duration,
 }
 
 /// The installed faces, grouped by family.
@@ -325,8 +354,9 @@ impl FontRegistry {
         Self::with_catalog(self.catalog.clone(), self.scans_system)
     }
 
-    /// Scans this computer's fonts again, in full (ADR-002 item 8: no change detection). Does
-    /// nothing for a bundled-only registry.
+    /// Scans this computer's fonts again, in full (ADR-002 item 8: no change detection), and waits
+    /// for it. Does nothing for a bundled-only registry. The window uses
+    /// [`FontRegistry::scan_in_background`] instead, so focus never waits.
     pub fn rescan(&mut self) -> Scan {
         let start = Instant::now();
         if !self.scans_system {
@@ -337,12 +367,46 @@ impl FontRegistry {
                 changed: false,
             };
         }
-        let fresh = Catalog::scan();
+        let fresh = Finished {
+            catalog: Catalog::scan(),
+            elapsed: start.elapsed(),
+        };
+        self.adopt(fresh)
+    }
+
+    /// Starts a full scan of this computer's fonts on a thread of its own and returns at once
+    /// (rung 11b; the record's Amendments, "background re-scan"). `None` for a bundled-only
+    /// registry, which has nothing to scan. Hand the result to [`FontRegistry::adopt`] when
+    /// [`PendingScan::finished`] gives it.
+    pub fn scan_in_background(&self) -> Option<PendingScan> {
+        if !self.scans_system {
+            return None;
+        }
+        SCANS_STARTED.fetch_add(1, Ordering::SeqCst);
+        let (tx, rx) = mpsc::channel();
+        std::thread::spawn(move || {
+            let start = Instant::now();
+            let catalog = Catalog::scan();
+            let _ = tx.send(Finished {
+                catalog,
+                elapsed: start.elapsed(),
+            });
+        });
+        Some(PendingScan { rx })
+    }
+
+    /// Takes in a finished scan: the list of installed families swaps to the new one, and the
+    /// layout store is made again with the families in use.
+    pub fn adopt(&mut self, scanned: Finished) -> Scan {
+        let Finished {
+            catalog: fresh,
+            elapsed,
+        } = scanned;
         let changed = fresh.names() != self.catalog.names();
         let scan = Scan {
             faces: fresh.faces(),
             families: fresh.families.len(),
-            elapsed: start.elapsed(),
+            elapsed,
             changed,
         };
         self.catalog = Arc::new(fresh);

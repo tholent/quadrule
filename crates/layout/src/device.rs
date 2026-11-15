@@ -103,7 +103,7 @@ pub fn ungroup_overrides(
                 continue;
             };
             // The child as the device shows it, put back in the space the group is in.
-            let text = matches!(c.kind, ObjectKind::Text(_));
+            let text = c.keeps_height();
             let (local, rot) = gn.ctx.unplace(cn.frame, cn.angle);
             let unfit = gn.ctx.unfit(local, rot, text);
             let mut baked = c.clone();
@@ -339,7 +339,7 @@ pub fn make_primary(doc: &Document, new_id: &str) -> Result<Command, DeviceError
                     return;
                 };
                 if !o.is_group() {
-                    let text = matches!(o.kind, ObjectKind::Text(_));
+                    let text = o.keeps_height();
                     let unfit = n.ctx.unfit(b.local, b.angle_own, text);
                     set_frame_override(o, dev, n.base, unfit);
                 }

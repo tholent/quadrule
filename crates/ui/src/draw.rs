@@ -253,7 +253,7 @@ fn make_object(
                 line_height: 1.25,
                 letter_spacing_em: 0.0,
                 align: TextAlign::Left,
-                extra: Extra::new(),
+                ..TextBox::default()
             }),
         ),
         DrawKind::Pattern => mm_object(

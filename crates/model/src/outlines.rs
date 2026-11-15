@@ -69,6 +69,10 @@ fn is_zero(v: &u16) -> bool {
     *v == 0
 }
 
+fn is_zero_u32(v: &u32) -> bool {
+    *v == 0
+}
+
 /// Each distinct letter shape of one face, once (ADR-001 item 1).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct GlyphTable {
@@ -131,6 +135,10 @@ pub struct TextOutlines {
     pub size_mm: f32,
     /// Height of all lines, in mm, from the box's top.
     pub height_mm: f32,
+    /// How many whole lines a Fixed box left out because they did not fully fit (format 0.12,
+    /// rung 11b); 0 for a box that left none out, and for every older file.
+    #[serde(default, skip_serializing_if = "is_zero_u32")]
+    pub lines_hidden: u32,
     /// Each drawn letter, in reading order.
     pub glyphs: Vec<PlacedGlyph>,
     /// Fields from newer versions.

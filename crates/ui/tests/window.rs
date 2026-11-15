@@ -827,7 +827,9 @@ fn the_tools_bar_picks_tools_by_click_double_click_and_key() {
 }
 
 #[test]
-fn a_drawn_text_box_takes_the_cursor_and_tool_keys_wait_while_typing() {
+fn a_drawn_text_box_starts_typing_on_the_canvas_and_tool_keys_wait_while_typing() {
+    // Rung 11b: a text box just drawn is typed in on the canvas, with its text selected, instead of
+    // the Text tab's field taking the cursor (rung 5).
     use quadrule_ui::{DragMods, Tab, Tool};
     let mut h = harness_on_a_new_page();
     h.state_mut().ui.viewer.set_tool(Tool::Text);
@@ -838,14 +840,41 @@ fn a_drawn_text_box_takes_the_cursor_and_tool_keys_wait_while_typing() {
     let st = h.state();
     let tab = st.ui.tab == Tab::Text;
     let selected = id.is_some() && st.ui.viewer.selection == id.into_iter().collect::<Vec<_>>();
-    let focused = h.ctx.memory(|m| m.focused().is_some());
-    // A tool key typed into the field does not switch tools.
+    let typing = st.ui.viewer.typing_id() == id;
+    let all_selected = st.ui.viewer.typing_caret().is_some_and(|c| {
+        c.selected_text().as_deref() == Some(st.ui.viewer.typing_text().unwrap().as_str())
+    });
+    // A tool key typed does not switch tools; letters typed replace the selected text.
     h.key_press(Key::L);
     h.run();
     let ignored = h.state().ui.viewer.tool == Tool::Select;
-    let ok = tab && selected && focused && ignored;
+    h.event(egui::Event::Text("Hello".into()));
+    h.run();
+    let typed = h.state().ui.viewer.typing_text().as_deref() == Some("Hello");
+    // Escape ends it: the text is in the document, as one step after the box.
+    let steps_before = h
+        .state()
+        .ui
+        .viewer
+        .open
+        .as_ref()
+        .unwrap()
+        .history
+        .undo_len();
+    h.key_press(Key::Escape);
+    h.run();
+    let v = &h.state().ui.viewer;
+    let content = id
+        .and_then(|i| v.doc().unwrap().object(i))
+        .map(|o| match &o.kind {
+            quadrule_model::ObjectKind::Text(t) => t.content.clone(),
+            _ => String::new(),
+        });
+    let ended = !v.is_typing() && content.as_deref() == Some("Hello");
+    let one_step = v.open.as_ref().unwrap().history.undo_len() == steps_before + 1;
+    let ok = tab && selected && typing && all_selected && ignored && typed && ended && one_step;
     println!(
-        "CHECK crate=ui name=window_text_focus_and_keys result={} text_tab_open={tab} new_box_selected={selected} field_has_focus={focused} tool_keys_ignored_in_field={ignored}",
+        "CHECK crate=ui name=window_text_typing_on_the_canvas result={} text_tab_open={tab} new_box_selected={selected} typing_began={typing} text_selected={all_selected} tool_keys_ignored_while_typing={ignored} typed_replaces={typed} escape_ends={ended} one_undo_step={one_step}",
         pass(ok)
     );
     assert!(ok);

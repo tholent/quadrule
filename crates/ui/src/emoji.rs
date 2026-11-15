@@ -24,7 +24,7 @@ use crate::fonts::{Pictures, raster_text};
 use crate::view::ViewerUi;
 use egui::{Role, ScrollArea, Sense, WidgetInfo};
 use emojis::{Emoji, Group};
-use quadrule_model::{Extra, FontStyle, ObjectKind, TextAlign, TextBox, Uuid};
+use quadrule_model::{FontStyle, ObjectKind, TextAlign, TextBox, Uuid};
 use quadrule_text::{FontRegistry, TextRequest, lay_out};
 
 /// The point size of a new text box holding an emoji.
@@ -57,7 +57,7 @@ fn emoji_box(text: &str) -> TextBox {
         line_height: 1.25,
         letter_spacing_em: 0.0,
         align: TextAlign::Left,
-        extra: Extra::new(),
+        ..TextBox::default()
     }
 }
 
@@ -72,11 +72,7 @@ pub fn drawable(reg: &mut FontRegistry) -> Vec<&'static Emoji> {
     let requests: Vec<TextRequest> = boxes
         .iter()
         .enumerate()
-        .map(|(i, b)| TextRequest {
-            object_id: Uuid::from_u128(i as u128 + 1),
-            text: b,
-            width_mm: 1000.0,
-        })
+        .map(|(i, b)| TextRequest::new(Uuid::from_u128(i as u128 + 1), b, 1000.0))
         .collect();
     let Ok(laid) = lay_out(reg, "emoji", &requests) else {
         return Vec::new();
@@ -260,9 +256,14 @@ impl ViewerUi {
         self.text_field_id
     }
 
-    /// Puts `emoji` where the user is writing: at the Text tab field's cursor (replacing what is
-    /// selected there) when a text box is picked, else in a new text box in the middle of the view.
+    /// Puts `emoji` where the user is writing: at the canvas caret while typing there, else at the
+    /// Text tab field's cursor (replacing what is selected there) when a text box is picked, else in a new text box in the middle of the view.
     pub fn insert_emoji(&mut self, ctx: &egui::Context, emoji: &str) {
+        // Typing on the canvas: it goes in at the canvas caret (rung 11b).
+        if self.viewer.is_typing() {
+            self.viewer.type_str(emoji);
+            return;
+        }
         let text_box = self.viewer.selection.first().and_then(|id| {
             let o = self.viewer.doc()?.object(*id)?;
             match &o.kind {

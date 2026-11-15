@@ -25,7 +25,7 @@
 
 use crate::override_key;
 use crate::rotate::rotate_point;
-use crate::tree::{Node, resolve_nodes_on};
+use crate::tree::{Heights, Node, resolve_nodes_with};
 use crate::units::Axis;
 use quadrule_model::{Document, Frame, ObjectKind, Uuid};
 use quadrule_profiles::Profile;
@@ -139,11 +139,26 @@ pub fn boxes_of(doc: &Document, primary: &Profile, ids: &[Uuid]) -> Vec<Boxed> {
 /// The boxes of `ids` on the page of device `shown` (rung 8 bbq, Defaulted "Align and distribute on
 /// a secondary"): where its constraints and its overrides put them, in the mm of that page.
 pub fn boxes_on(doc: &Document, primary: &Profile, shown: &Profile, ids: &[Uuid]) -> Vec<Boxed> {
-    let nodes = resolve_nodes_on(
+    boxes_on_with(doc, primary, shown, ids, Heights::NONE)
+}
+
+/// [`boxes_on`] with the laid-out heights of the text boxes that are as tall as their text (rung
+/// 11b, paying the rung 7b debt "a text box aligns by its stored frame"): such a box aligns, and
+/// distributes, by the box its text fills on the device.
+pub fn boxes_on_with(
+    doc: &Document,
+    primary: &Profile,
+    shown: &Profile,
+    ids: &[Uuid],
+    heights: Heights,
+) -> Vec<Boxed> {
+    let nodes = resolve_nodes_with(
         doc,
         primary.page_mm(),
         shown.page_mm(),
         override_key(primary, shown),
+        None,
+        heights,
     );
     ids.iter()
         .filter_map(|id| {

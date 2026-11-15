@@ -292,7 +292,7 @@ impl ViewerUi {
     }
 
     /// A step field: `auto`, `2u` (follows the rhythm) or a length (kept in mm).
-    fn spacing_row(
+    pub(crate) fn spacing_row(
         &mut self,
         ui: &mut egui::Ui,
         key: &str,

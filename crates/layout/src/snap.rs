@@ -424,8 +424,13 @@ impl Handle {
         Handle::W,
     ];
 
-    /// The handles on the left and right edges only (text boxes grow downward by themselves).
+    /// The handles on the left and right edges only.
     pub const SIDES: [Handle; 2] = [Handle::W, Handle::E];
+
+    /// The four edge handles, no corners: what a text box that is as tall as its text shows (rung
+    /// 11b). The left and right ones change its width; pulling the top or bottom one gives the box a
+    /// height of its own (it turns Fixed).
+    pub const EDGES: [Handle; 4] = [Handle::N, Handle::E, Handle::S, Handle::W];
 
     /// Which way the handle pulls on x: -1 the left edge, 1 the right edge, 0 neither.
     pub fn x_side(self) -> i8 {

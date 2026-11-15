@@ -74,6 +74,12 @@ pub struct DragBench {
     /// Opens the rung 11a fonts page when nothing is open yet (`--fonts-page`); a page that is
     /// mostly text, whose dot grid the drag moves.
     pub fonts: bool,
+    /// Opens the rung 11b text-box page when nothing is open yet (`--textbox-page`).
+    pub textbox: bool,
+    /// Types into a long text box instead of dragging (rung 11b: `--bench-type`): a box of a page's
+    /// worth of text is made, a letter is typed into it at each step (a new paragraph now and then),
+    /// and the run is timed like a drag. The box is taken away again after.
+    pub typing: bool,
     /// Runs on the document's first secondary device, not the primary one (`--bench-secondary`), so
     /// a drag writes overrides (rung 8a).
     pub secondary: bool,
@@ -100,6 +106,8 @@ impl DragBench {
             patterns: false,
             repeats: false,
             fonts: false,
+            textbox: false,
+            typing: false,
             secondary: false,
             no_strip: false,
         }
@@ -133,6 +141,14 @@ impl DragBench {
     pub fn with_fonts(self) -> Self {
         DragBench {
             fonts: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark over the rung 11b text-box page.
+    pub fn with_textbox(self) -> Self {
+        DragBench {
+            textbox: true,
             ..self
         }
     }
@@ -183,6 +199,14 @@ impl DragBench {
         DragBench {
             groups: true,
             ..self
+        }
+    }
+
+    /// A benchmark of `frames` steps that types into a long text box (rung 11b).
+    pub fn typing(frames: u32) -> Self {
+        DragBench {
+            typing: true,
+            ..DragBench::new(frames)
         }
     }
 

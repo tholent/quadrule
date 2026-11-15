@@ -29,6 +29,9 @@ use quadrule_i18n::Message;
 /// How tall a picture is, in screen points.
 pub const STRIP_PICTURE_POINTS: f32 = 96.0;
 
+/// The red + tab's size on a strip picture, in points (rung 11b).
+const STRIP_TAB_POINTS: f32 = 8.0;
+
 /// One device's picture and what it was made from.
 pub(crate) struct StripPic {
     generation: u64,
@@ -42,7 +45,7 @@ impl ViewerUi {
     /// Makes the pictures for devices whose picture is out of date, unless a gesture is running
     /// (the last picture shows meanwhile). Does nothing while the strip is folded.
     pub(crate) fn refresh_strip(&mut self, ctx: &egui::Context) {
-        if !self.viewer.show_strip || self.viewer.dragging() {
+        if !self.viewer.show_strip || self.viewer.dragging() || self.viewer.is_typing() {
             return;
         }
         let ppp = ctx.pixels_per_point();
@@ -64,9 +67,14 @@ impl ViewerUi {
                 ((page.image.width as f32 * k).round() as u32).max(1),
                 ((page.image.height as f32 * k).round() as u32).max(1),
             );
+            let overflow = (
+                page.overflows.iter().map(|o| o.corner).collect::<Vec<_>>(),
+                (page.image.width, page.image.height),
+            );
             let small = shrink(&page.image, tw, th);
             let img = ColorImage::from_gray([tw as usize, th as usize], &small.data);
             let texture = ctx.load_texture(format!("strip-{id}"), img, TextureOptions::LINEAR);
+            self.strip_overflows.insert(id.clone(), overflow);
             self.strip_pics.insert(
                 id,
                 StripPic {
@@ -135,6 +143,18 @@ impl ViewerUi {
                             egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
                             egui::Color32::WHITE,
                         );
+                        // Where this device leaves lines of a Fixed box out, the red + tab
+                        // (rung 11b), at the picture's scale.
+                        if let Some((marks, (pw, ph))) = self.strip_overflows.get(id) {
+                            for &(cx, cy) in marks {
+                                let at = rect.min
+                                    + egui::vec2(
+                                        cx as f32 / *pw as f32 * rect.width(),
+                                        cy as f32 / *ph as f32 * rect.height(),
+                                    );
+                                crate::view::paint_overflow_tab(ui.painter(), at, STRIP_TAB_POINTS);
+                            }
+                        }
                     }
                     let here = *id == on_screen;
                     let stroke = if here {

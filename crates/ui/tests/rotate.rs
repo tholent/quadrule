@@ -154,14 +154,14 @@ fn the_rotate_handle_turns_catches_steps_and_is_one_undo_step() {
 }
 
 #[test]
-fn only_one_line_or_shape_has_a_rotate_handle() {
+fn only_one_line_shape_or_text_box_has_a_rotate_handle() {
     let mut v = page();
     let a = rect(&mut v);
     let one = v.rotate_handle().is_some();
-    // A text box and a pattern region do not turn.
+    // A text box turns since rung 11b; a pattern region does not.
     v.set_tool(Tool::Text);
     let t = v.place_click(300.0, 900.0, NONE, REACH).unwrap();
-    let text = v.rotate_handle().is_none();
+    let text = v.rotate_handle().is_some();
     v.set_tool(Tool::Pattern);
     let p = v.place_click(300.0, 1200.0, NONE, REACH).unwrap();
     let pattern = v.rotate_handle().is_none();
@@ -174,17 +174,17 @@ fn only_one_line_or_shape_has_a_rotate_handle() {
     v.edit(quadrule_model::edit::Command::SetObject(locked), None)
         .unwrap();
     let locked_none = v.rotate_handle().is_none();
-    // The field's setter refuses a kind that cannot turn.
+    // The field's setter refuses a kind that cannot turn (the pattern region), and turns the text.
     v.selection = vec![t, p];
     let _ = v.edit_selected(None, |o| {
         if o.kind.can_rotate() {
             o.rotation_deg = 40.0;
         }
     });
-    let refused = obj(&v, t).rotation() == 0.0 && obj(&v, p).rotation() == 0.0;
+    let refused = obj(&v, t).rotation() == 40.0 && obj(&v, p).rotation() == 0.0;
     let ok = one && text && pattern && several && locked_none && refused;
     println!(
-        "\nCHECK crate=ui name=rotate_handle_kinds result={} shape_has_one={one} text_none={text} pattern_none={pattern} several_none={several} locked_none={locked_none} text_and_pattern_ignore_rotation={refused}",
+        "\nCHECK crate=ui name=rotate_handle_kinds result={} shape_has_one={one} text_has_one={text} pattern_none={pattern} several_none={several} locked_none={locked_none} text_turns_pattern_ignores_rotation={refused}",
         pass(ok)
     );
     assert!(ok);
@@ -458,7 +458,7 @@ fn the_rotation_and_opacity_fields_are_named_and_work() {
     h.key_press(Key::Enter);
     h.run();
     let opacity = obj(&h.state().ui.viewer, id).opacity_pct == 40;
-    // A text box has no Rotation field.
+    // A text box has a Rotation field since rung 11b.
     let t = {
         let v = &mut h.state_mut().ui.viewer;
         v.set_tool(Tool::Text);
@@ -467,12 +467,12 @@ fn the_rotation_and_opacity_fields_are_named_and_work() {
     h.state_mut().ui.tab = Tab::Arrange;
     h.run();
     h.run();
-    let none_for_text = h.query_by_label("Rotation").is_none();
+    let field_for_text = h.query_by_label("Rotation").is_some();
     let _ = t;
     let ok =
-        rotation_named && by_field && one_step_undo && opacity_named && opacity && none_for_text;
+        rotation_named && by_field && one_step_undo && opacity_named && opacity && field_for_text;
     println!(
-        "\nCHECK crate=ui name=window_rotation_opacity_fields result={} rotation_named={rotation_named} rotation_typed={by_field} undone={one_step_undo} opacity_named={opacity_named} opacity_typed={opacity} text_has_no_rotation_field={none_for_text}",
+        "\nCHECK crate=ui name=window_rotation_opacity_fields result={} rotation_named={rotation_named} rotation_typed={by_field} undone={one_step_undo} opacity_named={opacity_named} opacity_typed={opacity} text_has_a_rotation_field={field_for_text}",
         pass(ok)
     );
     assert!(ok);

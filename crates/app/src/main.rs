@@ -32,7 +32,8 @@
 //! otherwise). Rung 8b adds `--landscape-page` (the landscape page; the benchmarks then run over it). Rung 9 adds
 //! `--patterns-page` (the pattern page: every new pattern; the benchmarks then run over it). Rung 10 adds
 //! `--repeats-page` (the repeat page; the benchmarks then run over it and the drag moves the habit tracker). Rung 11a adds
-//! `--fonts-page` (the fonts page: a page of text; the benchmarks then run over it and the drag moves its dot grid).
+//! `--fonts-page` (the fonts page: a page of text; the benchmarks then run over it and the drag moves its dot grid). Rung 11b adds
+//! `--textbox-page` (the text-box page, same use) and `--bench-type [frames]` (type into a long text box; `name=type_bench`).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -134,6 +135,8 @@ impl App {
         }
         if let Some(p) = path {
             ui.open_file(&p);
+        } else if args.textbox_page {
+            ui.viewer.open_textbox();
         } else if args.fonts_page {
             ui.viewer.open_fonts();
         } else if args.repeats_page {
@@ -153,6 +156,8 @@ impl App {
         }
         let bench = if let Some(frames) = args.bench_rotate {
             Some(quadrule_ui::DragBench::rotate(frames))
+        } else if let Some(frames) = args.bench_type {
+            Some(quadrule_ui::DragBench::typing(frames))
         } else if let Some(frames) = args.bench_drag {
             // A timing run is not a session: it leaves no settings behind and opens no recovery.
             Some(quadrule_ui::DragBench::new(frames))
@@ -169,7 +174,9 @@ impl App {
                 b
             };
             let b = if args.no_strip { b.without_strip() } else { b };
-            if args.fonts_page {
+            if args.textbox_page {
+                b.with_textbox()
+            } else if args.fonts_page {
                 b.with_fonts()
             } else if args.repeats_page {
                 b.with_repeats()
@@ -379,6 +386,8 @@ struct Args {
     bench_drag: Option<u32>,
     /// Replay drawing a pattern region this many steps and close (`--bench-draw [frames]`).
     bench_draw: Option<u32>,
+    /// Type this many letters into a long text box and close (`--bench-type [frames]`).
+    bench_type: Option<u32>,
     /// Open the shapes page (every new kind) instead of the empty start (`--shapes-page`); the
     /// benchmarks then run over it.
     shapes_page: bool,
@@ -403,6 +412,9 @@ struct Args {
     /// Open the rung 11a fonts page instead of the empty start (`--fonts-page`); the benchmarks
     /// then run over it, and the drag moves its dot grid.
     fonts_page: bool,
+    /// Open the rung 11b text-box page instead of the empty start (`--textbox-page`); the benchmarks
+    /// then run over it, and the drag moves its dot grid.
+    textbox_page: bool,
     /// Run the benchmark on the first secondary device, so a drag writes overrides
     /// (`--bench-secondary`).
     bench_secondary: bool,
@@ -437,6 +449,11 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
                 .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
                 .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
             out.bench_draw = Some(steps.unwrap_or(150));
+        } else if a == "--bench-type" {
+            let steps = args
+                .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
+                .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
+            out.bench_type = Some(steps.unwrap_or(150));
         } else if a == "--bench-rotate" {
             let steps = args
                 .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
@@ -458,6 +475,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.repeats_page = true;
         } else if a == "--fonts-page" {
             out.fonts_page = true;
+        } else if a == "--textbox-page" {
+            out.textbox_page = true;
         } else if a == "--bench-secondary" {
             out.bench_secondary = true;
         } else if a == "--no-strip" {
@@ -621,6 +640,14 @@ mod tests {
                 Ok(Args {
                     bench_drag: Some(40),
                     repeats_page: true,
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--textbox-page", "--bench-type", "40"]),
+                Ok(Args {
+                    bench_type: Some(40),
+                    textbox_page: true,
                     ..Args::default()
                 }),
             ),

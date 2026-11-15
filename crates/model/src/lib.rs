@@ -390,7 +390,7 @@ pub struct Object {
     pub cap: LineCap,
     /// Rotation in degrees, clockwise on the page, about the centre of the frame; the frame stays
     /// the unrotated box (rung 6 bbq, Defaulted "6b, settled now for its builder"). Format 0.6; a
-    /// file without it reads as 0. Only lines and the shapes rotate: text boxes and pattern
+    /// file without it reads as 0. Lines, the shapes and (since format 0.12) text boxes rotate; pattern
     /// regions ignore it, so use [`Object::rotation`] to read it.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub rotation_deg: f64,
@@ -409,6 +409,10 @@ pub struct Object {
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+fn is_false(v: &bool) -> bool {
+    !*v
 }
 
 fn collect_objects<'a>(objs: &'a [Object], out: &mut Vec<&'a Object>) {
@@ -447,13 +451,20 @@ pub fn normalize_deg(deg: f64) -> f64 {
 
 impl Object {
     /// The rotation that counts, in degrees from 0 up to (not including) 360: the stored one for a
-    /// line or a shape, always 0 for a text box or a pattern region, which do not rotate (rung 6b).
+    /// line, a shape or a text box, always 0 for a pattern region, which does not rotate.
     pub fn rotation(&self) -> f64 {
         if self.kind.can_rotate() {
             normalize_deg(self.rotation_deg)
         } else {
             0.0
         }
+    }
+
+    /// Whether this is a text box that is as tall as its text (rung 11b): its height is not its
+    /// own to keep, so a resize changes only its place and width, and wherever the app reads its
+    /// height it reads the laid-out one.
+    pub fn keeps_height(&self) -> bool {
+        matches!(&self.kind, ObjectKind::Text(t) if t.sizing.is_auto())
     }
 
     /// The opacity that counts, 0 to 100 percent.
@@ -952,15 +963,15 @@ impl PolygonShape {
 }
 
 impl ObjectKind {
-    /// Whether the kind can rotate (format 0.6): lines, the shapes and groups of such. A text box and
-    /// a pattern region cannot, in 6b (rung 6 bbq, "Things I chose" of the 6b builder).
+    /// Whether the kind can rotate (format 0.6): lines, the shapes, text boxes (since rung 11b) and
+    /// groups of such. A pattern region cannot (rung 6 bbq, "Things I chose" of the 6b builder).
     pub fn can_rotate(&self) -> bool {
         match self {
-            ObjectKind::Text(_) | ObjectKind::Pattern(_) => false,
+            ObjectKind::Pattern(_) => false,
             // A repeat has no rotate handle (rung 10 bbq, Defaulted "Modes").
             ObjectKind::Repeat(_) => false,
-            // A group turns only if nothing in it, at any depth, is a text box or a pattern region
-            // (rung 7a bbq, Q2).
+            // A group turns only if nothing in it, at any depth, is a pattern region or a repeat
+            // (rung 7a bbq, Q2; text no longer blocks it, rung 11b).
             ObjectKind::Group(g) => g.children.iter().all(|c| c.kind.can_rotate()),
             _ => true,
         }
@@ -1038,9 +1049,116 @@ pub struct TextBox {
     pub letter_spacing_em: f64,
     /// Horizontal alignment.
     pub align: TextAlign,
+    /// Whether the box is as tall as its text (the default) or has a height of its own (format
+    /// 0.12, rung 11b). A file without it reads as Auto.
+    #[serde(default, skip_serializing_if = "TextSizing::is_auto")]
+    pub sizing: TextSizing,
+    /// Space added after each paragraph but the last (format 0.12, rung 11b). A file without it
+    /// reads as none.
+    #[serde(default, skip_serializing_if = "ParagraphSpacing::is_none")]
+    pub paragraph_spacing: ParagraphSpacing,
+    /// Where the text sits in a Fixed box (format 0.12, rung 11b); a box as tall as its text has
+    /// no room to move in. A file without it reads as Top.
+    #[serde(default, skip_serializing_if = "VerticalAlign::is_top")]
+    pub v_align: VerticalAlign,
+    /// Stand every baseline on a rung of the rhythm (format 0.12, rung 11b): the line height becomes
+    /// a whole number of rhythm steps (at least one), and the first baseline sits on the first
+    /// rhythm line at least a capital's height below the box's top. A file without it reads as off.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub baselines: bool,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+impl Default for TextBox {
+    /// An empty box in Atkinson Hyperlegible Next, regular, 12 pt, left aligned, as tall as its text.
+    fn default() -> Self {
+        TextBox {
+            content: String::new(),
+            family: "Atkinson Hyperlegible Next".into(),
+            weight: 400,
+            style: FontStyle::Normal,
+            size_pt: 12.0,
+            line_height: 1.25,
+            letter_spacing_em: 0.0,
+            align: TextAlign::Left,
+            sizing: TextSizing::Auto,
+            paragraph_spacing: ParagraphSpacing::default(),
+            v_align: VerticalAlign::Top,
+            baselines: false,
+            extra: Extra::new(),
+        }
+    }
+}
+
+/// How a text box gets its height (format 0.12, rung 11b).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TextSizing {
+    /// As tall as its laid-out text, on each device (the default; every older box).
+    #[default]
+    Auto,
+    /// The height in the box's frame; lines that do not fully fit are left out.
+    Fixed,
+}
+
+impl TextSizing {
+    /// Whether this is the default; used to leave the field out of a file when it is.
+    pub fn is_auto(&self) -> bool {
+        matches!(self, TextSizing::Auto)
+    }
+}
+
+/// The space after each paragraph of a text box but the last (format 0.12, rung 11b): points, as
+/// typed in any length unit, or whole rhythm steps when typed in `u`, which follow the rhythm (as the
+/// repeat tool's spacing does).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub enum ParagraphSpacing {
+    /// A length, in points.
+    Pt(f64),
+    /// This many rhythm steps down (`u`), as the device resolves the step.
+    Units(f64),
+}
+
+impl Default for ParagraphSpacing {
+    fn default() -> Self {
+        ParagraphSpacing::Pt(0.0)
+    }
+}
+
+impl ParagraphSpacing {
+    /// Whether there is none; used to leave the field out of a file when so.
+    pub fn is_none(&self) -> bool {
+        matches!(self, ParagraphSpacing::Pt(v) | ParagraphSpacing::Units(v) if *v == 0.0)
+    }
+
+    /// The space in mm, given one rhythm step down in mm. Never negative; not-a-number is none.
+    pub fn mm(&self, step_mm: f64) -> f64 {
+        let v = match *self {
+            ParagraphSpacing::Pt(pt) => pt_to_mm(pt),
+            ParagraphSpacing::Units(u) => u * step_mm,
+        };
+        if v.is_finite() { v.max(0.0) } else { 0.0 }
+    }
+}
+
+/// Where the text of a Fixed box sits between its top and bottom (format 0.12, rung 11b).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum VerticalAlign {
+    /// At the top (the default).
+    #[default]
+    Top,
+    /// Centred.
+    Middle,
+    /// At the bottom.
+    Bottom,
+}
+
+impl VerticalAlign {
+    /// Whether this is the default; used to leave the field out of a file when it is.
+    pub fn is_top(&self) -> bool {
+        matches!(self, VerticalAlign::Top)
+    }
 }
 
 /// Whether a text box uses its family's upright or italic face (rung 11a, format 0.11).

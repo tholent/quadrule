@@ -264,6 +264,20 @@ app-align-left = Left
 app-align-center = Center
 app-align-right = Right
 app-align-justify = Justify
+app-sizing = Sizing
+app-sizing-auto = Auto height
+app-sizing-fixed = Fixed
+app-paragraph-spacing = Paragraph spacing
+app-valign = Vertical align
+app-valign-top = Top
+app-valign-middle = Middle
+app-valign-bottom = Bottom
+app-baselines = Align baselines to rhythm
+app-line-height-steps = { $n } rhythm { $n ->
+        [one] step
+       *[other] steps
+    } a line (set by the rhythm)
+app-valign-auto-note = A box as tall as its text has no room to move it. Set Sizing to Fixed.
 
 app-constraint-h = Horizontal
 app-constraint-v = Vertical
@@ -340,7 +354,7 @@ notice-turned-move = A turned group has a space of its own. Use Group and Ungrou
 app-group = Group
 app-ungroup = Ungroup
 app-fold-item = Show what is inside { $name }
-app-rotation-note = A group with a text box or a pattern region in it cannot turn.
+app-rotation-note = A group with a pattern region or a repeat in it cannot turn.
 
 # Align and distribute, and mixed values (rung 7b).
 app-align-heading = Align and distribute

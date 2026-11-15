@@ -55,20 +55,28 @@ and error.
 - Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock and reorder layers;
   unlimited undo and redo; autosave with recovery after a crash.
 - Export a PNG for the Manta or the Nomad, named like `{title}_{manta|nomad}_{w}x{h}.png`.
-- Check a page with the linter (nine rules so far).
+- Text boxes: double-click one (or draw a new one) to type in it, right where the letters are, with a caret, Shift to
+  select, Ctrl+A, Ctrl+C, Ctrl+X and Ctrl+V as plain text, Enter for a new paragraph, Ctrl+Z back through the words you
+  typed, and Escape or a click outside to finish (the whole session is one undo step). In the Text tab, Sizing is Auto
+  height (the box is as tall as its text, on each device) or Fixed (a height of its own: lines that do not fully fit are
+  left out of the page, a red + tab at the corner of the box shows it on the canvas and the device previews, never in
+  the export, and lint rule L08 says how many). Fixed boxes can put their text at the top, middle or bottom; paragraph
+  spacing is added after each paragraph; "Align baselines to rhythm" makes the line height a whole number of rhythm steps
+  and stands every line of type on a rung of the rhythm, as handwriting stands on ruled paper.
+- Check a page with the linter (ten rules so far).
 - Turn a line or a shape with the round handle above its top edge (it catches at 0, 90, 180 and 270 degrees; Shift
   holds 15-degree steps) or type an angle in the Arrange tab; a turned shape resizes along its own sides. Lines point any
   way (draw one up and to the right, or drag its ends past each other). Opacity, 0 to 100 percent, is in the Style tab;
   the export is flattened to gray, with no transparency. A turned edge is smooth; a quarter turn keeps sharp edges.
-  Text boxes and pattern regions do not turn yet.
+  Text boxes turn the same way, about the middle of the box; pattern regions do not turn yet.
 - Group objects (Ctrl+G, or the Group button; Ctrl+Shift+G or Ungroup breaks it up). A group moves, turns, resizes and
   fades as one. Grouping never changes how a page looks on either device: as in Figma, a group is see-through to
   constraints, so each child keeps its own constraints against the page (a group has none, and no Constraints tab), and
   the group's box is always the box round its children. Resizing a group stretches everything in it, as resizing a
   loose selection does. Groups nest as deep as you like. A click picks the whole group; double-click goes
   one level in (Escape or a click outside steps back out), and Ctrl+click picks the object inside at once. The Layers
-  panel is a tree with fold arrows, and rows can be dragged into and out of groups. A group with a text box or a pattern
-  region in it cannot turn.
+  panel is a tree with fold arrows, and rows can be dragged into and out of groups. A group with a pattern region (or a repeat)
+  in it cannot turn; a group with text in it can.
 - Align and distribute, in the Arrange tab: six align buttons (left edges, horizontal centres, right edges, tops,
   vertical middles, bottoms) and four distribute buttons (horizontally and vertically, by spacing or by centres; three
   or more objects). "Align to" is the selection when two or more objects are picked and the page when one is, switching by
@@ -146,7 +154,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

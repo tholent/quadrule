@@ -36,6 +36,7 @@ pub mod recovery;
 pub mod repeat_tab;
 pub mod strip;
 pub mod tools;
+pub mod typing;
 pub mod view;
 pub mod viewer;
 
@@ -51,5 +52,6 @@ pub use editor::{DropOn, RowZone, Toward, layer_drop_place, object_drop_place, r
 pub use panels::Tab;
 pub use recovery::{Autosave, Recovered, Recovery};
 pub use tools::Tool;
+pub use typing::{Start, Typing, TypingView};
 pub use view::{After, Request, UiFont, ViewerUi, install_fonts};
 pub use viewer::{ExportWhich, Source, Viewer, Zoom};

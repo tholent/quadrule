@@ -59,6 +59,8 @@ impl Viewer {
     /// history is sealed (typing in one field; Defaulted "Commands and undo"). A refused command
     /// changes nothing and the notice says why.
     pub fn edit(&mut self, cmd: Command, merge: Option<&str>) -> Result<(), EditError> {
+        // Another change ends the typing: its text is a step before this one (rung 11b).
+        self.end_typing();
         let Some(open) = &mut self.open else {
             return Ok(());
         };
@@ -86,6 +88,7 @@ impl Viewer {
 
     /// Undoes the last step.
     pub fn undo(&mut self) -> bool {
+        self.end_typing();
         let done = self
             .open
             .as_mut()
@@ -98,6 +101,7 @@ impl Viewer {
 
     /// Redoes the last undone step.
     pub fn redo(&mut self) -> bool {
+        self.end_typing();
         let done = self
             .open
             .as_mut()
@@ -371,6 +375,36 @@ impl Viewer {
         Ok(())
     }
 
+    /// Gives the selected text boxes `sizing` (rung 11b), as one step. A box that becomes Fixed
+    /// keeps the height its text has on the primary page, so nothing moves when it is switched.
+    pub fn set_text_sizing(&mut self, sizing: quadrule_model::TextSizing) -> Result<(), EditError> {
+        let primary_heights: std::collections::HashMap<Uuid, f64> = {
+            let Some(pid) = self.doc().map(|d| d.primary_profile_id.clone()) else {
+                return Ok(());
+            };
+            match self.page_for(&pid) {
+                Ok(page) => page
+                    .placed
+                    .iter()
+                    .map(|p| (p.id, p.node.frame.h_mm))
+                    .collect(),
+                Err(_) => Default::default(),
+            }
+        };
+        self.edit_selected(Some("text-sizing"), |x| {
+            let was_auto = x.keeps_height();
+            if let ObjectKind::Text(t) = &mut x.kind {
+                t.sizing = sizing;
+            }
+            if was_auto
+                && sizing == quadrule_model::TextSizing::Fixed
+                && let Some(h) = primary_heights.get(&x.id)
+            {
+                x.frame.h_mm = *h;
+            }
+        })
+    }
+
     /// Says in the status bar that an edit just made changed the design on every device, when it
     /// was made with a secondary device on screen (rung 8 bbq, Q3).
     pub(crate) fn say_shared(&mut self) {
@@ -485,9 +519,7 @@ impl Viewer {
                     y_mm: n.local.y_mm + my,
                     ..n.local
                 };
-                let unfit = n
-                    .ctx
-                    .unfit(moved, o.rotation(), matches!(o.kind, ObjectKind::Text(_)));
+                let unfit = n.ctx.unfit(moved, o.rotation(), o.keeps_height());
                 set_position_override(&mut o, dev, n.base, unfit.x_mm, unfit.y_mm);
                 Some(Command::SetObject(o))
             })
@@ -520,7 +552,7 @@ impl Viewer {
             .iter()
             .filter_map(|n| {
                 let mut o = doc.object(n.id)?.clone();
-                let text = matches!(o.kind, ObjectKind::Text(_));
+                let text = o.keeps_height();
                 let unfit = n.ctx.unfit(f(n.local), o.rotation(), text);
                 set_frame_override(&mut o, &dev, n.base, unfit);
                 (o != *doc.object(n.id)?).then_some(Command::SetObject(o))
@@ -1117,6 +1149,7 @@ impl Viewer {
     /// its text outlines (ADR-001 item 2), through the `format` crate. A profile whose text
     /// cannot be laid out here (a missing font) keeps the outlines the file had.
     pub fn file_bytes(&mut self) -> Result<Vec<u8>, String> {
+        self.end_typing();
         let Viewer { open, fonts, .. } = self;
         let open = open.as_mut().ok_or("nothing is open")?;
         if let Some(r) = &open.read_only {

@@ -168,7 +168,7 @@ fn a_rescan_lays_pages_out_again_only_when_the_list_changed() {
 
 #[test]
 fn names_and_preview_are_drawn_in_their_own_fonts_as_export_pixels() {
-    use quadrule_model::{Extra, TextAlign, TextBox};
+    use quadrule_model::{TextAlign, TextBox};
     use quadrule_text::FontRegistry;
     use quadrule_ui::fonts::raster_text;
     let mut reg = FontRegistry::bundled_only();
@@ -182,7 +182,7 @@ fn names_and_preview_are_drawn_in_their_own_fonts_as_export_pixels() {
         line_height: 1.25,
         letter_spacing_em: 0.0,
         align: TextAlign::Left,
-        extra: Extra::new(),
+        ..TextBox::default()
     };
     let mut rasters = Vec::new();
     for f in reg.families() {

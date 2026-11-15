@@ -17,7 +17,7 @@
 //! fonts. Each test prints one structured `CHECK` line (run with `-- --nocapture`).
 
 use cosmic_text::skrifa::{FontRef, MetadataProvider, Tag};
-use quadrule_model::{Extra, FontStyle, TextAlign, TextBox, Uuid};
+use quadrule_model::{FontStyle, TextAlign, TextBox, Uuid};
 use quadrule_text::opsz::{pin_opsz, wght_range};
 use quadrule_text::*;
 
@@ -35,16 +35,12 @@ fn text_box(family: &str, content: &str, weight: u16, style: FontStyle, size_pt:
         line_height: 1.25,
         letter_spacing_em: 0.0,
         align: TextAlign::Left,
-        extra: Extra::new(),
+        ..TextBox::default()
     }
 }
 
 fn lay_in(reg: &mut FontRegistry, tb: &TextBox) -> Laid {
-    let req = TextRequest {
-        object_id: Uuid::from_u128(1),
-        text: tb,
-        width_mm: 5000.0,
-    };
+    let req = TextRequest::new(Uuid::from_u128(1), tb, 5000.0);
     lay_out(reg, "test", &[req]).expect("lay out")
 }
 
@@ -318,11 +314,7 @@ fn installed_fonts_are_listed_and_a_bundled_name_is_never_shadowed() {
         match lay_out(
             &mut reg,
             "test",
-            &[TextRequest {
-                object_id: Uuid::from_u128(1),
-                text: &tb,
-                width_mm: 200.0,
-            }],
+            &[TextRequest::new(Uuid::from_u128(1), &tb, 200.0)],
         ) {
             Ok(l) => {
                 laid = f.name.clone();

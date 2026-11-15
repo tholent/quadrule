@@ -39,7 +39,7 @@ command it runs, so you can always run that directly.
 | `make check` | rustfmt, clippy and tests on the default members (quick) |
 | `make check-all` | The same on the whole workspace; this is what CI runs, so run it before you push |
 | `make run` | Open the app (`FILE=page.quad` to open a file) |
-| `make bench-drag`, `make bench-draw`, `make bench-rotate` | Time dragging, drawing and turning in a release build (`SHAPES=1`, `TRANSFORMS=1`, `GROUPS=1`, `DEVICES=1`, `LANDSCAPE=1` or `PATTERNS=1` or `REPEATS=1` or `FONTS=1` over the shapes, transforms, groups, overrides, landscape, pattern or repeat page, `NOMAD=1` to run on the Nomad so a drag writes overrides, `NOSTRIP=1` to fold the device previews strip shut (it is open in a bench otherwise), `TOOL=rect` to draw with another tool) |
+| `make bench-drag`, `make bench-draw`, `make bench-rotate`, `make bench-type` | Time dragging, drawing, turning and typing (into a long text box) in a release build (`SHAPES=1`, `TRANSFORMS=1`, `GROUPS=1`, `DEVICES=1`, `LANDSCAPE=1` or `PATTERNS=1` or `REPEATS=1` or `FONTS=1` or `TEXTBOX=1` over the shapes, transforms, groups, overrides, landscape, pattern or repeat page, `NOMAD=1` to run on the Nomad so a drag writes overrides, `NOSTRIP=1` to fold the device previews strip shut (it is open in a bench otherwise), `TOOL=rect` to draw with another tool) |
 | `make lint` | Lint a document from the command line |
 | `make fuzz` | Fuzz the `.quad` reader (needs nightly Rust and `cargo-fuzz`) |
 

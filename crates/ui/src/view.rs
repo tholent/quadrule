@@ -175,9 +175,19 @@ pub struct ViewerUi {
     zoom_anchor: Option<(egui::Pos2, f32, f32)>,
     /// The previews strip's pictures, by device (rung 8a).
     pub(crate) strip_pics: HashMap<String, crate::strip::StripPic>,
+    /// Where each strip picture's device leaves lines of a Fixed text box out: the box corners and
+    /// the page size they are in (rung 11b).
+    #[allow(clippy::type_complexity)]
+    pub(crate) strip_overflows: HashMap<String, (Vec<(f64, f64)>, (u32, u32))>,
     /// Put the cursor in the Text tab's text field, with its text selected, on the next frame
     /// that shows it (a text box was just drawn).
     pub(crate) focus_text_content: bool,
+    /// The canvas takes the keyboard focus on the next frame (a typing session just began).
+    pub(crate) take_canvas_focus: bool,
+    /// A pointer drag on the canvas is selecting text.
+    type_selecting: bool,
+    /// The canvas's widget id, to tell when something else takes the focus.
+    canvas_id: Option<egui::Id>,
     /// The font picker window (rung 11a).
     pub(crate) font_picker: crate::fonts::FontPicker,
     /// The emoji picker window (rung 11a).
@@ -249,7 +259,11 @@ impl ViewerUi {
             take_out: None,
             zoom_anchor: None,
             strip_pics: HashMap::new(),
+            strip_overflows: HashMap::new(),
             focus_text_content: false,
+            take_canvas_focus: false,
+            type_selecting: false,
+            canvas_id: None,
             renaming: None,
             folded: std::collections::HashSet::new(),
             field_text: HashMap::new(),
@@ -287,8 +301,13 @@ impl ViewerUi {
         self.shortcuts(&ctx, &mut requests);
         self.tick_autosave(&ctx);
         if std::mem::take(&mut self.viewer.focus_new_text) {
+            // A text box just drawn is typed in at once, with its text selected (rung 11b, Q3); the
+            // Text tab shows its style.
             self.tab = Tab::Text;
-            self.focus_text_content = true;
+            if let Some(id) = self.viewer.selection.first().copied() {
+                self.viewer.begin_typing(id, crate::typing::Start::All);
+                self.take_canvas_focus = self.viewer.is_typing();
+            }
         }
         egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut requests));
         egui::Panel::bottom("status").show(ui, |ui| self.status_bar(ui));
@@ -329,6 +348,13 @@ impl ViewerUi {
                     self.empty(ui, &mut requests);
                 }
             });
+        // Something else taking the keyboard (a field in the inspector) ends the typing.
+        if self.viewer.is_typing()
+            && let Some(f) = ctx.memory(|m| m.focused())
+            && Some(f) != self.canvas_id
+        {
+            self.viewer.end_typing();
+        }
         self.ruler_window(&ctx);
         self.font_picker_window(&ctx);
         self.emoji_picker_window(&ctx);
@@ -373,6 +399,11 @@ impl ViewerUi {
             return;
         }
         if self.viewer.open.is_none() {
+            return;
+        }
+        // Typing on the canvas takes the keyboard (rung 11b).
+        if self.viewer.is_typing() {
+            self.type_keys(ctx, requests);
             return;
         }
         // While an object is being dragged, only Escape counts: it drops the drag (rung 4 bbq,
@@ -476,6 +507,120 @@ impl ViewerUi {
                     let _ = self.viewer.nudge(dx, dy, false);
                 }
             }
+        }
+    }
+
+    /// The keyboard while typing on the canvas (rung 11b, Q3): letters, arrows (Shift selects, Ctrl
+    /// goes by words), Home and End, Backspace and Delete, Enter for a new paragraph, Ctrl+A, Ctrl+C,
+    /// Ctrl+X and Ctrl+V as plain text, Ctrl+Z back through typed words, Escape to end. Input method
+    /// events pass through. Only Save and Save As act on the document; both end the typing first.
+    fn type_keys(&mut self, ctx: &egui::Context, requests: &mut Vec<Request>) {
+        use quadrule_text::edit::{Go, Op};
+        let cmd = Modifiers::COMMAND;
+        let shift_cmd = Modifiers::COMMAND | Modifiers::SHIFT;
+        if ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(shift_cmd, Key::S))) {
+            self.viewer.end_typing();
+            requests.push(Request::SaveAsDialog(None));
+            return;
+        }
+        if ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(cmd, Key::S))) {
+            self.viewer.end_typing();
+            requests.extend(self.save());
+            return;
+        }
+        // Take the typing events; the rest (the pointer) stay for the canvas.
+        let events: Vec<egui::Event> = ctx.input_mut(|i| {
+            let mut taken = Vec::new();
+            i.events.retain(|e| {
+                let ours = matches!(
+                    e,
+                    egui::Event::Text(_)
+                        | egui::Event::Key { .. }
+                        | egui::Event::Copy
+                        | egui::Event::Cut
+                        | egui::Event::Paste(_)
+                        | egui::Event::Ime(_)
+                );
+                if ours {
+                    taken.push(e.clone());
+                }
+                !ours
+            });
+            taken
+        });
+        let had_events = !events.is_empty();
+        for e in events {
+            if !self.viewer.is_typing() {
+                break;
+            }
+            match e {
+                egui::Event::Text(t) => {
+                    for c in t.chars().filter(|c| !c.is_control()) {
+                        self.viewer.type_op(Op::Insert(c));
+                    }
+                }
+                egui::Event::Copy => {
+                    if let Some(t) = self.viewer.type_copy() {
+                        ctx.copy_text(t);
+                    }
+                }
+                egui::Event::Cut => {
+                    if let Some(t) = self.viewer.type_cut() {
+                        ctx.copy_text(t);
+                    }
+                }
+                egui::Event::Paste(t) => self.viewer.type_str(&t),
+                egui::Event::Ime(ime) => match ime {
+                    egui::ImeEvent::Preedit { text, .. } => self.viewer.type_preedit(Some(text)),
+                    egui::ImeEvent::Commit(t) => self.viewer.type_str(&t),
+                    _ => self.viewer.type_preedit(None),
+                },
+                egui::Event::Key {
+                    key,
+                    pressed: true,
+                    modifiers: m,
+                    ..
+                } => {
+                    let by = m.command || m.alt;
+                    let go = |to| Op::Go {
+                        to,
+                        select: m.shift,
+                    };
+                    match key {
+                        Key::Escape => self.viewer.end_typing(),
+                        Key::ArrowLeft => {
+                            self.viewer
+                                .type_op(go(if by { Go::WordLeft } else { Go::Left }))
+                        }
+                        Key::ArrowRight => {
+                            self.viewer
+                                .type_op(go(if by { Go::WordRight } else { Go::Right }))
+                        }
+                        Key::ArrowUp => self.viewer.type_op(go(Go::Up)),
+                        Key::ArrowDown => self.viewer.type_op(go(Go::Down)),
+                        Key::Home => {
+                            self.viewer
+                                .type_op(go(if m.command { Go::Start } else { Go::Home }))
+                        }
+                        Key::End => {
+                            self.viewer
+                                .type_op(go(if m.command { Go::Finish } else { Go::End }))
+                        }
+                        Key::Backspace => self.viewer.type_op(Op::Backspace),
+                        Key::Delete => self.viewer.type_op(Op::Delete),
+                        Key::Enter => self.viewer.type_op(Op::Enter),
+                        Key::A if m.command => self.viewer.type_op(Op::SelectAll),
+                        Key::Z if m.command && m.shift => self.viewer.type_redo(),
+                        Key::Z if m.command => self.viewer.type_undo(),
+                        Key::Y if m.command => self.viewer.type_redo(),
+                        _ => {}
+                    }
+                }
+                _ => {}
+            }
+        }
+        if had_events {
+            ctx.request_repaint();
         }
     }
 
@@ -813,8 +958,16 @@ impl ViewerUi {
         let gained_focus = !self.was_focused && focused;
         self.was_focused = focused;
         if gained_focus {
-            // The installed fonts may have changed while the window was in the background.
-            self.viewer.rescan_fonts();
+            // The installed fonts may have changed while the window was in the background. The scan
+            // runs off this thread; the list swaps in when it is done (rung 11b).
+            self.viewer.start_font_scan();
+        }
+        if self.viewer.font_scan_running() {
+            if self.viewer.poll_font_scan().is_none() {
+                ctx.request_repaint_after(std::time::Duration::from_millis(100));
+            } else {
+                ctx.request_repaint();
+            }
         }
         if self.closing {
             return;
@@ -1183,7 +1336,9 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    if b.fonts {
+                    if b.textbox {
+                        self.viewer.open_textbox();
+                    } else if b.fonts {
                         self.viewer.open_fonts();
                     } else if b.repeats {
                         self.viewer.open_repeats();
@@ -1240,7 +1395,13 @@ impl ViewerUi {
                     Some((x0, y0, x1, y1)) => {
                         b.centre = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
                         let none = DragMods::default();
-                        let began = if b.rotate {
+                        let began = if b.typing {
+                            // A long box, and the caret at its end; the steps type into it.
+                            match self.viewer.place_long_text() {
+                                Some(id) => self.viewer.begin_typing(id, crate::typing::Start::End),
+                                None => false,
+                            }
+                        } else if b.rotate {
                             // Press on the rotate handle of the selected rectangle.
                             self.viewer.selection = vec![target];
                             self.viewer.rotate_stalk_px = ROTATE_STALK_POINTS / 0.3;
@@ -1265,6 +1426,20 @@ impl ViewerUi {
             Phase::Run(i) if i < b.frames => {
                 let t = f64::from(i);
                 let (cx, cy) = b.centre;
+                if b.typing {
+                    // A letter a step; every twelfth is a space, every sixtieth a new paragraph.
+                    let op = if i % 60 == 59 {
+                        quadrule_text::edit::Op::Enter
+                    } else if i % 12 == 11 {
+                        quadrule_text::edit::Op::Insert(' ')
+                    } else {
+                        quadrule_text::edit::Op::Insert(char::from(b'a' + (i % 26) as u8))
+                    };
+                    self.viewer.type_op(op);
+                    b.phase = Phase::Run(i + 1);
+                    self.bench = Some(b);
+                    return;
+                }
                 let (x, y) = if b.rotate {
                     // The pointer swings round the rectangle's centre, a quarter turn each way.
                     let a = (-90.0 + 70.0 * (0.21 * t).sin()).to_radians();
@@ -1291,8 +1466,15 @@ impl ViewerUi {
                 b.phase = Phase::Run(i + 1);
             }
             Phase::Run(_) => {
-                self.viewer.gesture_end();
-                self.viewer.undo();
+                if b.typing {
+                    // The text typed is one step; the box and its text are taken away again.
+                    self.viewer.end_typing();
+                    self.viewer.undo();
+                    self.viewer.undo();
+                } else {
+                    self.viewer.gesture_end();
+                    self.viewer.undo();
+                }
                 let c = self.drag_clock.clone();
                 let canvas = match (self.canvas_mode, &self.chip_state.fallback) {
                     (CanvasMode::ExportPixels, _) => "export",
@@ -1310,7 +1492,9 @@ impl ViewerUi {
                 };
                 println!(
                     "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} device={} strip={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
-                    if b.rotate {
+                    if b.typing {
+                        "type_bench"
+                    } else if b.rotate {
                         "rotate_bench"
                     } else if b.draw {
                         "draw_bench"
@@ -1322,7 +1506,9 @@ impl ViewerUi {
                     } else {
                         "release"
                     },
-                    if b.fonts {
+                    if b.textbox {
+                        "textbox"
+                    } else if b.fonts {
                         "fonts"
                     } else if b.repeats {
                         "repeats"
@@ -1347,7 +1533,9 @@ impl ViewerUi {
                         "primary"
                     },
                     if self.viewer.show_strip { "on" } else { "off" },
-                    if b.rotate {
+                    if b.typing {
+                        "type"
+                    } else if b.rotate {
                         "rotate"
                     } else if b.draw {
                         b.tool.cli_name()
@@ -1394,7 +1582,7 @@ impl ViewerUi {
         let start = std::time::Instant::now();
         self.rebuilt = false;
         self.canvas_frame(ui);
-        if self.viewer.dragging() {
+        if self.viewer.dragging() || self.viewer.is_typing() {
             if !self.clock_live {
                 self.clock_live = true;
                 self.drag_clock = DragClock::default();
@@ -1478,6 +1666,7 @@ impl ViewerUi {
             _ => Vec::new(),
         };
         let zones: Vec<_> = page.profile.safe_zones.clone();
+        let overflows: Vec<(f64, f64)> = page.overflows.iter().map(|o| o.corner).collect();
         let area = selected
             .and_then(|i| page.findings.get(i))
             .and_then(|f| f.area);
@@ -1506,16 +1695,19 @@ impl ViewerUi {
         }
 
         // What the drag draws, and the handles of the selection (all overlays, never exported).
-        let handles = if self.viewer.tool == Tool::Select {
+        let typing = self.viewer.is_typing();
+        let handles = if self.viewer.tool == Tool::Select && !typing {
             self.viewer.handles()
         } else {
             Vec::new()
         };
-        let rotate_handle = if self.viewer.tool == Tool::Select {
+        let rotate_handle = if self.viewer.tool == Tool::Select && !typing {
             self.viewer.rotate_handle()
         } else {
             None
         };
+        let typing_view = self.viewer.typing_view();
+        let preedit = self.viewer.typing_preedit().map(String::from);
         let guides = self.viewer.drag_guides().to_vec();
         let marquee = self.viewer.drag_marquee();
         // Equal gaps are drawn with their size; the words come from Fluent.
@@ -1551,6 +1743,25 @@ impl ViewerUi {
                 (size.y + 2.0 * margin).max(avail.y),
             );
             let (rect, response) = ui.allocate_exact_size(total, Sense::click_and_drag());
+            self.canvas_id = Some(response.id);
+            // A typing session has the keyboard: arrows, Tab and Escape go to it and not to the
+            // focus (rung 11b).
+            if std::mem::take(&mut self.take_canvas_focus) {
+                response.request_focus();
+            }
+            if self.viewer.is_typing() {
+                ctx.memory_mut(|m| {
+                    m.set_focus_lock_filter(
+                        response.id,
+                        egui::EventFilter {
+                            tab: true,
+                            horizontal_arrows: true,
+                            vertical_arrows: true,
+                            escape: true,
+                        },
+                    )
+                });
+            }
             // The page's corner sits on a whole screen pixel, so 1:1 and the zoom steps stay
             // sharp.
             let min = rect.center() - size / 2.0;
@@ -1622,6 +1833,12 @@ impl ViewerUi {
             }
 
             let accent = ui.visuals().selection.stroke.color;
+
+            // A Fixed text box that leaves lines out wears a small red + tab at its bottom-right
+            // corner (rung 11b, Q5): an overlay, never exported.
+            for &(cx, cy) in &overflows {
+                paint_overflow_tab(&painter, to_screen(cx, cy), OVERFLOW_TAB_POINTS);
+            }
 
             // The rhythm, as a light blue guide that stays out of the way of the objects: units a little
             // stronger than subdivisions (rung 4 bbq Q9; chris, 2026-11-10: "much lighter and perhaps
@@ -1900,6 +2117,86 @@ impl ViewerUi {
                 );
             }
 
+            // The caret and the selection of a typing session (rung 11b): an overlay, drawn from the
+            // very layout the letters were, turned with the box.
+            if let Some(v) = &typing_view {
+                for q in &v.selection {
+                    let pts: Vec<egui::Pos2> = q.iter().map(|&(x, y)| to_screen(x, y)).collect();
+                    painter.add(egui::Shape::convex_polygon(
+                        pts,
+                        accent.gamma_multiply(0.30),
+                        Stroke::NONE,
+                    ));
+                }
+                let outline: Vec<egui::Pos2> =
+                    v.outline.iter().map(|&(x, y)| to_screen(x, y)).collect();
+                painter.add(egui::Shape::closed_line(
+                    outline,
+                    Stroke::new(1.0, accent.gamma_multiply(0.6)),
+                ));
+                let (a, b) = (
+                    to_screen(v.caret.0.0, v.caret.0.1),
+                    to_screen(v.caret.1.0, v.caret.1.1),
+                );
+                // A solid caret: it needs no repaint of its own while the window is idle.
+                let w = ((v.caret_width as f32 * scale).max(1.5 / ppp)).max(1.0);
+                painter.line_segment([a, b], Stroke::new(w, Color32::BLACK));
+                if let Some(text) = &preedit {
+                    // What an input method is composing, at the caret, underlined.
+                    let font = egui::FontId::proportional(14.0);
+                    let galley = painter.layout_no_wrap(text.clone(), font, Color32::BLACK);
+                    let at = a + vec2(2.0, 0.0);
+                    painter.rect_filled(
+                        Rect::from_min_size(at, galley.size()),
+                        CornerRadius::ZERO,
+                        Color32::from_rgb(255, 250, 200),
+                    );
+                    let under = at + vec2(0.0, galley.size().y);
+                    painter.line_segment(
+                        [under, under + vec2(galley.size().x, 0.0)],
+                        Stroke::new(1.0, Color32::BLACK),
+                    );
+                    painter.galley(at, galley, Color32::BLACK);
+                }
+                // Where an input method puts its window.
+                ctx.output_mut(|o| {
+                    o.ime = Some(egui::output::IMEOutput {
+                        purpose: egui::IMEPurpose::Normal,
+                        rect: Rect::from_two_pos(a, b).expand(2.0),
+                        cursor_rect: Rect::from_two_pos(a, b),
+                        should_interrupt_composition: false,
+                    })
+                });
+            }
+
+            // Typing on the canvas (rung 11b): a press on the box puts the caret there and a drag
+            // selects; a press elsewhere ends the typing and is then an ordinary press.
+            let press_mods = ui.input(|i| i.modifiers);
+            if self.viewer.is_typing() && response.drag_started_by(PointerButton::Primary) {
+                if let Some(p) = ui.input(|i| i.pointer.press_origin()) {
+                    let (x, y) = to_dev(p);
+                    if self.viewer.typing_contains(x, y) {
+                        self.viewer.type_pointer(x, y, press_mods.shift, false);
+                        self.type_selecting = true;
+                        response.request_focus();
+                    } else {
+                        self.viewer.end_typing();
+                    }
+                }
+            }
+            if self.type_selecting {
+                if response.dragged()
+                    && let Some(p) = ui.input(|i| i.pointer.latest_pos())
+                {
+                    let (x, y) = to_dev(p);
+                    self.viewer.type_drag_to(x, y);
+                    ctx.request_repaint();
+                }
+                if response.drag_stopped() || !ui.input(|i| i.pointer.primary_down()) {
+                    self.type_selecting = false;
+                }
+            }
+
             // Dragging (rung 4a): a press that moves is a drag; one that does not is a click.
             let mods = ui.input(|i| DragMods {
                 shift: i.modifiers.shift,
@@ -1912,6 +2209,7 @@ impl ViewerUi {
             // With a drawing tool on, a press draws a new object instead of moving one (rung 5).
             let drawing_tool = self.viewer.tool != Tool::Select;
             if response.drag_started_by(PointerButton::Primary)
+                && !self.type_selecting
                 && let Some(p) = ui.input(|i| i.pointer.press_origin())
             {
                 let (x, y) = to_dev(p);
@@ -1977,16 +2275,39 @@ impl ViewerUi {
 
             // A click picks the object under the pointer; Shift adds to the selection. With a
             // drawing tool on, it drops a new object at its default size instead.
+            // While typing, a click on the box moves the caret (a double-click selects the word); a
+            // click elsewhere ends the typing and then does what it would have.
+            let mut typed_click = false;
+            if self.viewer.is_typing()
+                && response.clicked()
+                && let Some(p) = response.interact_pointer_pos()
+            {
+                let (x, y) = to_dev(p);
+                if self.viewer.typing_contains(x, y) {
+                    self.viewer
+                        .type_pointer(x, y, press_mods.shift, response.double_clicked());
+                    typed_click = true;
+                    response.request_focus();
+                } else {
+                    self.viewer.end_typing();
+                }
+            }
             if response.clicked()
+                && !typed_click
                 && let Some(p) = response.interact_pointer_pos()
             {
                 let (x, y) = to_dev(p);
                 if drawing_tool {
                     let _ = self.viewer.place_click(x, y, mods, reach);
                 } else if response.double_clicked() {
-                    // A double-click goes one level into a group (rung 7a bbq, Q4); on anything
-                    // else it is the click it was.
-                    if !self.viewer.enter_at(x, y, slack) {
+                    // A double-click on text types in it, at the click (rung 11b), a copy in a repeat
+                    // and text inside a group included; on a group it goes one level in (rung 7a
+                    // bbq, Q4); on anything else it is the click it was.
+                    if self.viewer.begin_typing_at(x, y, slack) {
+                        self.take_canvas_focus = true;
+                        response.request_focus();
+                        ctx.request_repaint();
+                    } else if !self.viewer.enter_at(x, y, slack) {
                         self.viewer
                             .click_with(x, y, slack, mods.shift, mods.snapping_off);
                     }
@@ -2269,4 +2590,20 @@ pub fn install_fonts(ctx: &egui::Context, font: Option<UiFont>) {
         }
     }
     ctx.set_fonts(fonts);
+}
+
+/// How big the red + tab of a Fixed text box that leaves lines out is on screen, in points
+/// (rung 11b).
+pub(crate) const OVERFLOW_TAB_POINTS: f32 = 14.0;
+
+/// Paints the red + tab with its bottom-right corner at `corner`: a red square, a white plus. The
+/// canvases and the strip's pictures both use it (rung 11b).
+pub(crate) fn paint_overflow_tab(painter: &egui::Painter, corner: egui::Pos2, side: f32) {
+    let rect = Rect::from_min_max(corner - vec2(side, side), corner);
+    painter.rect_filled(rect, CornerRadius::same(2), Color32::from_rgb(210, 30, 30));
+    let c = rect.center();
+    let arm = side * 0.28;
+    let stroke = Stroke::new((side * 0.14).max(1.0), Color32::WHITE);
+    painter.line_segment([c - vec2(arm, 0.0), c + vec2(arm, 0.0)], stroke);
+    painter.line_segment([c - vec2(0.0, arm), c + vec2(0.0, arm)], stroke);
 }

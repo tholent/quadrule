@@ -27,7 +27,7 @@ use egui::{
 use kurbo::{Point, Shape};
 use quadrule_i18n::Message;
 use quadrule_layout::{DisplayList, Item, text_path};
-use quadrule_model::{Extra, FontStyle, MM_PER_IN, ObjectKind, TextAlign, TextBox, Uuid};
+use quadrule_model::{FontStyle, MM_PER_IN, ObjectKind, TextAlign, TextBox, Uuid};
 use quadrule_render::{Math, render};
 use quadrule_text::{FamilyInfo, FontRegistry, TextRequest, lay_out};
 use std::collections::HashMap;
@@ -54,12 +54,8 @@ pub struct Raster {
 /// Draws `tb` on one line as the export would at `px_per_mm`, black on white, or `None` when it
 /// has nothing to draw or cannot be laid out (a family missing here).
 pub fn raster_text(reg: &mut FontRegistry, tb: &TextBox, px_per_mm: f64) -> Option<Raster> {
-    let req = TextRequest {
-        object_id: Uuid::from_u128(1),
-        text: tb,
-        // One line: the box is as wide as a page ever is.
-        width_mm: 100_000.0,
-    };
+    // One line: the box is as wide as a page ever is.
+    let req = TextRequest::new(Uuid::from_u128(1), tb, 100_000.0);
     let laid = lay_out(reg, "preview", &[req]).ok()?;
     let text = laid.outlines.texts.first()?;
     if text.glyphs.is_empty() {
@@ -97,7 +93,7 @@ fn sample_box(family: &str, text: &str, size_pt: f64, like: Option<&TextBox>) ->
         line_height: like.map_or(1.25, |t| t.line_height),
         letter_spacing_em: like.map_or(0.0, |t| t.letter_spacing_em),
         align: TextAlign::Left,
-        extra: Extra::new(),
+        ..TextBox::default()
     }
 }
 

@@ -98,7 +98,7 @@ pub fn slice_document() -> Document {
             line_height: 1.25,
             letter_spacing_em: 0.0,
             align: TextAlign::Left,
-            extra: Extra::new(),
+            ..TextBox::default()
         }),
     );
     let rule = object(
@@ -1987,6 +1987,268 @@ pub fn fonts_document() -> Document {
         visible: true,
         locked: false,
         objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}
+
+/// Fixed ids for the text-box page's objects.
+pub mod textbox_ids {
+    use crate::Uuid;
+    /// The `n`th object of the text-box page.
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_000F_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+    /// The Fixed box that leaves lines out.
+    pub const CUT: Uuid = nth(1);
+    /// The box with a paragraph's space.
+    pub const SPACED: Uuid = nth(2);
+    /// The Fixed box with its text at the top.
+    pub const TOP: Uuid = nth(3);
+    /// The Fixed box with its text in the middle.
+    pub const MIDDLE: Uuid = nth(4);
+    /// The Fixed box with its text at the bottom.
+    pub const BOTTOM: Uuid = nth(5);
+    /// The ruled region the baselines stand on.
+    pub const RULED: Uuid = nth(6);
+    /// The box whose baselines stand on the rhythm.
+    pub const ON_RHYTHM: Uuid = nth(7);
+    /// The text turned 15 degrees.
+    pub const TURNED_15: Uuid = nth(8);
+    /// The text turned 90 degrees.
+    pub const TURNED_90: Uuid = nth(9);
+    /// The text turned 180 degrees.
+    pub const TURNED_180: Uuid = nth(10);
+}
+
+/// The text-box page (docs/bbq/2026-11-14-rung-11-text-and-fonts.md, Defaulted "Golden page 11b"): a
+/// Fixed box that leaves lines out, the three vertical alignments, a paragraph's space, a box whose
+/// baselines stand on a ruled region, and text turned 15, 90 and 180 degrees. Every box with a height
+/// of its own has a hairline frame round it, so the page shows where it ends. Bundled fonts only.
+/// Designed on the Manta, also targeting the Nomad (laid out for its smaller page). A dot grid holds
+/// the sample's id, so the benchmarks drag it.
+pub fn textbox_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 11b text boxes".into();
+    doc.metadata.description =
+        "The rung 11b text-box page: a Fixed box with hidden lines, vertical \
+        alignment, paragraph spacing, baselines on a ruled region and turned text."
+            .into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    let title = doc.layers[1].objects[0].clone();
+    let rule = doc.layers[1].objects[1].clone();
+    let dots = doc.layers[0].objects[0].clone();
+    let pinned = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+    let width = 102.8;
+    let n = std::cell::Cell::new(100u128);
+    let mut objs: Vec<Object> = Vec::new();
+    // A text box: its place and size in mm, what it says, and how its size and style are set.
+    let text = |objs: &mut Vec<Object>,
+                id: Option<Uuid>,
+                name: &str,
+                content: &str,
+                frame: Frame,
+                pt: f64,
+                set: &dyn Fn(&mut TextBox, &mut Object)| {
+        n.set(n.get() + 1);
+        let mut t = title.clone();
+        t.id = id.unwrap_or_else(|| textbox_ids::nth(n.get()));
+        t.name = name.into();
+        t.frame = frame;
+        t.constraints = pinned;
+        let mut tb = TextBox {
+            content: content.into(),
+            size_pt: pt,
+            ..TextBox::default()
+        };
+        set(&mut tb, &mut t);
+        t.kind = ObjectKind::Text(tb);
+        objs.push(t);
+    };
+    // A hairline frame (no fill) round a box.
+    let mut frames = Vec::new();
+    let frame_of = |frames: &mut Vec<Object>, name: &str, f: Frame| {
+        n.set(n.get() + 1);
+        let mut r = rule.clone();
+        r.id = textbox_ids::nth(n.get());
+        r.name = name.into();
+        r.frame = f;
+        r.constraints = pinned;
+        r.style = Style::Role(LineRole::Structure);
+        r.kind = ObjectKind::Rect(RectShape {
+            corner_radius_mm: 0.0,
+            extra: Extra::new(),
+        });
+        frames.push(r);
+    };
+    let plain = |_: &mut TextBox, _: &mut Object| {};
+    text(
+        &mut objs,
+        Some(textbox_ids::TITLE),
+        "Title",
+        "Rung 11b: the text box",
+        Frame::new(margin, margin, width, 7.0),
+        12.0,
+        &|tb, _| tb.weight = 700,
+    );
+    let small = 7.0;
+    // Row 1: a Fixed box that leaves lines out, and a paragraph's space.
+    let (left, right) = (margin, 62.0);
+    text(
+        &mut objs,
+        None,
+        "Cut label",
+        "Fixed: 3 of 5 lines fit",
+        Frame::new(left, 17.0, 48.0, 3.0),
+        small,
+        &plain,
+    );
+    let cut = Frame::new(left, 21.0, 48.0, 14.0);
+    frame_of(&mut frames, "Cut frame", cut);
+    text(
+        &mut objs,
+        Some(textbox_ids::CUT),
+        "Cut",
+        "Line one\nLine two\nLine three\nLine four\nLine five",
+        cut,
+        10.0,
+        &|tb, _| tb.sizing = TextSizing::Fixed,
+    );
+    text(
+        &mut objs,
+        None,
+        "Spaced label",
+        "Paragraph spacing: 8 pt",
+        Frame::new(right, 17.0, 48.8, 3.0),
+        small,
+        &plain,
+    );
+    text(
+        &mut objs,
+        Some(textbox_ids::SPACED),
+        "Spaced",
+        "First paragraph\nSecond paragraph\nThird paragraph",
+        Frame::new(right, 21.0, 48.8, 16.0),
+        10.0,
+        &|tb, _| tb.paragraph_spacing = ParagraphSpacing::Pt(8.0),
+    );
+    // Row 2: the three vertical alignments, in Fixed boxes 22 mm tall.
+    text(
+        &mut objs,
+        None,
+        "Align label",
+        "Vertical align: top, middle, bottom",
+        Frame::new(margin, 42.0, width, 3.0),
+        small,
+        &plain,
+    );
+    for (i, (id, name, v)) in [
+        (textbox_ids::TOP, "Top", VerticalAlign::Top),
+        (textbox_ids::MIDDLE, "Middle", VerticalAlign::Middle),
+        (textbox_ids::BOTTOM, "Bottom", VerticalAlign::Bottom),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let f = Frame::new(margin + i as f64 * 35.9, 46.0, 31.0, 22.0);
+        frame_of(&mut frames, &format!("{name} frame"), f);
+        text(
+            &mut objs,
+            Some(id),
+            name,
+            &format!("{name}\nof the box"),
+            f,
+            10.0,
+            &move |tb, _| {
+                tb.sizing = TextSizing::Fixed;
+                tb.v_align = v;
+                tb.align = TextAlign::Center;
+            },
+        );
+    }
+    // Row 3: baselines on a ruled region. The box sits off the rhythm; its text is pulled onto it.
+    text(
+        &mut objs,
+        None,
+        "Ruled label",
+        "Baselines on the rhythm",
+        Frame::new(margin, 74.0, width, 3.0),
+        small,
+        &plain,
+    );
+    let mut ruled = dots.clone();
+    ruled.id = textbox_ids::RULED;
+    ruled.name = "Ruled".into();
+    ruled.frame = Frame::new(margin, 78.0, width, 30.0);
+    ruled.constraints = pinned;
+    if let ObjectKind::Pattern(p) = &mut ruled.kind {
+        p.pattern = Pattern::Lines;
+    }
+    objs.push(ruled);
+    text(
+        &mut objs,
+        Some(textbox_ids::ON_RHYTHM),
+        "On the rhythm",
+        "Letters stand on the ruled lines.\nA new paragraph keeps to them too.",
+        Frame::new(margin + 3.0, 79.7, 60.0, 20.0),
+        11.0,
+        &|tb, _| {
+            tb.baselines = true;
+            tb.paragraph_spacing = ParagraphSpacing::Pt(2.0);
+        },
+    );
+    // Row 4: turned text, about the middle of each box.
+    text(
+        &mut objs,
+        None,
+        "Turned label",
+        "Turned: 15, 90 and 180 degrees",
+        Frame::new(margin, 112.0, width, 3.0),
+        small,
+        &plain,
+    );
+    for (i, (id, name, deg)) in [
+        (textbox_ids::TURNED_15, "Turned 15", 15.0),
+        (textbox_ids::TURNED_90, "Turned 90", 90.0),
+        (textbox_ids::TURNED_180, "Turned 180", 180.0),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        text(
+            &mut objs,
+            Some(id),
+            name,
+            "Quartz",
+            Frame::new(margin + 2.0 + i as f64 * 34.0, 126.0, 28.0, 5.3),
+            12.0,
+            &move |tb, o| {
+                tb.align = TextAlign::Center;
+                o.rotation_deg = deg;
+            },
+        );
+    }
+    let mut grid = dots.clone();
+    grid.name = "Dots".into();
+    grid.frame = Frame::new(margin, 144.0, width, 6.0);
+    grid.constraints = pinned;
+    objs.push(grid);
+    // Frames go under the text.
+    let mut all = frames;
+    all.extend(objs);
+    doc.layers = vec![Layer {
+        name: "Text boxes".into(),
+        visible: true,
+        locked: false,
+        objects: all,
         extra: Extra::new(),
     }];
     doc

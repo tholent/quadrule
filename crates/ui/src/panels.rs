@@ -1112,7 +1112,17 @@ impl ViewerUi {
                         ovr.size.is_some(),
                     ),
                 ];
+                // The height of a box that is as tall as its text is its text's: shown, not typed
+                // (rung 11b). Switch the box to Fixed to give it a height.
+                let all_tall = !self.viewer.selection.is_empty()
+                    && self.viewer.selection.iter().all(|id| {
+                        self.viewer
+                            .doc()
+                            .and_then(|d| d.object(*id))
+                            .is_some_and(|x| x.keeps_height())
+                    });
                 for (key, id, v, is_mixed, ctx, set, set_here, badge) in rows {
+                    let enabled = enabled && !(key == "arrange-h" && all_tall);
                     if let Some(mm) = self.length_row_badged(
                         ui,
                         key,
@@ -2107,7 +2117,33 @@ impl ViewerUi {
 
                 let label = ui.label(self.t("app-line-height"));
                 let mut lh = t.line_height;
-                if ui
+                if t.baselines {
+                    // On the rhythm the line height is a whole number of its steps: shown as the
+                    // device on screen resolves it, and not typed (rung 11b).
+                    let size_mm = quadrule_model::pt_to_mm(font_override.unwrap_or(t.size_pt));
+                    let step = cx.rhythm_mm;
+                    let n = if step > 0.0 {
+                        (size_mm * t.line_height / step).round().max(1.0)
+                    } else {
+                        1.0
+                    };
+                    let mut shown = if size_mm > 0.0 {
+                        n * step / size_mm
+                    } else {
+                        lh
+                    };
+                    ui.vertical(|ui| {
+                        ui.add_enabled(false, egui::DragValue::new(&mut shown).fixed_decimals(2))
+                            .labelled_by(label.id);
+                        ui.label(
+                            RichText::new(
+                                self.strings
+                                    .format(&Message::new("app-line-height-steps").num("n", n, 0)),
+                            )
+                            .small(),
+                        );
+                    });
+                } else if ui
                     .add(egui::DragValue::new(&mut lh).range(0.5..=4.0).speed(0.01))
                     .labelled_by(label.id)
                     .changed()
@@ -2115,6 +2151,15 @@ impl ViewerUi {
                     edit_text(&mut self.viewer, "text-line-height", &|t| {
                         t.line_height = lh
                     });
+                }
+                ui.end_row();
+
+                // Every baseline on a rung of the rhythm (rung 11b).
+                ui.label("");
+                let mut on = t.baselines;
+                let tick = ui.checkbox(&mut on, self.t("app-baselines"));
+                if tick.changed() {
+                    edit_text(&mut self.viewer, "text-baselines", &|t| t.baselines = on);
                 }
                 ui.end_row();
 
@@ -2142,6 +2187,77 @@ impl ViewerUi {
                 self.combo(ui, "align", label.id, &mut a, &options);
                 if a != t.align {
                     edit_text(&mut self.viewer, "text-align", &|t| t.align = a);
+                }
+                ui.end_row();
+
+                // The space after each paragraph but the last: any unit; a length is kept in points,
+                // `u` in rhythm steps (it follows the rhythm; rung 11b).
+                let spacing = match t.paragraph_spacing {
+                    quadrule_model::ParagraphSpacing::Units(u) => quadrule_model::Spacing::Units(u),
+                    quadrule_model::ParagraphSpacing::Pt(p) => {
+                        quadrule_model::Spacing::Mm(quadrule_model::pt_to_mm(p))
+                    }
+                };
+                if let Some(new) =
+                    self.spacing_row(ui, "text-paragraph", "app-paragraph-spacing", spacing, &cx)
+                {
+                    let next = match new {
+                        quadrule_model::Spacing::Units(u) => {
+                            Some(quadrule_model::ParagraphSpacing::Units(u.max(0.0)))
+                        }
+                        quadrule_model::Spacing::Mm(m) => {
+                            Some(quadrule_model::ParagraphSpacing::Pt(
+                                (m / quadrule_model::pt_to_mm(1.0)).max(0.0),
+                            ))
+                        }
+                        quadrule_model::Spacing::Auto => None,
+                    };
+                    if let Some(next) = next {
+                        edit_text(&mut self.viewer, "text-paragraph", &|t| {
+                            t.paragraph_spacing = next
+                        });
+                    }
+                }
+                ui.end_row();
+
+                // Where the text sits in a Fixed box. A box as tall as its text has no room to move
+                // it, so the choice is greyed there, with the reason.
+                let label = ui.label(self.t("app-valign"));
+                let mut va = t.v_align;
+                let fixed = t.sizing == quadrule_model::TextSizing::Fixed;
+                ui.vertical(|ui| {
+                    ui.add_enabled_ui(fixed, |ui| {
+                        self.combo(
+                            ui,
+                            "valign",
+                            label.id,
+                            &mut va,
+                            &[
+                                (quadrule_model::VerticalAlign::Top, "app-valign-top"),
+                                (quadrule_model::VerticalAlign::Middle, "app-valign-middle"),
+                                (quadrule_model::VerticalAlign::Bottom, "app-valign-bottom"),
+                            ],
+                        );
+                    });
+                    if !fixed {
+                        ui.label(RichText::new(self.t("app-valign-auto-note")).small());
+                    }
+                });
+                if va != t.v_align {
+                    edit_text(&mut self.viewer, "text-valign", &|t| t.v_align = va);
+                }
+                ui.end_row();
+
+                // Sizing: as tall as the text (the default) or a height of its own (rung 11b).
+                let label = ui.label(self.t("app-sizing"));
+                let mut sz = t.sizing;
+                let options = [
+                    (quadrule_model::TextSizing::Auto, "app-sizing-auto"),
+                    (quadrule_model::TextSizing::Fixed, "app-sizing-fixed"),
+                ];
+                self.combo(ui, "sizing", label.id, &mut sz, &options);
+                if sz != t.sizing {
+                    let _ = self.viewer.set_text_sizing(sz);
                 }
                 ui.end_row();
             });

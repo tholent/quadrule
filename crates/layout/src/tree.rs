@@ -32,6 +32,29 @@ use crate::repeat::{Plan, RepeatEnv};
 use crate::rotate::{cos_sin_deg, rotate_point};
 use quadrule_model::geom::{Fit, Holder};
 use quadrule_model::{Constraints, Document, Frame, Object, ObjectKind, Uuid, normalize_deg};
+use std::collections::HashMap;
+
+/// The laid-out heights of the text boxes that are as tall as their text (rung 11b), by object id,
+/// on the device being laid out: an auto-height box takes this height wherever the tree reads one,
+/// after its constraints have placed it (so a stored height never moves a box). `Heights::NONE`
+/// leaves every box its stored height.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Heights<'a>(Option<&'a HashMap<Uuid, f64>>);
+
+impl<'a> Heights<'a> {
+    /// No laid-out heights known: every box keeps the height it is stored with.
+    pub const NONE: Heights<'static> = Heights(None);
+
+    /// The heights in `map`.
+    pub fn of(map: &'a HashMap<Uuid, f64>) -> Self {
+        Heights(Some(map))
+    }
+
+    /// The laid-out height of `id` in mm, when known.
+    pub fn get(&self, id: Uuid) -> Option<f64> {
+        self.0.and_then(|m| m.get(&id).copied())
+    }
+}
 
 /// A rigid move of the page: a turn of `deg` degrees clockwise, then a shift by `t` (mm).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -198,22 +221,52 @@ pub fn local_frame(o: &Object, holder: &Holder) -> Frame {
 /// second is where the object is in the space of the group it is in, before that group's own
 /// override moves it.
 pub fn unfit_frame(o: &Object, holder: &Holder, ov: Option<&str>) -> (Frame, Frame) {
+    unfit_frame_with(o, holder, ov, Heights::NONE)
+}
+
+/// [`unfit_frame`] with the laid-out heights of the text boxes that are as tall as their text: such
+/// a box is as tall as `heights` says, its top left where its constraints (and override) put it
+/// (rung 11b).
+pub fn unfit_frame_with(
+    o: &Object,
+    holder: &Holder,
+    ov: Option<&str>,
+    heights: Heights,
+) -> (Frame, Frame) {
+    let tall = |mut f: Frame| {
+        if o.keeps_height()
+            && let Some(h) = heights.get(o.id)
+        {
+            f.h_mm = h;
+        }
+        f
+    };
     let base = match &o.kind {
-        ObjectKind::Group(g) => group_box(&g.children, holder, ov).unwrap_or(o.frame),
-        _ => holder.resolve(o.frame, o.constraints),
+        ObjectKind::Group(g) => group_box_with(&g.children, holder, ov, heights).unwrap_or(o.frame),
+        _ => tall(holder.resolve(o.frame, o.constraints)),
     };
     let own = ov
         .and_then(|p| o.override_on(p))
-        .map_or(base, |x| x.apply_to(base));
+        .map_or(base, |x| tall(x.apply_to(base)));
     (base, own)
 }
 
 /// The box round `children` as resolved on `holder`'s page for device `ov`, each as turned by its
 /// own angle; `None` for no children.
 pub fn group_box(children: &[Object], holder: &Holder, ov: Option<&str>) -> Option<Frame> {
+    group_box_with(children, holder, ov, Heights::NONE)
+}
+
+/// [`group_box`] with the laid-out heights of the text boxes in it (rung 11b).
+pub fn group_box_with(
+    children: &[Object],
+    holder: &Holder,
+    ov: Option<&str>,
+    heights: Heights,
+) -> Option<Frame> {
     children
         .iter()
-        .map(|c| c.outer_box_of(unfit_frame(c, holder, ov).1))
+        .map(|c| c.outer_box_of(unfit_frame_with(c, holder, ov, heights).1))
         .reduce(|a, b| a.union(&b))
 }
 
@@ -246,9 +299,15 @@ pub struct Placing {
 
 /// Lays `o` out in `ctx` for device `ov`.
 pub fn place_object(o: &Object, ctx: &Ctx, ov: Option<&str>) -> Placing {
-    let (base, unfit) = unfit_frame(o, &ctx.holder, ov);
+    place_object_with(o, ctx, ov, Heights::NONE)
+}
+
+/// [`place_object`] with the laid-out heights of the text boxes that are as tall as their text
+/// (rung 11b).
+pub fn place_object_with(o: &Object, ctx: &Ctx, ov: Option<&str>, heights: Heights) -> Placing {
+    let (base, unfit) = unfit_frame_with(o, &ctx.holder, ov, heights);
     let rot = o.rotation();
-    let text = matches!(o.kind, ObjectKind::Text(_));
+    let text = o.keeps_height();
     let local = ctx.fitted(unfit, rot, text);
     let (frame, angle) = ctx.place(local, rot);
     // A group's contents are mapped from the box round them onto its override box first, then
@@ -351,6 +410,19 @@ pub fn resolve_nodes_env(
     ov: Option<&str>,
     px: Option<crate::repeat::PxScale>,
 ) -> Vec<Node> {
+    resolve_nodes_with(doc, from, to, ov, px, Heights::NONE)
+}
+
+/// [`resolve_nodes_env`] with the laid-out heights of the text boxes that are as tall as their text
+/// (rung 11b): they are as tall as `heights` says, and turn about the middle of that.
+pub fn resolve_nodes_with(
+    doc: &Document,
+    from: (f64, f64),
+    to: (f64, f64),
+    ov: Option<&str>,
+    px: Option<crate::repeat::PxScale>,
+    heights: Heights,
+) -> Vec<Node> {
     let ctx = Ctx::page(from, to).with_env(RepeatEnv {
         steps_mm: doc.rhythm.steps_mm(),
         px,
@@ -366,6 +438,7 @@ pub fn resolve_nodes_env(
             !layer.visible,
             layer.locked,
             ov,
+            heights,
             &mut out,
         );
     }
@@ -382,6 +455,7 @@ fn walk(
     hidden: bool,
     locked: bool,
     ov: Option<&str>,
+    heights: Heights,
     out: &mut Vec<Node>,
 ) {
     for o in objs {
@@ -393,7 +467,7 @@ fn walk(
             angle,
             inner,
             plan,
-        } = place_object(o, ctx, ov);
+        } = place_object_with(o, ctx, ov, heights);
         // A kind that cannot turn is not turned by a group round it either (a hand-made file).
         let angle = if o.kind.can_rotate() { angle } else { 0.0 };
         let visible = ov.map_or(o.visible, |p| o.visible_on(p));
@@ -433,6 +507,7 @@ fn walk(
                 hidden,
                 locked,
                 ov,
+                heights,
                 out,
             );
         }

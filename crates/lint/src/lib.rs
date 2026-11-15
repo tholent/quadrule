@@ -17,16 +17,17 @@
 //!
 //! Built so far, the rules that need no calibration values:
 //! L01 stroke thinner than 1 px, L02 stroke not pixel-aligned, L06 content in a safe zone,
+//! L08 a Fixed text box leaves lines out (rung 11b),
 //! L10 off the page, L15 constraints cause trouble on a secondary device (rung 8a), L16 position
 //! off the rhythm, L18 rhythm fits the margins unevenly, L19 uneven physical-locked spacing. The gray, ink, text-size and handwriting rules (L03, L04, L05, L07,
-//! L09, L13, L14) wait for calibrated profile values; L08, L11 and L12 wait for the
+//! L09, L13, L14) wait for calibrated profile values; L11 and L12 wait for the
 //! features they check. Rung 10: a repeat's source is judged once, L06 and L10 judge every drawn
 //! copy (one finding per repeat and device, with the count), and L16 and L17 judge its pitch.
 
 #![forbid(unsafe_code)]
 
 use quadrule_i18n::{Arg, Message};
-use quadrule_layout::tree::{Node, resolve_nodes};
+use quadrule_layout::tree::{Heights, Node, resolve_nodes_with};
 use quadrule_layout::{RhythmPx, Shape, placed_objects};
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Frame, ObjectKind, RhythmResolution, Style, Uuid};
@@ -173,6 +174,21 @@ pub fn lint_with(
     outlines: &ProfileOutlines,
     opts: &Options,
 ) -> Vec<Finding> {
+    lint_against(doc, primary, target, outlines, None, opts)
+}
+
+/// [`lint_with`] with the text laid out for the primary profile too (`primary_outlines`), so L15
+/// compares a text box that is as tall as its text with the height it has on the primary page, not
+/// the one it is stored with (rung 11b, paying the rung 8a debt). Without it the stored height is
+/// used on the primary.
+pub fn lint_against(
+    doc: &Document,
+    primary: &Profile,
+    target: &Profile,
+    outlines: &ProfileOutlines,
+    primary_outlines: Option<&ProfileOutlines>,
+    opts: &Options,
+) -> Vec<Finding> {
     let mut out = Vec::new();
     let mut push = |rule, severity, object, area: Option<Bounds>, message: Message| {
         out.push(Finding {
@@ -249,11 +265,19 @@ pub fn lint_with(
     // from layout, the one copy of the maths.
     // L15 compares with the primary page (rung 8a, Q7): the stored design, laid out against itself.
     let on_secondary = target.id != primary.id;
+    let primary_heights = primary_outlines.map(|o| quadrule_layout::text_heights(doc, o));
     let primary_nodes: HashMap<Uuid, Node> = if on_secondary {
-        resolve_nodes(doc, primary.page_mm(), primary.page_mm())
-            .into_iter()
-            .map(|n| (n.id, n))
-            .collect()
+        resolve_nodes_with(
+            doc,
+            primary.page_mm(),
+            primary.page_mm(),
+            None,
+            None,
+            primary_heights.as_ref().map_or(Heights::NONE, Heights::of),
+        )
+        .into_iter()
+        .map(|n| (n.id, n))
+        .collect()
     } else {
         HashMap::new()
     };
@@ -289,7 +313,9 @@ pub fn lint_with(
             px(f.x_mm).max(px(f.x_mm + f.w_mm)),
             px(f.y_mm).max(px(f.y_mm + f.h_mm)),
         );
-        let turned = rotation != 0.0 && o.kind.is_shape();
+        // A turned shape or text box meets a zone by its turned corners (rung 6b; text, rung 11b).
+        let is_text = matches!(o.kind, ObjectKind::Text(_));
+        let turned = rotation != 0.0 && (o.kind.is_shape() || is_text);
         let at = |id| Message::new(id).text("name", o.name.clone());
         let mut push = |rule, severity, message| push(rule, severity, Some(o.id), Some(b), message);
 
@@ -335,6 +361,30 @@ pub fn lint_with(
             if (x1 - x0).abs() > 1e-6 && (y1 - y0).abs() > 1e-6 {
                 push("L02", Severity::Info, at("lint-l02-diagonal"));
             }
+        }
+
+        // L08: a Fixed text box leaves whole lines out on this device (rung 11b, Q5). Judged per
+        // device, since the font size may be overridden on one.
+        if let ObjectKind::Text(t) = &o.kind
+            && t.sizing == quadrule_model::TextSizing::Fixed
+            && let Some(laid) = outlines.text(o.id)
+            && laid.lines_hidden > 0
+        {
+            let device = {
+                let mut c = target.short_name.chars();
+                c.next()
+                    .map(|f| f.to_uppercase().collect::<String>() + c.as_str())
+                    .unwrap_or_default()
+            };
+            push(
+                "L08",
+                Severity::Warn,
+                at("lint-l08").arg("device", Arg::Text(device)).num(
+                    "count",
+                    f64::from(laid.lines_hidden),
+                    0,
+                ),
+            );
         }
 
         // L10: off the page. A repeat and what is in its source are judged over all copies below.
@@ -410,6 +460,11 @@ pub fn lint_with(
                     "lint-l15-short",
                 ),
             ] {
+                // A box as tall as its text has the height its text gives it on each device; no
+                // constraint squeezes that (rung 11b, paying the rung 8a debt).
+                if id == "lint-l15-short" && o.keeps_height() {
+                    continue;
+                }
                 if p_len > 0.0 && p_px >= 1.0 && t_len >= 0.0 && t_px < 1.0 {
                     push("L15", Severity::Info, l15(id).num("px", t_px, 2));
                 }
@@ -478,7 +533,7 @@ pub fn lint_with(
                 quadrule_layout::rotate::rotated_touches(
                     frame_px,
                     rotation,
-                    half_stroke,
+                    if is_text { 0.0 } else { half_stroke },
                     (zx, zy, zx + zw, zy + zh),
                 )
             } else {

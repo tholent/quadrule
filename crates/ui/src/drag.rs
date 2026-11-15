@@ -156,8 +156,10 @@ struct Item {
     unfit: Frame,
     /// Its frame on the device shown, in pixels, as the drag began, where it falls on the page.
     resolved: PxRect,
-    /// A text box: its height is its text's, so only its position and width change.
+    /// A text box that is as tall as its text: only its position and width change.
     text: bool,
+    /// Its top or bottom is being pulled: it gets a height of its own (turns Fixed).
+    fixing: bool,
     /// A group: resizing it stops at zero size instead of flipping it (rung 7a).
     group: bool,
     /// Its angle on the page in degrees as the drag began, the groups' turns included (always 0
@@ -591,7 +593,13 @@ impl Viewer {
         {
             let r = placed_px(p, &shown);
             let c = rotate::centre((r.x0, r.y0, r.x1, r.y1));
-            return Handle::ALL
+            // A turned box as tall as its text shows its four edges, as an upright one does.
+            let list: &[Handle] = if doc.object(id).is_some_and(|o| o.keeps_height()) {
+                &Handle::EDGES
+            } else {
+                &Handle::ALL
+            };
+            return list
                 .iter()
                 .map(|&h| {
                     let (x, y) = rotate::rotate_point(h.at(&r), c, p.node.angle);
@@ -599,9 +607,11 @@ impl Viewer {
                 })
                 .collect();
         }
+        // Boxes as tall as their text (rung 11b): their width is theirs to pull, and pulling the
+        // top or bottom turns the box Fixed.
         let all_text = ids
             .iter()
-            .all(|id| matches!(doc.object(*id).map(|o| &o.kind), Some(ObjectKind::Text(_))));
+            .all(|id| doc.object(*id).is_some_and(|o| o.keeps_height()));
         let Some(bx) = placed
             .iter()
             .filter(|p| ids.contains(&p.id))
@@ -611,7 +621,7 @@ impl Viewer {
             return Vec::new();
         };
         let list: &[Handle] = if all_text {
-            &Handle::SIDES
+            &Handle::EDGES
         } else {
             &Handle::ALL
         };
@@ -838,6 +848,8 @@ impl Viewer {
                 drag.duplicate = Some((cmd, base_doc.clone()));
             }
         }
+        // Pulling the top or bottom edge of a box as tall as its text gives it a height of its own.
+        let pulls_height = matches!(kind, DragKind::Handle(HandleHit::Box(h)) if h.y_side() != 0);
         for (id, target) in ids.iter().zip(&targets) {
             let Some(o) = base_doc.object(*target) else {
                 continue;
@@ -861,7 +873,8 @@ impl Viewer {
                 base: node.node.base,
                 unfit: node.node.unfit,
                 resolved,
-                text: matches!(o.kind, ObjectKind::Text(_)),
+                text: o.keeps_height() && !pulls_height,
+                fixing: o.keeps_height() && pulls_height,
                 group: o.is_group(),
                 rotation: node.node.angle,
                 dir: match &o.kind {
@@ -947,7 +960,7 @@ impl Viewer {
         // One object's frame in pixels, when the drag decides it directly (a turn, a turned
         // object's resize, a line's end).
         let mut direct: Option<PxRect> = None;
-        let single_turned = matches!(&drag.items[..], [i] if i.rotation != 0.0 && !i.text);
+        let single_turned = matches!(&drag.items[..], [i] if i.rotation != 0.0);
         let (new_box, guides) = match drag.kind {
             DragKind::Move => {
                 let raw = start.moved(delta.0, delta.1);
@@ -1062,15 +1075,21 @@ impl Viewer {
                         dir,
                         map: None,
                         device: None,
+                        fixed: item.fixing,
                     }
                     .on_device(&shown.id, item.base),
                 ));
                 continue;
             }
-            if let Some(o) = base_doc.object(item.id)
-                && near(&o.frame, &frame)
-            {
-                frame = o.frame;
+            if let Some(o) = base_doc.object(item.id) {
+                // A box as tall as its text keeps the height it is stored with: its height on the
+                // page is its text's (rung 11b).
+                if item.text {
+                    frame.h_mm = o.frame.h_mm;
+                }
+                if near(&o.frame, &frame) {
+                    frame = o.frame;
+                }
             }
             // A group's contents follow its box: moved and stretched as a loose selection's are.
             let map = item.group.then_some(GroupMap {
@@ -1086,6 +1105,7 @@ impl Viewer {
                     dir,
                     map,
                     device: None,
+                    fixed: item.fixing,
                 },
             ));
         }

@@ -16,7 +16,7 @@
 
 use quadrule_model::outlines::GlyphShape;
 use quadrule_model::sample::{ATKINSON, TITLE_TEXT};
-use quadrule_model::{Extra, FontStyle, TextAlign, TextBox, Uuid};
+use quadrule_model::{FontStyle, TextAlign, TextBox, Uuid};
 use quadrule_text::*;
 use sha2::{Digest, Sha256};
 
@@ -30,17 +30,13 @@ fn text_box(content: &str, weight: u16) -> TextBox {
         line_height: 1.25,
         letter_spacing_em: 0.0,
         align: TextAlign::Left,
-        extra: Extra::new(),
+        ..TextBox::default()
     }
 }
 
 fn lay(tb: &TextBox, width_mm: f64) -> Laid {
     let mut reg = FontRegistry::bundled_only();
-    let req = TextRequest {
-        object_id: Uuid::from_u128(1),
-        text: tb,
-        width_mm,
-    };
+    let req = TextRequest::new(Uuid::from_u128(1), tb, width_mm);
     lay_out(&mut reg, "test", &[req]).expect("lay out")
 }
 
@@ -201,11 +197,7 @@ fn missing_family_is_an_error() {
     let r = lay_out(
         &mut reg,
         "test",
-        &[TextRequest {
-            object_id: Uuid::from_u128(1),
-            text: &tb,
-            width_mm: 50.0,
-        }],
+        &[TextRequest::new(Uuid::from_u128(1), &tb, 50.0)],
     );
     let ok = matches!(r, Err(TextError::MissingFamily(_)));
     println!(

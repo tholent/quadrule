@@ -275,15 +275,22 @@ fn text_has_side_handles_and_a_line_has_two_ends() {
     let mut v = sample();
     v.selection = vec![ids::TITLE];
     let text: Vec<_> = v.handles().iter().map(|h| h.0).collect();
-    let sides = text.len() == 2
+    // A box as tall as its text shows its four edges (rung 11b): left and right change the width;
+    // pulling the top or bottom gives it a height of its own.
+    use quadrule_layout::snap::Handle;
+    let sides = text.len() == 4
         && text.iter().all(|h| {
             matches!(
                 h,
-                HandleHit::Box(quadrule_layout::snap::Handle::W | quadrule_layout::snap::Handle::E)
+                HandleHit::Box(Handle::N | Handle::E | Handle::S | Handle::W)
             )
         });
     let hs = v.handles();
-    let e = hs.iter().find(|h| h.1 > 500.0).copied().unwrap();
+    let e = hs
+        .iter()
+        .find(|h| h.0 == HandleHit::Box(Handle::E))
+        .copied()
+        .unwrap();
     let t0 = frame(&v, ids::TITLE);
     grab(&mut v, e.1, e.2, NONE);
     v.drag_update(e.1 - 100.0, e.2 + 300.0, FREE, REACH);

@@ -18,7 +18,7 @@ export CARGO_BUILD_JOBS := $(JOBS)
 LOG := target/test.log
 
 # For `run`, `lint`: FILE=path/to/page.quad. For `bench-drag`: FRAMES=150; SHAPES=1 runs it over the shapes page (every
-# new kind), TRANSFORMS=1 over the transforms page (turned shapes, lines every way, opacity; `bench-rotate` always), GROUPS=1 over the groups page (the drag moves its heavy group), DEVICES=1 over the overrides page, LANDSCAPE=1 over the landscape page, PATTERNS=1 over the pattern page, REPEATS=1 over the repeat page, FONTS=1 over the fonts page, NOMAD=1 on the Nomad (a drag then writes overrides), NOSTRIP=1 with the device previews strip folded shut (it is open in a bench otherwise); `bench-draw` also takes TOOL=rect|ellipse|polygon|pattern|line|text. For `calibration-sheet` and
+# new kind), TRANSFORMS=1 over the transforms page (turned shapes, lines every way, opacity; `bench-rotate` always), GROUPS=1 over the groups page (the drag moves its heavy group), DEVICES=1 over the overrides page, LANDSCAPE=1 over the landscape page, PATTERNS=1 over the pattern page, REPEATS=1 over the repeat page, FONTS=1 over the fonts page, TEXTBOX=1 over the text-box page, NOMAD=1 on the Nomad (a drag then writes overrides), NOSTRIP=1 with the device previews strip folded shut (it is open in a bench otherwise); `bench-draw` also takes TOOL=rect|ellipse|polygon|pattern|line|text. For `calibration-sheet` and
 # `safe-zones`: PROFILE=supernote.a6x2 (default all). For `fuzz`: SECS=60.
 FILE ?=
 FRAMES ?= 150
@@ -29,6 +29,7 @@ LANDSCAPE ?=
 PATTERNS ?=
 REPEATS ?=
 FONTS ?=
+TEXTBOX ?=
 TOOL ?=
 PROFILE ?= all
 OUT ?= calib
@@ -37,7 +38,7 @@ SECS ?= 60
 CHECK ?= check-all
 
 .PHONY: help build build-all fmt fmt-check clippy clippy-all test test-all test-v check check-all \
-        run run-release bench-drag bench-draw bench-rotate calibration-sheet safe-zones lint fuzz build-proof review
+        run run-release bench-drag bench-draw bench-type bench-rotate calibration-sheet safe-zones lint fuzz build-proof review
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  make %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -109,10 +110,13 @@ run-release: ## The same, as a release build (what the speed numbers use)
 	cargo run --release -p quadrule-app -- $(FILE)
 
 bench-drag: ## Drag-speed bench on the sample page, release build (FRAMES=150, SHAPES=1 for the shapes page, TRANSFORMS=1, GROUPS=1, DEVICES=1, LANDSCAPE=1, PATTERNS=1, REPEATS=1, NOMAD=1, NOSTRIP=1); the 90th percentile is the judge
-	cargo run --release -p quadrule-app -- --bench-drag $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page) $(if $(GROUPS),--groups-page) $(if $(DEVICES),--devices-page) $(if $(LANDSCAPE),--landscape-page) $(if $(PATTERNS),--patterns-page) $(if $(REPEATS),--repeats-page) $(if $(FONTS),--fonts-page) $(if $(NOMAD),--bench-secondary) $(if $(NOSTRIP),--no-strip)
+	cargo run --release -p quadrule-app -- --bench-drag $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page) $(if $(GROUPS),--groups-page) $(if $(DEVICES),--devices-page) $(if $(LANDSCAPE),--landscape-page) $(if $(PATTERNS),--patterns-page) $(if $(REPEATS),--repeats-page) $(if $(FONTS),--fonts-page) $(if $(TEXTBOX),--textbox-page) $(if $(NOMAD),--bench-secondary) $(if $(NOSTRIP),--no-strip)
 
 bench-draw: ## Drawing-speed bench: drags a pattern region out over the sample page, release build (FRAMES=150, SHAPES=1, TRANSFORMS=1, GROUPS=1, DEVICES=1, LANDSCAPE=1, PATTERNS=1, REPEATS=1, NOMAD=1, NOSTRIP=1, TOOL=rect|ellipse|polygon)
-	cargo run --release -p quadrule-app -- --bench-draw $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page) $(if $(GROUPS),--groups-page) $(if $(DEVICES),--devices-page) $(if $(LANDSCAPE),--landscape-page) $(if $(PATTERNS),--patterns-page) $(if $(REPEATS),--repeats-page) $(if $(FONTS),--fonts-page) $(if $(NOMAD),--bench-secondary) $(if $(NOSTRIP),--no-strip) $(if $(TOOL),--bench-tool $(TOOL))
+	cargo run --release -p quadrule-app -- --bench-draw $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page) $(if $(GROUPS),--groups-page) $(if $(DEVICES),--devices-page) $(if $(LANDSCAPE),--landscape-page) $(if $(PATTERNS),--patterns-page) $(if $(REPEATS),--repeats-page) $(if $(FONTS),--fonts-page) $(if $(TEXTBOX),--textbox-page) $(if $(NOMAD),--bench-secondary) $(if $(NOSTRIP),--no-strip) $(if $(TOOL),--bench-tool $(TOOL))
+
+bench-type: ## Typing-speed bench: types into a long text box, release build (FRAMES=150, FONTS=1, TEXTBOX=1, NOSTRIP=1)
+	cargo run --release -p quadrule-app -- --bench-type $(FRAMES) $(if $(FONTS),--fonts-page) $(if $(TEXTBOX),--textbox-page) $(if $(NOSTRIP),--no-strip)
 
 bench-rotate: ## Rotate-speed bench: turns the transforms page's big rectangle with its handle, release build (FRAMES=150)
 	cargo run --release -p quadrule-app -- --bench-rotate $(FRAMES)

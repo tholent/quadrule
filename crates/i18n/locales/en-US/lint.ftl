@@ -8,6 +8,10 @@ lint-l02-fraction = "{ $name }" has a { $px } px stroke on this device; it is dr
 lint-l02-diagonal = "{ $name }" is a diagonal line, so its edges cannot sit on whole pixels and are soft.
 lint-l06-fixed = "{ $name }" is under the { $zones } on this device. Move it inside the safe area, or widen the margins.
 lint-l06-movable = "{ $name }" can be covered by the { $zones } where it first appears; it can be moved.
+lint-l08 = "{ $name }" is too small for its text on { $device }: { $count ->
+        [one] one line is
+       *[other] { $count } lines are
+    } left out of the page. Make the box taller or wider, make the text smaller, or switch the box to Auto height.
 lint-l10-gone = "{ $name }" is entirely off the page on this device.
 lint-l10-partly = "{ $name }" runs off the edge of the page on this device.
 lint-l15-off = "{ $name }" is on the page on { $primary } but runs off it on { $device }, where its constraints put it. Change how it follows the page, or place it by hand on this device.

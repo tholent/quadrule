@@ -32,7 +32,7 @@
 use kurbo::{Affine, BezPath, Circle, Point, Shape};
 use quadrule_layout::{DisplayList, Item, snap_center, text_path};
 use quadrule_model::sample::ATKINSON;
-use quadrule_model::{Extra, FontStyle, MM_PER_IN, TextAlign, TextBox, Uuid};
+use quadrule_model::{FontStyle, MM_PER_IN, TextAlign, TextBox, Uuid};
 use quadrule_profiles::Profile;
 use quadrule_text::{FontRegistry, TextRequest, lay_out};
 
@@ -276,19 +276,11 @@ impl<'a> Pager<'a> {
             line_height: 1.2,
             letter_spacing_em: 0.0,
             align: TextAlign::Left,
-            extra: Extra::new(),
+            ..TextBox::default()
         };
         let id = Uuid::from_u128(1);
-        let laid = lay_out(
-            self.reg,
-            &self.p.id,
-            &[TextRequest {
-                object_id: id,
-                text: &tb,
-                width_mm,
-            }],
-        )
-        .map_err(|e| e.to_string())?;
+        let laid = lay_out(self.reg, &self.p.id, &[TextRequest::new(id, &tb, width_mm)])
+            .map_err(|e| e.to_string())?;
         if laid.missing_glyphs > 0 {
             return Err(format!("missing glyphs in {s:?}"));
         }

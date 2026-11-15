@@ -20,7 +20,7 @@ use quadrule_format::{Manifest, QuadFile, ReadOnly};
 use quadrule_i18n::Message;
 use quadrule_layout::snap::SnapToggles;
 use quadrule_layout::{DisplayList, Placed, display_list, lay_out_text, placed_objects};
-use quadrule_lint::{Finding, Options, Toolbar, lint_with};
+use quadrule_lint::{Finding, Options, Toolbar, lint_against};
 use quadrule_model::edit::History;
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Uuid};
@@ -71,6 +71,20 @@ pub struct Page {
     pub display_list: DisplayList,
     /// How many repeats drew fewer copies than their counts give, because of the cap (rung 10).
     pub repeats_capped: usize,
+    /// The Fixed text boxes that left lines out on this device, for the red + tab at their
+    /// bottom-right corners (rung 11b). On the canvases and the strip only, never exported.
+    pub overflows: Vec<Overflow>,
+}
+
+/// A Fixed text box that leaves lines out on one device (rung 11b).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Overflow {
+    /// The text box.
+    pub id: Uuid,
+    /// How many whole lines are left out.
+    pub hidden: u32,
+    /// The box's bottom-right corner on the device, in pixels (turned with the box).
+    pub corner: (f64, f64),
 }
 
 /// The open document.
@@ -188,6 +202,10 @@ pub struct Viewer {
     /// What Align to is for two or more objects picked: the selection, until they pick otherwise.
     pub align_multi: quadrule_layout::align::AlignTo,
     pub(crate) fonts: FontRegistry,
+    /// The typing session on the canvas, if any (rung 11b).
+    pub(crate) typing: Option<crate::typing::Typing>,
+    /// The re-scan of the installed fonts running now, if any (rung 11b).
+    pub(crate) font_scan: Option<quadrule_text::PendingScan>,
     /// What the last re-scan of the installed fonts found and how long it took (rung 11a, ADR-002
     /// item 8: a full re-scan whenever the window regains focus).
     pub last_font_scan: Option<quadrule_text::Scan>,
@@ -242,6 +260,8 @@ impl Default for Viewer {
             align_single: quadrule_layout::align::AlignTo::Page,
             align_multi: quadrule_layout::align::AlignTo::Selection,
             fonts: FontRegistry::bundled_only(),
+            typing: None,
+            font_scan: None,
             last_font_scan: None,
         }
     }
@@ -255,8 +275,9 @@ impl Viewer {
         self.invalidate_pages();
     }
 
-    /// Scans the installed fonts again in full (ADR-002 item 8: no change detection). When the
-    /// list of families differs, every page is laid out again.
+    /// Scans the installed fonts again in full (ADR-002 item 8: no change detection), and waits for
+    /// it. When the list of families differs, every page is laid out again. The window does not use
+    /// this: see [`Viewer::start_font_scan`].
     pub fn rescan_fonts(&mut self) -> quadrule_text::Scan {
         let scan = self.fonts.rescan();
         self.last_font_scan = Some(scan);
@@ -264,6 +285,36 @@ impl Viewer {
             self.invalidate_pages();
         }
         scan
+    }
+
+    /// Starts the re-scan of the installed fonts on a thread of its own and returns at once (rung
+    /// 11b; the record's Amendments, "background re-scan"): focus never waits. One scan at a time: a
+    /// focus while one runs starts no second. Returns whether a scan was started.
+    pub fn start_font_scan(&mut self) -> bool {
+        if self.font_scan.is_some() {
+            return false;
+        }
+        self.font_scan = self.fonts.scan_in_background();
+        self.font_scan.is_some()
+    }
+
+    /// Whether a scan of the installed fonts is running.
+    pub fn font_scan_running(&self) -> bool {
+        self.font_scan.is_some()
+    }
+
+    /// Takes in a finished scan: the font list swaps to the new one and, when the families differ,
+    /// every page is laid out again. Returns what the scan found, once, when it has finished; never
+    /// waits.
+    pub fn poll_font_scan(&mut self) -> Option<quadrule_text::Scan> {
+        let done = self.font_scan.as_ref()?.finished()?;
+        self.font_scan = None;
+        let scan = self.fonts.adopt(done);
+        self.last_font_scan = Some(scan);
+        if scan.changed {
+            self.invalidate_pages();
+        }
+        Some(scan)
     }
 
     /// The weights a family offers, or `None` when it cannot be laid out here.
@@ -349,6 +400,14 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 11b text-box page: a Fixed box with hidden lines, the three vertical
+    /// alignments, a paragraph's space, baselines on a ruled region and turned text (the benchmarks
+    /// drag its dot grid). Like the sample, it has no file.
+    pub fn open_textbox(&mut self) {
+        let doc = quadrule_model::sample::textbox_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// The pattern page held sideways (rung 9).
     pub fn open_patterns_landscape(&mut self) {
         let doc = quadrule_model::sample::patterns_landscape_document();
@@ -409,6 +468,8 @@ impl Viewer {
         if !doc.profile_ids().contains(&self.profile_id.as_str()) {
             self.profile_id = doc.primary_profile_id.clone();
         }
+        // A session in the document that was open is over with it.
+        self.typing = None;
         self.open = Some(Open {
             source,
             doc,
@@ -446,6 +507,7 @@ impl Viewer {
     /// Shows another device.
     pub fn set_profile(&mut self, id: &str) {
         if self.profile_id != id {
+            self.end_typing();
             self.drag_cancel();
             self.profile_id = id.to_string();
             self.selected = None;
@@ -516,6 +578,7 @@ impl Viewer {
     /// The bytes are the export renderer's (ADR-003), the same as rung 1's golden images.
     /// On failure the notice says why.
     pub fn export(&mut self, dir: &Path, which: ExportWhich) -> Result<Vec<PathBuf>, String> {
+        self.end_typing();
         let result = self.write_pngs(dir, which);
         if let Err(e) = &result {
             self.notice = Some(Notice {
@@ -643,13 +706,49 @@ fn make_page(
     };
     let findings = match known_findings {
         Some(f) => f,
-        None => lint_with(doc, &primary, &target, &outlines, &opts),
+        None => {
+            // L15 compares a text box with its height on the primary page, so the text is laid out
+            // there too (rung 11b).
+            let primary_laid = (target.id != primary.id && doc.objects().any(|o| o.keeps_height()))
+                .then(|| lay_out_text(doc, &primary, &primary, fonts))
+                .and_then(Result::ok);
+            lint_against(
+                doc,
+                &primary,
+                &target,
+                &outlines,
+                primary_laid.as_ref().map(|l| &l.outlines),
+                &opts,
+            )
+        }
     };
     let placed = placed_objects(doc, &primary, &target, &outlines);
     let repeats_capped = placed
         .iter()
         .filter(|p| p.node.plan.is_some_and(|plan| plan.capped()))
         .count();
+    let overflows = placed
+        .iter()
+        .filter(|p| !p.node.hidden)
+        .filter_map(|p| {
+            let hidden = outlines.text(p.id)?.lines_hidden;
+            if hidden == 0 || doc.object(p.id).is_none_or(|o| o.keeps_height()) {
+                return None;
+            }
+            let corner = match p.shape.corners() {
+                Some(c) => c[2],
+                None => {
+                    let b = p.shape.bounds();
+                    (b.2, b.3)
+                }
+            };
+            Some(Overflow {
+                id: p.id,
+                hidden,
+                corner,
+            })
+        })
+        .collect();
     Ok(Page {
         profile: target,
         image,
@@ -658,6 +757,7 @@ fn make_page(
         placed,
         display_list: dl,
         repeats_capped,
+        overflows,
     })
 }
 
