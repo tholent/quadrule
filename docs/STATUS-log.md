@@ -1529,3 +1529,38 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   list would carry too).
 - Debt: "Text spike T14/T15" is paid in code (the test requires faces on macOS and Windows) and waits for CI to show it; new "Rung 11a, owed" lines
   for the emoji picker, the chip first frame, optical size by retagged copy and the picker.
+
+## 2026-11-15 — rung 11a resumed: emoji picker and the chip's first frame (same builder)
+
+- chris ruled on the two stops ("Allow, ship the notice"; "Fix in 11a"). `4a2170b` (chip), `f827c6f` (emoji picker).
+- Emoji picker (step 5): `emojis` 0.9.1 added to `crates/ui`; the Unicode-3.0 notice is `crates/ui/licenses/Unicode-3.0.txt`, in
+  `packaging/packager.json` as `licenses/Unicode-3.0.txt` beside the OFL texts and in `README.md`'s credits (test
+  `unicode_notice_shipped`). Toolbar **Emoji** button and one in the Text tab; a window with a search box (by name or shortcode), nine groups
+  and a grid drawn from Noto Emoji as pictures; the list is the emoji Noto Emoji draws as one glyph (1,899 of 1,923 without tone variants,
+  `CHECK ... name=emoji_list`: 755 ms in a debug build, once, on first open). A pick goes into the Text tab field at the cursor (replacing a
+  selection) as one undo step, else into a new text box holding only it, 24 pt, centred on the middle of the view, one undo step
+  (`Viewer::place_text`). Tests: `emoji_insert`, `emoji_at_cursor`, `emoji_list`.
+- The chip's first frame, timed before any change (laps inside `Chip::render`, release build, Pi, `--fonts-page --bench-drag 40 --canvas chip`;
+  the laps were not committed): the very first frame 207 ms = vello init 19.6 + encode 36.4 + GPU wait 150.5 (shaders and pipelines;
+  never judged); a whole-page draw 83 ms = scene build 0.3 + encode 1.0 + GPU wait 81.6; the frame that made the kept lower part and the rest
+  99 ms (base about 82 + top about 15, one GPU wait of 95); a frame that reuses the base 16 ms (encode 1.0, GPU 15). So the 99 to 107 ms
+  frames were base frames, the cost is the GPU drawing the page's text outlines (not setup, not CPU path building), and a base frame is two
+  page-sized draws against a line meant for one. Fix: `ChipRenderer::last_frame_draws` (2 for a base frame) and
+  `ChipState::record_chip_draws`, the line is `SLOW_FRAME_MS` per draw; a single draw over 100 ms still falls back (`chip_fallback_rule`:
+  150 ms with two draws kept, 250 ms with two draws and 150 ms with one fall back).
+- Acceptance, release build, strip on, 150 frames, 3 runs each, `target/release/quadrule <page> --bench-drag|--bench-draw 150 --canvas chip`
+  (every run said `canvas=chip`):
+
+  | page | command | p90 ms | worst ms | frames over 50 ms |
+  |---|---|---|---|---|
+  | fonts | drag | 18.0, 17.9, 17.9 | 99.4, 99.4, 99.3 | 8 |
+  | fonts | draw | 25.2, 25.3, 25.5 | 107.6, 106.9, 107.5 | 8 |
+  | repeats | drag | 35.6, 35.6, 35.5 | 57.7, 57.8, 57.6 | 2 |
+  | repeats | draw | 23.4, 23.5, 23.5 | 65.6, 65.6, 65.5 | 4 |
+  | patterns | drag | 17.2, 17.3, 17.2 | 49.0, 48.9, 48.9 | 0 |
+  | patterns | draw | 23.5, 23.6, 23.6 | 56.7, 56.7, 56.6 | 2 |
+
+  Rung 10's chip numbers (repeats drag 35.7, 35.7, 35.6; draw 23.6; patterns drag 17.4, 17.3; draw 23.7) are matched: no regression.
+- Judged: `make check-all` → `TESTS scope=workspace checks=448 check_fail=0 passed=417 failed=0 status=ok`; `git diff 07875a9 --
+  crates/render/tests/golden/SHA256SUMS` adds the two `fonts_*` lines and changes none. Debt: the emoji picker and chip lines of
+  "Rung 11a, owed" are cleared; two smaller lines replace them (picker gaps; the 99 ms base frame is still a visible hiccup).
