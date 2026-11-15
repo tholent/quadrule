@@ -523,10 +523,10 @@ impl FontRegistry {
             && let Some((lo, def, hi)) = opsz::opsz_range(b.data)
         {
             let want = (size_pt as f32).round().clamp(lo, hi) as u16;
-            if want != def.round() as u16 {
-                if let Some(n) = self.ensure_instance(family, want) {
-                    name = n;
-                }
+            if want != def.round() as u16
+                && let Some(n) = self.ensure_instance(family, want)
+            {
+                name = n;
             }
         }
         Some(Resolved {
