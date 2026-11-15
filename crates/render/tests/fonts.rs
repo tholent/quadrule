@@ -194,7 +194,7 @@ fn the_fonts_page_uses_bundled_faces_in_italic_and_at_several_optical_sizes() {
                 "Inter",
                 "Literata",
             ]
-        && inter_opsz.iter().any(|o| *o == 14)
+        && inter_opsz.contains(&14)
         && inter_opsz.iter().any(|o| *o > 14);
     println!(
         "\nCHECK crate=render name=fonts_page_faces result={} families={} bundled_only={bundled_only} missing_glyphs={} italic_in={italic_families:?} inter_opsz={inter_opsz:?}",

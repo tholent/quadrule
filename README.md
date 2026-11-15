@@ -146,7 +146,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --repeats-page` for rows, grids and a Fill repeat). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote
