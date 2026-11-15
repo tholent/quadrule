@@ -97,3 +97,25 @@ Drivers:
 - 2026-11-09: ratified by chris ("ratify all three").
 - 2026-11-09: built status updated after the real `text` crate; the live-vs-saved identity test (item 5) is in the slice test (rung 1). Prior header values: built `not started`, proof
   `queued in STATUS.md (Next) for the real text crate; evidence in spikes/text/FINDINGS.md`.
+- 2026-11-15: amended by chris during rung 11a: `unicode-script` is allowed as a second direct dependency of the
+  text crate, for one purpose (see Amendment below). Header values unchanged.
+
+## Amendment — 2026-11-15, chris
+
+**What changed.** Item 1 ("The `text` crate depends on `cosmic-text` only") now allows one more direct dependency,
+**`unicode-script`**, used only to name the `Script` type in cosmic-text's `Fallback` trait, and declared at the
+version cosmic-text itself uses (`unicode-script = "0.5.9"` in the workspace `Cargo.toml`, with a comment saying why;
+0.5.9 in `Cargo.lock`, one copy shared with cosmic-text). fontdb and skrifa still come only through cosmic-text's
+re-exports, and swash stays off.
+
+**Why.** Rung 11's bbq Q4 (`docs/bbq/2026-11-14-rung-11-text-and-fonts.md`) rules that a character missing from the
+chosen font comes from the bundled fonts only until rung 12. cosmic-text 0.19 lets quadrule choose fallback fonts
+through its `Fallback` trait, whose methods name `unicode_script::Script`. cosmic-text does not re-export that crate,
+so the trait cannot be filled without depending on it directly. The risk item 1 guards against, copies drifting apart
+silently, cannot happen here: Cargo shares one 0.5.x copy with cosmic-text, and if cosmic-text moves to another
+version the trait's type no longer matches and the build fails. The lead put the choice to chris: amend this ADR, or
+have the builder look for a way round it (which might not exist). After the lead explained it in plain words, chris
+answered: "amendment, go ahead".
+
+**Touches.** Decision, item 1. Built in rung 11a (`crates/text/src/registry.rs`, `Cargo.toml`). Revisit when
+cosmic-text re-exports `Script` or changes its `Fallback` trait: then the direct dependency should go.

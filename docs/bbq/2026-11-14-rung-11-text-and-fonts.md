@@ -209,3 +209,17 @@ his look. After 11a's approval: bump to `0.11.0`, commit `docs/arcs/v1/release-n
 the same way (steps: sizing and laid-out height; overflow and L08; paragraph spacing and vertical alignment; baselines
 on the rhythm; rotation; typing on the canvas; format 0.12.0 and the `v0.11/` fixture; golden page, tests, timings),
 look, `0.11.1`, release. Then re-plan the board and write the next lead's prompt in `docs/arcs/v1/`.
+
+## Amendments
+
+- **2026-11-15, emoji data licence (11a).** The builder stopped before adding the `emojis` crate: its licence is
+  "(MIT OR Apache-2.0) AND Unicode-3.0", not plain MIT or Apache-2.0 as the Defaulted "The emoji picker" required.
+  chris chose "Allow, ship the notice" (the option read: add `emojis`; put the Unicode-3.0 notice beside the OFL texts
+  in the packages and README credits).
+- **2026-11-15, chip canvas first frame (11a).** On the fonts page the chip canvas's first frame took 100.5 and 100.8
+  ms in the lead's two runs (`--fonts-page --bench-drag 150 --canvas chip`), on the 100 ms fall-back line; one run fell
+  back. chris chose "Fix in 11a" (time the first frame's parts first, then fix the cause, or stop counting one-time
+  setup toward the fall-back).
+- **2026-11-15, `unicode-script` (11a).** The builder added it directly to fill cosmic-text's `Fallback` trait for Q4.
+  chris, after asking what it meant and hearing it explained: "amendment, go ahead". ADR-002 amended
+  (`docs/decisions/ADR-002-text-stack.md`, Amendment — 2026-11-15).
