@@ -36,6 +36,26 @@
       "target": "licenses/OFL-Atkinson.txt"
     },
     {
+      "src": "../crates/text/fonts/OFL-AtkinsonMono.txt",
+      "target": "licenses/OFL-AtkinsonMono.txt"
+    },
+    {
+      "src": "../crates/text/fonts/OFL-Inter.txt",
+      "target": "licenses/OFL-Inter.txt"
+    },
+    {
+      "src": "../crates/text/fonts/OFL-Literata.txt",
+      "target": "licenses/OFL-Literata.txt"
+    },
+    {
+      "src": "../crates/text/fonts/OFL-Caveat.txt",
+      "target": "licenses/OFL-Caveat.txt"
+    },
+    {
+      "src": "../crates/text/fonts/OFL-NotoEmoji.txt",
+      "target": "licenses/OFL-NotoEmoji.txt"
+    },
+    {
       "src": "../LICENSE",
       "target": "licenses/LICENSE"
     }

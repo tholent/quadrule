@@ -161,6 +161,21 @@ Bug reports and ideas are welcome as [issues](https://github.com/tholent/quadrul
 before sending a pull request, because the design is still settling. If you own a Supernote, measurements from your
 device are especially useful; [DEVELOPMENT.md](DEVELOPMENT.md) says how to take them.
 
+## Fonts
+
+Quadrule ships these fonts, all under the [SIL Open Font License 1.1](https://openfontlicense.org); each licence text is in the
+`licenses` folder of every package and in `crates/text/fonts/`:
+
+- [Atkinson Hyperlegible Next](https://github.com/googlefonts/atkinson-hyperlegible-next) and [Atkinson Hyperlegible Mono](https://github.com/googlefonts/atkinson-hyperlegible-next-mono), with italics (The Atkinson Hyperlegible Next Project Authors)
+- [Inter](https://github.com/rsms/inter), with italic (The Inter Project Authors)
+- [Literata](https://github.com/googlefonts/literata), with italic (The Literata Project Authors)
+- [Caveat](https://github.com/googlefonts/caveat) (The Caveat Project Authors)
+- [Noto Emoji](https://github.com/googlefonts/noto-emoji), for the monochrome emoji (Google LLC)
+
+The fonts are the variable files from [google/fonts](https://github.com/google/fonts). Fonts installed on your computer
+can be picked too; a character the chosen font lacks is always taken from the bundled fonts, so a design looks the same
+on every machine.
+
 ## Licence
 
 Apache-2.0; see [LICENSE](LICENSE).

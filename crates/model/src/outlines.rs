@@ -51,6 +51,22 @@ pub struct FaceKey {
     pub family: String,
     /// CSS weight the outlines were drawn at.
     pub weight: u16,
+    /// The italic face of the family (format 0.11): glyph numbers differ from the upright file's,
+    /// so the two never share a table. A file without it reads as upright.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub italic: bool,
+    /// The optical size in whole points the outlines were drawn at, for a font with an `opsz`
+    /// axis (format 0.11); 0 for a font without one. A file without it reads as 0.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub opsz: u16,
+}
+
+fn is_false(v: &bool) -> bool {
+    !*v
+}
+
+fn is_zero(v: &u16) -> bool {
+    *v == 0
 }
 
 /// Each distinct letter shape of one face, once (ADR-001 item 1).

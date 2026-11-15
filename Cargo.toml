@@ -66,6 +66,9 @@ rfd = "0.18.0"
 fluent-bundle = "0.16.0"
 unic-langid = "0.9.6"
 cosmic-text = { version = "0.19.0", default-features = false, features = ["std", "fontconfig"] }
+# Only to name the `Script` type in cosmic-text's `Fallback` trait (rung 11a: bundled-only fallback);
+# the same 0.5.9 cosmic-text already uses, so no second copy. Not one of ADR-002 item 1's three.
+unicode-script = "0.5.9"
 # The same kurbo vello_cpu 0.3 uses, so paths pass between layout and render unchanged.
 kurbo = "0.13.1"
 png = "0.18.1"

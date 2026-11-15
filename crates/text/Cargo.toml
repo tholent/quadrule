@@ -6,10 +6,11 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
-# The bundled font is under the SIL Open Font License 1.1: fonts/OFL-Atkinson.txt.
+# The bundled fonts are under the SIL Open Font License 1.1: fonts/OFL-*.txt.
 
 [dependencies]
 cosmic-text.workspace = true
+unicode-script.workspace = true
 quadrule-model.workspace = true
 
 [dev-dependencies]

@@ -1023,8 +1023,13 @@ pub struct TextBox {
     pub content: String,
     /// Font family name, e.g. `Atkinson Hyperlegible Next`.
     pub family: String,
-    /// CSS weight, 100 to 900; drives a variable font's weight axis.
+    /// CSS weight, 100 to 900; drives a variable font's weight axis. A value outside the
+    /// family's own range is clamped when the text is laid out (rung 11a).
     pub weight: u16,
+    /// Normal or italic (format 0.11, rung 11a). A file without it reads as Normal. Italic picks the
+    /// family's own italic face; a family without one draws upright (no synthetic slant).
+    #[serde(default, skip_serializing_if = "FontStyle::is_normal")]
+    pub style: FontStyle,
     /// Font size in points, a fixed physical size on every profile (§5.4).
     pub size_pt: f64,
     /// Line height as a multiple of the font size.
@@ -1036,6 +1041,23 @@ pub struct TextBox {
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+/// Whether a text box uses its family's upright or italic face (rung 11a, format 0.11).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum FontStyle {
+    /// The upright face.
+    #[default]
+    Normal,
+    /// The family's italic face; a family with none draws upright.
+    Italic,
+}
+
+impl FontStyle {
+    /// Whether this is the default; used to leave the field out of a file when it is.
+    pub fn is_normal(&self) -> bool {
+        matches!(self, FontStyle::Normal)
+    }
 }
 
 /// Horizontal text alignment.

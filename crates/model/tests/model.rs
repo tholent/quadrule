@@ -66,6 +66,8 @@ fn unknown_fields_survive_per_record_type() {
         face: FaceKey {
             family: ATKINSON.into(),
             weight: 400,
+            italic: false,
+            opsz: 0,
         },
         units_per_em: 1000,
         glyphs: BTreeMap::from([(5, shape)]),

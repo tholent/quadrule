@@ -93,6 +93,7 @@ pub fn slice_document() -> Document {
             content: TITLE_TEXT.into(),
             family: ATKINSON.into(),
             weight: 700,
+            style: FontStyle::Normal,
             size_pt: 12.0,
             line_height: 1.25,
             letter_spacing_em: 0.0,

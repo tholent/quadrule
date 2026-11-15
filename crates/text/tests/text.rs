@@ -16,7 +16,7 @@
 
 use quadrule_model::outlines::GlyphShape;
 use quadrule_model::sample::{ATKINSON, TITLE_TEXT};
-use quadrule_model::{Extra, TextAlign, TextBox, Uuid};
+use quadrule_model::{Extra, FontStyle, TextAlign, TextBox, Uuid};
 use quadrule_text::*;
 use sha2::{Digest, Sha256};
 
@@ -25,6 +25,7 @@ fn text_box(content: &str, weight: u16) -> TextBox {
         content: content.into(),
         family: ATKINSON.into(),
         weight,
+        style: FontStyle::Normal,
         size_pt: 12.0,
         line_height: 1.25,
         letter_spacing_em: 0.0,
@@ -63,7 +64,10 @@ fn bundled_font_is_the_recorded_file() {
         }
     }
     let version = BUNDLED[0].version().unwrap_or_default();
-    let ok = fails.is_empty() && !version.is_empty();
+    // Rung 1's file is the one the golden pages were made with: its hash may never change.
+    let first_unchanged =
+        BUNDLED[0].sha256 == "5a455d1cfa099b601ab70751bb9673e8fe1854dc4500c80e1a220d0d75e31745";
+    let ok = fails.is_empty() && !version.is_empty() && first_unchanged;
     println!(
         "CHECK crate=text name=bundled_font_sha256 result={} fonts={} version={version:?} fails={fails:?}",
         if ok { "pass" } else { "fail" },

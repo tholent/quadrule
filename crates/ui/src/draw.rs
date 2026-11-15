@@ -31,8 +31,8 @@ use quadrule_layout::snap::{Guide, Handle, Mark, PxRect, ResizeMods, SnapToggles
 use quadrule_model::edit::Command;
 use quadrule_model::sample::ATKINSON;
 use quadrule_model::{
-    Constraints, DashStyle, EllipseShape, Extra, Frame, HConstraint, Line, LineCap, LineDir,
-    LineRole, Object, ObjectKind, Pattern, PatternRegion, PolygonShape, RectShape, Style,
+    Constraints, DashStyle, EllipseShape, Extra, FontStyle, Frame, HConstraint, Line, LineCap,
+    LineDir, LineRole, Object, ObjectKind, Pattern, PatternRegion, PolygonShape, RectShape, Style,
     TextAlign, TextBox, Uuid, VConstraint,
 };
 use quadrule_profiles::Profile;
@@ -248,6 +248,7 @@ fn make_object(
                 content: names.text_content.clone(),
                 family: ATKINSON.into(),
                 weight: 400,
+                style: FontStyle::Normal,
                 size_pt: 12.0,
                 line_height: 1.25,
                 letter_spacing_em: 0.0,

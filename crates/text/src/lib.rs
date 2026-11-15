@@ -20,9 +20,12 @@
 //! The result is a [`ProfileOutlines`]: each distinct letter shape once, plus each box's letter
 //! positions (ADR-001 item 1). Live text and saved text are both drawn from that one structure.
 //!
-//! Not built yet: system fonts and fallback to them (ADR-002 item 6), substitution by font
-//! signature (item 7), re-scan on focus (item 8), hinting (item 4's flag), paragraph spacing,
-//! vertical alignment and the overflow signal (item 3).
+//! Rung 11a added the bundled set with italics, optical size, installed fonts with the re-scan on
+//! focus (item 8), and a fallback that uses bundled fonts only ([`registry`]).
+//!
+//! Not built yet: fallback to any installed font with its warning (ADR-002 item 6, rung 12),
+//! substitution by font signature (item 7), hinting (item 4's flag), paragraph spacing, vertical
+//! alignment and the overflow signal (item 3, rung 11b).
 
 #![forbid(unsafe_code)]
 
@@ -34,10 +37,15 @@ use cosmic_text::skrifa::{
     string::StringId,
 };
 use cosmic_text::{Align, Attrs, Buffer, Family, FontSystem, Metrics, Shaping, Weight, Wrap};
+use std::collections::HashMap;
+
+pub mod opsz;
+pub mod registry;
 use quadrule_model::outlines::{
     FaceKey, GlyphShape, GlyphTable, PlacedGlyph, ProfileOutlines, TextOutlines,
 };
 use quadrule_model::{Extra, TextAlign, TextBox, Uuid, pt_to_mm};
+pub use registry::{FALLBACK_ORDER, FamilyInfo, FontRegistry, Scan, Weights};
 use std::collections::BTreeMap;
 
 /// A font that ships inside quadrule (napkin §7.2).
@@ -53,22 +61,118 @@ pub struct BundledFont {
     pub data: &'static [u8],
     /// sha256 of `data`, checked by a test.
     pub sha256: &'static str,
+    /// True for the family's italic file.
+    pub italic: bool,
+    /// The file name of the family's SIL Open Font License text under `crates/text/fonts/`, which
+    /// the packages ship (`packaging/packager.json`); a test checks both.
+    pub ofl: &'static str,
 }
 
-/// The bundled fonts. Rung 1 bundles Atkinson Hyperlegible Next only (rung 1 record,
-/// "Fonts"); the rest of napkin §7.2's list arrives with the rungs that use them.
-pub const BUNDLED: &[BundledFont] = &[BundledFont {
-    id: "atkinson-hyperlegible-next",
-    family: "Atkinson Hyperlegible Next",
-    file: "AtkinsonHyperlegibleNext[wght].ttf",
-    data: include_bytes!("../fonts/AtkinsonHyperlegibleNext[wght].ttf"),
-    sha256: "5a455d1cfa099b601ab70751bb9673e8fe1854dc4500c80e1a220d0d75e31745",
-}];
+/// One bundled font file: the variable files of the record's Defaulted "Font files".
+macro_rules! font {
+    ($id:literal, $family:literal, $file:literal, $sha:literal, $italic:literal, $ofl:literal) => {
+        BundledFont {
+            id: $id,
+            family: $family,
+            file: $file,
+            data: include_bytes!(concat!("../fonts/", $file)),
+            sha256: $sha,
+            italic: $italic,
+            ofl: $ofl,
+        }
+    };
+}
+
+/// The bundled fonts (rung 11a, bbq record Q2): Atkinson Hyperlegible Next and Mono, Inter,
+/// Literata, Caveat and Noto Emoji, each with its italic where one exists, as the families' variable
+/// files from github.com/google/fonts. The first is rung 1's file, unchanged.
+pub const BUNDLED: &[BundledFont] = &[
+    font!(
+        "atkinson-hyperlegible-next",
+        "Atkinson Hyperlegible Next",
+        "AtkinsonHyperlegibleNext[wght].ttf",
+        "5a455d1cfa099b601ab70751bb9673e8fe1854dc4500c80e1a220d0d75e31745",
+        false,
+        "OFL-Atkinson.txt"
+    ),
+    font!(
+        "atkinson-hyperlegible-next-italic",
+        "Atkinson Hyperlegible Next",
+        "AtkinsonHyperlegibleNext-Italic[wght].ttf",
+        "ce9cffed32742ad2d9238c561a93220385e5934cdc02b8eb4097a50efa957dc6",
+        true,
+        "OFL-Atkinson.txt"
+    ),
+    font!(
+        "atkinson-hyperlegible-mono",
+        "Atkinson Hyperlegible Mono",
+        "AtkinsonHyperlegibleMono[wght].ttf",
+        "5ce8b1698d1ded7dff2178c1a3ad159470085a58ea239e8b2cb88f4fb4a6f646",
+        false,
+        "OFL-AtkinsonMono.txt"
+    ),
+    font!(
+        "atkinson-hyperlegible-mono-italic",
+        "Atkinson Hyperlegible Mono",
+        "AtkinsonHyperlegibleMono-Italic[wght].ttf",
+        "e18f523877530e4abe229df6a36d394326254da488a7f5abb9b7b5ea8f780cd4",
+        true,
+        "OFL-AtkinsonMono.txt"
+    ),
+    font!(
+        "inter",
+        "Inter",
+        "Inter[opsz,wght].ttf",
+        "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031",
+        false,
+        "OFL-Inter.txt"
+    ),
+    font!(
+        "inter-italic",
+        "Inter",
+        "Inter-Italic[opsz,wght].ttf",
+        "acd98e64795781b2058f07b18475e0ecee2a0fe2b42a49e2f9e37d0d6bf66ce6",
+        true,
+        "OFL-Inter.txt"
+    ),
+    font!(
+        "literata",
+        "Literata",
+        "Literata[opsz,wght].ttf",
+        "b41138c9373112f32abb589cc22e8674b06ed4048b0c513be922bdd26f274440",
+        false,
+        "OFL-Literata.txt"
+    ),
+    font!(
+        "literata-italic",
+        "Literata",
+        "Literata-Italic[opsz,wght].ttf",
+        "d483dfaeba9cbf4ce71d32a52ee65df82f7e35b15fff8d1011cdb242d1fcd465",
+        true,
+        "OFL-Literata.txt"
+    ),
+    font!(
+        "caveat",
+        "Caveat",
+        "Caveat[wght].ttf",
+        "0bdb6b660482d31531b3945849fba5916b3ef8695da7024a9e6b9ee3c4157988",
+        false,
+        "OFL-Caveat.txt"
+    ),
+    font!(
+        "noto-emoji",
+        "Noto Emoji",
+        "NotoEmoji[wght].ttf",
+        "de6c18832938afc99caf132b39d6a30a19bac7f2e812e28db2535b4608d27551",
+        false,
+        "OFL-NotoEmoji.txt"
+    ),
+];
 
 impl BundledFont {
-    /// The bundled font of a family, if there is one.
+    /// The bundled upright font of a family, if there is one.
     pub fn for_family(family: &str) -> Option<&'static BundledFont> {
-        BUNDLED.iter().find(|f| f.family == family)
+        BUNDLED.iter().find(|f| f.family == family && !f.italic)
     }
 
     /// The font's own version string (name ID 5), e.g. `Version 2.001`.
@@ -78,33 +182,6 @@ impl BundledFont {
             .localized_strings(StringId::VERSION_STRING)
             .english_or_first()?;
         Some(s.chars().collect())
-    }
-}
-
-/// The fonts text can be laid out with.
-pub struct FontRegistry {
-    fs: FontSystem,
-}
-
-impl FontRegistry {
-    /// Bundled fonts only, no system fonts: the same on every machine. Used by tests and by the
-    /// rung 1 slice.
-    pub fn bundled_only() -> Self {
-        let mut db = fontdb::Database::new();
-        for f in BUNDLED {
-            db.load_font_data(f.data.to_vec());
-        }
-        FontRegistry {
-            fs: FontSystem::new_with_locale_and_db("en-US".into(), db),
-        }
-    }
-
-    /// True when some loaded face belongs to this family.
-    pub fn has_family(&self, family: &str) -> bool {
-        self.fs
-            .db()
-            .faces()
-            .any(|f| f.families.iter().any(|(n, _)| n == family))
     }
 }
 
@@ -194,12 +271,17 @@ pub fn lay_out(
     let mut texts = Vec::with_capacity(requests.len());
     let mut missing = 0;
     let mut rounded = 0;
+    // Installed families first, so the layout store is rebuilt at most once for the page.
+    reg.ensure_system(requests.iter().map(|r| r.text.family.as_str()));
+    // Family, italic flag and optical size of each face met, worked out once.
+    let mut identities: HashMap<fontdb::ID, (String, bool, u16)> = HashMap::new();
     for req in requests {
-        if !reg.has_family(&req.text.family) {
-            return Err(TextError::MissingFamily(req.text.family.clone()));
-        }
-        let size_mm = pt_to_mm(req.text.size_pt) as f32;
-        let buf = paragraph(&mut reg.fs, req.text, size_mm, req.width_mm as f32);
+        let tb = req.text;
+        let resolved = reg
+            .resolve(&tb.family, tb.weight, tb.style, tb.size_pt)
+            .ok_or_else(|| TextError::MissingFamily(tb.family.clone()))?;
+        let size_mm = pt_to_mm(tb.size_pt) as f32;
+        let buf = paragraph(&mut reg.fs, tb, &resolved, size_mm, req.width_mm as f32);
         let mut glyphs = Vec::new();
         let mut height_mm = 0.0f32;
         for run in buf.layout_runs() {
@@ -208,10 +290,15 @@ pub fn lay_out(
                 if g.glyph_id == 0 {
                     missing += 1;
                 }
-                let family = family_of(&reg.fs, g.font_id);
+                let (family, italic, opsz) = identities
+                    .entry(g.font_id)
+                    .or_insert_with(|| reg.face_identity(g.font_id))
+                    .clone();
                 let key = FaceKey {
                     family,
                     weight: g.font_weight.0,
+                    italic,
+                    opsz,
                 };
                 let table = match tables.iter().position(|t| t.face == key) {
                     Some(i) => i,
@@ -269,13 +356,20 @@ pub fn lay_out(
 }
 
 /// Lays one box out with cosmic-text, in millimetres.
-fn paragraph(fs: &mut FontSystem, tb: &TextBox, size_mm: f32, width_mm: f32) -> Buffer {
+fn paragraph(
+    fs: &mut FontSystem,
+    tb: &TextBox,
+    font: &registry::Resolved,
+    size_mm: f32,
+    width_mm: f32,
+) -> Buffer {
     let mut buf = Buffer::new(fs, Metrics::new(size_mm, size_mm * tb.line_height as f32));
     buf.set_wrap(Wrap::WordOrGlyph);
     buf.set_size(Some(width_mm), None);
     let mut attrs = Attrs::new()
-        .family(Family::Name(&tb.family))
-        .weight(Weight(tb.weight));
+        .family(Family::Name(&font.family))
+        .weight(Weight(font.weight))
+        .style(font.style);
     if tb.letter_spacing_em != 0.0 {
         attrs = attrs.letter_spacing(tb.letter_spacing_em as f32);
     }
@@ -288,13 +382,6 @@ fn paragraph(fs: &mut FontSystem, tb: &TextBox, size_mm: f32, width_mm: f32) -> 
     buf.set_text(&tb.content, &attrs, Shaping::Advanced, Some(align));
     buf.shape_until_scroll(fs, false);
     buf
-}
-
-fn family_of(fs: &FontSystem, id: fontdb::ID) -> String {
-    fs.db()
-        .face(id)
-        .and_then(|f| f.families.first().map(|(n, _)| n.clone()))
-        .unwrap_or_default()
 }
 
 fn font_ref<'a>(data: &'a [u8], index: u32) -> Result<skrifa::FontRef<'a>, TextError> {
@@ -311,8 +398,9 @@ fn units_per_em(fs: &mut FontSystem, id: fontdb::ID, weight: Weight) -> Result<u
         .units_per_em)
 }
 
-/// Draws one glyph in font units at the face's weight and stores it in half font units.
-/// Returns the shape and how many coordinates had to be rounded.
+/// Draws one glyph in font units at the face's weight (and, in a copy made for an optical size,
+/// at that size: see [`opsz`]) and stores it in half font units. Returns the shape and how many
+/// coordinates had to be rounded.
 fn glyph_shape(
     fs: &mut FontSystem,
     id: fontdb::ID,

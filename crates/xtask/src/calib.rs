@@ -32,7 +32,7 @@
 use kurbo::{Affine, BezPath, Circle, Point, Shape};
 use quadrule_layout::{DisplayList, Item, snap_center, text_path};
 use quadrule_model::sample::ATKINSON;
-use quadrule_model::{Extra, MM_PER_IN, TextAlign, TextBox, Uuid};
+use quadrule_model::{Extra, FontStyle, MM_PER_IN, TextAlign, TextBox, Uuid};
 use quadrule_profiles::Profile;
 use quadrule_text::{FontRegistry, TextRequest, lay_out};
 
@@ -271,6 +271,7 @@ impl<'a> Pager<'a> {
             content: s.into(),
             family: ATKINSON.into(),
             weight,
+            style: FontStyle::Normal,
             size_pt,
             line_height: 1.2,
             letter_spacing_em: 0.0,
