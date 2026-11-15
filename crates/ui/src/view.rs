@@ -2047,7 +2047,8 @@ impl ViewerUi {
                 match &mut self.chip {
                     Ok(chip) => match chip.render(&list) {
                         Ok((id, ms)) => {
-                            self.chip_state.record_chip(ms);
+                            self.chip_state
+                                .record_chip_draws(ms, chip.last_frame_draws());
                             drawn = Some(VectorTexture::Chip(id));
                             if self.chip_state.frames == 1 {
                                 // The first frame builds shaders and is not judged; draw a

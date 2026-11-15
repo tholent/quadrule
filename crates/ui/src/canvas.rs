@@ -18,7 +18,8 @@
 //! export (ADR-003 item 3).
 //!
 //! The fallback rule (Defaulted "The chip canvas on the Pi will be slow"): if the chip canvas
-//! cannot start, or a measured frame after the first takes over [`SLOW_FRAME_MS`], it draws with
+//! cannot start, or a measured frame after the first takes over [`SLOW_FRAME_MS`] (a frame that
+//! draws the page twice, to keep its unchanged lower part, is allowed twice that), it draws with
 //! vello_cpu at screen resolution instead and the status bar says so.
 //!
 //! The chip renderer itself lives in the app, which alone has the wgpu device; this crate sees it
@@ -44,6 +45,14 @@ pub trait ChipRenderer {
     /// Renders `dl` (already at screen resolution) and returns its texture and how long the
     /// frame took, GPU work included, in milliseconds.
     fn render(&mut self, dl: &DisplayList) -> Result<(egui::TextureId, f64), String>;
+
+    /// How many whole-page-sized draws the last frame made: 1 normally, 2 when it drew the
+    /// unchanged lower part of the page into a texture of its own and then the rest over it (rung
+    /// 11a: on a page of text that is two draws, about 82 ms and 15 ms on the Pi). The fall-back
+    /// rule allows each draw [`SLOW_FRAME_MS`].
+    fn last_frame_draws(&self) -> u32 {
+        1
+    }
 }
 
 /// Why the chip canvas is drawing with vello_cpu.
@@ -71,9 +80,15 @@ pub struct ChipState {
 impl ChipState {
     /// Records a chip frame's time; the first frame (shaders being built) is not judged.
     pub fn record_chip(&mut self, ms: f64) {
+        self.record_chip_draws(ms, 1);
+    }
+
+    /// [`ChipState::record_chip`] for a frame that made `draws` whole-page draws (at least one):
+    /// it may take `draws` times as long before the canvas falls back.
+    pub fn record_chip_draws(&mut self, ms: f64, draws: u32) {
         self.frames += 1;
         self.last_ms = Some(ms);
-        if self.frames > 1 && ms > SLOW_FRAME_MS {
+        if self.frames > 1 && ms > SLOW_FRAME_MS * f64::from(draws.max(1)) {
             self.fallback = Some(Fallback::Slow(ms));
         }
     }

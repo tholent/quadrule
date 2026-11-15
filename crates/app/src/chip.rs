@@ -109,6 +109,8 @@ pub struct Chip {
     base: Option<Base>,
     last: Option<Last>,
     pace: Pace,
+    /// Whole-page-sized draws the last frame made (see `ChipRenderer::last_frame_draws`).
+    draws: u32,
 }
 
 impl Chip {
@@ -125,6 +127,7 @@ impl Chip {
             base: None,
             last: None,
             pace: Pace::default(),
+            draws: 1,
         }
     }
 
@@ -295,6 +298,7 @@ fn weight(it: &Item) -> usize {
 impl quadrule_ui::ChipRenderer for Chip {
     fn render(&mut self, dl: &DisplayList) -> Result<(egui::TextureId, f64), String> {
         let start = Instant::now();
+        self.draws = 1;
         if self.vello.is_none() {
             let v = vello::Renderer::new(
                 &self.device,
@@ -360,6 +364,8 @@ impl quadrule_ui::ChipRenderer for Chip {
         });
         if !keep {
             self.make_base(&dl.items[..cut], size, gray(dl.background))?;
+            // The lower part, then the rest over it: two draws in one frame.
+            self.draws = 2;
         }
         let base = self.base.as_ref().expect("made above");
         // Vello keeps images in an atlas it may reuse between frames, so the picture is handed over
@@ -378,6 +384,10 @@ impl quadrule_ui::ChipRenderer for Chip {
             self.pace.split.push(ms);
         }
         Ok((id, ms))
+    }
+
+    fn last_frame_draws(&self) -> u32 {
+        self.draws
     }
 }
 

@@ -33,9 +33,21 @@ fn slow_chip_frames_fall_back() {
     let at_line_ok = s.fallback.is_none();
     s.record_chip(392.0);
     let slow = s.fallback == Some(Fallback::Slow(392.0));
-    let ok = first_free && at_line_ok && slow;
+    // A frame that drew the page twice (a kept lower part, then the rest over it) may take twice the
+    // line: 150 ms is fine, 250 ms is not; a truly slow chip still falls back.
+    let mut two = ChipState::default();
+    two.record_chip(900.0);
+    two.record_chip_draws(150.0, 2);
+    let two_kept = two.fallback.is_none();
+    two.record_chip_draws(250.0, 2);
+    let two_slow = two.fallback == Some(Fallback::Slow(250.0));
+    let mut one = ChipState::default();
+    one.record_chip(900.0);
+    one.record_chip_draws(150.0, 1);
+    let one_slow = one.fallback == Some(Fallback::Slow(150.0));
+    let ok = first_free && at_line_ok && slow && two_kept && two_slow && one_slow;
     println!(
-        "CHECK crate=ui name=chip_fallback_rule result={} first_frame_not_judged={first_free} at_100ms_kept={at_line_ok} over_100ms_falls_back={slow}",
+        "CHECK crate=ui name=chip_fallback_rule result={} first_frame_not_judged={first_free} at_100ms_kept={at_line_ok} over_100ms_falls_back={slow} two_draws_150_kept={two_kept} two_draws_250_falls_back={two_slow} one_draw_150_falls_back={one_slow}",
         pass(ok)
     );
     assert!(ok);
