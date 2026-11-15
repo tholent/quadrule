@@ -90,6 +90,7 @@ fn v011_files_open_migrate_and_export_the_same_bytes() {
                     && t.paragraph_spacing.is_none()
                     && t.v_align == quadrule_model::VerticalAlign::Top
                     && !t.baselines
+                    && !t.baseline_gap
                     && o.rotation_deg == 0.0
             }
             _ => true,

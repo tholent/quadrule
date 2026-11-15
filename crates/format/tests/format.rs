@@ -476,21 +476,28 @@ fn format_012_fields_are_left_out_at_their_defaults_and_round_trip() {
     let plain = quadrule_model::TextBox::default();
     let keys = |t: &quadrule_model::TextBox| {
         let v = Value::serialized(t).unwrap();
-        let names = ["sizing", "paragraph_spacing", "v_align", "baselines"];
+        let names = [
+            "sizing",
+            "paragraph_spacing",
+            "v_align",
+            "baselines",
+            "baseline_gap",
+        ];
         names.map(|n| has(&v, n))
     };
-    let left_out = keys(&plain) == [false; 4];
+    let left_out = keys(&plain) == [false; 5];
     let mut set = plain.clone();
     set.sizing = TextSizing::Fixed;
     set.paragraph_spacing = ParagraphSpacing::Units(1.0);
     set.v_align = VerticalAlign::Bottom;
     set.baselines = true;
-    let written = keys(&set) == [true; 4];
+    set.baseline_gap = true;
+    let written = keys(&set) == [true; 5];
     // A box that is Fixed but otherwise plain writes only that.
     let only = {
         let mut t = plain.clone();
         t.sizing = TextSizing::Fixed;
-        keys(&t) == [true, false, false, false]
+        keys(&t) == [true, false, false, false, false]
     };
     // Saved and read again, a file with the choices set (and a turned box) is what was written.
     let mut file = slice_file();

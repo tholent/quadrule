@@ -350,6 +350,10 @@ pub fn override_key<'a>(primary: &Profile, target: &'a Profile) -> Option<&'a st
     (target.id != primary.id).then_some(target.id.as_str())
 }
 
+/// The clear gap above a rule that "Small gap above the line" leaves, in mm (chris's ruling at the
+/// 11b look), rounded to whole device pixels, at least one.
+pub const BASELINE_GAP_MM: f64 = 0.3;
+
 /// One text box to lay out on a profile: the object's text as it falls there (with its font-size
 /// override, if any) and the width of its box there.
 #[derive(Debug, Clone)]
@@ -421,6 +425,13 @@ pub fn text_jobs<'a>(doc: &'a Document, primary: &Profile, target: &Profile) -> 
                         px_per_mm: target.mm_to_px(1.0),
                         origin_px: rhythm.origin_y,
                         unit_px: rhythm.unit_y,
+                        // A ruled region's default line role is Guide (the Pattern tool's).
+                        rule_px: target.role(quadrule_model::LineRole::Guide).width_px.max(1),
+                        gap_px: if tb.baseline_gap {
+                            (BASELINE_GAP_MM * target.mm_to_px(1.0)).round().max(1.0)
+                        } else {
+                            0.0
+                        },
                     }),
                 })
             }

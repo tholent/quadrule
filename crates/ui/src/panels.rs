@@ -2163,6 +2163,22 @@ impl ViewerUi {
                 }
                 ui.end_row();
 
+                // A small clear gap above the rule instead of standing on its top edge; greyed
+                // while the baselines are off (chris, at the 11b look).
+                ui.label("");
+                let mut gap = t.baseline_gap;
+                let tick = ui
+                    .add_enabled_ui(t.baselines, |ui| {
+                        ui.checkbox(&mut gap, self.t("app-baselines-gap"))
+                    })
+                    .inner;
+                if tick.changed() {
+                    edit_text(&mut self.viewer, "text-baseline-gap", &|t| {
+                        t.baseline_gap = gap
+                    });
+                }
+                ui.end_row();
+
                 let label = ui.label(self.t("app-letter-spacing"));
                 let mut ls = t.letter_spacing_em;
                 if ui

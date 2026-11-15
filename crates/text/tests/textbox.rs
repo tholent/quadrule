@@ -178,6 +178,8 @@ fn grid(top_px: f64) -> BaselineGrid {
         px_per_mm: 300.0 / 25.4,
         origin_px: 94.0,
         unit_px: 71.0,
+        rule_px: 3,
+        gap_px: 0.0,
     }
 }
 
@@ -199,8 +201,10 @@ fn baselines_stand_on_rhythm_lines_with_a_whole_step_line_height() {
         .iter()
         .map(|y| (g.top_px + f64::from(*y) * g.px_per_mm).round())
         .collect();
+    // A baseline stands on the top edge of the rule on its rung: the rung's row less half the rule.
     let on_lines = rows.iter().all(|r| {
-        ((r - g.origin_px) / g.unit_px - ((r - g.origin_px) / g.unit_px).round()).abs() < 1e-9
+        let rung = r + f64::from(g.rule_px / 2);
+        ((rung - g.origin_px) / g.unit_px - ((rung - g.origin_px) / g.unit_px).round()).abs() < 1e-9
     });
     // Exactly on, not just near: the glyph's own coordinate is the line's, to a thousandth of a pixel.
     let exact = ys.iter().all(|y| {

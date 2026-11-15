@@ -177,8 +177,9 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   when it is switched to Fixed. Such a box shows four edge handles, not the record's left and right only, so that pulling the top or bottom can
   turn it Fixed. Resizing a group that holds a turned text box stretches it approximately (as for any turned thing). Baselines on the rhythm take
   the box's unturned top as the page's, so a turned box, or one in a turned group, is not stood on the rhythm by its turned lines; under a
-  physical-locked rhythm every baseline is on a rung's rounded pixel row but the gaps vary by a pixel; with a 3 px ruled line the letters'
-  bottoms overlap the upper half of the line (a look for chris). L15's overlap and off-page checks use the primary's laid-out height only
+  physical-locked rhythm every baseline is on a rung's rounded pixel row but the gaps vary by a pixel; a baseline stands on the top edge of a
+  rule of the Guide role's width (the Pattern tool's line role), so a region ruled in another role or width, or with major lines, has its
+  letters off that rule's top edge by half the difference in width. L15's overlap and off-page checks use the primary's laid-out height only
   when the window lays the primary out as well (it does for a secondary device's page; `lint_with` alone uses the stored height).
 - Rung 11b, owed (`crates/text/src/edit.rs`, `crates/ui/src/typing.rs`, `crates/ui/src/view.rs`): the caret is solid (no blink: a blink needs the
   window to repaint twice a second, which keeps the test harness from settling); no triple-click and no autoscroll to the caret; a session

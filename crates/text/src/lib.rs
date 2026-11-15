@@ -219,6 +219,12 @@ pub struct BaselineGrid {
     pub origin_px: f64,
     /// One rhythm step down, in pixels.
     pub unit_px: f64,
+    /// The width in whole pixels of the rule a ruled region draws on a rung (its default line
+    /// role): a baseline stands on the rule's top edge, which is half this above the rung's row.
+    pub rule_px: u32,
+    /// A clear gap in whole pixels between the baseline and that top edge (0: the letters stand on
+    /// the edge).
+    pub gap_px: f64,
 }
 
 impl BaselineGrid {
@@ -227,14 +233,20 @@ impl BaselineGrid {
         self.unit_px / self.px_per_mm
     }
 
-    /// Rhythm line `k` on the page, in pixels (whole).
+    /// Rhythm line `k` on the page, in pixels (whole): the pixel the rule is placed at.
     pub fn line_px(&self, k: i64) -> f64 {
         (self.origin_px + k as f64 * self.unit_px).round()
     }
 
-    /// Rhythm line `k`, in mm below the box's top.
+    /// Where a baseline on rung `k` is, on the page in pixels: on the rule's top edge (a rule of
+    /// `rule_px` is centred on the rung, so its top row is `rule_px / 2` rows above it), less the gap.
+    pub fn baseline_px(&self, k: i64) -> f64 {
+        self.line_px(k) - f64::from(self.rule_px / 2) - self.gap_px
+    }
+
+    /// The baseline on rung `k`, in mm below the box's top.
     pub fn line_mm(&self, k: i64) -> f64 {
-        (self.line_px(k) - self.top_px) / self.px_per_mm
+        (self.baseline_px(k) - self.top_px) / self.px_per_mm
     }
 
     /// The first rhythm line at least `min_mm` below the box's top: its number.

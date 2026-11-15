@@ -273,6 +273,7 @@ app-valign-top = Top
 app-valign-middle = Middle
 app-valign-bottom = Bottom
 app-baselines = Align baselines to rhythm
+app-baselines-gap = Small gap above the line
 app-line-height-steps = { $n } rhythm { $n ->
         [one] step
        *[other] steps

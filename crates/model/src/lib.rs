@@ -1066,6 +1066,11 @@ pub struct TextBox {
     /// rhythm line at least a capital's height below the box's top. A file without it reads as off.
     #[serde(default, skip_serializing_if = "is_false")]
     pub baselines: bool,
+    /// With baselines on the rhythm: leave a small clear gap (0.3 mm, whole device pixels, at least one)
+    /// between the letters' bottoms and the rule's top edge, instead of standing them on that edge
+    /// (format 0.12; chris's ruling at the 11b look). A file without it reads as off.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub baseline_gap: bool,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
@@ -1087,6 +1092,7 @@ impl Default for TextBox {
             paragraph_spacing: ParagraphSpacing::default(),
             v_align: VerticalAlign::Top,
             baselines: false,
+            baseline_gap: false,
             extra: Extra::new(),
         }
     }

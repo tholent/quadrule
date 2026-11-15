@@ -190,62 +190,145 @@ fn laid(
     (l.outlines, dl)
 }
 
+/// The ruled region's rules as (top row, bottom row exclusive), from the display list.
+fn rules(
+    dl: &quadrule_layout::DisplayList,
+    ruled: &Object,
+    target: &quadrule_profiles::Profile,
+) -> Vec<(f64, f64)> {
+    let (top, bottom) = (
+        target.mm_to_px(ruled.frame.y_mm),
+        target.mm_to_px(ruled.frame.y_mm + ruled.frame.h_mm),
+    );
+    dl.items
+        .iter()
+        .filter_map(|it| match it {
+            Item::Rect { x0, y0, x1, y1, .. }
+                if x1 - x0 > 100.0 && *y0 >= top - 4.0 && *y1 <= bottom + 4.0 =>
+            {
+                Some((*y0, *y1))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
 #[test]
-fn baselines_land_on_the_pixel_rows_of_the_ruled_regions_lines_on_both_devices() {
+fn baselines_stand_on_the_rules_top_edge_or_a_small_gap_above_it_on_both_devices() {
     let doc = textbox_document();
     let mut parts = Vec::new();
     let mut all = true;
     for id in doc.profile_ids() {
         let target = builtin_for(id, Orientation::Portrait).unwrap();
         let (outlines, dl) = laid(&doc, id);
-        let o = doc.object(textbox_ids::ON_RHYTHM).unwrap();
-        let text = outlines.text(o.id).unwrap();
-        let (origin, _) = text_box_origin(&o.frame, &target);
         let ppmm = target.mm_to_px(1.0);
-        let mut rows: Vec<f64> = text
-            .glyphs
-            .iter()
-            .map(|g| origin.y + f64::from(g.y_mm()) * ppmm)
-            .collect();
-        rows.sort_by(f64::total_cmp);
-        rows.dedup_by(|a, b| (*a - *b).abs() < 0.01);
-        // The ruled region's lines: wide, short rectangles inside the region.
-        let ruled = doc.object(textbox_ids::RULED).unwrap();
-        let (top, bottom) = (
-            target.mm_to_px(ruled.frame.y_mm),
-            target.mm_to_px(ruled.frame.y_mm + ruled.frame.h_mm),
-        );
-        let lines: Vec<(f64, f64)> = dl
-            .items
-            .iter()
-            .filter_map(|it| match it {
-                Item::Rect { x0, y0, x1, y1, .. }
-                    if x1 - x0 > 100.0 && *y0 >= top - 3.0 && *y1 <= bottom + 3.0 =>
-                {
-                    Some((*y0, *y1))
-                }
-                _ => None,
-            })
-            .collect();
-        let exact = rows.iter().all(|r| (r - r.round()).abs() < 1e-3);
-        let on_lines = !rows.is_empty()
-            && rows.iter().all(|r| {
-                lines
-                    .iter()
-                    .any(|(y0, y1)| *y0 <= r.round() && r.round() < *y1)
-            });
-        // Every baseline is a different line of the region, and they are the region's own: the text
-        // has several lines.
-        let several = rows.len() >= 3;
-        all &= exact && on_lines && several;
+        // B on the rule's top edge; C a gap of 0.3 mm in whole pixels, at least one, above it.
+        let gap = (0.3 * ppmm).round().max(1.0);
+        for (ruled_id, text_id, want_gap) in [
+            (textbox_ids::RULED, textbox_ids::ON_RHYTHM, 0.0),
+            (textbox_ids::RULED_GAP, textbox_ids::ON_RHYTHM_GAP, gap),
+        ] {
+            let o = doc.object(text_id).unwrap();
+            let text = outlines.text(o.id).unwrap();
+            let (origin, _) = text_box_origin(&o.frame, &target);
+            let mut rows: Vec<f64> = text
+                .glyphs
+                .iter()
+                .map(|g| origin.y + f64::from(g.y_mm()) * ppmm)
+                .collect();
+            rows.sort_by(f64::total_cmp);
+            rows.dedup_by(|a, b| (*a - *b).abs() < 0.01);
+            let lines = rules(&dl, doc.object(ruled_id).unwrap(), &target);
+            let exact = rows.iter().all(|r| (r - r.round()).abs() < 1e-3);
+            // The baseline is the rule's top row less the gap: the same pixel row layout draws.
+            let on = !rows.is_empty()
+                && rows.iter().all(|r| {
+                    lines
+                        .iter()
+                        .any(|(y0, _)| (*y0 - want_gap - r.round()).abs() < 1e-6)
+                });
+            let several = rows.len() >= 2;
+            all &= exact && on && several;
+            parts.push(format!(
+                "{id}:gap_px={want_gap}:baselines={}:rules={}:exact={exact}:on_top_edge={on}",
+                rows.len(),
+                lines.len()
+            ));
+        }
+    }
+    println!(
+        "\nCHECK crate=render name=textbox_baselines_on_rule_top_edge result={} {}",
+        pass(all),
+        parts.join(" ")
+    );
+    assert!(all);
+}
+
+/// A ruled region with an "L" standing on it, drawn with and without the letter: the rows the letter
+/// alone darkens, and the rows of the rule above which it stands.
+fn pixels_of_l(id: &str, gap: bool) -> (Option<usize>, usize, f64) {
+    let mut doc = textbox_document();
+    let (ruled, text) = (textbox_ids::RULED, textbox_ids::ON_RHYTHM);
+    let (ruled_id, text_id) = (ruled, text);
+    doc.layers[0]
+        .objects
+        .retain(|o| o.id == ruled_id || o.id == text_id);
+    if let Some(o) = doc.object_mut(text_id)
+        && let ObjectKind::Text(t) = &mut o.kind
+    {
+        t.content = "LLL".into();
+        t.baseline_gap = gap;
+    }
+    let with = {
+        let (_, dl) = laid(&doc, id);
+        (render(&dl, Math::Fastest), dl)
+    };
+    doc.layers[0].objects.retain(|o| o.id == ruled_id);
+    let without = render(&laid(&doc, id).1, Math::Fastest);
+    let (img, dl) = with;
+    let w = img.width as usize;
+    // Rows holding a pixel only the letters made.
+    let lowest = (0..img.height as usize)
+        .rev()
+        .find(|y| (0..w).any(|x| img.data[y * w + x] != without.data[y * w + x]));
+    let target = builtin_for(id, Orientation::Portrait).unwrap();
+    // The top row of the rule the letters stand on: the first rule at or below the letters.
+    let ruled_obj = doc.object(ruled_id).unwrap();
+    let rule_rows = rules(&dl, ruled_obj, &target);
+    let below = lowest
+        .and_then(|l| {
+            rule_rows
+                .iter()
+                .map(|(y0, _)| *y0)
+                .filter(|y0| *y0 > l as f64)
+                .min_by(f64::total_cmp)
+        })
+        .unwrap_or(f64::NAN);
+    (lowest, w, below)
+}
+
+#[test]
+fn a_letters_flat_bottom_ends_on_the_row_above_the_rule_or_a_clear_gap_above_that() {
+    let mut parts = Vec::new();
+    let mut all = true;
+    for id in [MANTA_ID, NOMAD_ID] {
+        let target = builtin_for(id, Orientation::Portrait).unwrap();
+        let n = (0.3 * target.mm_to_px(1.0)).round().max(1.0);
+        // B: the letters' lowest dark row is the row just above the rule's top row.
+        let (low_b, _, rule_b) = pixels_of_l(id, false);
+        let b_ok = low_b.is_some_and(|l| (rule_b - (l as f64 + 1.0)).abs() < 1e-6);
+        // C: exactly N clear rows between the letters and the rule.
+        let (low_c, _, rule_c) = pixels_of_l(id, true);
+        let c_ok = low_c.is_some_and(|l| (rule_c - (l as f64 + 1.0) - n).abs() < 1e-6);
+        all &= b_ok && c_ok;
         parts.push(format!(
-            "{id}:baselines={} region_lines={} exact={exact} on_lines={on_lines}",
-            rows.len(),
-            lines.len()
+            "{id}:B_clear_rows={}:C_clear_rows={}:N={n}:b_ok={b_ok}:c_ok={c_ok}",
+            low_b.map_or(-1.0, |l| rule_b - (l as f64 + 1.0)),
+            low_c.map_or(-1.0, |l| rule_c - (l as f64 + 1.0)),
         ));
     }
     println!(
-        "\nCHECK crate=render name=textbox_baselines_on_ruled_rows result={} {}",
+        "\nCHECK crate=render name=textbox_letter_bottom_rows result={} {}",
         pass(all),
         parts.join(" ")
     );

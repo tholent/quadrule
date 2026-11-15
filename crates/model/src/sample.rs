@@ -2013,8 +2013,12 @@ pub mod textbox_ids {
     pub const BOTTOM: Uuid = nth(5);
     /// The ruled region the baselines stand on.
     pub const RULED: Uuid = nth(6);
-    /// The box whose baselines stand on the rhythm.
+    /// The box whose baselines stand on the rhythm, on the rule's top edge.
     pub const ON_RHYTHM: Uuid = nth(7);
+    /// The ruled region of the box with a small gap above the line.
+    pub const RULED_GAP: Uuid = nth(11);
+    /// The box whose baselines stand a small gap above the rule.
+    pub const ON_RHYTHM_GAP: Uuid = nth(12);
     /// The text turned 15 degrees.
     pub const TURNED_15: Uuid = nth(8);
     /// The text turned 90 degrees.
@@ -2024,8 +2028,8 @@ pub mod textbox_ids {
 }
 
 /// The text-box page (docs/bbq/2026-11-14-rung-11-text-and-fonts.md, Defaulted "Golden page 11b"): a
-/// Fixed box that leaves lines out, the three vertical alignments, a paragraph's space, a box whose
-/// baselines stand on a ruled region, and text turned 15, 90 and 180 degrees. Every box with a height
+/// Fixed box that leaves lines out, the three vertical alignments, a paragraph's space, two boxes whose
+/// baselines stand on a ruled region (on the rule's top edge, and a small gap above it), and text turned 15, 90 and 180 degrees. Every box with a height
 /// of its own has a hairline frame round it, so the page shows where it ends. Bundled fonts only.
 /// Designed on the Manta, also targeting the Nomad (laid out for its smaller page). A dot grid holds
 /// the sample's id, so the benchmarks drag it.
@@ -2174,44 +2178,66 @@ pub fn textbox_document() -> Document {
             },
         );
     }
-    // Row 3: baselines on a ruled region. The box sits off the rhythm; its text is pulled onto it.
-    text(
-        &mut objs,
-        None,
-        "Ruled label",
-        "Baselines on the rhythm",
-        Frame::new(margin, 74.0, width, 3.0),
-        small,
-        &plain,
-    );
-    let mut ruled = dots.clone();
-    ruled.id = textbox_ids::RULED;
-    ruled.name = "Ruled".into();
-    ruled.frame = Frame::new(margin, 78.0, width, 30.0);
-    ruled.constraints = pinned;
-    if let ObjectKind::Pattern(p) = &mut ruled.kind {
-        p.pattern = Pattern::Lines;
+    // Row 3: baselines on a ruled region, twice: standing on the rule's top edge (B, the default), and
+    // with a small gap above it (C). The boxes sit off the rhythm; their text is pulled onto it.
+    for (i, (ruled_id, text_id, name, gap)) in [
+        (
+            textbox_ids::RULED,
+            textbox_ids::ON_RHYTHM,
+            "on the line (default)",
+            false,
+        ),
+        (
+            textbox_ids::RULED_GAP,
+            textbox_ids::ON_RHYTHM_GAP,
+            "a small gap above the line",
+            true,
+        ),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let top = 72.0 + i as f64 * 22.0;
+        text(
+            &mut objs,
+            None,
+            &format!("Ruled label {i}"),
+            &format!("Baselines on the rhythm: {name}"),
+            Frame::new(margin, top, width, 3.0),
+            small,
+            &plain,
+        );
+        let mut ruled = dots.clone();
+        ruled.id = ruled_id;
+        ruled.name = format!("Ruled {i}");
+        ruled.frame = Frame::new(margin, top + 4.0, width, 16.0);
+        ruled.constraints = pinned;
+        // The Pattern tool's own line role.
+        ruled.style = Style::Role(LineRole::Guide);
+        if let ObjectKind::Pattern(p) = &mut ruled.kind {
+            p.pattern = Pattern::Lines;
+        }
+        objs.push(ruled);
+        text(
+            &mut objs,
+            Some(text_id),
+            &format!("On the rhythm {i}"),
+            "Letters stand on the line.\nLlama Elf",
+            Frame::new(margin + 3.0, top + 5.7, 60.0, 14.0),
+            11.0,
+            &move |tb, _| {
+                tb.baselines = true;
+                tb.baseline_gap = gap;
+            },
+        );
     }
-    objs.push(ruled);
-    text(
-        &mut objs,
-        Some(textbox_ids::ON_RHYTHM),
-        "On the rhythm",
-        "Letters stand on the ruled lines.\nA new paragraph keeps to them too.",
-        Frame::new(margin + 3.0, 79.7, 60.0, 20.0),
-        11.0,
-        &|tb, _| {
-            tb.baselines = true;
-            tb.paragraph_spacing = ParagraphSpacing::Pt(2.0);
-        },
-    );
     // Row 4: turned text, about the middle of each box.
     text(
         &mut objs,
         None,
         "Turned label",
         "Turned: 15, 90 and 180 degrees",
-        Frame::new(margin, 112.0, width, 3.0),
+        Frame::new(margin, 118.0, width, 3.0),
         small,
         &plain,
     );
@@ -2228,7 +2254,7 @@ pub fn textbox_document() -> Document {
             Some(id),
             name,
             "Quartz",
-            Frame::new(margin + 2.0 + i as f64 * 34.0, 126.0, 28.0, 5.3),
+            Frame::new(margin + 2.0 + i as f64 * 34.0, 132.0, 28.0, 5.3),
             12.0,
             &move |tb, o| {
                 tb.align = TextAlign::Center;
@@ -2238,7 +2264,7 @@ pub fn textbox_document() -> Document {
     }
     let mut grid = dots.clone();
     grid.name = "Dots".into();
-    grid.frame = Frame::new(margin, 144.0, width, 6.0);
+    grid.frame = Frame::new(margin, 147.0, width, 3.0);
     grid.constraints = pinned;
     objs.push(grid);
     // Frames go under the text.

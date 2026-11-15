@@ -1602,8 +1602,18 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   with them); `git diff 7cbb5c9 -- crates/render/tests/golden/SHA256SUMS` adds only the two `textbox_*` lines.
 - Golden images looked at by eye (Manta and Nomad show the same page): a Fixed box showing "Line one, two, three" of five, with its frame; three
   paragraphs 8 pt apart; "Top / Middle / Bottom of the box" in three framed boxes, text at the top, in the middle and at the bottom; a ruled region
-  with the text standing on its lines (the letters' bottoms overlap the upper half of the 3 px line; a paragraph skips a rung); "Quartz" turned 15°,
-  90° (reading downward) and 180° (upside down).
+  with the text standing on its lines; "Quartz" turned 15°, 90° (reading downward) and 180° (upside down). (The first blessing had the baseline on
+  the rule's centre row, so letter bottoms sat inside a 3 px rule and read as an underline: chris's ruling below replaced it.)
+- chris's ruling at the look, word for word: "Let's have the default be 'B', but have a toggle that allows shifting the text up to 'C'". Built:
+  B (default) puts the baseline on the rule's top edge, so a flat letter ends on the pixel row just above the rule (round letters may dip about 1 px);
+  C (`TextBox.baseline_gap`, "Small gap above the line", under "Align baselines to rhythm", greyed while that is off, off by default, left out of
+  the 0.12.0 file at its default) leaves a clear gap of 0.3 mm in whole device pixels, at least 1 (4 px on both tablets). The rule's top edge is
+  taken from the Guide line role (what the Pattern tool gives a ruled region) at the device's pixel width: top row = rung row less half the width
+  (builder's choice, for chris to veto: Guide is the default role; a region in another role or width is off by half the difference). Tests
+  (`crates/render/tests/textbox.rs`): rendering "LLL" with and without the box, the lowest row only the letters darken is exactly the row above the
+  rule's top row with B (0 clear rows) and has exactly N = 4 clear rows between it and the rule with C, on both devices; the baseline row equals the
+  rule's top row less the gap. The golden page now holds two ruled samples, each labelled (B "on the line (default)", C "a small gap above the
+  line"); both `textbox_*` images were looked at and re-blessed (new in 11b, not frozen); the twenty older sums are unchanged.
 - Speed on the Pi, release build, strip on, 150 frames, 3 runs each, 90th percentile ms, `target/release/quadrule --textbox-page|--fonts-page
   --bench-drag|--bench-draw|--bench-type 150 --canvas export|chip` (every `canvas=` said what is shown):
 
