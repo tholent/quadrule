@@ -188,6 +188,9 @@ pub struct Viewer {
     /// What Align to is for two or more objects picked: the selection, until they pick otherwise.
     pub align_multi: quadrule_layout::align::AlignTo,
     pub(crate) fonts: FontRegistry,
+    /// What the last re-scan of the installed fonts found and how long it took (rung 11a, ADR-002
+    /// item 8: a full re-scan whenever the window regains focus).
+    pub last_font_scan: Option<quadrule_text::Scan>,
 }
 
 /// A message for the user, and whether it is an error.
@@ -239,11 +242,37 @@ impl Default for Viewer {
             align_single: quadrule_layout::align::AlignTo::Page,
             align_multi: quadrule_layout::align::AlignTo::Selection,
             fonts: FontRegistry::bundled_only(),
+            last_font_scan: None,
         }
     }
 }
 
 impl Viewer {
+    /// Lets text use the fonts installed on this computer as well as the bundled ones (the app
+    /// does this; tests keep the bundled fonts alone so they are the same on every machine).
+    pub fn use_system_fonts(&mut self) {
+        self.fonts = FontRegistry::with_system();
+        self.invalidate_pages();
+    }
+
+    /// Scans the installed fonts again in full (ADR-002 item 8: no change detection). When the
+    /// list of families differs, every page is laid out again.
+    pub fn rescan_fonts(&mut self) -> quadrule_text::Scan {
+        let scan = self.fonts.rescan();
+        self.last_font_scan = Some(scan);
+        if scan.changed {
+            self.invalidate_pages();
+        }
+        scan
+    }
+
+    fn invalidate_pages(&mut self) {
+        self.revision += 1;
+        if let Some(o) = &mut self.open {
+            o.pages.clear();
+        }
+    }
+
     /// Opens the rung 1 sample page.
     pub fn open_sample(&mut self) {
         let doc = quadrule_model::sample::slice_document();

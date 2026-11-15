@@ -81,6 +81,8 @@ impl App {
         let path = args.path;
         quadrule_ui::install_fonts(&cc.egui_ctx, desktop_ui_font());
         let mut ui = ViewerUi::new(Viewer::default());
+        // Text can use the fonts installed on this computer as well as the bundled ones (rung 11a).
+        ui.viewer.use_system_fonts();
         if let Some(storage) = cc.storage {
             if let Some(theme) = eframe::get_value::<String>(storage, KEY_THEME) {
                 ui.theme = match theme.as_str() {

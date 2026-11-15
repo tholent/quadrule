@@ -796,7 +796,12 @@ impl ViewerUi {
     fn tick_autosave(&mut self, ctx: &egui::Context) {
         let (now, focused) = ctx.input(|i| (i.time, i.viewport().focused.unwrap_or(true)));
         let lost_focus = self.was_focused && !focused;
+        let gained_focus = !self.was_focused && focused;
         self.was_focused = focused;
+        if gained_focus {
+            // The installed fonts may have changed while the window was in the background.
+            self.viewer.rescan_fonts();
+        }
         if self.closing {
             return;
         }
