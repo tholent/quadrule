@@ -238,3 +238,236 @@ fn names_and_preview_are_drawn_in_their_own_fonts_as_export_pixels() {
         png,
     );
 }
+
+// ---------------------------------------------------------------- the emoji picker
+
+#[test]
+fn the_unicode_notice_ships_beside_the_font_licences_and_is_credited() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let notice = std::fs::read_to_string(root.join("licenses/Unicode-3.0.txt")).unwrap_or_default();
+    let packager =
+        std::fs::read_to_string(root.join("../../packaging/packager.json")).unwrap_or_default();
+    let readme = std::fs::read_to_string(root.join("../../README.md")).unwrap_or_default();
+    let ok = notice.contains("UNICODE LICENSE V3")
+        && packager.contains("\"../crates/ui/licenses/Unicode-3.0.txt\"")
+        && packager.contains("\"licenses/Unicode-3.0.txt\"")
+        && readme.contains("Unicode-3.0.txt");
+    println!(
+        "CHECK crate=ui name=unicode_notice_shipped result={} notice={} packaged={} credited={}",
+        pass(ok),
+        notice.contains("UNICODE LICENSE V3"),
+        packager.contains("licenses/Unicode-3.0.txt"),
+        readme.contains("Unicode-3.0.txt")
+    );
+    assert!(ok);
+}
+
+#[test]
+fn the_picker_lists_emoji_noto_can_draw_in_the_nine_groups() {
+    use quadrule_text::FontRegistry;
+    use quadrule_ui::emoji::{GROUPS, drawable};
+    let t = std::time::Instant::now();
+    let list = drawable(&mut FontRegistry::bundled_only());
+    let ms = t.elapsed().as_secs_f64() * 1000.0;
+    let per: Vec<usize> = GROUPS
+        .iter()
+        .map(|(g, _)| list.iter().filter(|e| e.group() == *g).count())
+        .collect();
+    let all = emojis::iter()
+        .filter(|e| e.skin_tone().is_none_or(|t| t == emojis::SkinTone::Default))
+        .count();
+    let grin = list.iter().any(|e| e.as_str() == "\u{1F600}");
+    let ok = list.len() > 500 && per.iter().filter(|n| **n > 0).count() >= 8 && grin;
+    println!(
+        "CHECK crate=ui name=emoji_list result={} drawable={} of={all} per_group={per:?} grinning_face={grin} ms={ms:.0} build={}",
+        pass(ok),
+        list.len(),
+        if cfg!(debug_assertions) {
+            "debug"
+        } else {
+            "release"
+        }
+    );
+    assert!(ok);
+}
+
+fn emoji_harness(select_title: bool) -> Harness<'static, Window> {
+    let mut v = Viewer::default();
+    v.open_sample();
+    if select_title {
+        v.selection = vec![ids::TITLE];
+    }
+    let mut ui = ViewerUi::new(v);
+    ui.tab = Tab::Text;
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(1280.0, 900.0))
+        .with_max_steps(24)
+        .build_ui_state(
+            |ui, w: &mut Window| {
+                let _ = w.ui.show(ui);
+            },
+            Window { ui },
+        );
+    h.run();
+    h
+}
+
+fn count_objects(h: &Harness<'static, Window>) -> usize {
+    h.state().ui.viewer.doc().unwrap().objects().count()
+}
+
+#[test]
+fn an_emoji_goes_into_the_picked_text_box_and_with_none_picked_into_a_new_24_pt_box() {
+    // In the picked box: the emoji is added to its text (the field's cursor is at the end when it was
+    // never clicked), as one undo step.
+    let mut h = emoji_harness(true);
+    let before = match &h
+        .state()
+        .ui
+        .viewer
+        .doc()
+        .unwrap()
+        .object(ids::TITLE)
+        .unwrap()
+        .kind
+    {
+        ObjectKind::Text(t) => t.content.clone(),
+        _ => unreachable!(),
+    };
+    h.get_all_by_label("Emoji").next().unwrap().click();
+    h.run();
+    let opened =
+        h.query_by_label("Search emoji by name").is_some() && h.query_by_label("Smileys").is_some();
+    h.get_by_label("Search emoji by name").click();
+    h.get_by_label("Search emoji by name")
+        .type_text("grinning face");
+    h.run();
+    h.get_by_label("grinning face").click();
+    h.run();
+    let after = match &h
+        .state()
+        .ui
+        .viewer
+        .doc()
+        .unwrap()
+        .object(ids::TITLE)
+        .unwrap()
+        .kind
+    {
+        ObjectKind::Text(t) => t.content.clone(),
+        _ => unreachable!(),
+    };
+    let inserted = after == format!("{before}\u{1F600}");
+    h.state_mut().ui.viewer.undo();
+    h.run();
+    let undone = match &h
+        .state()
+        .ui
+        .viewer
+        .doc()
+        .unwrap()
+        .object(ids::TITLE)
+        .unwrap()
+        .kind
+    {
+        ObjectKind::Text(t) => t.content == before,
+        _ => false,
+    };
+
+    // With nothing picked: a new box holding only the emoji, 24 pt, one undo step.
+    let mut h = emoji_harness(false);
+    let n = count_objects(&h);
+    h.get_all_by_label("Emoji").next().unwrap().click();
+    h.run();
+    h.get_by_label("Search emoji by name").click();
+    h.get_by_label("Search emoji by name")
+        .type_text("grinning face");
+    h.run();
+    h.get_by_label("grinning face").click();
+    h.run();
+    let doc = h.state().ui.viewer.doc().unwrap().clone();
+    let sel = h.state().ui.viewer.selection.clone();
+    let new = sel.first().and_then(|id| doc.object(*id)).cloned();
+    let (content, pt) = match new.as_ref().map(|o| &o.kind) {
+        Some(ObjectKind::Text(t)) => (t.content.clone(), t.size_pt),
+        _ => (String::new(), 0.0),
+    };
+    let made = count_objects(&h) == n + 1 && content == "\u{1F600}" && pt == 24.0;
+    // In the middle of the page (the page is shown whole), give or take the box's own size.
+    let middle = new.as_ref().is_some_and(|o| {
+        let (cx, cy) = (
+            o.frame.x_mm + o.frame.w_mm / 2.0,
+            o.frame.y_mm + o.frame.h_mm / 2.0,
+        );
+        let (pw, ph) = (
+            quadrule_model::sample::MANTA_W_MM,
+            quadrule_model::sample::MANTA_H_MM,
+        );
+        (cx - pw / 2.0).abs() < pw * 0.15 && (cy - ph / 2.0).abs() < ph * 0.15
+    });
+    h.state_mut().ui.viewer.undo();
+    h.run();
+    let one_step = count_objects(&h) == n;
+    let ok = opened && inserted && undone && made && middle && one_step;
+    println!(
+        "CHECK crate=ui name=emoji_insert result={} opened={opened} into_box={inserted} undone={undone} new_box={made} in_the_middle={middle} one_undo={one_step}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn an_emoji_goes_at_the_cursor_of_the_text_field_and_replaces_what_is_selected() {
+    let mut h = emoji_harness(true);
+    let ctx = h.ctx.clone();
+    let id = h.state().ui.text_field_id();
+    let content = |h: &Harness<'static, Window>| match &h
+        .state()
+        .ui
+        .viewer
+        .doc()
+        .unwrap()
+        .object(ids::TITLE)
+        .unwrap()
+        .kind
+    {
+        ObjectKind::Text(t) => t.content.clone(),
+        _ => unreachable!(),
+    };
+    let before = content(&h);
+    let set = |from: usize, to: usize| {
+        let id = id.expect("the Text tab shows its field");
+        let mut state = egui::TextEdit::load_state(&ctx, id).unwrap_or_default();
+        state
+            .cursor
+            .set_char_range(Some(egui::text::CCursorRange::two(
+                egui::text::CCursor::new(from),
+                egui::text::CCursor::new(to),
+            )));
+        state.store(&ctx, id);
+    };
+    // A cursor after the third letter.
+    set(3, 3);
+    h.state_mut().ui.insert_emoji(&ctx, "\u{1F600}");
+    h.run();
+    let chars: Vec<char> = before.chars().collect();
+    let want_mid: String = chars[..3].iter().collect::<String>()
+        + "\u{1F600}"
+        + &chars[3..].iter().collect::<String>();
+    let mid = content(&h) == want_mid;
+    // A selection of letters 1 to 2 is replaced.
+    h.state_mut().ui.viewer.undo();
+    h.run();
+    set(1, 2);
+    h.state_mut().ui.insert_emoji(&ctx, "\u{2764}");
+    h.run();
+    let want_sel: String =
+        chars[..1].iter().collect::<String>() + "\u{2764}" + &chars[2..].iter().collect::<String>();
+    let replaced = content(&h) == want_sel;
+    let ok = mid && replaced;
+    println!(
+        "CHECK crate=ui name=emoji_at_cursor result={} at_cursor={mid} replaces_selection={replaced}",
+        pass(ok)
+    );
+    assert!(ok);
+}

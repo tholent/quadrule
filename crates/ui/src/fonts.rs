@@ -101,35 +101,23 @@ fn sample_box(family: &str, text: &str, size_pt: f64, like: Option<&TextBox>) ->
     }
 }
 
-/// What a text box has to say about the picker while it is open.
+/// Pictures of lines of text made with a registry of its own, kept as textures by key.
 #[derive(Default)]
-pub(crate) struct FontPicker {
-    /// The window shows.
-    pub open: bool,
-    search: String,
-    focus_search: bool,
-    /// The family under the pointer on the last frame, whose preview shows.
-    hovered: Option<String>,
-    /// A registry of its own over the same list of installed fonts, so the previews do not fill
-    /// the page's store with every family shown.
-    reg: Option<FontRegistry>,
-    families: Vec<FamilyInfo>,
+pub(crate) struct Pictures {
+    /// A registry over the same list of installed fonts, with a layout store of its own, so the
+    /// previews do not fill the page's store with every family shown.
+    pub reg: Option<FontRegistry>,
     pics: HashMap<String, Option<(TextureHandle, [u32; 2])>>,
 }
 
-impl FontPicker {
-    /// Opens the window with a fresh list of families.
-    pub(crate) fn open(&mut self, fonts: &FontRegistry) {
-        let reg = fonts.sibling();
-        self.families = reg.families();
-        self.reg = Some(reg);
+impl Pictures {
+    /// Starts again over `fonts`' families.
+    pub(crate) fn reset(&mut self, fonts: &FontRegistry) {
+        self.reg = Some(fonts.sibling());
         self.pics.clear();
-        self.search.clear();
-        self.focus_search = true;
-        self.open = true;
     }
 
-    fn picture(
+    pub(crate) fn picture(
         &mut self,
         ctx: &egui::Context,
         key: String,
@@ -164,6 +152,35 @@ impl FontPicker {
         entry
             .as_ref()
             .map(|(t, [w, h])| (t.id(), egui::vec2(*w as f32 / ppp, *h as f32 / ppp)))
+    }
+}
+
+/// What a text box has to say about the picker while it is open.
+#[derive(Default)]
+pub(crate) struct FontPicker {
+    /// The window shows.
+    pub open: bool,
+    search: String,
+    focus_search: bool,
+    /// The family under the pointer on the last frame, whose preview shows.
+    hovered: Option<String>,
+    families: Vec<FamilyInfo>,
+    pub(crate) pictures: Pictures,
+}
+
+impl FontPicker {
+    /// Opens the window with a fresh list of families.
+    pub(crate) fn open(&mut self, fonts: &FontRegistry) {
+        self.pictures.reset(fonts);
+        self.families = self
+            .pictures
+            .reg
+            .as_ref()
+            .map(|r| r.families())
+            .unwrap_or_default();
+        self.search.clear();
+        self.focus_search = true;
+        self.open = true;
     }
 }
 
@@ -287,12 +304,13 @@ impl ViewerUi {
                             .text("device", device.clone()),
                     ),
                 );
-                if let Some(reg) = self.font_picker.reg.as_mut() {
+                if let Some(reg) = self.font_picker.pictures.reg.as_mut() {
                     reg.ensure_open([preview_family.as_str()]);
                 }
-                let pic = self
-                    .font_picker
-                    .picture(ctx, key, &sample, device_px_per_mm, false);
+                let pic =
+                    self.font_picker
+                        .pictures
+                        .picture(ctx, key, &sample, device_px_per_mm, false);
                 egui::Frame::new().fill(Color32::WHITE).show(ui, |ui| {
                     ScrollArea::horizontal()
                         .id_salt("font-preview")
@@ -319,7 +337,7 @@ impl ViewerUi {
                                 Row::Header(_) => None,
                             })
                             .collect();
-                        if let Some(reg) = self.font_picker.reg.as_mut() {
+                        if let Some(reg) = self.font_picker.pictures.reg.as_mut() {
                             reg.ensure_open(visible);
                         }
                         for row in &rows[range] {
@@ -352,7 +370,7 @@ impl ViewerUi {
                                     }
                                     let name_box = sample_box(&f.name, &f.name, NAME_PT, None);
                                     let key = format!("n|{}|{name_px_per_mm}", f.name);
-                                    let pic = self.font_picker.picture(
+                                    let pic = self.font_picker.pictures.picture(
                                         ctx,
                                         key,
                                         &name_box,

@@ -176,6 +176,10 @@ The fonts are the variable files from [google/fonts](https://github.com/google/f
 can be picked too; a character the chosen font lacks is always taken from the bundled fonts, so a design looks the same
 on every machine.
 
+The emoji picker's names and groups come from the [`emojis`](https://github.com/rossmacarthur/emojis) crate (MIT or
+Apache-2.0), which carries Unicode data under the [Unicode License v3](crates/ui/licenses/Unicode-3.0.txt); the notice is
+in the `licenses` folder of every package.
+
 ## Licence
 
 Apache-2.0; see [LICENSE](LICENSE).

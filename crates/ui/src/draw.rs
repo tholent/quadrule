@@ -627,6 +627,50 @@ impl Viewer {
         ))
     }
 
+    /// A new text box holding `content` at `size_pt`, centred on (x, y) device pixels of the page on
+    /// screen, in the layer a drawn object would go to (rung 11a, the emoji picker). One undo step.
+    /// Returns its id; `None` when every layer is locked or nothing is open.
+    pub fn place_text(&mut self, content: &str, size_pt: f64, centre: (f64, f64)) -> Option<Uuid> {
+        let layer = self.draw_layer()?;
+        let (primary, shown) = self.profiles()?;
+        let size_px = shown.mm_to_px(quadrule_model::pt_to_mm(size_pt));
+        let (w, h) = (size_px * 2.0, size_px * 1.25);
+        let rect = PxRect {
+            x0: centre.0 - w / 2.0,
+            y0: centre.1 - h / 2.0,
+            x1: centre.0 + w / 2.0,
+            y1: centre.1 + h / 2.0,
+        };
+        let constraints = Constraints::default();
+        let frame = frame_from_px(rect, constraints, &primary, &shown);
+        let id = Uuid::new_v4();
+        let mut object = make_object(
+            DrawKind::Text,
+            frame,
+            constraints,
+            &self.names,
+            id,
+            LineDir::Down,
+        );
+        if let ObjectKind::Text(t) = &mut object.kind {
+            t.content = content.into();
+            t.size_pt = size_pt;
+            t.align = TextAlign::Center;
+        }
+        let index = self.doc()?.layers.get(layer)?.objects.len();
+        self.edit(
+            Command::Insert {
+                layer,
+                index,
+                object,
+            },
+            None,
+        )
+        .ok()?;
+        self.selection = vec![id];
+        Some(id)
+    }
+
     fn insert_drawn(&mut self, layer: usize, object: Object, kind: DrawKind) -> Option<Uuid> {
         let id = object.id;
         let index = self.doc()?.layers.get(layer)?.objects.len();

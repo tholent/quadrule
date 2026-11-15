@@ -2002,11 +2002,13 @@ impl ViewerUi {
                     )));
                 state.store(ui.ctx(), field.id);
             }
+            self.text_field_id = Some(field.id);
             if field.changed() {
                 edit_text(&mut self.viewer, "text-content", &|t| {
                     t.content.clone_from(&content)
                 });
             }
+            self.emoji_button(ui);
             ui.add_space(4.0);
             egui::Grid::new("text-grid").num_columns(2).show(ui, |ui| {
                 // Font: the family in use, and the button that opens the picker (rung 11a).

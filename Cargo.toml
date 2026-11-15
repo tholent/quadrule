@@ -69,6 +69,9 @@ cosmic-text = { version = "0.19.0", default-features = false, features = ["std",
 # Only to name the `Script` type in cosmic-text's `Fallback` trait (rung 11a: bundled-only fallback);
 # the same 0.5.9 cosmic-text already uses, so no second copy. Not one of ADR-002 item 1's three.
 unicode-script = "0.5.9"
+# Emoji names and groups for the picker (rung 11a, chris 2026-11-15 "Allow, ship the notice"): licence
+# (MIT OR Apache-2.0) AND Unicode-3.0, whose notice ships beside the OFL texts.
+emojis = "0.9.1"
 # The same kurbo vello_cpu 0.3 uses, so paths pass between layout and render unchanged.
 kurbo = "0.13.1"
 png = "0.18.1"

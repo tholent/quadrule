@@ -180,6 +180,12 @@ pub struct ViewerUi {
     pub(crate) focus_text_content: bool,
     /// The font picker window (rung 11a).
     pub(crate) font_picker: crate::fonts::FontPicker,
+    /// The emoji picker window (rung 11a).
+    pub(crate) emoji_picker: crate::emoji::EmojiPicker,
+    /// The id of the Text tab's text field on the last frame, whose cursor an emoji goes to.
+    pub(crate) text_field_id: Option<egui::Id>,
+    /// The middle of what the canvas shows, in device pixels of the page on screen.
+    pub(crate) view_centre_px: Option<(f64, f64)>,
     pub(crate) renaming: Option<Renaming>,
     /// Groups folded shut in the layers tree (rung 7a).
     pub(crate) folded: std::collections::HashSet<quadrule_model::Uuid>,
@@ -256,6 +262,9 @@ impl ViewerUi {
             autosave: Autosave::default(),
             was_focused: true,
             font_picker: Default::default(),
+            emoji_picker: Default::default(),
+            text_field_id: None,
+            view_centre_px: None,
             closing: false,
         }
     }
@@ -322,6 +331,7 @@ impl ViewerUi {
             });
         self.ruler_window(&ctx);
         self.font_picker_window(&ctx);
+        self.emoji_picker_window(&ctx);
         // The Text tab, if it showed, has taken the cursor by now; a request it could not use
         // (no text box selected) must not wait for a later selection.
         self.focus_text_content = false;
@@ -897,6 +907,8 @@ impl ViewerUi {
             {
                 self.viewer.redo();
             }
+            ui.separator();
+            self.emoji_button(ui);
             ui.separator();
 
             // Device.
@@ -1545,6 +1557,12 @@ impl ViewerUi {
             let min = pos2((min.x * ppp).round() / ppp, (min.y * ppp).round() / ppp);
             let page_rect = Rect::from_min_size(min, size);
             self.geom = Some((min, scale));
+            // The middle of what is in view, as a device pixel of the page, kept on the page.
+            let c = ui.clip_rect().center();
+            self.view_centre_px = Some((
+                f64::from((c.x - min.x) / scale).clamp(0.0, f64::from(w)),
+                f64::from((c.y - min.y) / scale).clamp(0.0, f64::from(h)),
+            ));
             let painter = ui.painter_at(rect);
             let to_screen =
                 |x: f64, y: f64| pos2(min.x + x as f32 * scale, min.y + y as f32 * scale);

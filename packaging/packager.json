@@ -56,6 +56,10 @@
       "target": "licenses/OFL-NotoEmoji.txt"
     },
     {
+      "src": "../crates/ui/licenses/Unicode-3.0.txt",
+      "target": "licenses/Unicode-3.0.txt"
+    },
+    {
       "src": "../LICENSE",
       "target": "licenses/LICENSE"
     }

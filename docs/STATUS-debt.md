@@ -162,14 +162,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   Repeat tab edits only the first selected repeat, and has no pointer test (the tests call the same functions). The
   Fluent plural in `notice-expanded` is English only. Some rung 10 commits do not build alone (steps 1 and 2, and 3 and
   5, share files).
-- Rung 11a, owed (emoji picker, step 5): not built. The `emojis` crate's licence is `(MIT OR Apache-2.0) AND Unicode-3.0` (`cargo info
-  emojis`, 0.9.1), not plain MIT or Apache-2.0 as the record's Defaulted "The emoji picker" requires, so the builder stopped for chris.
-  The Emoji button, the picker window, insert at the Text tab's cursor and the new 24 pt box are all still to do.
-- Rung 11a, owed (`crates/ui/src/canvas.rs` `SLOW_FRAME_MS`): on the fonts page the chip canvas's first frame takes 99.9-116.8 ms on the Pi
-  (`--fonts-page --bench-drag|--bench-draw 150 --canvas chip`), so ADR-009 item 3's fall-back (a frame over 100 ms) sometimes takes the
-  window to the processor canvas on a text-heavy page (draw runs with the strip on: 4 of 4 fell back; drag and draw runs with the strip off: 2 of 2 fell back; drag
-  runs with the strip on: 4 of 4 stayed on the chip, 8 of 148 frames over 50 ms, 90th percentile 17.8 ms). The cost is the chip encoding the
-  page's outlines, as in rung 10's `chip.rs` fix, which keeps only the unchanged lower part.
 - Rung 11a, owed (`crates/text/src/opsz.rs`): optical size is made by a copy of the font file with the `opsz` axis retagged as a second
   `wght` axis and a constant `avar` map, because cosmic-text 0.19 sets only `wght`; it is rounded to whole points and each size held
   costs about 1 MB per font file in memory. A cosmic-text or skrifa upgrade that stops mapping every same-tagged axis breaks it; the test
@@ -178,3 +170,9 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Rung 11a, owed (font picker, `crates/ui/src/fonts.rs`): no keyboard arrows in the list; a family's name is drawn at one fixed size, not
   the device's; hidden system fonts (names that start with a dot) are left out; the picker has no dark-theme or screen-reader pass beyond
   a label on each row; a document that names a system font this computer lacks still stops at "font family not available" (rung 12's flow).
+- Rung 11a, owed (emoji picker, `crates/ui/src/emoji.rs`): no skin tone choice (the default tone stands for each); the list is the emoji Noto
+  Emoji draws as one glyph (1,899 of 1,923 without tone variants), the other 24 are left out; the picker has no keyboard arrows through the
+  grid; the Emoji button does not remember the group between openings of the window.
+- Rung 11a, owed (`crates/app/src/chip.rs`): a whole page of text costs the chip about 82 ms of GPU time on the Pi, and a frame that makes
+  the kept lower part (82 ms) and then the rest (15 ms) takes about 99 ms, a visible hiccup at the start of each drag and every 100 frames
+  when the timing choice is redone. The fall-back no longer fires on it (a two-draw frame has twice the line), but the hiccup is there.
