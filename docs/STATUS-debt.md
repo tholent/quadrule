@@ -44,7 +44,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   2026-11-10). Rung 4's new checks print the newline; the older ones do not, and nothing enforces it yet.
 - Rung 4a, owed (`crates/ui/src/drag.rs`, `crates/layout/src/snap.rs`, `crates/ui/src/view.rs`): drag speed is measured
   only on the sample page at Fit zoom (export canvas: one 60.1 ms frame in 1,595; chip canvas: none over 34 ms); not
-  zoomed in, not on a text-heavy page, not on a desktop card. No autoscroll when a drag reaches the canvas edge. Several objects selected on
+  zoomed in, not on a desktop card (a text-heavy page was timed in rungs 11a and 11b). No autoscroll when a drag reaches the canvas edge. Several objects selected on
   different layers are dragged together but a locked one among them stays put without saying so. The layers panel's
   drag-and-drop has no pointer test. Alt-drag may be taken by the window manager on the Pi. The status bar's snap
   switches may not fit in a narrow window.
@@ -87,7 +87,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   too (a line is a stroke); a pattern region and a text box have neither. The shapes page is built in code
   (`quadrule_model::sample::shapes_document`) and opened with `--shapes-page`, not as a file.
 - Rung 6b, owed (`crates/layout/src/rotate.rs`, `crates/layout/src/shapes.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/view.rs`): text
-  boxes and pattern regions do not rotate, and a stored angle on them is ignored; only one object turns at a time (a group has no
+  boxes turn since rung 11b; pattern regions do not rotate, and a stored angle on them is ignored; only one object turns at a time (a group has no
   rotate handle and no group turn); resizing a group with turned objects stretches them approximately; a dash pattern on a rectangle
   or ellipse turned by a quarter turn starts at the unturned top-left corner; a turned shape's fill covers the rhythm-snapped box
   turned about its centre, which may sit a pixel off the frame's own centre used for picking; a turned shape is picked by its box
@@ -111,8 +111,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   Shift-picking a group and something inside it in the layers panel keeps only the last of the two. Group opacity on the
   chip canvas is one vello layer per opacity group, nested ones nested (not measured with many). A loose multiple
   selection still resizes turned objects approximately.
-- Rung 7b, owed (`crates/layout/src/align.rs`, `crates/ui/src/arrange.rs`, `crates/ui/src/panels.rs`): A text box aligns by its stored frame, not by the
-  height of its laid-out text. Aligning or distributing objects inside a turned group moves them in the group's own space and
+- Rung 7b, owed (`crates/layout/src/align.rs`, `crates/ui/src/arrange.rs`, `crates/ui/src/panels.rs`): Aligning or distributing objects inside a turned group moves them in the group's own space and
   the group's box is refitted after, so its pivot may shift and the others with it by a little; this is the same for a drag or
   a nudge there. On a pixel grid an object's extent counts as its width rounded to a pixel (how the export draws it), the
   aligned edge lands on a pixel, a centre align puts the left or top edge on a pixel (the centre within half a pixel), and
@@ -128,7 +127,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   into the same box (a jump). Make primary can shift a child of a turned group on a device whose group box differs (the
   group turns about its box's middle); Ungroup's bake is exact for unturned groups only. A rotation or line-direction
   change made by a drag on a secondary changes the shared design without the status-bar note (only field edits say it).
-  L15's "squeezed" check uses a text box's stored height, not its laid-out height. Override keys for a device no longer
+  Override keys for a device no longer
   targeted stay only when they came from a file. The strip's pictures and the Ctrl + scroll anchor have no pointer test.
   The overrides dot is the accent colour (kept, chris 2026-11-13; clicking it to open the Overrides tab is v1.1).
 - Rung 8b, owed (`crates/layout/src/device.rs`, `crates/ui/src/strip.rs`, `crates/ui/tests/landscape.rs`): landscape is
@@ -172,3 +171,30 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Rung 11a, owed (`crates/app/src/chip.rs`): a whole page of text costs the chip about 82 ms of GPU time on the Pi, and a frame that makes
   the kept lower part (82 ms) and then the rest (15 ms) takes about 99 ms, a visible hiccup at the start of each drag and every 100 frames
   when the timing choice is redone. The fall-back no longer fires on it (a two-draw frame has twice the line), but the hiccup is there.
+- Rung 11b, owed (`crates/layout/src/tree.rs`, `crates/ui/src/drag.rs`, `crates/layout/src/lib.rs`): a text box as tall as its text is as tall as its
+  laid-out text on each device wherever the tree reads a height, but its constraints still place it by the height it is stored with (a box pinned
+  to the bottom measures its gap from the stored bottom, as before, so no old page moved); the stored height of such a box is refreshed only
+  when it is switched to Fixed. Such a box shows four edge handles, not the record's left and right only, so that pulling the top or bottom can
+  turn it Fixed. Resizing a group that holds a turned text box stretches it approximately (as for any turned thing). Baselines on the rhythm take
+  the box's unturned top as the page's, so a turned box, or one in a turned group, is not stood on the rhythm by its turned lines; under a
+  physical-locked rhythm every baseline is on a rung's rounded pixel row but the gaps vary by a pixel; with a 3 px ruled line the letters'
+  bottoms overlap the upper half of the line (a look for chris). L15's overlap and off-page checks use the primary's laid-out height only
+  when the window lays the primary out as well (it does for a secondary device's page; `lint_with` alone uses the stored height).
+- Rung 11b, owed (`crates/text/src/edit.rs`, `crates/ui/src/typing.rs`, `crates/ui/src/view.rs`): the caret is solid (no blink: a blink needs the
+  window to repaint twice a second, which keeps the test harness from settling); no triple-click and no autoscroll to the caret; a session
+  ends when the device on screen changes, and it types on the device it began on (on a secondary one the shared text changes); a repeat
+  copy's caret is drawn on the source's cell, not on the copy clicked; an input method's pre-edit text is drawn as plain overlay text at the
+  caret and its window is placed by the caret, tested headless only (no real input method here; Linux only, as the record says); copy and
+  paste are tested through egui's events, not the system clipboard; the Text tab's field shows the document's text, not the session's, until
+  the session ends; Up and Down keep their column through short lines but walk by the layout's lines, so a line a Fixed box leaves out can
+  still be walked into.
+- Rung 11b, owed (`crates/render/tests/fixtures/v0.11/`): the 0.11 fixture was made by saving the fonts page with this build and setting the
+  manifest's `format_version` to 0.11.0 (the page uses none of 0.12's fields, so its scene and outline bytes are what 0.11 wrote), not by a
+  0.11 build. The commit of steps 1 to 7 does not build in parts: the steps share files.
+- Rung 11b, owed (`crates/text/src/registry.rs`): the background font scan is not cancelled when the window closes (the thread ends with the
+  process); a scan that finishes during a drag swaps the list in at the next frame, which can lay the page out again under the pointer.
+- Rung 11b, owed (`crates/app/src/chip.rs`, STOP put to the lead): typing on the graphics-chip canvas crosses the 50 ms line on a text-heavy page. `--bench-type 150 --canvas chip` on
+  the text-box page: 90th percentile 75.1, 75.5, 75.1 ms (every frame about 65 to 76 ms: each letter changes the page's text, so the chip draws
+  it whole, and its cost grows with the outline, about 0.1 ms a letter); on the fonts page the first typed frame is 128 ms and the window falls
+  back (`canvas=chip-cpu-fallback`, 90th percentile 4.6 ms on the processor canvas). The export canvas is 20.1 to 20.5 ms on both pages. Not
+  fixed: it is the rung 11a chip-cost line (a whole page of text costs the chip about 82 ms) meeting an edit that changes the text every frame.

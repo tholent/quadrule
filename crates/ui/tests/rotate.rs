@@ -464,6 +464,10 @@ fn the_rotation_and_opacity_fields_are_named_and_work() {
         v.set_tool(Tool::Text);
         v.place_click(300.0, 1000.0, NONE, REACH).unwrap()
     };
+    // The new box starts a typing session and opens the Text tab (rung 11b); the Arrange tab is read
+    // after that frame.
+    h.run();
+    h.state_mut().ui.viewer.end_typing();
     h.state_mut().ui.tab = Tab::Arrange;
     h.run();
     h.run();

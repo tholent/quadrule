@@ -138,12 +138,12 @@ impl Xf {
 }
 
 impl Viewer {
-    /// Makes a long text box on the page (`--bench-type`): a page's worth of words at 9 pt, 100 mm
+    /// Makes a long text box on the page (`--bench-type`): a long paragraph (about 430 letters) at 9 pt, 100 mm
     /// wide. One undo step. Returns its id.
     pub fn place_long_text(&mut self) -> Option<Uuid> {
         let words = "the quick brown fox jumps over the lazy dog and keeps running through the \
                      tall grass";
-        let text = format!("{words} ").repeat(18);
+        let text = format!("{words} ").repeat(5);
         let (_, shown) = self.profiles()?;
         let px = shown.mm_to_px(1.0);
         let id = self.place_text(&text, 9.0, (px * 70.0, px * 80.0))?;

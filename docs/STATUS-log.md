@@ -1580,3 +1580,47 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - Meter: chris's reading "6–10 %" logged as 8 (`spend-ledger.py reading 8 --meter weekly`); about 7 of the 15-point
   share spent on 11a (builder 450,380 tokens reported by the harness).
 - 2026-11-15: T14/T15 paid: installed fonts found on macOS (675 faces) and Windows (176) in CI run 43666062914; debt line removed.
+
+## 2026-11-15 — rung 11b built (builder Sonnet 5.5, steps 1 to 9; one STOP put to the lead)
+
+- Commits on `main`: `5692c20` (steps 1 to 7: sizing and laid-out height, overflow and L08, paragraph spacing and vertical alignment, baselines on
+  the rhythm, text rotation, typing on the canvas, the background font re-scan; the steps share files, so they land in one commit), `99e6abd`
+  (step 8: format 0.12.0, `v0.11/` fixture), `aca87dd` (step 9: the text-box golden page and its tests), `7a61c6d` (clippy), and the commit after it
+  (bench box length, one window test, this log and the debt lines).
+- What was built, in the record's words. Sizing: Auto (default) or Fixed; an auto box's height is its laid-out height on each device in the tree
+  (`layout::tree::Heights`, applied after the constraints, so no stored height moves a box): picking, snapping, align and distribute, L15 (pays the
+  rung 7b and 8a debt lines). Fixed boxes leave out whole lines; a red + tab on both canvases and the strip pictures, never in the export; L08 (Warn)
+  per device. Paragraph spacing in any unit (`u` kept in steps); vertical alignment for fixed boxes; baselines on the rhythm (`BaselineGrid`: the
+  line height a whole number of steps, the first baseline on the first rung at least a cap height down, paragraph space rounded up, Middle and
+  Bottom by whole steps). Rotation as shapes (handle, catches, Shift, the Arrange field, groups holding text turn; L06 and L10 by turned corners;
+  pays the 6b text line). Typing: `text::edit` (cosmic-text's `Editor` over the export's layout) and `ui::typing` (a session, preview document,
+  words in the session's undo, one document step on leaving); egui IME events pass through; the emoji picker inserts at the canvas caret; a new box
+  starts typing with its text selected. `--bench-type`, `--textbox-page`, `make bench-type`, `TEXTBOX=1`. Background re-scan: `FontRegistry::
+  scan_in_background`, `Viewer::start_font_scan`/`poll_font_scan` (one at a time).
+- Checks before step 5: no sample page or fixture holds a text box with a stored angle (a throwaway test listed every sample document and every
+  `fixtures/v0.*/*.quad`: turned text boxes 0 in all). The twenty golden sums and fixtures `v0.4/`–`v0.10/` did not move (the whole test run passed
+  with them); `git diff 7cbb5c9 -- crates/render/tests/golden/SHA256SUMS` adds only the two `textbox_*` lines.
+- Golden images looked at by eye (Manta and Nomad show the same page): a Fixed box showing "Line one, two, three" of five, with its frame; three
+  paragraphs 8 pt apart; "Top / Middle / Bottom of the box" in three framed boxes, text at the top, in the middle and at the bottom; a ruled region
+  with the text standing on its lines (the letters' bottoms overlap the upper half of the 3 px line; a paragraph skips a rung); "Quartz" turned 15°,
+  90° (reading downward) and 180° (upside down).
+- Speed on the Pi, release build, strip on, 150 frames, 3 runs each, 90th percentile ms, `target/release/quadrule --textbox-page|--fonts-page
+  --bench-drag|--bench-draw|--bench-type 150 --canvas export|chip` (every `canvas=` said what is shown):
+
+  | page | command | export canvas | chip canvas (`canvas=`) |
+  |---|---|---|---|
+  | textbox | drag | 20.7, 20.6, 20.8 | 16.8, 17.1, 16.8 (`chip`; worst 52.6, 2 frames over 50 ms) |
+  | textbox | draw | 20.2, 20.3, 20.1 | 24.0, 24.0, 24.3 (`chip`; worst 60.4) |
+  | textbox | type | 20.5, 20.3, 20.4 | **75.1, 75.5, 75.1** (`chip`) |
+  | fonts | drag | 20.3, 20.5, 20.4 | 18.0, 17.9, 18.1 (`chip`; worst 99.6, 8 frames over) |
+  | fonts | draw | 20.0, 20.0, 20.1 | 25.2, 25.3, 25.4 (`chip`; worst 107.7, 8 frames over) |
+  | fonts | type | 20.3, 20.5, 20.5 | **`chip-cpu-fallback`** (first typed frame 128 ms; 4.7, 4.6, 4.6 on the processor canvas) |
+
+  The long box of `--bench-type` is about 430 letters at 9 pt (a first try of 1,300 letters fell back on both pages at once). **STOP:** typing
+  on the chip canvas crosses 50 ms on the text-box page and falls back on the fonts page; put to the lead (debt line "Rung 11b, owed", chip).
+  Drag and draw are as in 11a (fonts) and under 50 ms (text-box page).
+- Builder's choices, for chris to veto: auto boxes show four edge handles (the record said left and right only, but pulling the top or bottom
+  turns the box Fixed); the caret is solid, not blinking (a blink keeps the test harness from settling); a double-click on text types in it before
+  it would enter a group; a session ends on a device change; the baseline sits at the ruled line's own row (letters overlap the line's upper half);
+  switching to Fixed keeps the box's laid-out height on the primary; the 0.11 fixture is this build's fonts page with the manifest set to 0.11.0.
+- TESTS: see the commit that follows (final `make check-all` line is in the report).
