@@ -2172,16 +2172,17 @@ impl ViewerUi {
             // Typing on the canvas (rung 11b): a press on the box puts the caret there and a drag
             // selects; a press elsewhere ends the typing and is then an ordinary press.
             let press_mods = ui.input(|i| i.modifiers);
-            if self.viewer.is_typing() && response.drag_started_by(PointerButton::Primary) {
-                if let Some(p) = ui.input(|i| i.pointer.press_origin()) {
-                    let (x, y) = to_dev(p);
-                    if self.viewer.typing_contains(x, y) {
-                        self.viewer.type_pointer(x, y, press_mods.shift, false);
-                        self.type_selecting = true;
-                        response.request_focus();
-                    } else {
-                        self.viewer.end_typing();
-                    }
+            if self.viewer.is_typing()
+                && response.drag_started_by(PointerButton::Primary)
+                && let Some(p) = ui.input(|i| i.pointer.press_origin())
+            {
+                let (x, y) = to_dev(p);
+                if self.viewer.typing_contains(x, y) {
+                    self.viewer.type_pointer(x, y, press_mods.shift, false);
+                    self.type_selecting = true;
+                    response.request_focus();
+                } else {
+                    self.viewer.end_typing();
                 }
             }
             if self.type_selecting {

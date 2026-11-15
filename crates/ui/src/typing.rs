@@ -120,7 +120,7 @@ struct Xf {
 }
 
 impl Xf {
-    fn to_px(&self, x: f32, y: f32) -> (f64, f64) {
+    fn to_px(self, x: f32, y: f32) -> (f64, f64) {
         let p = (
             self.origin.0 + f64::from(x) * self.ppmm,
             self.origin.1 + f64::from(y) * self.ppmm,
@@ -128,7 +128,7 @@ impl Xf {
         rotate_point(p, self.centre, self.angle)
     }
 
-    fn to_mm(&self, px: (f64, f64)) -> (f32, f32) {
+    fn to_mm(self, px: (f64, f64)) -> (f32, f32) {
         let p = rotate_point(px, self.centre, -self.angle);
         (
             ((p.0 - self.origin.0) / self.ppmm) as f32,
@@ -355,12 +355,12 @@ impl Viewer {
                 _ => Last::Other,
             };
             // A new word, or a new kind of edit, starts a step to go back to.
-            let continues = match (t.last, kind) {
-                (Some(Last::Word | Last::Gap), Last::Gap) => true,
-                (Some(Last::Word), Last::Word) => true,
-                (Some(Last::Deleting), Last::Deleting) => true,
-                _ => false,
-            };
+            let continues = matches!(
+                (t.last, kind),
+                (Some(Last::Word | Last::Gap), Last::Gap)
+                    | (Some(Last::Word), Last::Word)
+                    | (Some(Last::Deleting), Last::Deleting)
+            );
             if !continues {
                 t.undo.push(t.eb.caret());
             }

@@ -279,7 +279,7 @@ fn typing_in_a_box_is_one_step_goes_back_by_words_and_sits_on_the_letters() {
     let typed = v.typing_text().as_deref() == Some(want.as_str());
     // While it runs the page shows the new text and the document is not touched.
     let live = text_of(&v, ids::TITLE) == original && steps(&v) == before;
-    let shown = v.page().unwrap().display_list.items.len() > 0;
+    let shown = !v.page().unwrap().display_list.items.is_empty();
     // Ctrl+Z inside the session steps back through words.
     v.type_undo();
     let one_word = v.typing_text().as_deref() == Some(format!("{original}hello ").as_str());
