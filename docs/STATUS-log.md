@@ -1482,3 +1482,50 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   with italics and Caveat (+6.4 MB); typing on the canvas added (11b); bundled-only fallback until rung 12; overflow cuts
   whole lines with a red mark; baselines stand on the rules; emoji are characters in text. Record
   `docs/bbq/2026-11-14-rung-11-text-and-fonts.md`; board row updated (`docs/arcs/v1/README.md`).
+
+## 2026-11-14/15 — rung 11a built (builder Sonnet 5.5, steps 1 to 4 and 6; step 5 stopped)
+
+- Built on `main`, each step pushed: `120f25b` (fonts, OFL texts, `BUNDLED`, optical size, bundled-only fallback, installed
+  fonts, `TextBox.style`, face key `italic`/`opsz`), `86cacce` (format 0.11.0 and the `v0.10/` fixture), `2cb343b` (clippy), `0c83179`
+  (the app uses installed fonts; full re-scan on focus), `bea1b29` (font picker, Style field, weight note), `14fc421` (fonts page, goldens,
+  `--fonts-page`, `FONTS=1`), `34b84e0` (docs); this log and `docs/STATUS-debt.md` in the commit after them.
+- Fonts: the ten variable files of the record's Defaulted "Font files" from `google/fonts` (`ofl/<family>/`); each `OFL.txt` read and
+  checked as SIL OFL 1.1; `AtkinsonHyperlegibleNext[wght].ttf` unchanged (sha256 `5a455d1c…`, google's copy is the same file). Texts
+  `OFL-Atkinson.txt` (existing), `OFL-AtkinsonMono.txt`, `OFL-Inter.txt`, `OFL-Literata.txt`, `OFL-Caveat.txt`, `OFL-NotoEmoji.txt` in
+  `crates/text/fonts/`, listed in `packaging/packager.json` (the only place the Atkinson text was shipped; `release.yml` needed no change)
+  and in `README.md`'s credits. Raw size added: `ls -l crates/text/fonts/*.ttf` sums to 6,376,068 bytes (6,261,516 more than before);
+  `tar cf - *.ttf | gzip -9 | wc -c` → 3,612,221. The release binary is 53,867,672 bytes (`ls -l target/release/quadrule`); the
+  packages were not built here, so their before and after sizes are for the release run.
+- Optical size: cosmic-text 0.19 sets only `wght` when it loads a face, so `crates/text/src/opsz.rs` makes a copy of the font file with
+  the `opsz` axis retagged as a second `wght` axis and a constant `avar` map; the copy shapes and draws at the size (whole points,
+  clamped to the axis: Inter 14 to 32, Literata 7 to 72). Test: 144 cases equal skrifa's own coordinates.
+- Fallback (Q4): `FALLBACK_ORDER` = Atkinson Next, Noto Emoji, then the rest, through cosmic-text's `Fallback` trait (needs `unicode-script`
+  as a direct dependency to name `Script`); installed families are open in the layout store only for boxes that choose them and are in its
+  forbidden list. No existing sum or fixture moved.
+- Re-scan on the Pi: `cargo test --release -p quadrule-text --test fonts -- --nocapture rescan` → first 4.6 ms, second 4.5 ms (111 faces,
+  29 families; debug build 38 to 45 ms). Under 50 ms.
+- Judged: `make check-all` → `TESTS scope=workspace checks=443 check_fail=0 passed=413 failed=0 status=ok`;
+  `git diff 07875a9 -- crates/render/tests/golden/SHA256SUMS` adds `fonts_supernote.a5x2_1920x2560.png` and `fonts_supernote.a6x2_1404x1872.png`
+  and changes nothing else; fixtures `v0.4/`–`v0.9/` unchanged, `v0.10/` added; the eighteen old goldens pass unchanged.
+- Golden images looked at by eye (a first draft was reflowed twice: scaled boxes crowded on the Nomad; then too tall and too wide for the
+  Nomad's page, and a sunflower wrapped onto the next line, before the sums were kept). Final: both show the same page, laid out for the Nomad's
+  118.9 by 158.5 mm: five families upright (left) and italic (right) at 8 and 12 pt (Caveat has no italic and draws upright), Inter and
+  Literata weight ramps 100 to 900 (Literata's 100 is its 200), "Quartz 24" in Inter and Literata at their display optical size, a Noto
+  Emoji line of seven and Atkinson with an emoji and a heart falling back to Noto Emoji, a dot grid.
+- Speed on the Pi, release build, fonts page, strip on, 150 frames, 90th percentile (`target/release/quadrule --fonts-page
+  --bench-drag|--bench-draw 150 --canvas export|chip`, 3 runs each):
+
+  | command | canvas | p90 ms (runs) |
+  |---|---|---|
+  | `--bench-drag` | export | 20.1, 20.1, 20.2 |
+  | `--bench-draw` | export | 19.7, 19.8, 19.8 |
+  | `--bench-drag` | chip | 17.8, 17.8, 17.8 (worst 99.2–99.4, 8 of 148 frames over 50 ms, first 99.9) |
+  | `--bench-draw` | chip | 3.2, 3.2, 3.2, but the line says `canvas=chip-cpu-fallback`: the chip's first frame took over 100 ms and ADR-009 item 3 fell back |
+
+  With `--no-strip` both chip runs fell back (first frame 113.8 and 116.8 ms). So no 90th percentile crosses 50 ms, but the chip canvas's first
+  frame on this text-heavy page is about 100 ms and the window can drop to the processor canvas; put to the lead (debt line "Rung 11a, owed").
+- Not built: step 5 (emoji picker). The `emojis` crate is licensed `(MIT OR Apache-2.0) AND Unicode-3.0` (`cargo info emojis`, 0.9.1), which is not
+  "MIT or Apache-2.0" alone, so the builder stopped for the lead and chris (the data's own Unicode-3.0 licence is the one any CLDR-derived
+  list would carry too).
+- Debt: "Text spike T14/T15" is paid in code (the test requires faces on macOS and Windows) and waits for CI to show it; new "Rung 11a, owed" lines
+  for the emoji picker, the chip first frame, optical size by retagged copy and the picker.
