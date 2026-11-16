@@ -1770,3 +1770,17 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   limit 50): `--bench-drag` export 20.6, 21.5, 21.2, chip 5.3, 5.3, 5.3; `--bench-draw` export 21.3, 21.3, 21.2, chip 23.8, 23.6, 23.6;
   `--bench-rotate` export 21.2, 22.6, 22.1, chip 3.8, 3.8, 3.7 (the first chip frame of `--bench-draw` took 41 to 49 ms, still under 50).
 
+## 2026-11-16 — rung 12b, pattern angle (builder, Sonnet 5.5 high)
+
+- Built the amendment (record Q8 as amended, Q10, Q11): `PatternRegion::angle_deg` (`crates/model/src/lib.rs`, optional, left out at 0, in format 0.13.0
+  with no version bump; `pattern_angle()` normalises). `crates/layout/src/pattern.rs` `ruling_items` lays a ruling (lines, dots, grid, isometric,
+  hex) over a box that covers the frame at any angle (anchored at the frame's corner so turning is rigid), turns it about the frame's middle
+  and cuts it at the frame (lines exactly, a dot whole if its centre is inside); Cornell and the staves are laid out in the frame's own box and
+  turned; a quarter turn stays whole-pixel `Item::Rect`; the frame's own turn then adds (`pattern_items_turned`). `Pattern angle` field in the Style tab
+  beside the spacing (Fluent `app-pattern-angle`), L02 for a frame or ruling off a quarter turn, `--pattern-angle-page` (`make ... ANGLE=1`).
+- Golden lines `pattern-angle_supernote.a5x2_1920x2560.png` and `..a6x2_1404x1872.png` appended (`git diff b5ff1f0 -- crates/render/tests/golden/SHA256SUMS`
+  shows those two lines only; the two `patterns-turned_*` lines and the 22 older ones, and the fixtures, are unchanged).
+- `make test-all` -> `TESTS scope=workspace checks=538 check_fail=0 passed=496 failed=0 status=ok`.
+- Pi, release build, strip on, 150 frames, 3 runs each, `target/release/quadrule --pattern-angle-page <flag> 150 --canvas <c>` (90th percentile ms; limit 50):
+  `--bench-drag` export 20.4, 20.9, 21.0, chip 3.6, 3.6, 3.6; `--bench-draw` export 20.7, 21.9, 21.0, chip 23.4, 23.4, 23.3 (first frame 45 to 52 ms).
+

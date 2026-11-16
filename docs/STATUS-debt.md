@@ -215,3 +215,13 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   at the frame along their centre line, as rung 9 left them; a pattern region inside a repeat can be turned only by editing
   the source's angle after Expand (a repeat has no handle, as in rung 10); speed was measured on the turned-patterns page only (12 regions, 3
   copies in one repeat), not on a page full of turned dot grids.
+- Rung 12b pattern angle, owed (`crates/layout/src/pattern.rs` `ruling_items`, `crates/ui/src/panels.rs`, `crates/model/src/lib.rs`): Cornell and the music
+  staves are laid out in the frame's own box and turned with the ruling, so at an angle their corners are bare and the cue column and brace turn
+  with them (the record says the pattern fills the frame; a covering layout for them would put the cue column off the frame); a bound ruling is the
+  page's rhythm lattice turned about the frame's middle, an unbound one starts at the frame's top-left corner turned the same way; a dot is kept
+  whole when its centre is in the frame and dropped otherwise (not cut), and a cut line piece under 4 square pixels is left out as a speck
+  (`MIN_CUT_AREA_PX`); the angle has no per-device override, no canvas handle (Q11) and the Pattern field has no pointer test (the test edits through
+  `Viewer::edit_selected`, as the other pattern fields' tests do); with several regions selected the field shows the first's angle; speed was measured
+  on the pattern-angle page only (`docs/STATUS-log.md`, 2026-11-16, pattern angle); the chip's `--bench-draw` first frame is 45 to 52 ms, one frame
+  over the 50 ms line in each run, with the 90th percentile at 23 ms.
+
