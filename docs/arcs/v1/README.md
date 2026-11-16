@@ -25,7 +25,7 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 | 8 | Several devices: secondary profiles, the device previews strip, per-object overrides with badges and an Overrides tab, lint L15; portrait and landscape orientation (a landscape design exports turned into portrait pixels: chris's Nomad check, 2026-11-12, below) | large: 8a + 8b | done: `v0.8.0` (8a and 8b in one release), approved by chris 2026-11-13 |
 | 9 | Pattern library: isometric, hex, Cornell, music staff; "every Nth line is major"; unbinding a region from the rhythm; isometric rhythm; major every N; lint L17 | large | done: `v0.9.0`, approved by chris 2026-11-13 (with the isometric turned 90°, hex edges cut at the frame, bigger major dots) |
 | 10 | Repeat tool: linear and grid, pitch or gap, fill to bounds, alternation, Expand (§6.4) | large | done: `v0.10.0`, approved by chris 2026-11-13 (with the chip-canvas speed fix he asked for before the look) |
-| 11 | Text and fonts: the bundled set with its OFL texts, system fonts on all three systems, the font picker, fixed-size boxes and L08, paragraph spacing, vertical alignment, baselines on the rhythm; monochrome emoji and its picker. Added 2026-11-14 by chris: text rotation (pulled from v1.1) and typing on the canvas (bbq Q3). Split (bbq Q1, `docs/bbq/2026-11-14-rung-11-text-and-fonts.md`): **11a** fonts, italic, system fonts, the picker, emoji; **11b** fixed boxes, overflow and L08, spacing, vertical alignment, baselines, rotation, typing on the canvas | large: 11a + 11b | in progress: 11a approved by chris 2026-11-15, not released alone ("release 11a/b as v0.11.0"); 11b building |
+| 11 | Text and fonts: the bundled set with its OFL texts, system fonts on all three systems, the font picker, fixed-size boxes and L08, paragraph spacing, vertical alignment, baselines on the rhythm; monochrome emoji and its picker. Added 2026-11-14 by chris: text rotation (pulled from v1.1) and typing on the canvas (bbq Q3). Split (bbq Q1, `docs/bbq/2026-11-14-rung-11-text-and-fonts.md`): **11a** fonts, italic, system fonts, the picker, emoji; **11b** fixed boxes, overflow and L08, spacing, vertical alignment, baselines, rotation, typing on the canvas | large: 11a + 11b | done: `v0.11.0` (11a and 11b in one release), 11a approved by chris 2026-11-15, 11b 2026-11-16 (with the baseline gap toggle and the chip-typing fix) |
 | 12 | The missing-font flow (§7.3: saved outlines, substitute, locate), L11, the system-font lint (ADR-002), embedded fonts in `assets/fonts/` | medium | — |
 | 13 | Profile system: user profiles in the config folder, the profile editor, local override and Reset to built-in, `.ron` import and export | medium | — |
 | 14 | Lint and preflight: L03, L05, L07, L09, L13, L14 from measured values; quick fixes; Ignore for this document; Free placement; filter by device; the preflight sheet with Export anyway; Style tab gray swatches, "matches Guide", "Use recommended" (§8.2). L04 is v1.1 (Q7) | medium–large | — |
@@ -141,3 +141,15 @@ above (which chris approves before it counts).
   took the recommendation, with a long Defaulted list, needed no change at the look. The Planning and Bullet journal
   starters are now buildable. No change to the rungs is proposed. Next lead's prompt:
   `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`.
+- 2026-11-16, after rung 11: rung 11 took one lead session and four Sonnet 5.5 high builder legs (11a 450,487 tokens
+  with its look leg; 11b 688,463, stopped once by the 5-hour usage window and resumed; the chip-typing fix 169,173 and a
+  Windows CI leg), and moved the weekly meter about 20 points (1 → 21 %, chris's readings) against a share raised from
+  15 to 21 points. Lessons: (1) text is the chip canvas's heaviest load, and an edit that changes text every frame
+  needs its own path: drawing only the changed patch, with text held in rows, took typing from 82 to 9 ms and dragging
+  from 17 to 4 ms; (2) explain a term in plain words before asking a ruling on it (chris asked what the ADR question
+  meant); (3) a background wait using `pgrep -f` on a pattern in its own command never ends: two builder loops and a
+  lead CI watcher ran stuck for 14 hours; (4) a builder must read CI for its own commits: two legs reported done with
+  CI red (a clippy lint, then a Windows-only crash); (5) a layout rule a picture would settle (baselines on the rule)
+  still landed one pixel row wrong, and a mock from the golden's own pixels settled it in one question. Rung 11 grew
+  by text rotation and typing on the canvas (chris), both built. No change to the rungs is proposed. Next lead's
+  prompt: `docs/arcs/v1/rung-12-PROMPT-2026-11-16.md`.

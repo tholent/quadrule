@@ -244,3 +244,8 @@ look, `0.11.1`, release. Then re-plan the board and write the next lead's prompt
   image while typing and redraw only the box being edited; time the parts first).
 - **2026-11-15, budget.** Meter "16–20 %" (chris), logged as 18: the 15-point share is spent. chris chose "+6 points",
   so rung 11's share is 21 points and its stop line 22 %.
+- **2026-11-16, 11b approved.** After the chip-typing fix (typing on the chip canvas 82 → 8.9 ms, `61a7347`,
+  `e34992e`), chris, word for word: "11b looks good in the window; excellent job". The builder's choices in 11b (four
+  edge handles on an auto box, a solid caret, a double-click types into text inside a group, the rule's top edge taken
+  from the Guide role, the label "Small gap above the line") stand as built. Rung 11 ships as `v0.11.0` once Windows
+  CI is green (a chip test crashed there; a builder leg is on it, chris: "Resume the fix builder").
