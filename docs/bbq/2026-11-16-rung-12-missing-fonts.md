@@ -184,3 +184,14 @@ on any other model or effort, stop and say so before doing anything.
   out live; L20 on the primary device only; the sheet also before the unsaved-changes prompt's Save; `.ttc` faces never
   embedded; L20 keeps its id). No release yet (Q1): `v0.12.0` waits for 12b's approval. Meter 27 % after 12a (chris,
   `/usage`), 5 points of the 12-point share.
+- 2026-11-16, chris, after trying 12b (before approving it), word for word: "What if the pattern itself could rotate
+  independent of it's frame? So the pattern still get's trimmed by its frame, but the pattern itself could rotate
+  independently." **Q8 amended:** the region still turns whole (as built), and a region also gets its own **pattern
+  angle**, turning the ruling inside the frame about the frame's centre, cut at the frame; the two angles add. This is
+  Q8's option "Both", which the bbq offered and chris did not pick then. Asked as two questions:
+  **Q10 Where.** "Add to 12b now (Recommended)": one more builder leg before the 12b look; `v0.12.0` ships with it; the
+  field joins format 0.13.0 (not yet released), read as 0 from files without it.
+  **Q11 Control.** "Field in the Pattern tab (Recommended)": a Pattern angle field beside the pattern's spacing; no
+  second canvas handle.
+  Meter 29–30 % (chris, `/usage`; logged as 30), about 3 points for 12b's first leg.
+
