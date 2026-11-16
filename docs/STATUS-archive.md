@@ -24,3 +24,11 @@ From Next:
 - Rung 3 waits on chris's look check of the window (`docs/bbq/2026-11-10-rung-3-first-editor.md`, Kickoff): try
   `cargo run --release -p quadrule-app -- [file.quad]` (add `--canvas chip` for the chip canvas). Taste calls
   made for it are listed in `docs/STATUS-log.md` (2026-11-10, rung 3 built). Then rung 4: dragging and snapping.
+
+## Moved 2026-11-16 from STATUS.md, Log (word for word)
+
+- 2026-11-09: prepared with project-prep (`docs/STATUS-log.md`).
+- 2026-11-09: rung 1 built and merged (PR #1), CI green on three OSes (`docs/STATUS-log.md`).
+- 2026-11-09: LICENSE and headers; calibration sheets; repo public; safe zones measured; stock grid matched;
+  linter started; fuzzing (`docs/STATUS-log.md`).
+- 2026-11-09: rung 2 planned (bbq, 12 questions) and built: the viewer window; spike R15 paid (`docs/STATUS-log.md`).

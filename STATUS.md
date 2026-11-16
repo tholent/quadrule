@@ -238,11 +238,6 @@ Full debt list: `docs/STATUS-debt.md`.
 ## Log
 
 Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
-- 2026-11-09: prepared with project-prep (`docs/STATUS-log.md`).
-- 2026-11-09: rung 1 built and merged (PR #1), CI green on three OSes (`docs/STATUS-log.md`).
-- 2026-11-09: LICENSE and headers; calibration sheets; repo public; safe zones measured; stock grid matched;
-  linter started; fuzzing (`docs/STATUS-log.md`).
-- 2026-11-09: rung 2 planned (bbq, 12 questions) and built: the viewer window; spike R15 paid (`docs/STATUS-log.md`).
 - 2026-11-10: rung 3 planned (bbq, 12 questions): the first editor (`docs/STATUS-log.md`).
 - 2026-11-10: rung 3 built (steps 1–9), chip canvas measured on the Pi; layers moved right; look approved
   (`docs/STATUS-log.md`).
