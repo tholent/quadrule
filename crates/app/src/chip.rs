@@ -21,7 +21,7 @@ use eframe::egui_wgpu;
 use eframe::wgpu;
 use quadrule_layout::{DisplayList, Item};
 use std::time::Instant;
-use vello::kurbo::{Affine, Cap, Join, Line, Rect, Stroke};
+use vello::kurbo::{Affine, BezPath, Cap, Join, Line, PathEl, Point, Rect, Stroke};
 use vello::peniko::{Color, Fill, Mix};
 
 /// A texture the page is drawn into, kept while its size stays the same.
@@ -128,6 +128,8 @@ struct Tune {
     patch_min: usize,
     /// Most path elements below the patch drawn straight into it; more is kept as an image.
     direct_max: usize,
+    /// Whether a big text fill is held in rows.
+    rows: bool,
 }
 
 impl Default for Tune {
@@ -135,6 +137,7 @@ impl Default for Tune {
         Tune {
             patch_min: PATCH_MIN_WEIGHT,
             direct_max: DIRECT_MAX_WEIGHT,
+            rows: true,
         }
     }
 }
@@ -506,6 +509,108 @@ fn plan_patch(
     })
 }
 
+/// Path elements a fill needs before it is held in rows.
+const ROWS_MIN_ELEMENTS: usize = 600;
+/// Path elements a row of a fill should hold at least; a thinner row joins the next.
+const ROW_MIN_ELEMENTS: usize = 150;
+
+/// `items` with each big fill (a box of text) cut into pieces by row: the contours whose pixel
+/// rows reach one another stay together, and the pieces share no pixel, so drawing them one after
+/// the other (same gray, non-zero rule) makes the picture the whole fill makes. A letter typed
+/// then changes the piece of its row, and the rows above and below stay as they were.
+fn in_rows(items: &[Item]) -> Vec<Item> {
+    let mut out = Vec::with_capacity(items.len());
+    for it in items {
+        match it {
+            Item::Fill { path, gray } if path.elements().len() >= ROWS_MIN_ELEMENTS => {
+                fill_in_rows(path, *gray, &mut out);
+            }
+            _ => out.push(it.clone()),
+        }
+    }
+    out
+}
+
+fn fill_in_rows(path: &BezPath, gray: u8, out: &mut Vec<Item>) {
+    let els = path.elements();
+    // Each contour: where it starts, and the whole pixel rows its points reach.
+    let mut contours: Vec<(usize, i64, i64)> = Vec::new();
+    for (i, el) in els.iter().enumerate() {
+        let pts: &[Point] = match el {
+            PathEl::MoveTo(p) | PathEl::LineTo(p) => std::slice::from_ref(p),
+            PathEl::QuadTo(a, b) => &[*a, *b],
+            PathEl::CurveTo(a, b, c) => &[*a, *b, *c],
+            PathEl::ClosePath => &[],
+        };
+        if matches!(el, PathEl::MoveTo(_)) || contours.is_empty() {
+            contours.push((i, i64::MAX, i64::MIN));
+        }
+        let c = contours.last_mut().expect("pushed above");
+        for p in pts {
+            c.1 = c.1.min(p.y.floor() as i64);
+            c.2 = c.2.max(p.y.ceil() as i64);
+        }
+    }
+    // Rows of contours: ones whose pixel rows overlap, chained.
+    let mut order: Vec<usize> = (0..contours.len()).collect();
+    order.sort_by_key(|&k| (contours[k].1, k));
+    let mut rows: Vec<(Vec<usize>, usize)> = Vec::new();
+    let mut reach = i64::MIN;
+    for k in order {
+        let (_, y0, y1) = contours[k];
+        let n = contour_len(&contours, els.len(), k);
+        match rows.last_mut() {
+            Some(row) if y0 < reach => {
+                row.0.push(k);
+                row.1 += n;
+            }
+            _ => rows.push((vec![k], n)),
+        }
+        reach = if rows.last().is_some_and(|r| r.0.len() == 1) {
+            y1
+        } else {
+            reach.max(y1)
+        };
+    }
+    if rows.len() < 2 {
+        out.push(Item::Fill {
+            path: path.clone(),
+            gray,
+        });
+        return;
+    }
+    // A row with too little in it goes with the next one.
+    let mut piece: Vec<usize> = Vec::new();
+    let mut held = 0usize;
+    let last = rows.len() - 1;
+    for (r, (mut ks, n)) in rows.into_iter().enumerate() {
+        piece.append(&mut ks);
+        held += n;
+        if held >= ROW_MIN_ELEMENTS || r == last {
+            piece.sort_unstable();
+            let mut p = BezPath::new();
+            for &k in &piece {
+                let end = contour_start(&contours, els.len(), k + 1);
+                for el in &els[contours[k].0..end] {
+                    p.push(*el);
+                }
+            }
+            out.push(Item::Fill { path: p, gray });
+            piece.clear();
+            held = 0;
+        }
+    }
+}
+
+/// Where contour `k` starts, or `end` past the last one.
+fn contour_start(contours: &[(usize, i64, i64)], end: usize, k: usize) -> usize {
+    contours.get(k).map_or(end, |c| c.0)
+}
+
+fn contour_len(contours: &[(usize, i64, i64)], end: usize, k: usize) -> usize {
+    contour_start(contours, end, k + 1) - contours[k].0
+}
+
 /// A rough cost of drawing an item: its path's size.
 fn weight(it: &Item) -> usize {
     match it {
@@ -515,9 +620,22 @@ fn weight(it: &Item) -> usize {
 }
 
 impl quadrule_ui::ChipRenderer for Chip {
-    fn render(&mut self, dl: &DisplayList) -> Result<(egui::TextureId, f64), String> {
+    fn render(&mut self, page: &DisplayList) -> Result<(egui::TextureId, f64), String> {
         let start = Instant::now();
         self.draws = 1;
+        // A big text fill is held as one piece for each row of text, so a letter typed changes a
+        // row, not the whole box.
+        let rows = DisplayList {
+            width: page.width,
+            height: page.height,
+            background: page.background,
+            items: if self.tune.rows {
+                in_rows(&page.items)
+            } else {
+                page.items.clone()
+            },
+        };
+        let dl = &rows;
         if self.vello.is_none() {
             let v = vello::Renderer::new(
                 &self.device,
@@ -917,9 +1035,15 @@ mod tests {
 
     /// Small slanted shapes in a row: what text looks like to the chip (many short curves).
     fn blobs(x: f64, y: f64, n: usize) -> BezPath {
+        blobs_moved(x, y, n, usize::MAX)
+    }
+
+    /// [`blobs`] with the one numbered `moved` shifted a little to the right.
+    fn blobs_moved(x: f64, y: f64, n: usize, moved: usize) -> BezPath {
         let mut p = BezPath::new();
         for i in 0..n {
-            let x0 = x + (i % 20) as f64 * 9.3 + 0.37 * (i / 20) as f64;
+            let nudge = if i == moved { 0.7 } else { 0.0 };
+            let x0 = x + nudge + (i % 20) as f64 * 9.3 + 0.37 * (i / 20) as f64;
             let y0 = y + (i / 20) as f64 * 11.7;
             p.move_to((x0, y0));
             p.curve_to(
@@ -959,6 +1083,46 @@ mod tests {
         v
     }
 
+    /// A fill of 230 shapes in 12 rows (two rows to a piece, for the 150 element floor) is held as rows that are the same contours, in pieces that
+    /// share no pixel row.
+    #[test]
+    fn rows_split() {
+        let item = fill(40.0, 40.0, 230, 0);
+        let pieces = in_rows(std::slice::from_ref(&item));
+        let Item::Fill { path: whole, .. } = &item else {
+            unreachable!()
+        };
+        let mut elements = 0;
+        let mut spans = Vec::new();
+        for p in &pieces {
+            let Item::Fill { path, .. } = p else {
+                unreachable!()
+            };
+            elements += path.elements().len();
+            let b = path.control_box();
+            spans.push((b.y0.floor(), b.y1.ceil()));
+        }
+        spans.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let apart = spans.windows(2).all(|w| w[0].1 <= w[1].0);
+        // The rows are a letter wide in their contours, so a small fill is not cut.
+        let small = in_rows(&[fill(40.0, 40.0, 20, 0)]).len();
+        println!(
+            "CHECK crate=app name=chip_rows result={} pieces={} elements={}/{} apart={apart} small={small}",
+            if pieces.len() >= 5 && elements == whole.elements().len() && apart && small == 1 {
+                "pass"
+            } else {
+                "fail"
+            },
+            pieces.len(),
+            elements,
+            whole.elements().len()
+        );
+        assert!(pieces.len() >= 5);
+        assert_eq!(elements, whole.elements().len());
+        assert!(apart);
+        assert_eq!(small, 1);
+    }
+
     /// Frames of a page whose middle object is edited, the way a page is while typing: the same
     /// frames through the patch way and through whole draws must make the same picture.
     #[test]
@@ -975,6 +1139,7 @@ mod tests {
             let tune = Tune {
                 patch_min: 0,
                 direct_max,
+                rows: true,
             };
             let mut patched = chip_on(&device, &queue, tune);
             let mut whole = chip_on(
@@ -983,6 +1148,7 @@ mod tests {
                 Tune {
                     patch_min: usize::MAX,
                     direct_max,
+                    rows: false,
                 },
             );
             let low = || {
@@ -1010,22 +1176,30 @@ mod tests {
                 list(v)
             };
             let steps: Vec<DisplayList> = vec![
-                frame(vec![fill(40.0, 40.0, 30, 0)], top(0.0)),
-                frame(vec![fill(40.0, 40.0, 31, 0)], top(0.0)),
-                frame(vec![fill(40.0, 40.0, 32, 0)], top(0.0)),
-                frame(vec![fill(40.0, 40.0, 20, 0)], top(0.0)),
+                frame(vec![fill(40.0, 40.0, 230, 0)], top(0.0)),
+                // a letter in the middle of the box moves: the one row of it changes
+                frame(
+                    vec![Item::Fill {
+                        path: blobs_moved(40.0, 40.0, 230, 87),
+                        gray: 0,
+                    }],
+                    top(0.0),
+                ),
+                frame(vec![fill(40.0, 40.0, 231, 0)], top(0.0)),
+                frame(vec![fill(40.0, 40.0, 232, 0)], top(0.0)),
+                frame(vec![fill(40.0, 40.0, 220, 0)], top(0.0)),
                 // two objects change together: the box and an object above it
-                frame(vec![fill(40.0, 40.0, 21, 0)], top(3.0)),
+                frame(vec![fill(40.0, 40.0, 221, 0)], top(3.0)),
                 // more items, so the middles differ in length
                 frame(
-                    vec![fill(40.0, 40.0, 21, 0), fill(200.0, 60.0, 5, 70)],
+                    vec![fill(40.0, 40.0, 221, 0), fill(200.0, 60.0, 5, 70)],
                     top(3.0),
                 ),
                 // a change in the lower part
                 {
                     let mut v = low();
                     v[1] = fill(10.0, 10.0, 121, 150);
-                    v.push(fill(40.0, 40.0, 21, 0));
+                    v.push(fill(40.0, 40.0, 221, 0));
                     v.extend(top(3.0));
                     list(v)
                 },

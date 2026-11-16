@@ -194,8 +194,9 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   0.11 build. The commit of steps 1 to 7 does not build in parts: the steps share files.
 - Rung 11b, owed (`crates/text/src/registry.rs`): the background font scan is not cancelled when the window closes (the thread ends with the
   process); a scan that finishes during a drag swaps the list in at the next frame, which can lay the page out again under the pointer.
-- Rung 11b, owed (`crates/app/src/chip.rs`, STOP put to the lead): typing on the graphics-chip canvas crosses the 50 ms line on a text-heavy page. `--bench-type 150 --canvas chip` on
-  the text-box page: 90th percentile 75.1, 75.5, 75.1 ms (every frame about 65 to 76 ms: each letter changes the page's text, so the chip draws
-  it whole, and its cost grows with the outline, about 0.1 ms a letter); on the fonts page the first typed frame is 128 ms and the window falls
-  back (`canvas=chip-cpu-fallback`, 90th percentile 4.6 ms on the processor canvas). The export canvas is 20.1 to 20.5 ms on both pages. Not
-  fixed: it is the rung 11a chip-cost line (a whole page of text costs the chip about 82 ms) meeting an edit that changes the text every frame.
+- Rung 11b, owed (`crates/app/src/chip.rs`): the chip draws a changed patch only when it is under 60 % of the page and what it must draw is
+  under three quarters of the page's outline; a zoom, a pan or a big object moved still draws the page the older ways (a whole draw, or the
+  stored lower part under what changed). The first typed frame of a session makes the stored lower part and is one slow frame (76 ms on the
+  text-box page, 115 ms on the fonts page, inside the two-draw allowance). A big text fill is held in rows, split where no two contours
+  share a pixel row, so a box of lines set tighter than their glyphs are tall stays one piece and types at the older, slower cost. The chip
+  tests need a graphics adapter; on a machine with none, `chip_patch` prints `result=skip` and passes.

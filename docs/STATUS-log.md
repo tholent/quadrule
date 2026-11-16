@@ -1650,3 +1650,51 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   (`gh run list --commit <short sha>` found no run, so it never ended) and two of the 11a builder's waits, which used
   `pgrep -f "cargo build --release"` and `pgrep -f "cargo test"` and so always found their own command line. Lesson for
   builder briefs: never wait with `pgrep -f` on a pattern that appears in the waiting command itself.
+
+## 2026-11-15 — rung 11b, chip typing fixed (builder, Sonnet 5.5)
+
+- chris ruled "Fix in 11b". Commits `61a7347` (the patch) and the one after it (rows, tests, notes).
+- Part timings before any change (laps inside `Chip::render`, release build, Pi, `--textbox-page --bench-type 150 --canvas chip`; not
+  committed): scene build 0.2 ms, vello encode 1.0 ms, GPU wait 69.4 ms at the first typed letter growing to 79.7 ms by the 150th (about
+  0.07 ms a letter), whole frame 70.9 to 81.5 ms. The page's items: 21 below the text box (path size 9,304) and the box itself, one fill of
+  about 8,500 path elements and growing. Fonts page: a whole draw 110 ms. Forcing rung 10's way (the box drawn over the stored lower part as
+  an image) gave 41.7 to 43.8 ms: about 15 for the page-sized image, 28 for the box. So the cost is the GPU working through the box's
+  outline, not setup or the processor, as in 11a. And the existing rule never stored the lower part here: it needs the lower part to be
+  half of what is drawn, and the box is the other half.
+- Approach (`crates/app/src/chip.rs` only): (1) a changed patch. The chip compares this frame's items with the last: the same from the
+  bottom (the lower part), the same at the top (what lies above), and the middle between. The patch is the pixel box that the items of the
+  middle that differ touch, old and new; the texture shown keeps the rest of the page as the last frame left it. The patch is drawn into a
+  small texture of its own: the stored lower part as an image, then each object of the middle and the top that reaches the patch, in order,
+  and the texture is copied over the shown one. A box in the middle of the stack, with an object above it that overlaps, is the case this was
+  built for: the object above is drawn again inside the patch, in order, so the picture is the one a whole draw makes (opacity groups are
+  kept whole). A turned box, or a box in a group, is just an item that differs; a repeat, whose copies all change, makes every copy an item
+  that differs, and the patch is the box around them all: over 60 % of the page, or over three quarters of the page's outline, the old
+  ways are used instead (a whole draw, or rung 10's image) and the timed choice between those two stays as it was. A patch is not timed
+  against a whole draw: on the fonts page the probe itself (110 ms) crossed the 100 ms fall-back line and put the window on the processor
+  canvas, and the patch draws less than the whole page by the rule above. This alone: text-box 39.3 to 40.0 ms, fonts 39.9 to 40.0 ms
+  (the box's 8,500 elements are still all drawn each letter). (2) Rows. A big text fill (600 path elements or more) is held as one piece for
+  each row of text: the contours whose pixel rows reach one another stay together, so the pieces share no pixel and draw the same picture as
+  the whole fill. A letter typed changes its row's piece, and the patch is one row wide. The stored lower part holds the rows above.
+- Picture checked: test `patch_matches_whole` (a headless device on the Pi; skipped, and says so, where there is no adapter) feeds the same
+  frames to a chip that patches (with rows) and a chip that draws whole (without), through both ways of holding the lower part, and
+  compares every pixel: `CHECK crate=app name=chip_patch result=pass frames=22 patches=12 worst_gray_diff=1`; `chip_rows` checks the
+  pieces keep every contour and share no pixel row.
+- Acceptance, release build, strip on, 150 frames, 3 runs each, `target/release/quadrule <page> --bench-type|--bench-drag|--bench-draw 150
+  --canvas chip|export`:
+
+  | page | command | canvas= | p90 ms | worst ms |
+  |---|---|---|---|---|
+  | textbox | type, chip | chip, chip, chip | 8.7, 8.6, 8.7 | 75.7, 75.6, 76.4 (first typed frame; was 82.0) |
+  | fonts | type, chip | chip, chip, chip | 9.5, 9.5, 9.5 | 115.3, 115.2, 115.3 (first typed frame; was a fall-back) |
+  | textbox | type, export | export x3 | 20.1, 20.0, 20.0 | 20.3, 21.0, 21.9 |
+  | fonts | type, export | export x3 | 19.9, 20.0, 20.0 | 20.4, 20.3, 23.0 |
+  | textbox | drag, chip | chip x3 | 4.0, 4.2, 4.0 (was 16.8 to 18.1) | 4.6, 4.8, 4.5 |
+  | fonts | drag, chip | chip x3 | 6.2, 6.1, 6.1 (was 17.9 to 18.1) | 6.7, 6.6, 6.5 |
+  | textbox | draw, chip | chip x3 | 23.8, 23.9, 23.8 (was 24.0 to 24.3) | 58.5, 58.6, 58.6 |
+  | fonts | draw, chip | chip x3 | 25.3, 25.2, 25.2 (was 25.2 to 25.4) | 99.3, 99.1, 99.0 |
+
+  Other pages, one run, chip (rung 10 and 11a figures in brackets): repeats drag 8.9 (35.6), draw 23.3 (23.5); patterns drag 5.0 (17.2),
+  draw 23.2 (23.6); groups drag 30.8 (30.8), draw 22.8; shapes drag 8.5, draw 22.8 (23.1). A drag now draws a patch where the moved object
+  is small, hence the lower drag figures; the draw figures use the older ways and are as before.
+- Judged: `make check-all` → `TESTS scope=workspace checks=476 check_fail=0 passed=443 failed=0 status=ok`; the 22 golden lines and fixtures `v0.4/` to `v0.11/` unchanged
+  (the chip is screen-only). Debt: the chip-typing line of "Rung 11b, owed" is paid; a smaller line replaces it.
