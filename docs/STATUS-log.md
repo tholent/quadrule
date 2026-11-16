@@ -1634,3 +1634,19 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   it would enter a group; a session ends on a device change; the baseline sits at the ruled line's own row (letters overlap the line's upper half);
   switching to Fixed keeps the box's laid-out height on the primary; the 0.11 fixture is this build's fonts page with the manifest set to 0.11.0.
 - TESTS: see the commit that follows (final `make check-all` line is in the report).
+
+## 2026-11-15 — rung 11b judged (lead, Opus 5.5 high)
+
+- 11b built by a Sonnet 5.5 high builder (688,463 tokens reported by the harness; one stop at the 5-hour usage window,
+  resumed): `5692c20`, `99e6abd`, `aca87dd`, `7a61c6d`, `7c38afa`, `46ccf9c`. Lead's checks: `git diff 7cbb5c9 origin/main
+  -- crates/render/tests/golden/SHA256SUMS` adds only the two `textbox_*` lines; fixtures unchanged but for the new
+  `v0.11/`; CI failed on `7a61c6d` and passed on `2b0750a` (after the builder's `7c38afa`). Baseline B and C samples
+  looked at by eye on the Nomad golden.
+- chris's baseline ruling (B by default, a tick for C) built in `46ccf9c`.
+- Stop: chip typing, `target/release/quadrule --textbox-page --bench-type 150 --canvas chip` → `canvas=chip p90_ms=82.0
+  first_ms=87.3 over_budget=105`; export canvas `p90_ms=20.5`. chris: "Fix in 11b". Share raised from 15 to 21 points
+  ("+6 points") at a reading of 18 % (chris: "16–20 %").
+- Housekeeping: three background loops stuck for about 14 hours were stopped by process number: the lead's CI watcher
+  (`gh run list --commit <short sha>` found no run, so it never ended) and two of the 11a builder's waits, which used
+  `pgrep -f "cargo build --release"` and `pgrep -f "cargo test"` and so always found their own command line. Lesson for
+  builder briefs: never wait with `pgrep -f` on a pattern that appears in the waiting command itself.

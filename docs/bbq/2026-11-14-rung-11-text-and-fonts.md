@@ -238,3 +238,9 @@ look, `0.11.1`, release. Then re-plan the board and write the next lead's prompt
   with baselines on the rhythm, letters' flat bottoms end on the pixel row just above the rule (B); a per-box tick
   (working label "Small gap above the line", the name chris's to change) lifts them by 0.3 mm rounded to whole pixels,
   at least 1 px (C).
+- **2026-11-15, chip typing (11b).** The builder stopped: typing on the chip canvas on the text-box page runs at a 90th
+  percentile of 82.0 ms (lead's run, `--textbox-page --bench-type 150 --canvas chip`; export canvas 20.5 ms), and the
+  fonts page falls back to the processor. chris chose "Fix in 11b" (keep the rest of the page in the chip's stored
+  image while typing and redraw only the box being edited; time the parts first).
+- **2026-11-15, budget.** Meter "16–20 %" (chris), logged as 18: the 15-point share is spent. chris chose "+6 points",
+  so rung 11's share is 21 points and its stop line 22 %.
