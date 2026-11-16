@@ -313,3 +313,135 @@ fn a_turned_region_in_a_group_and_in_a_repeat_turns_with_them() {
     );
     assert!(ok);
 }
+
+/// Draws `p` in `REGION` with the frame turned by `frame` and the ruling by `own` (its own angle).
+fn draw_own(p: Pattern, frame: f64, own: f64) -> Vec<Item> {
+    let doc = doc();
+    let manta = builtin(MANTA_ID).unwrap();
+    let env = Env {
+        target: &manta,
+        rhythm: &doc.rhythm,
+        rhythm_px: RhythmPx::new(&doc, &manta),
+    };
+    let mut pr = PatternRegion::new(p);
+    pr.angle_deg = own;
+    let mut items = Vec::new();
+    pattern_items_turned(&pr, Pen { w: 2, gray: 0 }, REGION, frame, &env, &mut items);
+    items
+}
+
+#[test]
+fn a_ruling_angle_of_nothing_changes_nothing_and_the_ruling_is_cut_at_the_frame() {
+    let mut zero_same = true;
+    let mut outside = Vec::new();
+    for (name, p) in kinds() {
+        zero_same &= draw_own(p, 0.0, 0.0) == draw(p, 0.0, true)
+            && draw_own(p, 25.0, 0.0) == draw(p, 25.0, true);
+        for own in [20.0, 45.0, 200.0, 333.0] {
+            let items = draw_own(p, 0.0, own);
+            if items.is_empty() {
+                outside.push(format!("{name}@{own}:empty"));
+            }
+            // Every point is in the frame: a dot whole (up to a dot's size past it), a cut line exactly.
+            for it in &items {
+                let reach = if matches!(it, Item::StrokePath { .. }) {
+                    1e-6
+                } else {
+                    4.0
+                };
+                for q in points(std::slice::from_ref(it)) {
+                    if q.0 < REGION.0 - reach
+                        || q.0 > REGION.2 + reach
+                        || q.1 < REGION.1 - reach
+                        || q.1 > REGION.3 + reach
+                    {
+                        outside.push(format!("{name}@{own}"));
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    outside.dedup();
+    println!(
+        "\nCHECK crate=layout name=ruling_angle_cut result={} zero_is_unchanged={zero_same} outside={outside:?}",
+        pass(zero_same && outside.is_empty())
+    );
+    assert!(zero_same && outside.is_empty());
+}
+
+#[test]
+fn a_ruling_turned_inside_its_frame_fills_the_whole_frame() {
+    // Lines and a grid at 30 degrees reach all four sides of the frame; dots come within a step of each.
+    let mut bad = Vec::new();
+    for (name, p, slack) in [
+        ("lines", Pattern::Lines, 2.0),
+        ("grid", Pattern::Grid, 2.0),
+        ("dots", Pattern::Dots, 70.0),
+    ] {
+        for own in [30.0, 45.0, 80.0] {
+            let b = bounds_of_points(&points(&draw_own(p, 0.0, own)));
+            let near_all = (b.0 - REGION.0).abs() <= slack
+                && (b.1 - REGION.1).abs() <= slack
+                && (b.2 - REGION.2).abs() <= slack
+                && (b.3 - REGION.3).abs() <= slack;
+            if !near_all {
+                bad.push(format!("{name}@{own}:{b:?}"));
+            }
+        }
+    }
+    println!(
+        "\nCHECK crate=layout name=ruling_angle_fills_frame result={} short={bad:?}",
+        pass(bad.is_empty())
+    );
+    assert!(bad.is_empty());
+}
+
+fn bounds_of_points(pts: &[(f64, f64)]) -> (f64, f64, f64, f64) {
+    quadrule_layout::rotate::bounds_of(pts)
+}
+
+#[test]
+fn the_frame_angle_and_the_ruling_angle_add() {
+    // A frame turned by 20 whose ruling is turned by 340 (-20): the lines run level on the page.
+    let level = draw_own(Pattern::Lines, 20.0, 340.0);
+    let along = |items: &[Item]| -> f64 {
+        // The direction of the longest edge of any filled polygon, in degrees from level (0 to 90).
+        let mut best = (0.0_f64, 0.0_f64);
+        for it in items {
+            if let Item::Fill { path, .. } = it {
+                let pts: Vec<_> = path
+                    .elements()
+                    .iter()
+                    .filter_map(|e| match e {
+                        PathEl::MoveTo(p) | PathEl::LineTo(p) => Some((p.x, p.y)),
+                        _ => None,
+                    })
+                    .collect();
+                for w in pts.windows(2) {
+                    let (dx, dy) = (w[1].0 - w[0].0, w[1].1 - w[0].1);
+                    let len = dx.hypot(dy);
+                    if len > best.0 {
+                        let a = dy.atan2(dx).to_degrees().rem_euclid(180.0);
+                        best = (len, a.min(180.0 - a));
+                    }
+                }
+            }
+        }
+        best.1
+    };
+    // 20 + 340 = 360: level. 20 + 10 = 30: slanted 30 degrees.
+    let flat = along(&level) < 1e-6;
+    let thirty = (along(&draw_own(Pattern::Lines, 20.0, 10.0)) - 30.0).abs() < 1e-6;
+    // A quarter turn of the ruling keeps whole pixels: rectangles on whole coordinates.
+    let sharp = draw_own(Pattern::Lines, 0.0, 90.0).iter().all(|i| match i {
+        Item::Rect { x0, y0, x1, y1, .. } => [x0, y0, x1, y1].iter().all(|v| **v == v.round()),
+        _ => false,
+    });
+    let ok = flat && thirty && sharp;
+    println!(
+        "\nCHECK crate=layout name=ruling_angle_adds result={} level_at_20_plus_340={flat} thirty_at_20_plus_10={thirty} quarter_is_sharp={sharp}",
+        pass(ok)
+    );
+    assert!(ok);
+}

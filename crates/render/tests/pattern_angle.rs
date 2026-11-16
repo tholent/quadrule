@@ -1,0 +1,212 @@
+// Copyright 2026 Chris Wells
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! The rung 12b pattern-angle page (docs/bbq/2026-11-16-rung-12-missing-fonts.md, Q8 as amended, Q10, Q11):
+//! the ruling of a pattern region turned inside its frame and cut at it, in a dozen cells, one in a group
+//! and one in a repeat, drawn on each device in portrait and compared with golden images in
+//! `tests/golden/` (`pattern-angle_*`), whose sums sit after the twenty-four that were there before
+//! (the two `patterns-turned_*` pages among them), which are unchanged. Then: the same document drawn
+//! again is the same bytes, a saved and reopened file exports the same, and a region turned by 0
+//! draws the same bytes as before the rung. Each step prints one `CHECK` line (run with
+//! `-- --nocapture`).
+//!
+//! To accept new output as golden (after a deliberate change, reviewed by eye):
+//! `QUADRULE_BLESS=1 cargo test -p quadrule-render --test pattern_angle`, then commit `tests/golden/`.
+//! Blessing only replaces this test's own lines of `SHA256SUMS`.
+
+use quadrule_format::{QuadFile, sha256_hex};
+use quadrule_layout::{display_list, lay_out_text};
+use quadrule_model::sample::*;
+use quadrule_model::*;
+use quadrule_profiles::builtin_for;
+use quadrule_render::*;
+use quadrule_text::FontRegistry;
+use std::path::PathBuf;
+
+const PREFIX: &str = "pattern-angle";
+
+fn pass(ok: bool) -> &'static str {
+    if ok { "pass" } else { "fail" }
+}
+
+fn golden_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("golden")
+}
+
+fn out_dir() -> PathBuf {
+    let d = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("pattern_angle");
+    std::fs::create_dir_all(&d).expect("create output folder");
+    d
+}
+
+/// The design on one device.
+fn design(doc: &Document, id: &str) -> Gray {
+    let o = doc.page.orientation;
+    let primary = builtin_for(&doc.primary_profile_id, o).unwrap();
+    let target = builtin_for(id, o).unwrap();
+    let mut reg = FontRegistry::bundled_only();
+    let laid = lay_out_text(doc, &primary, &target, &mut reg).unwrap();
+    let dl = display_list(doc, &primary, &target, &laid.outlines).unwrap();
+    render(&dl, Math::Fastest)
+}
+
+/// The same page with every pattern region's ruling angle at 0 (frames keep their turn), in a group or a repeat too.
+fn unturned(doc: &Document) -> Document {
+    let mut d = doc.clone();
+    let ids: Vec<Uuid> = d.objects().map(|o| o.id).collect();
+    for id in ids {
+        if let Some(o) = d.object_mut(id)
+            && let ObjectKind::Pattern(pr) = &mut o.kind
+        {
+            pr.angle_deg = 0.0;
+        }
+    }
+    d
+}
+
+#[test]
+fn pattern_angle_page_goldens() {
+    let bless = std::env::var("QUADRULE_BLESS").is_ok_and(|v| v == "1");
+    let doc = pattern_angle_document();
+    let mut sums = String::new();
+    let mut all_ok = true;
+    for id in doc.profile_ids() {
+        let img = design(&doc, id);
+        let target = builtin_for(id, Orientation::Portrait).unwrap();
+        let (dw, dh) = target.device_size();
+        let sizes = (img.width, img.height) == (dw, dh);
+        let png = encode_png(&img, None);
+        let name = format!("{PREFIX}_{id}_{dw}x{dh}.png");
+        std::fs::write(out_dir().join(&name), &png).unwrap();
+        let sha = sha256_hex(&png);
+        sums.push_str(&format!("{sha}  {name}\n"));
+        let golden_path = golden_dir().join(&name);
+        if bless {
+            std::fs::write(&golden_path, &png).unwrap();
+        }
+        let golden = std::fs::read(&golden_path).unwrap_or_default();
+        let matches = golden == png;
+        all_ok &= matches && sizes;
+        println!(
+            "\nCHECK crate=render name=pattern_angle_golden profile={id} result={} sizes={sizes} sha256={sha} golden_sha256={} os={} arch={}",
+            pass(matches && sizes),
+            if golden.is_empty() {
+                "none".to_string()
+            } else {
+                sha256_hex(&golden)
+            },
+            std::env::consts::OS,
+            std::env::consts::ARCH
+        );
+    }
+    let path = golden_dir().join("SHA256SUMS");
+    if bless {
+        let old = std::fs::read_to_string(&path).unwrap_or_default();
+        let mut merged: String = old
+            .lines()
+            .filter(|l| {
+                !l.split_whitespace()
+                    .nth(1)
+                    .is_some_and(|n| n.starts_with(&format!("{PREFIX}_")))
+            })
+            .map(|l| format!("{l}\n"))
+            .collect();
+        merged.push_str(&sums);
+        std::fs::write(&path, merged).unwrap();
+    }
+    let file = std::fs::read_to_string(&path).unwrap();
+    let lines: Vec<&str> = file.lines().collect();
+    let listed = sums.lines().all(|l| lines.contains(&l));
+    // The twenty-four lines that were there come first, in their order.
+    let firsts = [
+        "slice_",
+        "shapes_",
+        "transforms_",
+        "groups_",
+        "devices_",
+        "landscape_",
+        "patterns_",
+        "patterns-landscape_",
+        "repeats_",
+        "fonts_",
+        "textbox_",
+        "patterns-turned_",
+    ];
+    let old_twenty_four = lines.len() >= 24
+        && firsts
+            .iter()
+            .enumerate()
+            .all(|(i, k)| lines[2 * i..2 * i + 2].iter().all(|l| l.contains(k)));
+    println!(
+        "\nCHECK crate=render name=pattern_angle_sums_listed result={} listed={listed} old_twenty_four_first={old_twenty_four}",
+        pass(listed && old_twenty_four)
+    );
+    assert!(all_ok && listed && old_twenty_four, "see the CHECK lines");
+}
+
+#[test]
+fn the_pattern_angle_page_draws_the_same_twice_and_differs_from_a_ruling_at_zero() {
+    let doc = pattern_angle_document();
+    let flat = unturned(&doc);
+    let mut same = true;
+    let mut differs = true;
+    for id in doc.profile_ids() {
+        let a = design(&doc, id);
+        same &= a == design(&doc, id);
+        differs &= a != design(&flat, id);
+    }
+    println!(
+        "\nCHECK crate=render name=pattern_angle_repeatable result={} same_twice={same} differs_from_ruling_at_zero={differs}",
+        pass(same && differs)
+    );
+    assert!(same && differs);
+}
+
+#[test]
+fn the_pattern_angle_page_exports_the_same_bytes_after_a_save() {
+    let doc = pattern_angle_document();
+    let o = doc.page.orientation;
+    let primary = builtin_for(&doc.primary_profile_id, o).unwrap();
+    let mut reg = FontRegistry::bundled_only();
+    let outlines: Vec<_> = doc
+        .profile_ids()
+        .into_iter()
+        .map(|id| {
+            lay_out_text(&doc, &primary, &builtin_for(id, o).unwrap(), &mut reg)
+                .unwrap()
+                .outlines
+        })
+        .collect();
+    let bytes = QuadFile::new(doc.clone(), outlines, vec![])
+        .to_bytes("pattern-angle-test")
+        .unwrap();
+    let file = QuadFile::from_bytes(&bytes).unwrap();
+    let same_doc = file.doc == doc;
+    let current = file.manifest.format_version == quadrule_format::FORMAT_VERSION
+        && file.migrated_from.is_none();
+    let mut same = true;
+    for id in doc.profile_ids() {
+        let target = builtin_for(id, o).unwrap();
+        let dl = display_list(&file.doc, &primary, &target, &file.outlines[id]).unwrap();
+        same &= render(&dl, Math::Fastest) == design(&doc, id);
+    }
+    let ok = same_doc && current && same;
+    println!(
+        "\nCHECK crate=render name=pattern_angle_save_round_trip result={} doc_equal={same_doc} export_equal={same}",
+        pass(ok)
+    );
+    assert!(ok);
+}

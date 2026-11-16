@@ -1225,6 +1225,12 @@ pub struct PatternRegion {
     /// The role major lines are drawn in (Structure unless changed).
     #[serde(default = "structure_role", skip_serializing_if = "is_structure_role")]
     pub major_role: LineRole,
+    /// The ruling's own angle in degrees, clockwise, about the frame's centre: the pattern turns inside
+    /// the frame and is cut at it, on top of the frame's own `rotation_deg` (rung 12b bbq, Q8 as amended and
+    /// Q10). Format 0.13 (not yet released); a file without it reads as 0. Read it with
+    /// [`PatternRegion::pattern_angle`].
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub angle_deg: f64,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
@@ -1256,8 +1262,15 @@ impl PatternRegion {
             v_spacing_mm: None,
             major: MajorLines::Follow,
             major_role: LineRole::Structure,
+            angle_deg: 0.0,
             extra: Extra::new(),
         }
+    }
+
+    /// The ruling's own angle that counts, in degrees from 0 up to (not including) 360 (see
+    /// [`normalize_deg`]).
+    pub fn pattern_angle(&self) -> f64 {
+        normalize_deg(self.angle_deg)
     }
 
     /// The N for this region's major lines under `rhythm`: its own, the rhythm's, or `None` for

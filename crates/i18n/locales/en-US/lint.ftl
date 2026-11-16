@@ -6,7 +6,7 @@
 lint-l01-thin = "{ $name }" has a { $px } px stroke on this device, thinner than one pixel: it is drawn 1 px wide and may look heavier than meant. Use a role, or at least { $min_mm } mm.
 lint-l02-fraction = "{ $name }" has a { $px } px stroke on this device; it is drawn { $drawn } px wide. A role, or a width of whole pixels, keeps it exact.
 lint-l02-diagonal = "{ $name }" is a diagonal line, so its edges cannot sit on whole pixels and are soft.
-lint-l02-turned-pattern = "{ $name }" is a pattern region turned off a quarter turn, so its lines and dots cannot sit on whole pixels and come out softer.
+lint-l02-turned-pattern = "{ $name }" is a pattern region with its frame or its ruling turned off a quarter turn, so its lines and dots cannot sit on whole pixels and come out softer.
 lint-l06-fixed = "{ $name }" is under the { $zones } on this device. Move it inside the safe area, or widen the margins.
 lint-l06-movable = "{ $name }" can be covered by the { $zones } where it first appears; it can be moved.
 lint-l08 = "{ $name }" is too small for its text on { $device }: { $count ->

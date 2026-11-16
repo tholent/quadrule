@@ -1380,6 +1380,8 @@ impl ViewerUi {
                         self.viewer.open_textbox();
                     } else if b.fonts {
                         self.viewer.open_fonts();
+                    } else if b.pattern_angle {
+                        self.viewer.open_pattern_angle();
                     } else if b.turned_patterns {
                         self.viewer.open_turned_patterns();
                     } else if b.repeats {
@@ -1556,6 +1558,8 @@ impl ViewerUi {
                         "textbox"
                     } else if b.fonts {
                         "fonts"
+                    } else if b.pattern_angle {
+                        "pattern_angle"
                     } else if b.turned_patterns {
                         "turned_patterns"
                     } else if b.repeats {

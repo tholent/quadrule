@@ -2010,6 +2010,264 @@ pub fn turned_patterns_document() -> Document {
     doc
 }
 
+/// Fixed ids for the pattern-angle page's objects.
+pub mod angle_ids {
+    use crate::Uuid;
+    /// The `n`th object of the pattern-angle page.
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0011_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+    /// The grid whose ruling is turned by 30 degrees in an upright frame.
+    pub const GRID: Uuid = nth(3);
+    /// The group holding a region with a ruling angle.
+    pub const GROUP: Uuid = nth(10);
+    /// The repeat of a region with a ruling angle.
+    pub const REPEAT: Uuid = nth(11);
+}
+
+/// The rung 12b pattern-angle page (docs/bbq/2026-11-16-rung-12-missing-fonts.md, Q8 as amended, Q10,
+/// Q11): the ruling turned inside its frame and cut at it, in twelve labelled cells: lines, dots, a grid
+/// with major lines, hexagons and isometric lines in an upright frame; a turned frame whose ruling is turned
+/// back to level, a turned frame and ruling that add, a ruling turned a quarter (sharp); a Cornell page
+/// and a grand staff (laid out in their frame, turned with it); a group and a repeat. The rhythm is 5 mm
+/// with a major line every 5. A dot region holds the sample's id ([`ids::DOTS`]), so the benchmarks run over
+/// it. Designed on the Manta, also targeting the Nomad.
+pub fn pattern_angle_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 12b pattern angle".into();
+    doc.metadata.description =
+        "The rung 12b pattern-angle page: the ruling turned inside its frame, cut at the frame."
+            .into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    doc.rhythm.major_every = Some(5);
+    let title = doc.layers[1].objects[0].clone();
+    let unit = 5.0;
+    let (cols, cell_w) = (3, 9.0);
+    let region = |p: Pattern, ruling: f64| {
+        let mut pr = PatternRegion::new(p);
+        pr.angle_deg = ruling;
+        pr
+    };
+    let hex = Pattern::Hex {
+        orientation: HexOrientation::Flat,
+        height_units: 2,
+    };
+    let guide = LineRole::Guide;
+    let dotted = LineRole::DotGrid;
+    // (label, region, role, frame degrees)
+    let cells: Vec<(&str, Option<PatternRegion>, LineRole, f64)> = vec![
+        (
+            "Lines, ruling 30°",
+            Some(region(Pattern::Lines, 30.0)),
+            guide,
+            0.0,
+        ),
+        (
+            "Dots, ruling 45°",
+            Some(region(Pattern::Dots, 45.0)),
+            dotted,
+            0.0,
+        ),
+        (
+            "Grid, major 5, ruling 30°",
+            Some(region(Pattern::Grid, 30.0)),
+            guide,
+            0.0,
+        ),
+        (
+            "Hex, flat top, ruling 15°",
+            Some(region(hex, 15.0)),
+            guide,
+            0.0,
+        ),
+        (
+            "Isometric, ruling 10°",
+            Some(region(
+                Pattern::Isometric {
+                    style: IsoStyle::Lines,
+                },
+                10.0,
+            )),
+            guide,
+            0.0,
+        ),
+        (
+            "Cornell, ruling 10°",
+            Some(region(
+                Pattern::Cornell {
+                    cue_units: None,
+                    summary_units: None,
+                },
+                10.0,
+            )),
+            guide,
+            0.0,
+        ),
+        (
+            "Frame 20°, ruling 340° (level)",
+            Some(region(Pattern::Lines, 340.0)),
+            guide,
+            20.0,
+        ),
+        (
+            "Frame 45° + ruling 45° (add)",
+            Some(region(Pattern::Grid, 45.0)),
+            guide,
+            45.0,
+        ),
+        (
+            "Lines, ruling 90° (sharp)",
+            Some(region(Pattern::Lines, 90.0)),
+            guide,
+            0.0,
+        ),
+        (
+            "Grand staff, ruling 8°",
+            Some(region(
+                Pattern::MusicStaff {
+                    gap_mm: 1.5,
+                    pitch_units: 5,
+                    grand: true,
+                },
+                8.0,
+            )),
+            guide,
+            0.0,
+        ),
+        ("In a group (frame 15° + ruling 30°)", None, guide, 15.0),
+        ("In a repeat, 3 copies, ruling 45°", None, dotted, 0.0),
+    ];
+    let mut head = title.clone();
+    head.id = angle_ids::TITLE;
+    head.name = "Title".into();
+    head.frame = Frame::new(margin, margin, MANTA_W_MM - 2.0 * margin, 8.0);
+    if let ObjectKind::Text(t) = &mut head.kind {
+        t.content = "Rung 12b: pattern angle".into();
+        t.size_pt = 12.0;
+    }
+    head.constraints = Constraints::default();
+    let mut objs: Vec<Object> = vec![head];
+    for (i, (label, pr, role, frame_deg)) in cells.into_iter().enumerate() {
+        let (col, row) = ((i % cols) as f64, (i / cols) as f64);
+        let x = margin + col * (cell_w + 1.0) * unit;
+        let y = margin + (2.0 + row * 9.0) * unit;
+        let mut text = title.clone();
+        text.id = angle_ids::nth(100 + i as u128);
+        text.name = format!("Label {}", i + 1);
+        text.frame = Frame::new(x, y, cell_w * unit, 5.0);
+        if let ObjectKind::Text(t) = &mut text.kind {
+            t.content = label.into();
+            t.size_pt = 7.0;
+            t.weight = 400;
+        }
+        text.constraints = Constraints::default();
+        objs.push(text);
+        let (cx, cy) = (x + cell_w * unit / 2.0, y + 2.0 * unit + 15.0);
+        let id = match i {
+            1 => ids::DOTS,
+            2 => angle_ids::GRID,
+            _ => angle_ids::nth(1 + i as u128),
+        };
+        let pattern_at = |id: Uuid, name: &str, frame: Frame, pr: PatternRegion, deg: f64| {
+            let mut o = object(
+                id,
+                name,
+                frame,
+                Constraints::default(),
+                Style::Role(role),
+                ObjectKind::Pattern(pr),
+            );
+            o.rotation_deg = deg;
+            o
+        };
+        match pr {
+            Some(pr) => {
+                let frame = if matches!(pr.pattern, Pattern::MusicStaff { .. }) {
+                    Frame::new(cx - 17.0, cy - 14.0, 34.0, 28.0)
+                } else {
+                    Frame::new(cx - 15.0, cy - 10.0, 30.0, 20.0)
+                };
+                objs.push(pattern_at(id, label, frame, pr, frame_deg));
+            }
+            // A group of a grid with a ruling angle of 30 and a plain frame round it; the group turns by 15.
+            None if i == 10 => {
+                let grid = pattern_at(
+                    angle_ids::nth(20),
+                    "Grid in the group",
+                    Frame::new(cx - 12.0, cy - 8.0, 24.0, 16.0),
+                    region(Pattern::Grid, 30.0),
+                    0.0,
+                );
+                let frame = object(
+                    angle_ids::nth(21),
+                    "Frame in the group",
+                    Frame::new(cx - 14.0, cy - 10.0, 28.0, 20.0),
+                    Constraints::default(),
+                    Style::Role(LineRole::Structure),
+                    ObjectKind::Rect(RectShape::default()),
+                );
+                let children = vec![frame, grid];
+                let bounds = children
+                    .iter()
+                    .map(Object::outer_box)
+                    .reduce(|a, b| a.union(&b))
+                    .unwrap_or(Frame::new(0.0, 0.0, 0.0, 0.0));
+                let mut g = object(
+                    angle_ids::GROUP,
+                    "Group with a ruling angle",
+                    bounds,
+                    Constraints::default(),
+                    Style::None,
+                    ObjectKind::Group(GroupShape {
+                        children,
+                        extra: Extra::new(),
+                    }),
+                );
+                g.rotation_deg = frame_deg;
+                objs.push(g);
+            }
+            // A repeat of a small dot region with a ruling angle of 45: three copies.
+            None => {
+                let dots = pattern_at(
+                    angle_ids::nth(22),
+                    "Dots in the repeat",
+                    Frame::new(x + 2.0, cy - 9.0, 10.0, 18.0),
+                    region(Pattern::Dots, 45.0),
+                    frame_deg,
+                );
+                let mut shape = RepeatShape::new(dots);
+                shape.count = 3;
+                shape.h_spacing = Spacing::Mm(14.0);
+                let mut o = object(
+                    angle_ids::REPEAT,
+                    "Repeat of a region with a ruling angle",
+                    Frame::new(0.0, 0.0, 1.0, 1.0),
+                    Constraints::default(),
+                    Style::None,
+                    ObjectKind::Repeat(shape),
+                );
+                if let Some(f) = o.repeat_fit((unit, unit)) {
+                    o.frame = f;
+                }
+                objs.push(o);
+            }
+        }
+    }
+    doc.layers = vec![Layer {
+        name: "Pattern angle".into(),
+        visible: true,
+        locked: false,
+        objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}
+
 /// Fixed ids for the fonts page's objects.
 pub mod fonts_ids {
     use crate::Uuid;

@@ -155,6 +155,7 @@ app-y = Y
 app-width = Width
 app-height = Height
 app-rotation = Rotation
+app-pattern-angle = Pattern angle
 app-opacity = Opacity
 app-rotate-handle = Rotate handle
 

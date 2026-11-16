@@ -57,6 +57,7 @@ fn an_old_document_writes_none_of_the_new_fields() {
         "v_spacing_mm",
         "major",
         "major_role",
+        "angle_deg",
     ];
     let none = !k.iter().any(|x| new.contains(&x.as_str()));
     // A pattern written the old way is a bare name, and reads back the same.
@@ -125,6 +126,7 @@ fn every_new_setting_round_trips() {
     region.v_spacing_mm = Some(4.5);
     region.major = MajorLines::Every(4);
     region.major_role = LineRole::Emphasis;
+    region.angle_deg = 30.0;
     doc.layers[0].objects[0].kind = ObjectKind::Pattern(region.clone());
     let back: Document = cbor(&doc).deserialized().unwrap();
     let same = back == doc;
@@ -182,6 +184,35 @@ fn major_lines_follow_the_rhythm_unless_the_region_says_otherwise() {
     let ok = off_by_default && follows && off && own && hex_none && follow_bad;
     println!(
         "\nCHECK crate=model name=major_lines_resolve result={} off_by_default={off_by_default} follows_rhythm={follows} region_off={off} region_own_n={own} hex_none={hex_none} n_of_1_is_off={follow_bad}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn the_ruling_angle_is_optional_normalised_and_left_out_at_zero() {
+    // Rung 12b, Q8 as amended: format 0.13 (unreleased) gains `angle_deg` on a region; a file without it reads 0.
+    let mut r = PatternRegion::new(Pattern::Lines);
+    let mut k = Vec::new();
+    keys(&cbor(&r), &mut k);
+    let left_out = !k.iter().any(|x| x == "angle_deg");
+    r.angle_deg = -30.0;
+    let norm = r.pattern_angle() == 330.0;
+    k.clear();
+    keys(&cbor(&r), &mut k);
+    let written = k.iter().any(|x| x == "angle_deg");
+    let back: PatternRegion = cbor(&r).deserialized().unwrap();
+    let json: PatternRegion = serde_json::from_str(&serde_json::to_string(&r).unwrap()).unwrap();
+    let round = back == r && json == r;
+    r.angle_deg = f64::NAN;
+    let nan = r.pattern_angle() == 0.0;
+    // A document with no regions turned writes no new key, a repeat's and a group's regions keep it.
+    let doc = pattern_angle_document();
+    let back_doc: Document = cbor(&doc).deserialized().unwrap();
+    let doc_round = back_doc == doc;
+    let ok = left_out && norm && written && round && nan && doc_round;
+    println!(
+        "\nCHECK crate=model name=ruling_angle_field result={} zero_left_out={left_out} normalised={norm} written_when_set={written} round_trip={round} nan_is_zero={nan} page_round_trip={doc_round}",
         pass(ok)
     );
     assert!(ok);

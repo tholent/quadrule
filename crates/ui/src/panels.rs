@@ -1685,6 +1685,25 @@ impl ViewerUi {
                     }
                 }
 
+                // The ruling's own angle inside the frame, in degrees clockwise, about the frame's
+                // middle (rung 12b bbq, Q8 as amended, Q11); it adds to the frame's Rotation.
+                let label = ui.label(self.t("app-pattern-angle"));
+                let mut deg = pr.pattern_angle();
+                let drag = egui::DragValue::new(&mut deg)
+                    .range(-360.0..=360.0)
+                    .speed(1.0)
+                    .max_decimals(2)
+                    .suffix("°");
+                if ui
+                    .add_enabled(enabled, drag)
+                    .labelled_by(label.id)
+                    .changed()
+                {
+                    let deg = quadrule_model::normalize_deg(deg);
+                    set!(Some("pattern-angle"), |p| p.angle_deg = deg);
+                }
+                ui.end_row();
+
                 // Major lines: follow the rhythm, off, or its own N; hex and the music staff have
                 // none, so the fields are greyed (Defaulted "Which patterns have major lines").
                 let has_major = pr.pattern.has_major();

@@ -452,10 +452,12 @@ pub fn lint_against(
             }
         }
 
-        // L02: a pattern region turned off a quarter turn (rung 12b, Q8): its lines and dots no
-        // longer sit on whole pixels, so they come out softer. A quarter turn keeps them sharp.
-        if matches!(o.kind, ObjectKind::Pattern(_))
-            && !quadrule_layout::rotate::is_quarter_turn(rotation)
+        // L02: a pattern region whose frame, or whose ruling inside it, is turned off a quarter turn
+        // (rung 12b, Q8 as amended): its lines and dots no longer sit on whole pixels, so they come
+        // out softer. A quarter turn keeps them sharp.
+        if let ObjectKind::Pattern(pr) = &o.kind
+            && !(quadrule_layout::rotate::is_quarter_turn(rotation)
+                && quadrule_layout::rotate::is_quarter_turn(pr.pattern_angle()))
         {
             push("L02", Severity::Info, at("lint-l02-turned-pattern"));
         }

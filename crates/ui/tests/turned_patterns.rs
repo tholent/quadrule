@@ -197,3 +197,88 @@ fn the_benchmarks_run_over_the_turned_patterns_page() {
     );
     assert!(ok);
 }
+
+#[test]
+fn the_pattern_tab_has_a_pattern_angle_field_and_its_edits_merge_into_one_undo_step() {
+    // Rung 12b, Q11: a "Pattern angle" field beside the spacing in the Style tab (the pattern's tab); no handle.
+    let mut v = Viewer::default();
+    v.open_pattern_angle();
+    v.rotate_stalk_px = 60.0;
+    v.selection = vec![angle_ids::GRID];
+    let mut h = harness_with(v);
+    h.state_mut().ui.tab = Tab::Style;
+    h.run();
+    h.run();
+    let field = h.query_all_by_label("Pattern angle").count() >= 1;
+    let v = &mut h.state_mut().ui.viewer;
+    let before = v.open.as_ref().unwrap().history.undo_len();
+    for deg in [31.0, 32.0, 33.0] {
+        let _ = v.edit_selected(Some("pattern-angle"), |o| {
+            if let quadrule_model::ObjectKind::Pattern(p) = &mut o.kind {
+                p.angle_deg = quadrule_model::normalize_deg(deg);
+            }
+        });
+    }
+    let set = match &v.doc().unwrap().object(angle_ids::GRID).unwrap().kind {
+        quadrule_model::ObjectKind::Pattern(p) => p.pattern_angle(),
+        _ => -1.0,
+    };
+    let one_step = v.open.as_ref().unwrap().history.undo_len() == before + 1;
+    v.undo();
+    let back = match &v.doc().unwrap().object(angle_ids::GRID).unwrap().kind {
+        quadrule_model::ObjectKind::Pattern(p) => p.pattern_angle(),
+        _ => -1.0,
+    };
+    // The frame's own rotation is a separate field and stays: 0 here.
+    let frame_turn = v.doc().unwrap().object(angle_ids::GRID).unwrap().rotation();
+    let handle = {
+        v.selection = vec![angle_ids::GRID];
+        v.rotate_handle().is_some()
+    };
+    let ok = field && set == 33.0 && one_step && back == 30.0 && frame_turn == 0.0 && handle;
+    println!(
+        "\nCHECK crate=ui name=pattern_angle_field result={} field_named={field} set_33={} edits_merge_to_one_step={one_step} undo_back_to_30={} frame_turn_untouched={}",
+        pass(ok),
+        set == 33.0,
+        back == 30.0,
+        frame_turn == 0.0
+    );
+    assert!(ok);
+}
+
+#[test]
+fn the_benchmarks_run_over_the_pattern_angle_page() {
+    // `quadrule --pattern-angle-page --bench-drag` and `--bench-draw`: headless they finish and leave the page as it was.
+    let want = pattern_angle_document();
+    let mut parts = Vec::new();
+    let mut ok = true;
+    let runs: [(&str, quadrule_ui::DragBench); 2] = [
+        ("drag", quadrule_ui::DragBench::new(12).with_pattern_angle()),
+        (
+            "draw",
+            quadrule_ui::DragBench::draw(12).with_pattern_angle(),
+        ),
+    ];
+    for (name, bench) in runs {
+        let mut h = harness_with(Viewer::default());
+        h.state_mut().ui.bench = Some(bench);
+        let mut steps = 0;
+        while !h.state().ui.bench_finished() && steps < 80 {
+            h.step();
+            steps += 1;
+        }
+        let ui = &h.state().ui;
+        let done = ui.bench_finished();
+        let clean = ui.viewer.doc().is_some_and(|d| *d == want)
+            && !ui.viewer.is_dirty()
+            && !ui.viewer.dragging();
+        ok &= done && clean;
+        parts.push(format!("{name}:finished={done}:clean={clean}"));
+    }
+    println!(
+        "\nCHECK crate=ui name=window_pattern_angle_benchmarks result={} {}",
+        pass(ok),
+        parts.join(" ")
+    );
+    assert!(ok);
+}

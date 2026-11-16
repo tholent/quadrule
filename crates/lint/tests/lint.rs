@@ -872,3 +872,33 @@ fn a_turned_pattern_region_gets_l02_a_quarter_turn_does_not() {
     );
     assert!(ok);
 }
+
+#[test]
+fn a_ruling_angle_off_a_quarter_turn_gets_l02_too() {
+    // Rung 12b, Q8 as amended: the ruling turned inside an upright frame is soft unless it is a quarter turn.
+    let manta = builtin(MANTA_ID).unwrap();
+    let mut doc = pattern_angle_document();
+    let id = angle_ids::nth(1);
+    let l02 = |doc: &Document| {
+        run(doc, &manta)
+            .iter()
+            .any(|x| x.object == Some(id) && x.rule == "L02")
+    };
+    let set = |doc: &mut Document, deg: f64| {
+        if let ObjectKind::Pattern(p) = &mut doc.object_mut(id).unwrap().kind {
+            p.angle_deg = deg;
+        }
+    };
+    set(&mut doc, 30.0);
+    let soft = l02(&doc);
+    set(&mut doc, 90.0);
+    let quarter = l02(&doc);
+    set(&mut doc, 0.0);
+    let none = l02(&doc);
+    let ok = soft && !quarter && !none;
+    println!(
+        "CHECK crate=lint name=l02_ruling_angle result={} ruling_30={soft} ruling_90={quarter} ruling_0={none}",
+        pass(ok)
+    );
+    assert!(ok);
+}

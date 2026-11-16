@@ -428,6 +428,13 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 12b pattern-angle page: the ruling turned inside its frame and cut at it (the
+    /// benchmarks drag its dot region). Like the sample, it has no file.
+    pub fn open_pattern_angle(&mut self) {
+        let doc = quadrule_model::sample::pattern_angle_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens the rung 10 repeat page: rows, columns, a habit tracker, a Fill repeat with Centre, a
     /// group as the source and a hatch (the benchmarks drag the habit tracker). Like the sample, it
     /// has no file.
