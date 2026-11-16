@@ -2,7 +2,6 @@
 
 Known debt and owed work. One line each. When an item is paid, remove it and note it in `STATUS-log.md`.
 
-- A lint/preflight rule for system-font use, at save and at export, is owed to the napkin's lint list (ADR-002).
 - Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; the build-folder instruction the render worker
   reports (`spikes/render/FINDINGS.md`). (Canvas fallback to vello_cpu on weak GPUs: ruled yes, 2026-11-09.)
 - Calibration: the Manta's gray levels are ruled equal to the Nomad's, not measured (chris, 2026-11-12: "Same as the
@@ -34,8 +33,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   a frame, release build); still to measure zoomed in, while scrolling, and on a desktop graphics card (rung 3 bbq
   Q7). It redraws the visible area on every scroll step.
 - Rung 3 editor, owed (`crates/ui/src/editor.rs`, `crates/ui/src/panels.rs`, `crates/ui/src/view.rs`): Save does not
-  update `metadata.modified`. When a font is missing here, Save keeps the file's saved outlines for that device even
-  if the text changed. "Don't save" followed by
+  update `metadata.modified`. "Don't save" followed by
   cancelling the Open dialog leaves the document unsaved with its recovery file deleted (the next autosave writes
   it again). Only one recovery file is restored per start.
 - `CHECK` lines can share a line with the test runner's output under `--nocapture`, so `grep '^CHECK'` (used in
@@ -164,7 +162,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   dependency (only to name `Script` in cosmic-text's `Fallback` trait; not one of ADR-002 item 1's three crates).
 - Rung 11a, owed (font picker, `crates/ui/src/fonts.rs`): no keyboard arrows in the list; a family's name is drawn at one fixed size, not
   the device's; hidden system fonts (names that start with a dot) are left out; the picker has no dark-theme or screen-reader pass beyond
-  a label on each row; a document that names a system font this computer lacks still stops at "font family not available" (rung 12's flow).
+  a label on each row.
 - Rung 11a, owed (emoji picker, `crates/ui/src/emoji.rs`): no skin tone choice (the default tone stands for each); the list is the emoji Noto
   Emoji draws as one glyph (1,899 of 1,923 without tone variants), the other 24 are left out; the picker has no keyboard arrows through the
   grid; the Emoji button does not remember the group between openings of the window.
@@ -200,3 +198,11 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   text-box page, 115 ms on the fonts page, inside the two-draw allowance). A big text fill is held in rows, split where no two contours
   share a pixel row, so a box of lines set tighter than their glyphs are tall stays one piece and types at the older, slower cost. The chip
   tests need a graphics chip; on a machine with none, or with only a software adapter, `chip_patch` prints `result=skip` and passes. On Windows CI (software DirectX 12, "Microsoft Basic Render Driver") vello's first draw crashes with an access violation, so the patch way has never run on Windows; a Windows machine with a real chip is untested, and a process crash is not caught by the canvas's fall-back.
+- Rung 12a, owed (`crates/ui/src/missing.rs`, `crates/ui/src/viewer.rs`, `crates/text/src/registry.rs`): a copy or paste of a read-only text box
+  (font missing) is a new box with no saved outlines, so it draws nothing ("needs the font") until a font is chosen; the best match for a
+  file saved before 0.13 uses the family name only (not the saved outlines' letter widths); L20 is said on the primary device only, so it
+  does not show in the findings list while a secondary device is on screen; a box whose font is here but has a letter no font has is laid out
+  live (notdef box) rather than from saved outlines; the Missing fonts dialog and the sheet have no screen-reader or keyboard pass; Locate
+  fonts opens the folder with `xdg-open`/`open`/`cmd start` and is untested here (no desktop in the test run); embedding is untested on
+  macOS and Windows installed fonts (the `fsType` values were measured on this Pi only); fuzz target `crates/format/fuzz/fuzz_targets/open_quad.rs`
+  is unchanged and covers the reader but was not run (needs nightly); `.ttc` faces are never embedded.

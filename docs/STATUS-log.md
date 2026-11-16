@@ -1729,3 +1729,19 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   Fuzz 43857657235 passed on `97bfe32`; release run 43858983486: linux-x86_64, linux-aarch64, windows-x86_64,
   macos-universal and "Draft, attach, publish" all success. Published as a pre-release with 7 files:
   https://github.com/tholent/quadrule/releases/tag/v0.11.0 (`gh release view v0.11.0`).
+
+## 2026-11-16 — rung 12a, missing fonts (builder, Sonnet 5.5 high)
+
+- Built 12a only (record `docs/bbq/2026-11-16-rung-12-missing-fonts.md`): `bcf314a` format 0.13.0 and the `v0.12/` fixture;
+  `92ca3d9` text crate (signature, ranking, carried fonts, installed fallback, embed rule); the commit after it: missing
+  boxes drawn from saved outlines, read-only boxes, bar, dialog, Substitute, Locate fonts, L11, L20, the Save sheet, the
+  Embed fonts tick, `--missing-fonts-page`. No ADR text, golden or fixture `v0.4/`-`v0.11/` was edited.
+- Choices the record did not settle: font signatures measure serif/sans by the feet of an "n", script by a wobbling
+  baseline, mono by equal widths (`crates/text/src/signature.rs`); a family's embedded files are the faces the boxes ask for;
+  `.ttc` faces are never embedded; embedded fonts are open for every box in their file (also as fallback); a box with a letter
+  no font has stays live; L20 is said on the primary device only; the Missing fonts dialog has Apply and Cancel; Remember
+  keeps the fonts left as saved outlines when ticked; Export, Save, Save As and the unsaved prompt's Save show the sheet.
+- Paid debt: rung 3 Save-with-stale-outlines (`crates/ui/tests/missing_fonts.rs::save_cannot_write_changed_text_with_stale_outlines`);
+  rung 11a "font family not available"; the system-font lint rule (L20).
+- `make test-all` -> `TESTS scope=workspace checks=507 check_fail=0 passed=473 failed=0 status=ok`; golden lines and fixtures unchanged
+  (`git status` shows none touched).
