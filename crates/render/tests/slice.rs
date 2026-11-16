@@ -25,7 +25,6 @@
 
 use quadrule_format::{FontRef, QuadFile, sha256_hex};
 use quadrule_layout::{display_list, lay_out_text};
-use quadrule_model::Extra;
 use quadrule_model::sample::*;
 use quadrule_profiles::builtin;
 use quadrule_render::*;
@@ -76,12 +75,7 @@ fn slice_end_to_end() {
         outlines.push(laid.outlines);
     }
     let font = BundledFont::for_family(ATKINSON).unwrap();
-    let fonts = vec![FontRef {
-        family: font.family.into(),
-        bundled_id: Some(font.id.into()),
-        version: font.version(),
-        extra: Extra::new(),
-    }];
+    let fonts = vec![FontRef::new(font.family, Some(font.id), font.version())];
 
     // 2. Save, then reopen.
     let bytes = QuadFile::new(doc.clone(), outlines.clone(), fonts)

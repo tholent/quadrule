@@ -20,21 +20,23 @@
 //! project.quad
 //! ├── manifest.cbor            format version, last saver, title, profiles, fonts, checksums
 //! ├── scene.cbor               the Document
-//! └── outlines/<profile>.cbor  text outlines, one file per document profile (ADR-001 item 2)
+//! ├── outlines/<profile>.cbor  text outlines, one file per document profile (ADR-001 item 2)
+//! └── assets/fonts/<sha256>.<ttf|otf>  embedded installed fonts, whole files (rung 12a)
 //! ```
 //!
 //! The same document always gives the same bytes, on every machine: entries are written in a
 //! fixed order with fixed timestamps, permissions and system byte.
 //!
-//! Not built yet: `assets/` and `previews/` (napkin §12.1), font signatures in the manifest
-//! (ADR-001 item 6), and `cargo-fuzz` on the reader (item 8; a stable-Rust damage test stands in).
+//! Not built yet: `previews/` and image assets (napkin §12.1). Font signatures in the manifest
+//! (ADR-001 item 6) and embedded fonts came with format 0.13; a damaged embedded font is skipped
+//! and never stops a file opening.
 
 #![forbid(unsafe_code)]
 
 pub mod migrate;
 
 use quadrule_model::outlines::ProfileOutlines;
-use quadrule_model::{Document, Extra};
+use quadrule_model::{Document, Extra, FontSignature};
 use semver::Version;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -45,7 +47,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, DateTime, System, ZipArchive, ZipWriter};
 
 /// The format version this build writes. Pre-1.0 while the format settles.
-pub const FORMAT_VERSION: &str = "0.12.0";
+pub const FORMAT_VERSION: &str = "0.13.0";
 
 /// Required features this build understands. A file that requires any other opens read-only.
 pub const KNOWN_FEATURES: &[&str] = &["text-outlines"];
@@ -87,9 +89,59 @@ pub struct FontRef {
     pub bundled_id: Option<String>,
     /// The font's version string.
     pub version: Option<String>,
+    /// The font's measured signature (ADR-001 item 6; format 0.13), so a computer without the font
+    /// can pick a close substitute.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signature: Option<FontSignature>,
+    /// The font files saved inside the file (format 0.13), when the font was embedded.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub files: Vec<FontFile>,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+impl FontRef {
+    /// A reference with no signature and no embedded files.
+    pub fn new(family: &str, bundled_id: Option<&str>, version: Option<String>) -> Self {
+        FontRef {
+            family: family.into(),
+            bundled_id: bundled_id.map(String::from),
+            version,
+            signature: None,
+            files: Vec::new(),
+            extra: Extra::new(),
+        }
+    }
+}
+
+/// One embedded font file (format 0.13): a whole font file under `assets/fonts/`.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct FontFile {
+    /// Where it is in the archive: `assets/fonts/<sha256>.<ttf|otf>`.
+    pub path: String,
+    /// sha256 of the file, lowercase hex (also its name).
+    pub sha256: String,
+    /// The weight of the face the file holds, 100 to 900 (for a variable font, its default).
+    pub weight: u16,
+    /// True when the face is italic or oblique.
+    pub italic: bool,
+    /// Fields from newer versions.
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// The folder embedded fonts are kept in.
+pub const FONT_DIR: &str = "assets/fonts/";
+
+/// The path an embedded font file is stored at: `assets/fonts/<sha256>.<ttf|otf>`.
+pub fn font_path(bytes: &[u8]) -> String {
+    let ext = if bytes.starts_with(b"OTTO") {
+        "otf"
+    } else {
+        "ttf"
+    };
+    format!("{FONT_DIR}{}.{ext}", sha256_hex(bytes))
 }
 
 /// One entry's fingerprint.
@@ -158,6 +210,11 @@ pub struct QuadFile {
     pub doc: Document,
     /// Text outlines, keyed by profile id.
     pub outlines: BTreeMap<String, ProfileOutlines>,
+    /// The embedded font files, by their path in the archive (format 0.13).
+    pub font_files: BTreeMap<String, Vec<u8>>,
+    /// Embedded font files that were damaged or missing and were skipped on opening; the file
+    /// still opened (rung 12a bbq, Defaulted "Embedding in detail").
+    pub damaged_fonts: Vec<String>,
     /// Set when the file must not be saved by this build.
     pub read_only: Option<ReadOnly>,
     /// The version the scene was upgraded from, if it was.
@@ -185,6 +242,8 @@ impl QuadFile {
             manifest,
             doc,
             outlines,
+            font_files: BTreeMap::new(),
+            damaged_fonts: Vec::new(),
             read_only: None,
             migrated_from: None,
         }
@@ -215,6 +274,9 @@ impl QuadFile {
         let mut files: Vec<(String, Vec<u8>)> = vec![(SCENE.into(), to_cbor(&self.doc)?)];
         for (id, o) in &self.outlines {
             files.push((format!("outlines/{id}.cbor"), to_cbor(o)?));
+        }
+        for (path, bytes) in &self.font_files {
+            files.push((path.clone(), bytes.clone()));
         }
         let mut m = self.manifest.clone();
         // A newer file keeps its own label, so its unknown fields stay labelled (ADR-001 item 5).
@@ -282,12 +344,28 @@ impl QuadFile {
         };
 
         let mut blobs = BTreeMap::new();
+        let mut font_files = BTreeMap::new();
+        let mut damaged_fonts = Vec::new();
         for (name, info) in &manifest.entries {
-            let b = read_entry(&mut z, name)?;
-            if b.len() as u64 != info.size || sha256_hex(&b) != info.sha256 {
-                return Err(FormatError::Checksum(name.clone()));
+            let embedded_font = name.starts_with(FONT_DIR);
+            let read = read_entry(&mut z, name).and_then(|b| {
+                if b.len() as u64 != info.size || sha256_hex(&b) != info.sha256 {
+                    Err(FormatError::Checksum(name.clone()))
+                } else {
+                    Ok(b)
+                }
+            });
+            match read {
+                Ok(b) if embedded_font => {
+                    font_files.insert(name.clone(), b);
+                }
+                Ok(b) => {
+                    blobs.insert(name.clone(), b);
+                }
+                // A damaged embedded font is skipped; its text falls back to saved outlines.
+                Err(_) if embedded_font => damaged_fonts.push(name.clone()),
+                Err(e) => return Err(e),
             }
-            blobs.insert(name.clone(), b);
         }
         let scene = blobs
             .remove(SCENE)
@@ -316,6 +394,8 @@ impl QuadFile {
             manifest,
             doc,
             outlines,
+            font_files,
+            damaged_fonts,
             read_only,
             migrated_from,
         })

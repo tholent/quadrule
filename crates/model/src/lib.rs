@@ -25,11 +25,13 @@
 pub mod blank;
 pub mod clipboard;
 pub mod edit;
+pub mod fonts;
 pub mod geom;
 pub mod outlines;
 pub mod repeat;
 pub mod sample;
 
+pub use fonts::{FontClass, FontSettings, FontSignature};
 pub use repeat::{
     AlternationRule, CellEffect, Leftover, REPEAT_COPIES_MAX, REPEAT_COUNT_DEFAULT,
     REPEAT_COUNT_MAX, RepeatMode, RepeatShape, RuleAction, RuleCounts, RuleWhen, Spacing,
@@ -169,6 +171,10 @@ pub struct PageSettings {
     /// unless the file says otherwise; only portrait is offered until rung 8b.
     #[serde(default, skip_serializing_if = "Orientation::is_portrait")]
     pub orientation: Orientation,
+    /// The document's choices about fonts: Embed fonts, Don't warn again, and the fonts kept as
+    /// saved outlines (format 0.13; rung 12a). Left out of a file when it holds the defaults.
+    #[serde(default, skip_serializing_if = "FontSettings::is_default")]
+    pub fonts: FontSettings,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,

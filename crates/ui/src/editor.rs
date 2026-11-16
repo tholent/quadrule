@@ -29,7 +29,7 @@ use quadrule_model::edit::{
     paste, remove, reorder_into, reset_override, set_font_size_override, set_frame_override,
     set_position_override, set_visible_override, ungroup_with,
 };
-use quadrule_model::{Document, Extra, Frame, Object, ObjectKind, Uuid};
+use quadrule_model::{Document, Frame, Object, ObjectKind, Uuid};
 use quadrule_profiles::{Profile, builtin_for};
 use quadrule_text::BundledFont;
 use std::path::Path;
@@ -1231,18 +1231,8 @@ pub fn font_refs(doc: &Document) -> Vec<FontRef> {
     families
         .into_iter()
         .map(|f| match BundledFont::for_family(f) {
-            Some(b) => FontRef {
-                family: b.family.into(),
-                bundled_id: Some(b.id.into()),
-                version: b.version(),
-                extra: Extra::new(),
-            },
-            None => FontRef {
-                family: f.into(),
-                bundled_id: None,
-                version: None,
-                extra: Extra::new(),
-            },
+            Some(b) => FontRef::new(b.family, Some(b.id), b.version()),
+            None => FontRef::new(f, None, None),
         })
         .collect()
 }

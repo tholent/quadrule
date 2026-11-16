@@ -36,6 +36,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.9.0", "0.10.0", v0_9_to_v0_10),
     ("0.10.0", "0.11.0", v0_10_to_v0_11),
     ("0.11.0", "0.12.0", v0_11_to_v0_12),
+    ("0.12.0", "0.13.0", v0_12_to_v0_13),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -131,6 +132,62 @@ fn v0_10_to_v0_11(_scene: &mut Value) -> Result<(), FormatError> {
 /// would lay a Fixed box out as tall as its text.
 fn v0_11_to_v0_12(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
+}
+
+/// 0.13 adds `fonts` on the page settings (Embed fonts, Don't warn again, the fonts kept as saved
+/// outlines), and, in the manifest, a measured signature and the embedded files of a font (rung 12
+/// bbq, Defaulted "File format 0.13.0"). Each is left out of a file when it holds its default, so a
+/// 0.12 scene needs no rewriting for them. One thing is rewritten: a pattern region's stored
+/// `rotation_deg` is dropped (set to 0). Pattern regions ignored it until now, and from 0.13 they turn
+/// with it, so an old file holding one keeps drawing its region unturned and no old page changes.
+fn v0_12_to_v0_13(scene: &mut Value) -> Result<(), FormatError> {
+    if let Some(Value::Array(layers)) = map_get_mut(scene, "layers") {
+        for layer in layers {
+            if let Some(Value::Array(objects)) = map_get_mut(layer, "objects") {
+                for o in objects {
+                    zero_pattern_rotation(o);
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Drops `rotation_deg` from a pattern region, and from every pattern region inside a group or a
+/// repeat's source.
+fn zero_pattern_rotation(object: &mut Value) {
+    let mut kind_name = None;
+    if let Some(Value::Map(kind)) = map_get_mut(object, "kind") {
+        kind_name = kind
+            .first()
+            .and_then(|(k, _)| k.as_text().map(String::from));
+    }
+    match kind_name.as_deref() {
+        Some("Pattern") => {
+            if let Value::Map(m) = object {
+                m.retain(|(k, _)| k.as_text() != Some("rotation_deg"));
+            }
+        }
+        Some("Group") => {
+            if let Some(Value::Map(kind)) = map_get_mut(object, "kind")
+                && let Some((_, inner)) = kind.first_mut()
+                && let Some(Value::Array(children)) = map_get_mut(inner, "children")
+            {
+                for c in children {
+                    zero_pattern_rotation(c);
+                }
+            }
+        }
+        Some("Repeat") => {
+            if let Some(Value::Map(kind)) = map_get_mut(object, "kind")
+                && let Some((_, inner)) = kind.first_mut()
+                && let Some(source) = map_get_mut(inner, "source")
+            {
+                zero_pattern_rotation(source);
+            }
+        }
+        _ => {}
+    }
 }
 
 /// Upgrades `scene` from `from` to `to` by walking `chain` one step at a time.

@@ -160,6 +160,7 @@ pub fn slice_document() -> Document {
             background_gray: 255,
             margins_mm: Margins::all(margin),
             orientation: Default::default(),
+            fonts: Default::default(),
             extra: Extra::new(),
         },
         rhythm: Rhythm {
