@@ -179,4 +179,8 @@ on any other model or effort, stop and say so before doing anything.
 
 ## Amendments
 
-None yet.
+- 2026-11-16, chris, at his look at 12a (`--missing-fonts-page`), word for word: "I approve 12a". The builder's
+  unsettled choices stand as built (Substitute keeps weight and italic; a font present but lacking a letter is laid
+  out live; L20 on the primary device only; the sheet also before the unsaved-changes prompt's Save; `.ttc` faces never
+  embedded; L20 keeps its id). No release yet (Q1): `v0.12.0` waits for 12b's approval. Meter 27 % after 12a (chris,
+  `/usage`), 5 points of the 12-point share.
