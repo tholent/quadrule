@@ -396,8 +396,8 @@ pub struct Object {
     pub cap: LineCap,
     /// Rotation in degrees, clockwise on the page, about the centre of the frame; the frame stays
     /// the unrotated box (rung 6 bbq, Defaulted "6b, settled now for its builder"). Format 0.6; a
-    /// file without it reads as 0. Lines, the shapes and (since format 0.12) text boxes rotate; pattern
-    /// regions ignore it, so use [`Object::rotation`] to read it.
+    /// file without it reads as 0. Lines, the shapes, text boxes (since rung 11b) and pattern regions
+    /// (since rung 12b, format 0.13) rotate; a repeat ignores it, so use [`Object::rotation`] to read it.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub rotation_deg: f64,
     /// How opaque the object is, 0 to 100 percent; the export is flattened onto what lies beneath
@@ -457,7 +457,7 @@ pub fn normalize_deg(deg: f64) -> f64 {
 
 impl Object {
     /// The rotation that counts, in degrees from 0 up to (not including) 360: the stored one for a
-    /// line, a shape or a text box, always 0 for a pattern region, which does not rotate.
+    /// line, a shape, a text box or a pattern region, always 0 for a repeat, which does not rotate.
     pub fn rotation(&self) -> f64 {
         if self.kind.can_rotate() {
             normalize_deg(self.rotation_deg)
@@ -969,15 +969,14 @@ impl PolygonShape {
 }
 
 impl ObjectKind {
-    /// Whether the kind can rotate (format 0.6): lines, the shapes, text boxes (since rung 11b) and
-    /// groups of such. A pattern region cannot (rung 6 bbq, "Things I chose" of the 6b builder).
+    /// Whether the kind can rotate (format 0.6): lines, the shapes, text boxes (since rung 11b),
+    /// pattern regions (since rung 12b, bbq Q8) and groups of such.
     pub fn can_rotate(&self) -> bool {
         match self {
-            ObjectKind::Pattern(_) => false,
             // A repeat has no rotate handle (rung 10 bbq, Defaulted "Modes").
             ObjectKind::Repeat(_) => false,
-            // A group turns only if nothing in it, at any depth, is a pattern region or a repeat
-            // (rung 7a bbq, Q2; text no longer blocks it, rung 11b).
+            // A group turns only if nothing in it, at any depth, is a repeat (rung 7a bbq, Q2; text
+            // no longer blocks it, rung 11b, nor a pattern region, rung 12b).
             ObjectKind::Group(g) => g.children.iter().all(|c| c.kind.can_rotate()),
             _ => true,
         }

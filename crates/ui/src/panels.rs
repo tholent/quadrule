@@ -1160,8 +1160,8 @@ impl ViewerUi {
                     ui.end_row();
                 }
                 // Rotation in degrees, clockwise, about the frame's centre (rung 6b, Q5). Lines and
-                // shapes only: a text box and a pattern region do not rotate, so no field. With
-                // several selected, the first that turns gives the value, and the field reads
+                // lines, shapes, text boxes and pattern regions (a repeat does not rotate, so no
+                // field). With several selected, the first that turns gives the value, and the field reads
                 // "mixed" when those that turn differ.
                 let turner = self
                     .viewer
@@ -1206,8 +1206,8 @@ impl ViewerUi {
                     }
                     ui.end_row();
                 } else if o.is_group() {
-                    // A group with a text box or a pattern region in it does not turn (rung 7a bbq,
-                    // Q2): the field is there, greyed, with the reason.
+                    // A group with a repeat in it does not turn (rung 7a bbq, Q2): the field is
+                    // there, greyed, with the reason.
                     let label = ui.label(self.t("app-rotation"));
                     let mut deg = 0.0;
                     ui.add_enabled(false, egui::DragValue::new(&mut deg).suffix("°"))

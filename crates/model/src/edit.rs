@@ -205,8 +205,8 @@ pub enum EditError {
     NotAGroup(Uuid),
     /// A group cannot go into itself or into something inside it.
     IntoItself(Uuid),
-    /// A text box or a pattern region cannot go into a turned group (this one): they do not turn
-    /// (rung 7a bbq, Q2).
+    /// A repeat cannot go into a turned group (this one): it does not turn (rung 7a bbq, Q2; text boxes
+    /// since rung 11b and pattern regions since rung 12b turn, so they can go in).
     TurnedGroup(Uuid),
     /// Objects can be grouped only from one place: the layers, or one group (rung 7a).
     MixedParents,
@@ -237,7 +237,7 @@ impl std::fmt::Display for EditError {
             EditError::NotAGroup(id) => write!(f, "object {id} is not a group"),
             EditError::IntoItself(id) => write!(f, "group {id} cannot go into itself"),
             EditError::TurnedGroup(id) => {
-                write!(f, "group {id} is turned; text and patterns do not turn")
+                write!(f, "group {id} is turned; repeats do not turn")
             }
             EditError::MixedParents => write!(f, "the objects are in different groups"),
             EditError::TooFew => write!(f, "a group needs two or more objects"),
@@ -444,7 +444,7 @@ impl Document {
         self.locate(id).is_some() && !self.effectively_locked(id)
     }
 
-    /// Whether `group` or a group round it has a turn: a text box or pattern region cannot go in.
+    /// Whether `group` or a group round it has a turn: a repeat cannot go in.
     fn turned_chain(&self, group: Uuid) -> bool {
         self.ancestors(group)
             .into_iter()

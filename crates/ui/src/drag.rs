@@ -691,8 +691,8 @@ impl Viewer {
     }
 
     /// The rotate handle (Q5): a round handle on a short stalk above the middle of the top edge
-    /// of the one selected line or shape, turned with it. None for anything else (a text box, a
-    /// pattern region, several objects) or when it is locked.
+    /// of the one selected line, shape, text box or pattern region, turned with it. None for anything
+    /// else (a repeat, several objects) or when it is locked.
     pub fn rotate_handle(&mut self) -> Option<RotateHandle> {
         let ids = self.editable_selection();
         let [id] = ids[..] else {

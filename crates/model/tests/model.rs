@@ -284,7 +284,7 @@ fn rotation_opacity_and_line_direction_are_left_out_of_the_file_at_their_default
 }
 
 #[test]
-fn lines_shapes_and_text_rotate_a_pattern_does_not_and_angles_are_normalised() {
+fn lines_shapes_text_and_patterns_rotate_a_repeat_does_not_and_angles_are_normalised() {
     let doc = shapes_document();
     let mut rect = doc.layers[1].objects[0].clone();
     rect.rotation_deg = -90.0;
@@ -297,18 +297,22 @@ fn lines_shapes_and_text_rotate_a_pattern_does_not_and_angles_are_normalised() {
         && normalize_deg(725.0) == 5.0
         && normalize_deg(f64::NAN) == 0.0
         && normalize_deg(-1e-20) == 0.0;
+    let mut repeat = pattern.clone();
+    repeat.kind = ObjectKind::Repeat(RepeatShape::new(pattern.clone()));
     let kinds = rect.rotation() == 270.0
         && text.rotation() == 45.0
-        && pattern.rotation() == 0.0
+        && pattern.rotation() == 45.0
+        && repeat.rotation() == 0.0
         && rect.kind.can_rotate()
         && text.kind.can_rotate()
-        && !pattern.kind.can_rotate();
+        && pattern.kind.can_rotate()
+        && !repeat.kind.can_rotate();
     let mut see = rect.clone();
     see.opacity_pct = 250;
     let clamped = see.opacity() == 100;
     let ok = norm && kinds && clamped;
     println!(
-        "\nCHECK crate=model name=rotation_rules result={} normalised={norm} lines_shapes_and_text_turn_pattern_does_not={kinds} opacity_clamped={clamped}",
+        "\nCHECK crate=model name=rotation_rules result={} normalised={norm} lines_shapes_text_and_patterns_turn_repeat_does_not={kinds} opacity_clamped={clamped}",
         if ok { "pass" } else { "fail" }
     );
     assert!(ok);

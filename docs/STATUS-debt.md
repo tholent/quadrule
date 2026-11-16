@@ -85,7 +85,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   too (a line is a stroke); a pattern region and a text box have neither. The shapes page is built in code
   (`quadrule_model::sample::shapes_document`) and opened with `--shapes-page`, not as a file.
 - Rung 6b, owed (`crates/layout/src/rotate.rs`, `crates/layout/src/shapes.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/view.rs`): text
-  boxes turn since rung 11b; pattern regions do not rotate, and a stored angle on them is ignored; only one object turns at a time (a group has no
+  boxes turn since rung 11b and pattern regions since rung 12b; only one object turns at a time (a group has no
   rotate handle and no group turn); resizing a group with turned objects stretches them approximately; a dash pattern on a rectangle
   or ellipse turned by a quarter turn starts at the unturned top-left corner; a turned shape's fill covers the rhythm-snapped box
   turned about its centre, which may sit a pixel off the frame's own centre used for picking; a turned shape is picked by its box
@@ -206,3 +206,12 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   fonts opens the folder with `xdg-open`/`open`/`cmd start` and is untested here (no desktop in the test run); embedding is untested on
   macOS and Windows installed fonts (the `fsType` values were measured on this Pi only); fuzz target `crates/format/fuzz/fuzz_targets/open_quad.rs`
   is unchanged and covers the reader but was not run (needs nightly); `.ttc` faces are never embedded.
+- Rung 12b, owed (`crates/layout/src/pattern.rs`, `crates/layout/src/lib.rs`, `crates/ui/src/view.rs`): a turned region is drawn upright and
+  then turned whole about the middle of its whole-pixel box, so a quarter turn (90 or 270) moves the pattern by up to half a pixel from
+  the unrounded frame that picking and the handles use (`turn_pivot`); a turned region's ruling is anti-aliased polygons, one filled path per
+  run of one gray, so a grid's major lines and its other lines are drawn in the order the upright code lists them (a thin line can show over a
+  thick one at a crossing); lint L16 never judged pattern regions, so a turned one is simply not judged (the bbq veto "judge the ruling along its
+  own axes" is not built); L17 still judges a turned unbound region's spacing along its own axes; a turned region's slanted lines are cut
+  at the frame along their centre line, as rung 9 left them; the turned-patterns page was timed on the Pi at the lead's request with the
+  commands in `docs/STATUS-log.md` (2026-11-16, 12b), not on a repeat of many turned regions; the Arrange tab's Rotation field and the handle
+  on a region inside a repeat's source are not reachable (a repeat has no handle, as in rung 10).

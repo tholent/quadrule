@@ -400,9 +400,11 @@ pub fn lint_against(
             px(f.x_mm).max(px(f.x_mm + f.w_mm)),
             px(f.y_mm).max(px(f.y_mm + f.h_mm)),
         );
-        // A turned shape or text box meets a zone by its turned corners (rung 6b; text, rung 11b).
+        // A turned shape, text box or pattern region meets a zone by its turned corners (rung 6b;
+        // text, rung 11b; patterns, rung 12b).
         let is_text = matches!(o.kind, ObjectKind::Text(_));
-        let turned = rotation != 0.0 && (o.kind.is_shape() || is_text);
+        let is_pattern = matches!(o.kind, ObjectKind::Pattern(_));
+        let turned = rotation != 0.0 && (o.kind.is_shape() || is_text || is_pattern);
         let at = |id| Message::new(id).text("name", o.name.clone());
         let mut push = |rule, severity, message| push(rule, severity, Some(o.id), Some(b), message);
 
@@ -448,6 +450,14 @@ pub fn lint_against(
             if (x1 - x0).abs() > 1e-6 && (y1 - y0).abs() > 1e-6 {
                 push("L02", Severity::Info, at("lint-l02-diagonal"));
             }
+        }
+
+        // L02: a pattern region turned off a quarter turn (rung 12b, Q8): its lines and dots no
+        // longer sit on whole pixels, so they come out softer. A quarter turn keeps them sharp.
+        if matches!(o.kind, ObjectKind::Pattern(_))
+            && !quadrule_layout::rotate::is_quarter_turn(rotation)
+        {
+            push("L02", Severity::Info, at("lint-l02-turned-pattern"));
         }
 
         // L08: a Fixed text box leaves whole lines out on this device (rung 11b, Q5). Judged per

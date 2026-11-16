@@ -68,6 +68,9 @@ pub struct DragBench {
     pub landscape: bool,
     /// Opens the rung 9 pattern page when nothing is open yet (`--patterns-page`).
     pub patterns: bool,
+    /// Opens the rung 12b turned-patterns page when nothing is open yet (`--turned-patterns-page`); the
+    /// drag then moves its turned dot region, and the rotate run turns its 45 degree grid.
+    pub turned_patterns: bool,
     /// Opens the rung 10 repeat page when nothing is open yet (`--repeats-page`); the drag then
     /// moves its habit tracker.
     pub repeats: bool,
@@ -107,6 +110,7 @@ impl DragBench {
             devices: false,
             landscape: false,
             patterns: false,
+            turned_patterns: false,
             repeats: false,
             fonts: false,
             textbox: false,
@@ -129,6 +133,14 @@ impl DragBench {
     pub fn with_patterns(self) -> Self {
         DragBench {
             patterns: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark over the rung 12b turned-patterns page.
+    pub fn with_turned_patterns(self) -> Self {
+        DragBench {
+            turned_patterns: true,
             ..self
         }
     }

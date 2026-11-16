@@ -207,7 +207,7 @@ fn a_turned_shape_is_placed_as_a_rotated_box() {
     let hit = s.hit(cx, cy - 15.0 * k, 0.0) && !s.hit(cx + 15.0 * k, cy, 0.0);
     let b = s.bounds();
     let bounds = near(b.0, cx - 5.0 * k) && near(b.2, cx + 5.0 * k) && near(b.1, cy - 20.0 * k);
-    // Unturned it stays a plain box, and a text-like kind that cannot turn ignores the field.
+    // Unturned it stays a plain box, and a pattern region turns too (rung 12b).
     o.rotation_deg = 0.0;
     let (_, flat) = lay(o, &manta);
     let plain = matches!(flat[0].shape, Shape::Box { .. });
@@ -217,10 +217,11 @@ fn a_turned_shape_is_placed_as_a_rotated_box() {
     );
     pat.rotation_deg = 90.0;
     let (_, pp) = lay(pat, &manta);
-    let ignored = matches!(pp[0].shape, Shape::Box { .. });
-    let ok = rot && hit && bounds && plain && ignored;
+    let pattern_turns = matches!(pp[0].shape, Shape::Rotated { deg, hw, hh, .. }
+        if near(deg, 90.0) && near(hw, 20.0 * k) && near(hh, 5.0 * k));
+    let ok = rot && hit && bounds && plain && pattern_turns;
     println!(
-        "\nCHECK crate=layout name=turned_shape_placed result={} rotated_box={rot} hit_by_turned_corners={hit} bounds_round_corners={bounds} unturned_is_box={plain} pattern_ignores_rotation={ignored}",
+        "\nCHECK crate=layout name=turned_shape_placed result={} rotated_box={rot} hit_by_turned_corners={hit} bounds_round_corners={bounds} unturned_is_box={plain} pattern_turns={pattern_turns}",
         pass(ok)
     );
     assert!(ok);

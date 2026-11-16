@@ -307,23 +307,34 @@ fn locks_hide_and_turn_rules() {
     let mut moved = work.object(id(1)).unwrap().clone();
     moved.frame.x_mm += 1.0;
     let refused = work.apply(Command::SetObject(moved)) == Err(EditError::Locked(id(1)));
-    // A turned group refuses a text box and a pattern region.
+    // A turned group refuses a repeat; a text box and a pattern region turn, so they go in (rung 12b).
     let mut work2 = page();
     let cmd = group(&work2, &[id(1), id(2)], gid, "G").unwrap();
     work2.apply(cmd).unwrap();
     let mut g = work2.object(gid).unwrap().clone();
     g.rotation_deg = 20.0;
     work2.apply(Command::SetObject(g)).unwrap();
-    let mut text = work2.object(id(3)).unwrap().clone();
-    text.kind = ObjectKind::Pattern(PatternRegion::new(Pattern::Lines));
-    work2.apply(Command::SetObject(text)).unwrap();
+    let mut pat = work2.object(id(3)).unwrap().clone();
+    pat.kind = ObjectKind::Pattern(PatternRegion::new(Pattern::Lines));
+    work2.apply(Command::SetObject(pat.clone())).unwrap();
+    let mut work_pat = work2.clone();
+    let pattern_goes_in = work_pat
+        .apply(Command::MoveObjectIn {
+            id: id(3),
+            parent: gid,
+            index: 0,
+        })
+        .is_ok();
+    let mut rep = pat.clone();
+    rep.kind = ObjectKind::Repeat(RepeatShape::new(pat.clone()));
+    work2.apply(Command::SetObject(rep)).unwrap();
     let into = work2.apply(Command::MoveObjectIn {
         id: id(3),
         parent: gid,
         index: 0,
     });
     let refused_turned = into == Err(EditError::TurnedGroup(gid));
-    // And a group holding a pattern region cannot turn.
+    // A group holding a pattern region can turn; one holding a repeat cannot.
     let mut work3 = work2.clone();
     work3
         .apply(Command::MoveObject {
@@ -337,11 +348,25 @@ fn locks_hide_and_turn_rules() {
         extra: Extra::new(),
     });
     let cannot_turn = !holds.can_rotate();
+    let holds_pattern = ObjectKind::Group(GroupShape {
+        children: vec![pat],
+        extra: Extra::new(),
+    });
+    let pattern_turns = holds_pattern.can_rotate();
     println!(
-        "\nCHECK crate=model name=group_locks_and_turn_rules result={} cascade={cascades} locked_child_refuses_edit={refused} turned_group_refuses_pattern={refused_turned} group_with_pattern_cannot_turn={cannot_turn}",
-        pass(cascades && refused && refused_turned && cannot_turn)
+        "\nCHECK crate=model name=group_locks_and_turn_rules result={} cascade={cascades} locked_child_refuses_edit={refused} turned_group_refuses_repeat={refused_turned} turned_group_takes_pattern={pattern_goes_in} group_with_repeat_cannot_turn={cannot_turn} group_with_pattern_turns={pattern_turns}",
+        pass(
+            cascades
+                && refused
+                && refused_turned
+                && cannot_turn
+                && pattern_goes_in
+                && pattern_turns
+        )
     );
-    assert!(cascades && refused && refused_turned && cannot_turn);
+    assert!(
+        cascades && refused && refused_turned && cannot_turn && pattern_goes_in && pattern_turns
+    );
 }
 
 #[test]

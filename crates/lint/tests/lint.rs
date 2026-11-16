@@ -832,3 +832,43 @@ fn l11_and_l20_name_the_missing_and_installed_fonts() {
     );
     assert!(ok);
 }
+
+#[test]
+fn a_turned_pattern_region_gets_l02_a_quarter_turn_does_not() {
+    // Rung 12b, Q8: L02 says a pattern region turned off a quarter turn has soft lines; L16 does not
+    // judge a pattern region's position at all, turned or not.
+    let manta = builtin(MANTA_ID).unwrap();
+    let mut doc = turned_patterns_document();
+    let id = turned_ids::nth(1);
+    let at = |doc: &Document| run(doc, &manta);
+    let l02 = |f: &[Finding]| f.iter().any(|x| x.object == Some(id) && x.rule == "L02");
+    let l16 = |f: &[Finding]| f.iter().any(|x| x.object == Some(id) && x.rule == "L16");
+    let turned_by = |doc: &mut Document, deg: f64| {
+        doc.object_mut(id).unwrap().rotation_deg = deg;
+    };
+    turned_by(&mut doc, 30.0);
+    let soft = at(&doc);
+    let said = soft
+        .iter()
+        .find(|x| x.object == Some(id) && x.rule == "L02")
+        .map(text)
+        .unwrap_or_default();
+    turned_by(&mut doc, 90.0);
+    let quarter = at(&doc);
+    turned_by(&mut doc, 0.0);
+    let upright = at(&doc);
+    let ok = l02(&soft)
+        && !l02(&quarter)
+        && !l02(&upright)
+        && !l16(&soft)
+        && said.contains("turned off a quarter turn");
+    println!(
+        "CHECK crate=lint name=l02_turned_pattern result={} turned_30={} quarter_90={} upright={} l16_silent={}",
+        pass(ok),
+        l02(&soft),
+        l02(&quarter),
+        l02(&upright),
+        !l16(&soft)
+    );
+    assert!(ok);
+}

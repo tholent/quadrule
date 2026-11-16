@@ -700,10 +700,13 @@ fn draw_objects(
                 // A pattern draws every line and dot whose centre lies in its region, whole: a dot
                 // on the region's edge (where the rhythm meets the margin) straddles it by half a
                 // stroke rather than being cut in two (ADR-014).
-                pattern::pattern_items(
+                // A turned region is drawn in its own axes and turned whole about its middle
+                // (rung 12b bbq, Q8).
+                pattern::pattern_items_turned(
                     pr,
                     pattern::Pen { w, gray },
                     region,
+                    angle,
                     &pattern::Env {
                         target,
                         rhythm: env.doc_rhythm,
@@ -1219,6 +1222,7 @@ pub fn placed_objects(
             ObjectKind::Rect(_)
             | ObjectKind::Ellipse(_)
             | ObjectKind::Polygon(_)
+            | ObjectKind::Pattern(_)
             | ObjectKind::Group(_)
                 if angle != 0.0 =>
             {

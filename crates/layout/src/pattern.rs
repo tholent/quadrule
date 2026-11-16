@@ -22,11 +22,16 @@
 //! honeycomb, run only as far as the region's frame, ending where they meet it; a hexagon's edge
 //! is drawn once, whichever hexagons share it.
 //!
+//! A turned region (rung 12b) is drawn upright, in its own axes, by the same code, and the result is
+//! then turned whole about the region's middle ([`pattern_items_turned`]): the ruling stays parallel to
+//! the frame, parallel lines and dots keep ADR-014's reach, slanted lines stay cut at the frame, all
+//! in the region's own axes. A quarter turn stays on whole pixels.
+//!
 //! Lines, dots and the square grid are the rung 1 patterns and draw exactly as they did (the
 //! goldens depend on it); the rest arrived with rung 9.
 
 use crate::{Item, RhythmPx, snap_center, stroke};
-use kurbo::BezPath;
+use kurbo::{Affine, BezPath};
 use quadrule_model::{
     HexOrientation, IsoStyle, LineCap, LineRole, Pattern, PatternRegion, Rhythm, RhythmResolution,
     Style,
@@ -314,6 +319,147 @@ pub fn pattern_items(
             music_staff(&mut c, &g, gap, pitch_units, grand);
         }
     }
+}
+
+/// The point a region of `region` (left, top, right, bottom, whole pixels) turns about by `deg`: its
+/// middle. A quarter or three-quarter turn swaps the box's sides, so the middle moves to a whole
+/// pixel (by at most half a pixel in each direction) to keep every line on whole pixels; a half turn
+/// keeps the middle exactly, which sends whole pixels to whole pixels.
+pub fn turn_pivot(region: (f64, f64, f64, f64), deg: f64) -> (f64, f64) {
+    let c = ((region.0 + region.2) / 2.0, (region.1 + region.3) / 2.0);
+    let quarter = {
+        let d = quadrule_model::normalize_deg(deg);
+        d == 90.0 || d == 270.0
+    };
+    if quarter {
+        (c.0.round(), c.1.round())
+    } else {
+        c
+    }
+}
+
+/// [`pattern_items`] for a region turned by `deg` degrees clockwise about its middle: the pattern is
+/// laid out upright in `region`, then every item is turned with it, so the frame and its ruling
+/// turn together (rung 12b bbq, Q8). At 0 this is exactly [`pattern_items`]. At a quarter turn the
+/// hard-edged rectangles stay hard-edged rectangles; at any other angle they are anti-aliased
+/// polygons, drawn one per run of the same gray.
+pub fn pattern_items_turned(
+    pr: &PatternRegion,
+    pen: Pen,
+    region: (f64, f64, f64, f64),
+    deg: f64,
+    env: &Env,
+    items: &mut Vec<Item>,
+) {
+    let deg = quadrule_model::normalize_deg(deg);
+    if deg == 0.0 {
+        pattern_items(pr, pen, region, env, items);
+        return;
+    }
+    let mut upright = Vec::new();
+    pattern_items(pr, pen, region, env, &mut upright);
+    turn_items(
+        upright,
+        crate::shapes::rotation_about(turn_pivot(region, deg), deg),
+        crate::rotate::is_quarter_turn(deg),
+        items,
+    );
+}
+
+/// Appends `upright` moved by `turn` to `out`. At a quarter turn (`exact`) a rectangle stays a
+/// rectangle; otherwise rectangles of one gray, side by side in the list, become one filled path.
+fn turn_items(upright: Vec<Item>, turn: Affine, exact: bool, out: &mut Vec<Item>) {
+    let mut run: Option<(u8, BezPath)> = None;
+    let flush = |run: &mut Option<(u8, BezPath)>, out: &mut Vec<Item>| {
+        if let Some((gray, path)) = run.take() {
+            out.push(Item::Fill { path, gray });
+        }
+    };
+    for it in upright {
+        match it {
+            Item::Rect {
+                x0,
+                y0,
+                x1,
+                y1,
+                gray,
+            } if exact => {
+                let a = turn * kurbo::Point::new(x0, y0);
+                let b = turn * kurbo::Point::new(x1, y1);
+                out.push(Item::Rect {
+                    x0: a.x.min(b.x),
+                    y0: a.y.min(b.y),
+                    x1: a.x.max(b.x),
+                    y1: a.y.max(b.y),
+                    gray,
+                });
+            }
+            Item::Rect {
+                x0,
+                y0,
+                x1,
+                y1,
+                gray,
+            } => {
+                if run.as_ref().is_some_and(|(g, _)| *g != gray) {
+                    flush(&mut run, out);
+                }
+                let path = &mut run.get_or_insert_with(|| (gray, BezPath::new())).1;
+                let corners = [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
+                    .map(|(x, y)| turn * kurbo::Point::new(x, y));
+                path.move_to(corners[0]);
+                for c in &corners[1..] {
+                    path.line_to(*c);
+                }
+                path.close_path();
+            }
+            Item::StrokePath {
+                mut path,
+                width,
+                gray,
+                cap,
+            } => {
+                flush(&mut run, out);
+                path.apply_affine(turn);
+                out.push(Item::StrokePath {
+                    path,
+                    width,
+                    gray,
+                    cap,
+                });
+            }
+            Item::Stroke {
+                x0,
+                y0,
+                x1,
+                y1,
+                width,
+                gray,
+            } => {
+                flush(&mut run, out);
+                let a = turn * kurbo::Point::new(x0, y0);
+                let b = turn * kurbo::Point::new(x1, y1);
+                out.push(Item::Stroke {
+                    x0: a.x,
+                    y0: a.y,
+                    x1: b.x,
+                    y1: b.y,
+                    width,
+                    gray,
+                });
+            }
+            Item::Fill { mut path, gray } => {
+                flush(&mut run, out);
+                path.apply_affine(turn);
+                out.push(Item::Fill { path, gray });
+            }
+            other @ (Item::BeginAlpha { .. } | Item::EndAlpha) => {
+                flush(&mut run, out);
+                out.push(other);
+            }
+        }
+    }
+    flush(&mut run, out);
 }
 
 fn lines(c: &mut Ctx, g: &Grid) {

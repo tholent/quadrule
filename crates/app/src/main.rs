@@ -33,7 +33,8 @@
 //! `--patterns-page` (the pattern page: every new pattern; the benchmarks then run over it). Rung 10 adds
 //! `--repeats-page` (the repeat page; the benchmarks then run over it and the drag moves the habit tracker). Rung 11a adds
 //! `--fonts-page` (the fonts page: a page of text; the benchmarks then run over it and the drag moves its dot grid). Rung 11b adds
-//! `--textbox-page` (the text-box page, same use), `--missing-fonts-page` (the same page set in a font this computer lacks) and `--bench-type [frames]` (type into a long text box; `name=type_bench`).
+//! `--textbox-page` (the text-box page, same use), `--missing-fonts-page` (the same page set in a font this computer lacks) and `--bench-type [frames]` (type into a long text box; `name=type_bench`). Rung 12b adds
+//! `--turned-patterns-page` (pattern regions turned whole, one in a group and one in a repeat; the benchmarks then run over it, and `--bench-rotate` turns its 45 degree grid).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -141,6 +142,8 @@ impl App {
             ui.viewer.open_textbox();
         } else if args.fonts_page {
             ui.viewer.open_fonts();
+        } else if args.turned_patterns_page {
+            ui.viewer.open_turned_patterns();
         } else if args.repeats_page {
             ui.viewer.open_repeats();
         } else if args.patterns_page {
@@ -182,6 +185,8 @@ impl App {
                 b.with_textbox()
             } else if args.fonts_page {
                 b.with_fonts()
+            } else if args.turned_patterns_page {
+                b.with_turned_patterns()
             } else if args.repeats_page {
                 b.with_repeats()
             } else if args.patterns_page {
@@ -410,6 +415,9 @@ struct Args {
     /// Open the rung 9 pattern page instead of the empty start (`--patterns-page`); the benchmarks
     /// then run over it.
     patterns_page: bool,
+    /// Open the rung 12b turned-patterns page instead of the empty start (`--turned-patterns-page`); the
+    /// benchmarks then run over it, and `--bench-rotate` turns its 45 degree grid.
+    turned_patterns_page: bool,
     /// Open the rung 10 repeat page instead of the empty start (`--repeats-page`); the benchmarks
     /// then run over it, and the drag moves the habit tracker.
     repeats_page: bool,
@@ -479,6 +487,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.landscape_page = true;
         } else if a == "--patterns-page" {
             out.patterns_page = true;
+        } else if a == "--turned-patterns-page" {
+            out.turned_patterns_page = true;
         } else if a == "--repeats-page" {
             out.repeats_page = true;
         } else if a == "--fonts-page" {
@@ -642,6 +652,14 @@ mod tests {
                 Ok(Args {
                     bench_draw: Some(20),
                     patterns_page: true,
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--turned-patterns-page", "--bench-rotate", "30"]),
+                Ok(Args {
+                    bench_rotate: Some(30),
+                    turned_patterns_page: true,
                     ..Args::default()
                 }),
             ),

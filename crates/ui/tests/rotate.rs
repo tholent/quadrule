@@ -154,17 +154,17 @@ fn the_rotate_handle_turns_catches_steps_and_is_one_undo_step() {
 }
 
 #[test]
-fn only_one_line_shape_or_text_box_has_a_rotate_handle() {
+fn only_one_line_shape_text_box_or_pattern_has_a_rotate_handle() {
     let mut v = page();
     let a = rect(&mut v);
     let one = v.rotate_handle().is_some();
-    // A text box turns since rung 11b; a pattern region does not.
+    // A text box turns since rung 11b, a pattern region since rung 12b.
     v.set_tool(Tool::Text);
     let t = v.place_click(300.0, 900.0, NONE, REACH).unwrap();
     let text = v.rotate_handle().is_some();
     v.set_tool(Tool::Pattern);
     let p = v.place_click(300.0, 1200.0, NONE, REACH).unwrap();
-    let pattern = v.rotate_handle().is_none();
+    let pattern = v.rotate_handle().is_some();
     v.selection = vec![a, t];
     let several = v.rotate_handle().is_none();
     // Locked: no handle.
@@ -174,17 +174,17 @@ fn only_one_line_shape_or_text_box_has_a_rotate_handle() {
     v.edit(quadrule_model::edit::Command::SetObject(locked), None)
         .unwrap();
     let locked_none = v.rotate_handle().is_none();
-    // The field's setter refuses a kind that cannot turn (the pattern region), and turns the text.
+    // The field's setter turns the text and the pattern region alike (a repeat would keep 0).
     v.selection = vec![t, p];
     let _ = v.edit_selected(None, |o| {
         if o.kind.can_rotate() {
             o.rotation_deg = 40.0;
         }
     });
-    let refused = obj(&v, t).rotation() == 40.0 && obj(&v, p).rotation() == 0.0;
+    let refused = obj(&v, t).rotation() == 40.0 && obj(&v, p).rotation() == 40.0;
     let ok = one && text && pattern && several && locked_none && refused;
     println!(
-        "\nCHECK crate=ui name=rotate_handle_kinds result={} shape_has_one={one} text_has_one={text} pattern_none={pattern} several_none={several} locked_none={locked_none} text_turns_pattern_ignores_rotation={refused}",
+        "\nCHECK crate=ui name=rotate_handle_kinds result={} shape_has_one={one} text_has_one={text} pattern_has_one={pattern} several_none={several} locked_none={locked_none} text_and_pattern_turn={refused}",
         pass(ok)
     );
     assert!(ok);

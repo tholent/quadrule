@@ -68,7 +68,9 @@ and error.
   holds 15-degree steps) or type an angle in the Arrange tab; a turned shape resizes along its own sides. Lines point any
   way (draw one up and to the right, or drag its ends past each other). Opacity, 0 to 100 percent, is in the Style tab;
   the export is flattened to gray, with no transparency. A turned edge is smooth; a quarter turn keeps sharp edges.
-  Text boxes turn the same way, about the middle of the box; pattern regions do not turn yet.
+  Text boxes turn the same way, about the middle of the box. So do pattern regions: the frame and its ruling turn
+  together, the ruling staying parallel to the frame's edges, and lines are cut at the turned frame; a group holding a
+  pattern region can turn too. A turned ruling is softer than an upright one (lint rule L02 says so).
 - Group objects (Ctrl+G, or the Group button; Ctrl+Shift+G or Ungroup breaks it up). A group moves, turns, resizes and
   fades as one. Grouping never changes how a page looks on either device: as in Figma, a group is see-through to
   constraints, so each child keeps its own constraints against the page (a group has none, and no Constraints tab), and
@@ -154,7 +156,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

@@ -349,7 +349,7 @@ new-text-content = Text
 new-name-group = Group
 notice-text-read-only = "{ $name }" is drawn from saved outlines because its font is not on this computer, so its text cannot change. It can be moved, turned, faded, copied, grouped and deleted. Choose a font to edit it.
 notice-locate-failed = The fonts folder could not be opened: { $error }
-notice-turned-group = The group "{ $name }" is turned, and text boxes and pattern regions do not turn, so they cannot go into it.
+notice-turned-group = The group "{ $name }" is turned, and repeats do not turn, so they cannot go into it.
 notice-group-mixed = Those objects are in different groups. Pick objects from one place to group them.
 notice-group-few = Pick two or more objects to group them.
 notice-ungroup-none = Pick a group to ungroup it.
@@ -357,7 +357,7 @@ notice-turned-move = A turned group has a space of its own. Use Group and Ungrou
 app-group = Group
 app-ungroup = Ungroup
 app-fold-item = Show what is inside { $name }
-app-rotation-note = A group with a pattern region or a repeat in it cannot turn.
+app-rotation-note = A group with a repeat in it cannot turn.
 
 # Align and distribute, and mixed values (rung 7b).
 app-align-heading = Align and distribute

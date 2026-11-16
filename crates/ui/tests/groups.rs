@@ -359,7 +359,7 @@ fn dragging_a_group_on_the_other_device_moves_what_the_pointer_moves() {
 }
 
 #[test]
-fn turning_a_group_turns_its_children_and_a_pattern_stops_it() {
+fn turning_a_group_turns_its_children_and_a_repeat_stops_it() {
     let mut v = open();
     v.selection = vec![group_ids::HALF];
     let h = v.rotate_handle().expect("a group can turn");
@@ -380,8 +380,8 @@ fn turning_a_group_turns_its_children_and_a_pattern_stops_it() {
         .find(|p| p.id == group_ids::nth(32))
         .map(|p| p.node.angle);
     let adds = page_angle.is_some_and(|a| (a - 90.0).abs() < 1e-6);
-    // A pattern region in the group: no rotate handle, and the group cannot turn.
-    let pattern = {
+    // A pattern region in the group still lets it turn (rung 12b); a repeat does not.
+    let source = {
         let mut o = v.doc().unwrap().object(group_ids::nth(32)).unwrap().clone();
         o.id = Uuid::from_u128(0x7A77);
         o.kind = ObjectKind::Pattern(quadrule_model::PatternRegion::new(
@@ -389,20 +389,32 @@ fn turning_a_group_turns_its_children_and_a_pattern_stops_it() {
         ));
         o
     };
+    let repeat = {
+        let mut inner = source.clone();
+        inner.id = Uuid::from_u128(0x7A79);
+        let mut o = source.clone();
+        o.id = Uuid::from_u128(0x7A78);
+        o.kind = ObjectKind::Repeat(quadrule_model::RepeatShape::new(inner));
+        o
+    };
     let mut flat = v.doc().unwrap().object(group_ids::HALF).unwrap().clone();
     flat.rotation_deg = 0.0;
     v.edit(Command::SetObject(flat), None).unwrap();
-    // Turned groups refuse the pattern; an unturned one takes it, and then cannot turn.
-    let ok_in = v
-        .edit(
+    let insert = |v: &mut Viewer, object| {
+        v.edit(
             Command::InsertIn {
                 parent: group_ids::HALF,
                 index: 0,
-                object: pattern,
+                object,
             },
             None,
         )
-        .is_ok();
+        .is_ok()
+    };
+    let pattern_in = insert(&mut v, source);
+    v.selection = vec![group_ids::HALF];
+    let pattern_keeps_handle = v.rotate_handle().is_some();
+    let repeat_in = insert(&mut v, repeat);
     v.selection = vec![group_ids::HALF];
     let no_handle = v.rotate_handle().is_none();
     let angle_ignored = v
@@ -410,9 +422,10 @@ fn turning_a_group_turns_its_children_and_a_pattern_stops_it() {
         .unwrap()
         .object(group_ids::HALF)
         .is_some_and(|g| g.rotation() == 0.0 && !g.kind.can_rotate());
+    let ok_in = pattern_in && pattern_keeps_handle && repeat_in;
     let ok = turned && kids_plain && adds && ok_in && no_handle && angle_ignored;
     println!(
-        "\nCHECK crate=ui name=group_turn result={} group_turned={turned} children_keep_own_angle={kids_plain} angles_add_on_page={adds} pattern_hides_handle={no_handle}",
+        "\nCHECK crate=ui name=group_turn result={} group_turned={turned} children_keep_own_angle={kids_plain} angles_add_on_page={adds} pattern_keeps_handle={pattern_keeps_handle} repeat_hides_handle={no_handle}",
         pass(ok)
     );
     assert!(ok);
@@ -682,14 +695,12 @@ fn the_inspector_for_a_group_and_the_new_controls_are_named() {
 }
 
 #[test]
-fn a_group_with_a_pattern_greys_the_rotation_field_with_a_note() {
+fn a_group_with_a_repeat_greys_the_rotation_field_with_a_note() {
     let mut v = open();
     let pattern = {
         let mut o = v.doc().unwrap().object(group_ids::nth(32)).unwrap().clone();
         o.id = Uuid::from_u128(0x7A77);
-        o.kind = ObjectKind::Pattern(quadrule_model::PatternRegion::new(
-            quadrule_model::Pattern::Lines,
-        ));
+        o.kind = ObjectKind::Repeat(quadrule_model::RepeatShape::new(o.clone()));
         o
     };
     v.edit(

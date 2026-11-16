@@ -1771,6 +1771,245 @@ fn patterns_page(landscape: bool) -> Document {
     doc
 }
 
+/// Fixed ids for the turned-patterns page's objects.
+pub mod turned_ids {
+    use crate::Uuid;
+    /// The `n`th object of the turned-patterns page.
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0010_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+    /// The grid turned by 45 degrees, which `--bench-rotate` turns on this page.
+    pub const TURNED: Uuid = nth(3);
+    /// The group holding a turned pattern region.
+    pub const GROUP: Uuid = nth(11);
+    /// The repeat of a turned pattern region.
+    pub const REPEAT: Uuid = nth(12);
+}
+
+/// The rung 12b turned-patterns page (docs/bbq/2026-11-16-rung-12-missing-fonts.md, Q8): pattern
+/// regions turned whole, one in each of a dozen labelled cells: lines, dots, grid with major lines,
+/// isometric lines and dots, hexagons flat and pointy, Cornell, a grand staff, a region of its own
+/// spacing, a group holding a turned region (its angle and the group's add) and a repeat of one (each
+/// copy turns). One is turned by a quarter turn, which stays on whole pixels. The rhythm is 5 mm with
+/// a major line every 5. A dot region holds the sample's id ([`ids::DOTS`]), so the benchmarks run
+/// over it. Designed on the Manta, also targeting the Nomad.
+pub fn turned_patterns_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 12b turned patterns".into();
+    doc.metadata.description =
+        "The rung 12b turned-patterns page: every pattern turned, in a group and in a repeat."
+            .into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    doc.rhythm.major_every = Some(5);
+    let title = doc.layers[1].objects[0].clone();
+    let unit = 5.0;
+    let (cols, cell_w) = (3, 9.0);
+    let region = |p: Pattern| PatternRegion::new(p);
+    let hex = |orientation| Pattern::Hex {
+        orientation,
+        height_units: 2,
+    };
+    let mut unbound = region(Pattern::Grid);
+    unbound.bound = false;
+    unbound.h_spacing_mm = Some(4.3);
+    unbound.v_spacing_mm = Some(7.0);
+    let guide = LineRole::Guide;
+    let dotted = LineRole::DotGrid;
+    // (label, region, role, degrees)
+    let cells: Vec<(&str, Option<PatternRegion>, LineRole, f64)> = vec![
+        ("Lines, 15°", Some(region(Pattern::Lines)), guide, 15.0),
+        ("Dots, 30°", Some(region(Pattern::Dots)), dotted, 30.0),
+        (
+            "Grid, major 5, 45°",
+            Some(region(Pattern::Grid)),
+            guide,
+            45.0,
+        ),
+        (
+            "Isometric, 90° (sharp)",
+            Some(region(Pattern::Isometric {
+                style: IsoStyle::Lines,
+            })),
+            guide,
+            90.0,
+        ),
+        (
+            "Isometric dots, 60°",
+            Some(region(Pattern::Isometric {
+                style: IsoStyle::Dots,
+            })),
+            dotted,
+            60.0,
+        ),
+        (
+            "Hex, flat top, 20°",
+            Some(region(hex(HexOrientation::Flat))),
+            guide,
+            20.0,
+        ),
+        (
+            "Hex, pointy top, 335°",
+            Some(region(hex(HexOrientation::Pointy))),
+            guide,
+            335.0,
+        ),
+        (
+            "Cornell, 10°",
+            Some(region(Pattern::Cornell {
+                cue_units: None,
+                summary_units: None,
+            })),
+            guide,
+            10.0,
+        ),
+        (
+            "Grand staff, 352°",
+            Some(region(Pattern::MusicStaff {
+                gap_mm: 1.5,
+                pitch_units: 5,
+                grand: true,
+            })),
+            guide,
+            352.0,
+        ),
+        ("Grid, own 4.3 x 7 mm, 12°", Some(unbound), guide, 12.0),
+        ("In a group (10° + 15°)", None, guide, 10.0),
+        ("In a repeat, 3 copies, 25°", None, dotted, 25.0),
+    ];
+    let mut head = title.clone();
+    head.id = turned_ids::TITLE;
+    head.name = "Title".into();
+    head.frame = Frame::new(margin, margin, MANTA_W_MM - 2.0 * margin, 8.0);
+    if let ObjectKind::Text(t) = &mut head.kind {
+        t.content = "Rung 12b: turned patterns".into();
+        t.size_pt = 12.0;
+    }
+    head.constraints = Constraints::default();
+    let mut objs: Vec<Object> = vec![head];
+    for (i, (label, pr, role, deg)) in cells.into_iter().enumerate() {
+        let (col, row) = ((i % cols) as f64, (i / cols) as f64);
+        let x = margin + col * (cell_w + 1.0) * unit;
+        let y = margin + (2.0 + row * 9.0) * unit;
+        let mut text = title.clone();
+        text.id = turned_ids::nth(100 + i as u128);
+        text.name = format!("Label {}", i + 1);
+        text.frame = Frame::new(x, y, cell_w * unit, 5.0);
+        if let ObjectKind::Text(t) = &mut text.kind {
+            t.content = label.into();
+            t.size_pt = 7.0;
+            t.weight = 400;
+        }
+        text.constraints = Constraints::default();
+        objs.push(text);
+        // A 30 x 20 mm region round the middle of the cell's 45 x 30 mm.
+        let (cx, cy) = (x + cell_w * unit / 2.0, y + 2.0 * unit + 15.0);
+        let id = match i {
+            1 => ids::DOTS,
+            2 => turned_ids::TURNED,
+            _ => turned_ids::nth(1 + i as u128),
+        };
+        let pattern_at = |id: Uuid, name: &str, frame: Frame, pr: PatternRegion, deg: f64| {
+            let mut o = object(
+                id,
+                name,
+                frame,
+                Constraints::default(),
+                Style::Role(role),
+                ObjectKind::Pattern(pr),
+            );
+            o.rotation_deg = deg;
+            o
+        };
+        match pr {
+            Some(pr) => {
+                // A staff needs room for its five lines twice over.
+                let frame = if matches!(pr.pattern, Pattern::MusicStaff { .. }) {
+                    Frame::new(cx - 17.0, cy - 14.0, 34.0, 28.0)
+                } else {
+                    Frame::new(cx - 15.0, cy - 10.0, 30.0, 20.0)
+                };
+                objs.push(pattern_at(id, label, frame, pr, deg));
+            }
+            // A group of a grid (turned by 10) and a plain frame round it; the group turns by 15.
+            None if i == 10 => {
+                let grid = pattern_at(
+                    turned_ids::nth(20),
+                    "Grid in the group",
+                    Frame::new(cx - 12.0, cy - 8.0, 24.0, 16.0),
+                    region(Pattern::Grid),
+                    deg,
+                );
+                let mut frame = object(
+                    turned_ids::nth(21),
+                    "Frame in the group",
+                    Frame::new(cx - 14.0, cy - 10.0, 28.0, 20.0),
+                    Constraints::default(),
+                    Style::Role(LineRole::Structure),
+                    ObjectKind::Rect(RectShape::default()),
+                );
+                frame.constraints = Constraints::default();
+                let children = vec![frame, grid];
+                let bounds = children
+                    .iter()
+                    .map(Object::outer_box)
+                    .reduce(|a, b| a.union(&b))
+                    .unwrap_or(Frame::new(0.0, 0.0, 0.0, 0.0));
+                let mut g = object(
+                    turned_ids::GROUP,
+                    "Turned group with a pattern",
+                    bounds,
+                    Constraints::default(),
+                    Style::None,
+                    ObjectKind::Group(GroupShape {
+                        children,
+                        extra: Extra::new(),
+                    }),
+                );
+                g.rotation_deg = 15.0;
+                objs.push(g);
+            }
+            // A repeat of a small dot region turned by 25: three copies, each turned.
+            None => {
+                let dots = pattern_at(
+                    turned_ids::nth(22),
+                    "Dots in the repeat",
+                    Frame::new(x + 2.0, cy - 9.0, 10.0, 18.0),
+                    region(Pattern::Dots),
+                    deg,
+                );
+                let mut shape = RepeatShape::new(dots);
+                shape.count = 3;
+                shape.h_spacing = Spacing::Mm(14.0);
+                let mut o = object(
+                    turned_ids::REPEAT,
+                    "Repeat of a turned region",
+                    Frame::new(0.0, 0.0, 1.0, 1.0),
+                    Constraints::default(),
+                    Style::None,
+                    ObjectKind::Repeat(shape),
+                );
+                if let Some(f) = o.repeat_fit((unit, unit)) {
+                    o.frame = f;
+                }
+                objs.push(o);
+            }
+        }
+    }
+    doc.layers = vec![Layer {
+        name: "Turned patterns".into(),
+        visible: true,
+        locked: false,
+        objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}
+
 /// Fixed ids for the fonts page's objects.
 pub mod fonts_ids {
     use crate::Uuid;

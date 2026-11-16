@@ -1380,6 +1380,8 @@ impl ViewerUi {
                         self.viewer.open_textbox();
                     } else if b.fonts {
                         self.viewer.open_fonts();
+                    } else if b.turned_patterns {
+                        self.viewer.open_turned_patterns();
                     } else if b.repeats {
                         self.viewer.open_repeats();
                     } else if b.patterns {
@@ -1414,7 +1416,9 @@ impl ViewerUi {
             }
             Phase::Begin => {
                 // The dot grid, or for the rotate run the big turned rectangle.
-                let target = if b.rotate {
+                let target = if b.rotate && b.turned_patterns {
+                    quadrule_model::sample::turned_ids::TURNED
+                } else if b.rotate {
                     quadrule_model::sample::transform_ids::TURNED
                 } else if b.groups {
                     // A cell of the heavy group: the press picks the group it is in.
@@ -1552,6 +1556,8 @@ impl ViewerUi {
                         "textbox"
                     } else if b.fonts {
                         "fonts"
+                    } else if b.turned_patterns {
+                        "turned_patterns"
                     } else if b.repeats {
                         "repeats"
                     } else if b.patterns {

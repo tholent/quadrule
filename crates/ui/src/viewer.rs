@@ -420,6 +420,14 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 12b turned-patterns page: every pattern kind turned, one in a group and one in a
+    /// repeat (the benchmarks drag its dot region, and turn its 45 degree grid). Like the sample, it has
+    /// no file.
+    pub fn open_turned_patterns(&mut self) {
+        let doc = quadrule_model::sample::turned_patterns_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens the rung 10 repeat page: rows, columns, a habit tracker, a Fill repeat with Centre, a
     /// group as the source and a hatch (the benchmarks drag the habit tracker). Like the sample, it
     /// has no file.
