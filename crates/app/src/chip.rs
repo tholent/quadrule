@@ -972,6 +972,11 @@ mod tests {
         let adapter =
             pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
                 .ok()?;
+        let info = adapter.get_info();
+        println!(
+            "CHECK crate=app name=chip_adapter backend={:?} device_type={:?} name={:?} driver={:?}",
+            info.backend, info.device_type, info.name, info.driver
+        );
         pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             required_limits: adapter.limits(),
             ..Default::default()
@@ -1209,9 +1214,12 @@ mod tests {
                 // the very same page
                 frame(vec![fill(480.0, 300.0, 9, 0)], top(3.0)),
             ];
-            for dl in &steps {
+            for (n, dl) in steps.iter().enumerate() {
+                println!("STEP {n} patch way");
                 patched.render(dl).expect("patch way");
+                println!("STEP {n} whole way");
                 whole.render(dl).expect("whole way");
+                println!("STEP {n} read");
                 let (a, b) = (pixels(&patched), pixels(&whole));
                 let d = a
                     .iter()
