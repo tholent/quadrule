@@ -20,5 +20,8 @@ quadrule-ui.workspace = true
 rfd.workspace = true
 vello.workspace = true
 
+[dev-dependencies]
+pollster.workspace = true
+
 [lints]
 workspace = true
