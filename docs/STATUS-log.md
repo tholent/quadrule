@@ -1725,3 +1725,7 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - chris approved 11b: "11b looks good in the window; excellent job". Version 0.11.0 (`Cargo.toml`), release notes
   `docs/arcs/v1/release-notes/v0.11.0.md`, ADR-002 built status updated (header values moved to its History), board
   row and re-plan, rung 12 prompt `docs/arcs/v1/rung-12-PROMPT-2026-11-16.md`, calibration row.
+- Tagged `v0.11.0` (annotated, "Rung 11: text and fonts") at `619b8a7` after CI 43857657013, Coverage 43857657007 and
+  Fuzz 43857657235 passed on `97bfe32`; release run 43858983486: linux-x86_64, linux-aarch64, windows-x86_64,
+  macos-universal and "Draft, attach, publish" all success. Published as a pre-release with 7 files:
+  https://github.com/tholent/quadrule/releases/tag/v0.11.0 (`gh release view v0.11.0`).
