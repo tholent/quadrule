@@ -7,7 +7,7 @@ owner: chris
 kind: architecture
 built: partial
 proof: "`crates/text/tests/text.rs::title_lays_out_with_no_missing_glyphs`, `crates/text/tests/text.rs::bold_draws_bolder_shapes_and_wider_text`, `crates/render/tests/slice.rs::slice_end_to_end`, `crates/text/tests/fonts.rs::rescan_reads_the_fonts_again_and_keeps_the_open_ones`, `crates/text/tests/textbox.rs::a_fixed_box_leaves_out_whole_lines_that_do_not_fit`, `crates/text/tests/textbox.rs::paragraph_spacing_goes_after_each_paragraph_but_the_last`"
-owed: "hinting flag (item 4); fallback to any installed font with its save and export warning (item 6; rung 12, until then bundled fonts only, rung 11 bbq Q4); substitution by font signature (item 7; rung 12)"
+owed: "hinting flag (item 4; moved to v1.1, amendment 2026-11-16); fallback to any installed font with its save and export warning (item 6; rung 12, until then bundled fonts only, rung 11 bbq Q4); substitution by font signature (item 7; rung 12)"
 supersedes: nothing
 amends: nothing
 consulted: text spike worker (Opus 5.5 subagent); talk-through with Claude (docs/proposals/talk-2026-11-09-format-versions-and-hinting.md)
@@ -102,6 +102,8 @@ Drivers:
 - 2026-11-16: built status updated after rung 11 (11a and 11b, approved by chris): installed fonts on all three
   systems with the full re-scan on focus, run in the background (item 8); paragraph spacing, vertical alignment and the
   overflow signal (item 3). Prior header values: proof ``crates/text/tests/text.rs::title_lays_out_with_no_missing_glyphs`, `crates/text/tests/text.rs::bold_draws_bolder_shapes_and_wider_text`, `crates/render/tests/slice.rs::slice_end_to_end``; owed `hinting flag (item 4); fallback to any installed font with its save and export warning (item 6); substitution by font signature (item 7); re-scan on focus (item 8); paragraph spacing, vertical alignment and the overflow signal (item 3)`.
+- 2026-11-16: amended by chris in the rung 12 bbq (Q2): the hinting flag (item 4) moves out of v1 to v1.1 (see
+  Amendment — 2026-11-16 below). Prior header values: owed `hinting flag (item 4); fallback to any installed font with its save and export warning (item 6; rung 12, until then bundled fonts only, rung 11 bbq Q4); substitution by font signature (item 7; rung 12)`.
 
 ## Amendment — 2026-11-15, chris
 
@@ -122,3 +124,17 @@ answered: "amendment, go ahead".
 
 **Touches.** Decision, item 1. Built in rung 11a (`crates/text/src/registry.rs`, `Cargo.toml`). Revisit when
 cosmic-text re-exports `Script` or changes its `Fallback` trait: then the direct dependency should go.
+
+## Amendment — 2026-11-16, chris
+
+**What changed.** Item 4 (the off/light text hinting setting per profile, behind a feature flag, its default chosen from
+hinted and plain rows on the calibration sheets) is no longer part of v1.0: it moves to **v1.1**. Until then plain
+(unhinted) outlines are the only kind, live and saved, so ADR-001 item 3's hinted outline tables wait with it. Item 5's
+identity test covers the plain mode only until then. The rest of item 4 stands as ruled for when it is built.
+
+**Why.** It was owed and not on the arc v1 board; the rung 12 prompt asked whether it belonged in rung 12. The lead's
+reasons for v1.1: every golden page and both tablets' calibration so far use plain text and nothing has looked wrong
+on the devices, and choosing the default needs chris's time on hardware. Asked in the rung 12 bbq, Q2
+(`docs/bbq/2026-11-16-rung-12-missing-fonts.md`), chris chose "Out of v1, to v1.1 (Recommended)".
+
+**Touches.** Decision, item 4; the `owed` header. Revisit when v1.1 is planned.
