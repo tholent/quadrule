@@ -1698,3 +1698,18 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   is small, hence the lower drag figures; the draw figures use the older ways and are as before.
 - Judged: `make check-all` → `TESTS scope=workspace checks=476 check_fail=0 passed=443 failed=0 status=ok`; the 22 golden lines and fixtures `v0.4/` to `v0.11/` unchanged
   (the chip is screen-only). Debt: the chip-typing line of "Rung 11b, owed" is paid; a smaller line replaces it.
+
+## 2026-11-16 — rung 11b, chip test crash on Windows CI (builder, Sonnet 5.5)
+
+- chris: "Resume the fix builder". CI runs 43802647748 (`e34992e`) and the one on `61a7347` crashed `quadrule-app` tests on windows-latest with
+  `0xc0000005 STATUS_ACCESS_VIOLATION` after `chip_rows` passed. I had not read CI for my own commits; I now do (`gh run view <id> --log`).
+- Found with `34916d1` (prints the adapter and each step): run 43852733249 on windows-latest:
+  `CHECK crate=app name=chip_adapter backend=Dx12 device_type=Cpu name="Microsoft Basic Render Driver" driver="10.0.26100.33648"`, then
+  `STEP 0 patch way`, then the crash. Step 0 is the first frame, with no frame before it, so it is a whole draw: no patch, no texture copy,
+  no rows code runs. The crash is vello (or wgpu) on the software DirectX 12 adapter, in the code the app already runs for every first
+  chip frame. Verdict (a): the test's own headless setup, not the patch path. Not proof about the real app on Windows (the app opens the chip
+  canvas on the window's device; a machine with a software adapter only would hit the same first draw, and the canvas already falls back when a
+  frame errors, not when the process dies; noted as debt).
+- Fix: `patch_matches_whole` skips a software adapter (`result=skip reason=software_adapter`, or `reason=no_adapter`). It still runs on the Pi
+  (V3DV, Vulkan) and wherever there is a graphics chip.
+- `make check-all` → `TESTS scope=workspace checks=477 check_fail=0 passed=443 failed=0 status=ok`; no golden line or fixture moved.

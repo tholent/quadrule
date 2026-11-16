@@ -966,17 +966,28 @@ mod tests {
     const W: u32 = 512;
     const H: u32 = 320;
 
-    /// A device on whatever the machine has (none on a bare CI runner: the test then says so).
+    /// A device on whatever the machine has, as long as it is a graphics chip: none on a bare CI
+    /// runner, and a software adapter (Windows' "Basic Render Driver" on the CI runner) is not
+    /// used, because vello's first draw crashes it with an access violation before any patch
+    /// code has run (CI run 43852733249, step 0 of `patch_matches_whole`). The test then says so.
     fn device() -> Option<(wgpu::Device, wgpu::Queue)> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
         let adapter =
             pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
-                .ok()?;
+                .ok();
+        let Some(adapter) = adapter else {
+            println!("CHECK crate=app name=chip_patch result=skip reason=no_adapter");
+            return None;
+        };
         let info = adapter.get_info();
         println!(
             "CHECK crate=app name=chip_adapter backend={:?} device_type={:?} name={:?} driver={:?}",
             info.backend, info.device_type, info.name, info.driver
         );
+        if info.device_type == wgpu::DeviceType::Cpu {
+            println!("CHECK crate=app name=chip_patch result=skip reason=software_adapter");
+            return None;
+        }
         pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             required_limits: adapter.limits(),
             ..Default::default()
@@ -1133,7 +1144,6 @@ mod tests {
     #[test]
     fn patch_matches_whole() {
         let Some((device, queue)) = device() else {
-            println!("CHECK crate=app name=chip_patch result=skip reason=no_gpu");
             return;
         };
         let mut worst = 0u8;
@@ -1214,12 +1224,9 @@ mod tests {
                 // the very same page
                 frame(vec![fill(480.0, 300.0, 9, 0)], top(3.0)),
             ];
-            for (n, dl) in steps.iter().enumerate() {
-                println!("STEP {n} patch way");
+            for dl in &steps {
                 patched.render(dl).expect("patch way");
-                println!("STEP {n} whole way");
                 whole.render(dl).expect("whole way");
-                println!("STEP {n} read");
                 let (a, b) = (pixels(&patched), pixels(&whole));
                 let d = a
                     .iter()

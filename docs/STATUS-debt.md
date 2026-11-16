@@ -199,4 +199,4 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   stored lower part under what changed). The first typed frame of a session makes the stored lower part and is one slow frame (76 ms on the
   text-box page, 115 ms on the fonts page, inside the two-draw allowance). A big text fill is held in rows, split where no two contours
   share a pixel row, so a box of lines set tighter than their glyphs are tall stays one piece and types at the older, slower cost. The chip
-  tests need a graphics adapter; on a machine with none, `chip_patch` prints `result=skip` and passes.
+  tests need a graphics chip; on a machine with none, or with only a software adapter, `chip_patch` prints `result=skip` and passes. On Windows CI (software DirectX 12, "Microsoft Basic Render Driver") vello's first draw crashes with an access violation, so the patch way has never run on Windows; a Windows machine with a real chip is untested, and a process crash is not caught by the canvas's fall-back.
