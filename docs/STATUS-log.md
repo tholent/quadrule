@@ -1745,3 +1745,28 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   rung 11a "font family not available"; the system-font lint rule (L20).
 - `make test-all` -> `TESTS scope=workspace checks=507 check_fail=0 passed=473 failed=0 status=ok`; golden lines and fixtures unchanged
   (`git status` shows none touched).
+
+## 2026-11-16 — rung 12b, pattern rotation (builder, Sonnet 5.5 high)
+
+- Built 12b (record `docs/bbq/2026-11-16-rung-12-missing-fonts.md`, Q8): a pattern region turns whole. `crates/layout/src/pattern.rs`
+  `pattern_items_turned` lays the region out upright in its own axes with the unchanged code and turns every item about the middle
+  of the whole-pixel box (`turn_pivot`; a 90 or 270 turn rounds the middle to a whole pixel so rules stay sharp); at a quarter turn
+  rectangles stay `Item::Rect`, otherwise runs of one gray become one filled path, slanted strokes are turned paths. `ObjectKind::can_rotate` is true for
+  patterns (a group holding one now turns; a repeat still cannot), picking uses the turned box (`Shape::Rotated`), lint L02 flags a
+  region off a quarter turn (`lint-l02-turned-pattern`); L16 never judged patterns. No file format change (0.13.0 already held the field and its migration).
+- Page and flag: `quadrule_model::sample::turned_patterns_document`, `--turned-patterns-page` (also `make bench-drag|bench-draw|bench-rotate TURNED=1`;
+  `--bench-rotate` there turns the 45 degree grid). Golden lines `patterns-turned_supernote.a5x2_1920x2560.png` and `..a6x2_1404x1872.png` appended to
+  `crates/render/tests/golden/SHA256SUMS`; the 22 earlier lines and the `v0.4/`-`v0.12/` fixtures are unchanged
+  (`git diff 7cb49eb -- crates/render/tests/golden/SHA256SUMS` shows two added lines only).
+- Tests changed because behaviour changed (not re-blessed): pattern regions turn and a group holding one turns, a repeat is what stops a
+  group (`crates/layout/tests/rotate.rs`, `crates/model/tests/groups.rs`, `crates/model/tests/model.rs`, `crates/ui/tests/groups.rs`,
+  `crates/ui/tests/rotate.rs`); new: `crates/layout/tests/turned_patterns.rs` (unturned is identical, rigid for 10 kinds x 5 angles, quarter turns on whole pixels, cut at the
+  frame, rhythm steps, group and repeat), `crates/render/tests/turned_patterns.rs`, `crates/ui/tests/turned_patterns.rs`, L02 in `crates/lint/tests/lint.rs`.
+- Choices the record did not settle: the region turns about the middle of its whole-pixel box (as shapes do); the pattern's phase turns with the
+  frame (a bound region's rows start at the rhythm origin in the region's own axes, so they sit on the page's rhythm only unturned or at a half turn
+  of a symmetric box); L17 still judges a turned unbound region; the L02 text and id use (`lint-l02-turned-pattern`); the new page has 12 cells of 30 x 20 mm regions (a staff 34 x 28 mm).
+- `make test-all` -> `TESTS scope=workspace checks=525 check_fail=0 passed=486 failed=0 status=ok`.
+- Pi, release build, strip on, 150 frames, 3 runs each, `target/release/quadrule --turned-patterns-page <flag> 150 --canvas <c>` (90th percentile ms;
+  limit 50): `--bench-drag` export 20.6, 21.5, 21.2, chip 5.3, 5.3, 5.3; `--bench-draw` export 21.3, 21.3, 21.2, chip 23.8, 23.6, 23.6;
+  `--bench-rotate` export 21.2, 22.6, 22.1, chip 3.8, 3.8, 3.7 (the first chip frame of `--bench-draw` took 41 to 49 ms, still under 50).
+

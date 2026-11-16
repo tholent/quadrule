@@ -212,6 +212,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   run of one gray, so a grid's major lines and its other lines are drawn in the order the upright code lists them (a thin line can show over a
   thick one at a crossing); lint L16 never judged pattern regions, so a turned one is simply not judged (the bbq veto "judge the ruling along its
   own axes" is not built); L17 still judges a turned unbound region's spacing along its own axes; a turned region's slanted lines are cut
-  at the frame along their centre line, as rung 9 left them; the turned-patterns page was timed on the Pi at the lead's request with the
-  commands in `docs/STATUS-log.md` (2026-11-16, 12b), not on a repeat of many turned regions; the Arrange tab's Rotation field and the handle
-  on a region inside a repeat's source are not reachable (a repeat has no handle, as in rung 10).
+  at the frame along their centre line, as rung 9 left them; a pattern region inside a repeat can be turned only by editing
+  the source's angle after Expand (a repeat has no handle, as in rung 10); speed was measured on the turned-patterns page only (12 regions, 3
+  copies in one repeat), not on a page full of turned dot grids.
