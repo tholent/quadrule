@@ -190,18 +190,29 @@ fn layout_is_repeatable() {
 }
 
 #[test]
-fn missing_family_is_an_error() {
+fn a_missing_family_is_left_out_and_listed() {
+    // Rung 12a: a box whose font is not on this computer no longer stops the page; it is listed so the
+    // caller can draw it from the file's saved outlines (napkin §7.3).
     let mut tb = text_box("x", 400);
     tb.family = "No Such Family".into();
     let mut reg = FontRegistry::bundled_only();
+    let id = Uuid::from_u128(1);
+    let other = text_box("y", 400);
     let r = lay_out(
         &mut reg,
         "test",
-        &[TextRequest::new(Uuid::from_u128(1), &tb, 50.0)],
+        &[
+            TextRequest::new(id, &tb, 50.0),
+            TextRequest::new(Uuid::from_u128(2), &other, 50.0),
+        ],
     );
-    let ok = matches!(r, Err(TextError::MissingFamily(_)));
+    let ok = r.as_ref().is_ok_and(|l| {
+        l.unavailable == [id]
+            && l.outlines.texts.len() == 1
+            && l.outlines.texts[0].object_id == Uuid::from_u128(2)
+    });
     println!(
-        "CHECK crate=text name=missing_family_error result={}",
+        "CHECK crate=text name=missing_family_left_out result={}",
         if ok { "pass" } else { "fail" }
     );
     assert!(ok);

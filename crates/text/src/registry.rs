@@ -14,22 +14,26 @@
 
 //! The fonts text can be laid out with (rung 11a, docs/bbq/2026-11-14-rung-11-text-and-fonts.md):
 //! the bundled families, the families installed on this computer (found by fontdb's system scan,
-//! re-scanned when the window regains focus, ADR-002 item 8), and the rule that a character the
-//! chosen font lacks comes from the bundled fonts only (rule Q4; rung 12 opens it to any installed
-//! font together with its save and export warning, ADR-002 item 6).
+//! re-scanned when the window regains focus, ADR-002 item 8), the fonts a document carries inside
+//! its file (rung 12a), and the rule for a character the chosen font lacks: it comes from the bundled
+//! fonts, then, on a registry made by [`FontRegistry::with_system`], from an installed font
+//! (ADR-002 item 6; rung 12a), which the layout reports ([`crate::Laid::fallback`]) so the linter can
+//! warn. A registry made by [`FontRegistry::bundled_only`] never looks further than the bundled fonts.
 //!
 //! Two stores are kept apart. The **catalog** lists the installed faces for the app's pickers and
 //! is shared by copies of a registry. The **layout store** is the cosmic-text `FontSystem` that
 //! text is actually shaped with: it holds the bundled faces, a copy of each bundled face at the
 //! optical sizes asked for ([`crate::opsz`]), and only those installed families some text box
 //! uses. The families of the last kind are *forbidden as fallback* in its [`Fallback`] list, so
-//! they serve only the boxes that chose them.
+//! they serve only the boxes that chose them, except the few opened as fallback for a character no
+//! bundled font has.
 
 use crate::opsz;
+use crate::signature;
 use crate::{BUNDLED, BundledFont};
 use cosmic_text::skrifa::{FontRef, MetadataProvider, Tag};
 use cosmic_text::{Fallback, FontSystem, fontdb};
-use quadrule_model::FontStyle;
+use quadrule_model::{FontSignature, FontStyle};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, mpsc};
@@ -94,6 +98,9 @@ pub struct FamilyInfo {
     pub name: String,
     /// True for a font that ships inside quadrule.
     pub bundled: bool,
+    /// True for a font that comes from the open file only (embedded in it, rung 12a), and is not
+    /// installed on this computer.
+    pub embedded: bool,
     /// True when the family has an italic (or oblique) face of its own.
     pub italic: bool,
 }
@@ -227,6 +234,27 @@ impl Catalog {
         Catalog { db, families }
     }
 
+    /// A catalog of the given font files, each filed under the family name given (whatever the
+    /// file calls itself): the fonts a document carries, and the stand-ins tests use.
+    fn from_files(files: &[(String, Arc<Vec<u8>>)]) -> Self {
+        let mut db = fontdb::Database::new();
+        let mut by_name: BTreeMap<String, Vec<fontdb::ID>> = BTreeMap::new();
+        for (name, bytes) in files {
+            for id in db.load_font_source(fontdb::Source::Binary(bytes.clone())) {
+                let Some(mut info) = db.face(id).cloned() else {
+                    continue;
+                };
+                db.remove_face(id);
+                info.families = vec![(name.clone(), fontdb::Language::English_UnitedStates)];
+                let new_id = db.push_face_info(info);
+                by_name.entry(name.clone()).or_default().push(new_id);
+            }
+        }
+        let mut families: Vec<_> = by_name.into_iter().collect();
+        families.sort_by_cached_key(|(n, _)| (n.to_lowercase(), n.clone()));
+        Catalog { db, families }
+    }
+
     fn faces(&self) -> usize {
         self.families.iter().map(|(_, ids)| ids.len()).sum()
     }
@@ -247,8 +275,18 @@ impl Catalog {
 pub struct FontRegistry {
     pub(crate) fs: FontSystem,
     catalog: Arc<Catalog>,
+    /// The fonts the open file carries inside it (rung 12a); empty for most documents. They serve
+    /// the boxes that choose them, and only in this document.
+    embedded: Arc<Catalog>,
     /// Installed families open in `fs`.
     used: BTreeSet<String>,
+    /// Installed families opened because a character no bundled font has is in some text: they may
+    /// serve as fallback for any box (ADR-002 item 6).
+    fallback: BTreeSet<String>,
+    /// For each character looked for in the installed fonts, the family chosen to draw it.
+    fallback_for: BTreeMap<char, Option<String>>,
+    /// Measured signatures by family (ADR-001 item 6), made on first use.
+    signatures: BTreeMap<String, Option<FontSignature>>,
     /// (bundled family, optical size) pairs that have a copy in `fs`.
     instances: BTreeSet<(String, u16)>,
     weights: BTreeMap<String, Option<Weights>>,
@@ -260,29 +298,64 @@ fn binary(data: &'static [u8]) -> fontdb::Source {
     fontdb::Source::Binary(Arc::new(data))
 }
 
-/// The layout store: the bundled faces and the installed families in `used`.
-fn build_store(catalog: &Catalog, used: &BTreeSet<String>) -> FontSystem {
+/// The layout store: the bundled faces, the installed or embedded families in `used` (which serve
+/// only the boxes that chose them) and the installed families in `fallback` (which may serve any).
+fn build_store(
+    catalog: &Catalog,
+    embedded: &Catalog,
+    used: &BTreeSet<String>,
+    fallback: &BTreeSet<String>,
+) -> FontSystem {
     let mut db = fontdb::Database::new();
     for f in BUNDLED {
         db.load_font_source(binary(f.data));
     }
     let mut forbidden = Vec::new();
-    for name in used {
-        let Some(ids) = catalog.find(name) else {
+    let mut pushed: BTreeSet<&str> = BTreeSet::new();
+    for name in used.union(fallback) {
+        let Some((cat, ids)) = lookup(catalog, embedded, name) else {
             continue;
         };
         for id in ids {
-            if let Some(face) = catalog.db.face(*id) {
+            if let Some(face) = cat.db.face(*id) {
                 db.push_face_info(face.clone());
             }
         }
-        forbidden.push(intern(name));
+        pushed.insert(name);
+        // Installed fonts serve only the boxes that chose them; the file's own fonts are part of the
+        // document and may serve any box in it.
+        if !fallback.contains(name) && catalog.find(name).is_some() {
+            forbidden.push(intern(name));
+        }
+    }
+    // The file's own fonts are always open, for their boxes and as fallback.
+    for (name, ids) in &embedded.families {
+        if pushed.contains(name.as_str()) || catalog.find(name).is_some() {
+            continue;
+        }
+        for id in ids {
+            if let Some(face) = embedded.db.face(*id) {
+                db.push_face_info(face.clone());
+            }
+        }
     }
     FontSystem::new_with_locale_and_db_and_fallback(
         "en-US".into(),
         db,
         BundledFallback { forbidden },
     )
+}
+
+/// The faces of a family on this computer: the installed ones, else the ones the file carries.
+fn lookup<'a>(
+    catalog: &'a Catalog,
+    embedded: &'a Catalog,
+    family: &str,
+) -> Option<(&'a Catalog, &'a Vec<fontdb::ID>)> {
+    catalog
+        .find(family)
+        .map(|ids| (catalog, ids))
+        .or_else(|| embedded.find(family).map(|ids| (embedded, ids)))
 }
 
 /// (family, optical size) of a face name made by [`FontRegistry::ensure_instance`], or the name
@@ -336,11 +409,26 @@ impl FontRegistry {
         Self::with_catalog(Arc::new(Catalog::scan()), true)
     }
 
+    /// A registry whose "installed" fonts are the given files, each under the family name given
+    /// (whatever the file calls itself), for tests that must not depend on this computer's fonts.
+    /// It looks in them for fallback as a registry made by [`FontRegistry::with_system`] does; a
+    /// re-scan would replace them with the real ones.
+    #[doc(hidden)]
+    pub fn with_installed_for_test(files: &[(String, Arc<Vec<u8>>)]) -> Self {
+        Self::with_catalog(Arc::new(Catalog::from_files(files)), true)
+    }
+
     fn with_catalog(catalog: Arc<Catalog>, scans_system: bool) -> Self {
         let used = BTreeSet::new();
+        let embedded = Arc::new(Catalog::empty());
+        let fallback = BTreeSet::new();
         FontRegistry {
-            fs: build_store(&catalog, &used),
+            fs: build_store(&catalog, &embedded, &used, &fallback),
             catalog,
+            embedded,
+            fallback,
+            fallback_for: BTreeMap::new(),
+            signatures: BTreeMap::new(),
             used,
             instances: BTreeSet::new(),
             weights: BTreeMap::new(),
@@ -351,7 +439,101 @@ impl FontRegistry {
     /// Another registry over the same list of installed fonts, with a layout store of its own: for
     /// the pickers, whose previews would otherwise fill the page's store with every family shown.
     pub fn sibling(&self) -> Self {
-        Self::with_catalog(self.catalog.clone(), self.scans_system)
+        let mut s = Self::with_catalog(self.catalog.clone(), self.scans_system);
+        s.embedded = self.embedded.clone();
+        s.fs = build_store(&s.catalog, &s.embedded, &s.used, &s.fallback);
+        s
+    }
+
+    /// Takes in the fonts a file carries (rung 12a): `(family, file bytes)` for each, replacing the
+    /// ones of the document before. They are this document's only: never installed on the
+    /// computer, and gone when the next document sets its own. A family this computer has
+    /// installed is used from here as before; the embedded copy serves when it is not. Returns true
+    /// when the set of families changed, so pages need laying out again.
+    pub fn set_embedded(&mut self, files: &[(String, Arc<Vec<u8>>)]) -> bool {
+        let fresh = Catalog::from_files(files);
+        let changed = fresh.names() != self.embedded.names();
+        self.embedded = Arc::new(fresh);
+        self.weights.clear();
+        self.signatures.clear();
+        self.used
+            .retain(|n| lookup(&self.catalog, &self.embedded, n).is_some());
+        self.rebuild();
+        changed
+    }
+
+    /// Makes the layout store again from what is in use.
+    fn rebuild(&mut self) {
+        self.fs = build_store(&self.catalog, &self.embedded, &self.used, &self.fallback);
+        self.instances.clear();
+    }
+
+    /// True when `family` comes from the open file's embedded fonts only: not bundled, not installed.
+    pub fn is_embedded_only(&self, family: &str) -> bool {
+        BundledFont::for_family(family).is_none()
+            && self.catalog.find(family).is_none()
+            && self.embedded.find(family).is_some()
+    }
+
+    /// The font files an installed or embedded family needs for faces at the given (weight, italic)
+    /// pairs, each once, whole: what Save writes into the file. Errors with the reason when a file
+    /// may not be embedded ([`crate::embed`]). An empty list for a bundled family or one not here.
+    pub fn font_files(
+        &self,
+        family: &str,
+        wanted: &[(u16, bool)],
+    ) -> Result<Vec<FontFileData>, crate::embed::NoEmbed> {
+        if BundledFont::for_family(family).is_some() {
+            return Ok(Vec::new());
+        }
+        let Some((cat, ids)) = lookup(&self.catalog, &self.embedded, family) else {
+            return Ok(Vec::new());
+        };
+        let mut out: Vec<FontFileData> = Vec::new();
+        for (weight, italic) in wanted {
+            let q = fontdb::Query {
+                families: &[fontdb::Family::Name(family)],
+                weight: fontdb::Weight(*weight),
+                style: if *italic {
+                    fontdb::Style::Italic
+                } else {
+                    fontdb::Style::Normal
+                },
+                ..Default::default()
+            };
+            let Some(id) = cat.db.query(&q).filter(|id| ids.contains(id)) else {
+                continue;
+            };
+            let Some((bytes, face_weight, face_italic)) = cat
+                .db
+                .with_face_data(id, |data, _| data.to_vec())
+                .zip(
+                    cat.db
+                        .face(id)
+                        .map(|f| (f.weight.0, f.style != fontdb::Style::Normal)),
+                )
+                .map(|(b, (w, i))| (b, w, i))
+            else {
+                continue;
+            };
+            crate::embed::verdict(&bytes)?;
+            if !out
+                .iter()
+                .any(|f| f.bytes == bytes && f.italic == face_italic)
+            {
+                out.push(FontFileData {
+                    bytes,
+                    weight: face_weight,
+                    italic: face_italic,
+                });
+            }
+        }
+        Ok(out)
+    }
+
+    /// True when `family` is installed on this computer (and not shadowed by a bundled family).
+    pub fn is_installed(&self, family: &str) -> bool {
+        BundledFont::for_family(family).is_none() && self.catalog.find(family).is_some()
     }
 
     /// Scans this computer's fonts again, in full (ADR-002 item 8: no change detection), and waits
@@ -411,22 +593,25 @@ impl FontRegistry {
         };
         self.catalog = Arc::new(fresh);
         self.weights.clear();
+        self.signatures.clear();
+        self.fallback_for.clear();
         // Installed faces may have moved or gone: open the ones still there again.
         let keep: BTreeSet<String> = self
             .used
             .iter()
-            .filter(|n| self.catalog.find(n).is_some())
+            .filter(|n| lookup(&self.catalog, &self.embedded, n).is_some())
             .cloned()
             .collect();
         self.used = keep;
-        self.fs = build_store(&self.catalog, &self.used);
-        self.instances.clear();
+        self.fallback.clear();
+        self.rebuild();
         scan
     }
 
     /// True when some family of this name can be laid out: a bundled one or an installed one.
     pub fn has_family(&self, family: &str) -> bool {
-        BundledFont::for_family(family).is_some() || self.catalog.find(family).is_some()
+        BundledFont::for_family(family).is_some()
+            || lookup(&self.catalog, &self.embedded, family).is_some()
     }
 
     /// The families, bundled ones first (in the order they ship), then the installed ones
@@ -438,6 +623,7 @@ impl FontRegistry {
                 out.push(FamilyInfo {
                     name: b.family.into(),
                     bundled: true,
+                    embedded: false,
                     italic: BUNDLED.iter().any(|x| x.family == b.family && x.italic),
                 });
             }
@@ -446,8 +632,26 @@ impl FontRegistry {
             out.push(FamilyInfo {
                 name: name.clone(),
                 bundled: false,
+                embedded: false,
                 italic: ids.iter().any(|id| {
                     self.catalog
+                        .db
+                        .face(*id)
+                        .is_some_and(|f| f.style != fontdb::Style::Normal)
+                }),
+            });
+        }
+        // The file's own fonts, after the installed ones, for a family the computer lacks.
+        for (name, ids) in &self.embedded.families {
+            if self.catalog.find(name).is_some() {
+                continue;
+            }
+            out.push(FamilyInfo {
+                name: name.clone(),
+                bundled: false,
+                embedded: true,
+                italic: ids.iter().any(|id| {
+                    self.embedded
                         .db
                         .face(*id)
                         .is_some_and(|f| f.style != fontdb::Style::Normal)
@@ -483,14 +687,14 @@ impl FontRegistry {
             }
             return Some(Weights::Set(vec![400]));
         }
-        let ids = self.catalog.find(family)?;
+        let (cat, ids) = lookup(&self.catalog, &self.embedded, family)?;
         let mut range: Option<(u16, u16)> = None;
         let mut set = BTreeSet::new();
         for id in ids {
-            if let Some(face) = self.catalog.db.face(*id) {
+            if let Some(face) = cat.db.face(*id) {
                 set.insert(face.weight.0);
             }
-            let r = self.catalog.db.with_face_data(*id, |data, index| {
+            let r = cat.db.with_face_data(*id, |data, index| {
                 let f = FontRef::from_index(data, index).ok()?;
                 let a = f.axes().get_by_tag(Tag::new(b"wght"))?;
                 Some((a.min_value().round() as u16, a.max_value().round() as u16))
@@ -513,10 +717,9 @@ impl FontRegistry {
         if BundledFont::for_family(family).is_some() {
             return BUNDLED.iter().any(|b| b.family == family && b.italic);
         }
-        self.catalog.find(family).is_some_and(|ids| {
+        lookup(&self.catalog, &self.embedded, family).is_some_and(|(cat, ids)| {
             ids.iter().any(|id| {
-                self.catalog
-                    .db
+                cat.db
                     .face(*id)
                     .is_some_and(|f| f.style != fontdb::Style::Normal)
             })
@@ -529,7 +732,10 @@ impl FontRegistry {
     pub fn ensure_open<'a>(&mut self, names: impl IntoIterator<Item = &'a str>) {
         let wanted: BTreeSet<String> = names
             .into_iter()
-            .filter(|n| BundledFont::for_family(n).is_none() && self.catalog.find(n).is_some())
+            .filter(|n| {
+                BundledFont::for_family(n).is_none()
+                    && lookup(&self.catalog, &self.embedded, n).is_some()
+            })
             .map(String::from)
             .collect();
         if wanted.is_subset(&self.used) {
@@ -540,8 +746,7 @@ impl FontRegistry {
         } else {
             self.used.extend(wanted);
         }
-        self.fs = build_store(&self.catalog, &self.used);
-        self.instances.clear();
+        self.rebuild();
     }
 
     /// The name of the copy of a bundled family at optical size `opsz` points, made on first use.
@@ -614,5 +819,217 @@ impl FontRegistry {
         let (base, inst) = split_instance(raw);
         let opsz = inst.or_else(|| bundled_opsz_default(base)).unwrap_or(0);
         (base.to_string(), face.style != fontdb::Style::Normal, opsz)
+    }
+}
+
+/// A whole font file read from an installed or embedded family, to be saved in a document.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FontFileData {
+    /// The file's bytes.
+    pub bytes: Vec<u8>,
+    /// The weight of the face used (its default, for a variable font).
+    pub weight: u16,
+    /// True when the face is italic or oblique.
+    pub italic: bool,
+}
+
+/// What a missing font was like, to find a substitute for it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Want {
+    /// The family that is missing.
+    pub family: String,
+    /// Its signature, as the file saved it; `None` for a file from before format 0.13, which gives the
+    /// family name only (the match then goes by the class its name hints at).
+    pub signature: Option<FontSignature>,
+}
+
+/// One candidate substitute.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Match {
+    /// The family.
+    pub family: String,
+    /// True for a font that ships inside quadrule.
+    pub bundled: bool,
+    /// How far it is from what was wanted (lower is closer); 0 for the very name.
+    pub distance: u32,
+}
+
+impl FontRegistry {
+    /// The measured signature of a family on this computer (ADR-001 item 6): its upright face nearest
+    /// regular, at regular weight. `None` for a family not here or one with no letters to measure.
+    pub fn signature_of(&mut self, family: &str) -> Option<FontSignature> {
+        if let Some(s) = self.signatures.get(family) {
+            return s.clone();
+        }
+        let sig = self.measure_family(family);
+        self.signatures.insert(family.into(), sig.clone());
+        sig
+    }
+
+    fn measure_family(&self, family: &str) -> Option<FontSignature> {
+        let sig = if let Some(b) = BundledFont::for_family(family) {
+            signature::measure(b.data, 0, Some(400), family)?
+        } else {
+            let (cat, ids) = lookup(&self.catalog, &self.embedded, family)?;
+            // The upright face whose weight is nearest 400.
+            let id = ids
+                .iter()
+                .filter_map(|id| cat.db.face(*id))
+                .min_by_key(|f| {
+                    (
+                        u8::from(f.style != fontdb::Style::Normal),
+                        f.weight.0.abs_diff(400),
+                    )
+                })?
+                .id;
+            cat.db
+                .with_face_data(id, |data, index| {
+                    signature::measure(data, index, Some(400), family)
+                })
+                .flatten()?
+        };
+        Some(sig)
+    }
+
+    /// The closest families here to a missing font, best first (at most `n`): an exact name (any
+    /// capitals) wins; otherwise the lowest distance by signature (ADR-002 item 7). Every family on
+    /// this computer is a candidate, bundled ones included, except fonts with nothing to measure
+    /// (emoji, symbols).
+    pub fn best_matches(&mut self, want: &Want, n: usize) -> Vec<Match> {
+        let names: Vec<(String, bool)> = self
+            .families()
+            .into_iter()
+            .map(|f| (f.name, f.bundled))
+            .collect();
+        let target = want.signature.clone().unwrap_or_else(|| FontSignature {
+            class: signature::name_class(&want.family).unwrap_or(quadrule_model::FontClass::Sans),
+            weight: 400,
+            width: 100,
+            italic: false,
+            avg_width: 0,
+            x_height: 0,
+            mono: false,
+            extra: Default::default(),
+        });
+        let mut out = Vec::new();
+        for (name, bundled) in names {
+            if name == want.family {
+                continue;
+            }
+            let exact = name.eq_ignore_ascii_case(&want.family);
+            let Some(sig) = self.signature_of(&name) else {
+                if exact {
+                    out.push(Match {
+                        family: name,
+                        bundled,
+                        distance: 0,
+                    });
+                }
+                continue;
+            };
+            let distance = if exact {
+                0
+            } else {
+                signature::distance(&target, &sig)
+            };
+            out.push(Match {
+                family: name,
+                bundled,
+                distance,
+            });
+        }
+        out.sort_by(|a, b| (a.distance, &a.family).cmp(&(b.distance, &b.family)));
+        out.truncate(n);
+        out
+    }
+
+    /// Looks in the installed fonts for the characters `chars`, which the chosen font and the bundled
+    /// ones lack (ADR-002 item 6), and opens the families that have them as fallback. Returns true
+    /// when the layout store changed, so the text should be laid out again. Does nothing for a
+    /// registry made by [`FontRegistry::bundled_only`].
+    pub(crate) fn open_fallbacks(&mut self, chars: &BTreeSet<char>) -> bool {
+        if !self.scans_system {
+            return false;
+        }
+        let todo: BTreeSet<char> = chars
+            .iter()
+            .copied()
+            .filter(|c| !c.is_whitespace() && !self.fallback_for.contains_key(c))
+            .collect();
+        if !todo.is_empty() {
+            let found = self.find_covering(&todo);
+            for c in todo {
+                self.fallback_for.insert(c, found.get(&c).cloned());
+            }
+        }
+        let wanted: BTreeSet<String> = chars
+            .iter()
+            .filter_map(|c| self.fallback_for.get(c).cloned().flatten())
+            .collect();
+        if wanted.is_subset(&self.fallback) {
+            return false;
+        }
+        self.fallback.extend(wanted);
+        self.rebuild();
+        true
+    }
+
+    /// For each of `chars`, the installed family to draw it with: the family that covers the most of
+    /// those still unplaced, over and over, ties by name.
+    fn find_covering(&self, chars: &BTreeSet<char>) -> BTreeMap<char, String> {
+        let mut covers: Vec<(String, BTreeSet<char>)> = Vec::new();
+        for (name, ids) in &self.catalog.families {
+            let mut have = BTreeSet::new();
+            // One face of the family is enough to say what it covers.
+            if let Some(id) = ids.first() {
+                self.catalog.db.with_face_data(*id, |data, index| {
+                    if let Ok(f) = FontRef::from_index(data, index) {
+                        let map = f.charmap();
+                        for c in chars {
+                            if map.map(*c).is_some_and(|g| g.to_u32() != 0) {
+                                have.insert(*c);
+                            }
+                        }
+                    }
+                });
+            }
+            if !have.is_empty() {
+                covers.push((name.clone(), have));
+            }
+        }
+        let mut left = chars.clone();
+        let mut out = BTreeMap::new();
+        while !left.is_empty() {
+            let best = covers
+                .iter()
+                .map(|(n, have)| (n, have.intersection(&left).count()))
+                .filter(|(_, k)| *k > 0)
+                .max_by(|a, b| a.1.cmp(&b.1).then_with(|| b.0.cmp(a.0)));
+            let Some((name, _)) = best else { break };
+            let have = covers
+                .iter()
+                .find(|(n, _)| n == name)
+                .map(|(_, h)| h.clone())
+                .unwrap_or_default();
+            for c in have.intersection(&left.clone()) {
+                out.insert(*c, name.clone());
+                left.remove(c);
+            }
+        }
+        out
+    }
+
+    /// Opens fallback for the letters of `text` and returns the families now open as fallback, for
+    /// tests.
+    #[doc(hidden)]
+    pub fn open_fallbacks_for_test(&mut self, text: &str) -> Vec<String> {
+        let chars: BTreeSet<char> = text.chars().collect();
+        self.open_fallbacks(&chars);
+        self.fallback.iter().cloned().collect()
+    }
+
+    /// True when the registry may draw a letter from an installed font that no bundled font has.
+    pub fn falls_back_to_installed(&self) -> bool {
+        self.scans_system
     }
 }

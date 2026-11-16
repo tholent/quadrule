@@ -23,9 +23,10 @@
 //! Rung 11a added the bundled set with italics, optical size, installed fonts with the re-scan on
 //! focus (item 8), and a fallback that uses bundled fonts only ([`registry`]).
 //!
-//! Not built yet: fallback to any installed font with its warning (ADR-002 item 6, rung 12),
-//! substitution by font signature (item 7), hinting (item 4's flag), paragraph spacing, vertical
-//! alignment and the overflow signal (item 3, rung 11b).
+//! Rung 12a added the font signature and the ranking of substitutes ([`signature`]), fonts carried
+//! inside a file, boxes whose font is missing (listed in [`Laid::unavailable`]) and fallback to any
+//! installed font, reported in [`Laid::fallback`] (ADR-002 items 6 and 7). Not built: hinting
+//! (item 4's flag; v1.1).
 
 #![forbid(unsafe_code)]
 
@@ -40,14 +41,17 @@ use cosmic_text::{Align, Attrs, Buffer, Family, FontSystem, Metrics, Shaping, We
 use std::collections::HashMap;
 
 pub mod edit;
+pub mod embed;
 pub mod opsz;
 pub mod registry;
+pub mod signature;
 use quadrule_model::outlines::{
     FaceKey, GlyphShape, GlyphTable, PlacedGlyph, ProfileOutlines, TextOutlines,
 };
 use quadrule_model::{Extra, TextAlign, TextBox, Uuid, VerticalAlign, pt_to_mm};
 pub use registry::{
-    FALLBACK_ORDER, FamilyInfo, Finished, FontRegistry, PendingScan, Scan, Weights, scans_started,
+    FALLBACK_ORDER, FamilyInfo, Finished, FontFileData, FontRegistry, Match, PendingScan, Scan,
+    Want, Weights, scans_started,
 };
 use std::collections::BTreeMap;
 
@@ -278,7 +282,9 @@ impl<'a> TextRequest<'a> {
 /// Why text could not be laid out.
 #[derive(Debug, Clone, PartialEq)]
 pub enum TextError {
-    /// The family is not loaded. (The missing-font flow, napkin §7.3, is a later rung.)
+    /// The family is not loaded. Laying a page out does not stop for it (the box is left out and listed
+    /// in [`Laid::unavailable`], rung 12a); this is the error of what needs the font itself, such as
+    /// typing into the box.
     MissingFamily(String),
     /// A glyph's outline could not be read from its font.
     Outline(String),
@@ -302,6 +308,16 @@ pub struct Laid {
     pub outlines: ProfileOutlines,
     /// Letters drawn as the font's "missing" box (glyph 0).
     pub missing_glyphs: usize,
+    /// The boxes left out because their font is not on this computer (not bundled, not installed, not
+    /// in the file): nothing is drawn for them here, and the caller supplies their saved outlines
+    /// (napkin §7.3; rung 12a).
+    pub unavailable: Vec<Uuid>,
+    /// The boxes with a letter drawn as the font's "missing" box (glyph 0): not even an installed font
+    /// had it. The text as designed (saved outlines) shows better than that box, when there are some.
+    pub lacking: Vec<Uuid>,
+    /// The families that drew a letter a box's own font lacked (ADR-002 item 6): bundled ones too.
+    /// The linter's L20 warns about the installed ones among them.
+    pub fallback: std::collections::BTreeSet<String>,
     /// Shape coordinates that were not a whole number of half font units and were rounded to
     /// the nearest half (at most 0.25 font units; happens at variable-font weights between
     /// masters). Live and saved text both use the rounded shape.
@@ -350,24 +366,42 @@ pub fn lay_out(
     let mut texts = Vec::with_capacity(requests.len());
     let mut missing = 0;
     let mut rounded = 0;
+    let mut unavailable = Vec::new();
+    let mut lacking = Vec::new();
+    let mut fallback_families = std::collections::BTreeSet::new();
     // Installed families first, so the layout store is rebuilt at most once for the page.
     reg.ensure_open(requests.iter().map(|r| r.text.family.as_str()));
     // Family, italic flag and optical size of each face met, worked out once.
     let mut identities: HashMap<fontdb::ID, (String, bool, u16)> = HashMap::new();
-    for req in requests {
+    'requests: for req in requests {
         let tb = req.text;
-        let resolved = reg
-            .resolve(&tb.family, tb.weight, tb.style, tb.size_pt)
-            .ok_or_else(|| TextError::MissingFamily(tb.family.clone()))?;
-        let prep = prepare(reg, req, resolved)?;
-        let buf = paragraph(
-            &mut reg.fs,
-            tb,
-            &prep.resolved,
-            prep.size_mm,
-            prep.line_mm,
-            req.width_mm as f32,
-        );
+        // A second pass when a letter no chosen or bundled font has was found in an installed font,
+        // which opens it in the layout store (ADR-002 item 6).
+        let mut pass = 0;
+        let (prep, buf) = loop {
+            let Some(resolved) = reg.resolve(&tb.family, tb.weight, tb.style, tb.size_pt) else {
+                unavailable.push(req.object_id);
+                continue 'requests;
+            };
+            let prep = prepare(reg, req, resolved)?;
+            let buf = paragraph(
+                &mut reg.fs,
+                tb,
+                &prep.resolved,
+                prep.size_mm,
+                prep.line_mm,
+                req.width_mm as f32,
+            );
+            if pass == 0 && reg.falls_back_to_installed() {
+                let lacking = chars_without_glyphs(&buf);
+                if !lacking.is_empty() && reg.open_fallbacks(&lacking) {
+                    identities.clear();
+                    pass += 1;
+                    continue;
+                }
+            }
+            break (prep, buf);
+        };
         let (_, arranged) = arrange_buffer(&buf, req, &prep);
         let mut glyphs = Vec::new();
         for (run, line) in buf.layout_runs().zip(&arranged.lines) {
@@ -377,11 +411,17 @@ pub fn lay_out(
             for g in run.glyphs {
                 if g.glyph_id == 0 {
                     missing += 1;
+                    if lacking.last() != Some(&req.object_id) {
+                        lacking.push(req.object_id);
+                    }
                 }
                 let (family, italic, opsz) = identities
                     .entry(g.font_id)
                     .or_insert_with(|| reg.face_identity(g.font_id))
                     .clone();
+                if family != tb.family {
+                    fallback_families.insert(family.clone());
+                }
                 let key = FaceKey {
                     family,
                     weight: g.font_weight.0,
@@ -442,8 +482,26 @@ pub fn lay_out(
     Ok(Laid {
         outlines,
         missing_glyphs: missing,
+        unavailable,
+        lacking,
+        fallback: fallback_families,
         rounded_coords: rounded,
     })
+}
+
+/// The characters of a shaped box that came out as the font's "missing" box (glyph 0).
+fn chars_without_glyphs(buf: &Buffer) -> std::collections::BTreeSet<char> {
+    let mut out = std::collections::BTreeSet::new();
+    for run in buf.layout_runs() {
+        for g in run.glyphs {
+            if g.glyph_id == 0
+                && let Some(s) = run.text.get(g.start..g.end)
+            {
+                out.extend(s.chars().filter(|c| !c.is_whitespace()));
+            }
+        }
+    }
+    out
 }
 
 /// What a box's layout needs worked out before its text is shaped (rung 11b).
