@@ -464,6 +464,11 @@ The linter runs continuously, with results in a Lint panel and an issue count in
 > Amended 2026-11-10, chris in the v1 arc bbq (`docs/arcs/v1/v1-PROMPT-2026-11-10.md`, Q7): L04 moves to v1.1, since
 > the Label gray question it depends on stays open until v1.1. Every other rule above that is not marked v1.1 is v1.
 
+> Amended 2026-11-16, rung 12a (`docs/bbq/2026-11-16-rung-12-missing-fonts.md`, Q7; ADR-002 item 6): the table gains one
+> row, **L20 | Uses fonts installed on this computer (chosen, or as fallback for a letter the chosen font lacks); each
+> is marked embedded, not embedded (Embed fonts is off), or cannot be embedded (its licence) | Warn**. It is said once
+> for the document, not per device. The id is the lead's proposal; chris may rename it. L11 is built in the same rung.
+
 Rhythm rules offer quick fixes: "Snap to rhythm" (single object or all off-rhythm objects), "Bind to rhythm," and "Center rhythm origin." Objects can be marked **"Free placement"** in the Arrange tab to opt out of L16 deliberately, e.g. a decorative element.
 
 Each rule has a tooltip that explains the problem in plain language and offers a quick fix ("Snap to pixel grid", "Use Guide role", "Move inside safe area"). Rules and thresholds read from the active profile's presets. Lint runs per profile, and the panel can filter by profile.

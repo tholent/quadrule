@@ -347,6 +347,8 @@ new-text-content = Text
 
 # Groups (rung 7a).
 new-name-group = Group
+notice-text-read-only = "{ $name }" is drawn from saved outlines because its font is not on this computer, so its text cannot change. It can be moved, turned, faded, copied, grouped and deleted. Choose a font to edit it.
+notice-locate-failed = The fonts folder could not be opened: { $error }
 notice-turned-group = The group "{ $name }" is turned, and text boxes and pattern regions do not turn, so they cannot go into it.
 notice-group-mixed = Those objects are in different groups. Pick objects from one place to group them.
 notice-group-few = Pick two or more objects to group them.
@@ -486,3 +488,46 @@ app-repeat-expand-hint = Turn the copies into plain objects in one group. Nothin
 app-repeat-drawn = { $drawn } of { $total } copies are drawn on this device.
 app-repeat-capped-note = The cap of { $max } copies cut it short.
 app-repeat-locked = This repeat is locked.
+
+# Missing fonts (rung 12a). The bar above the canvas, the Missing fonts dialog, the Text tab's badge,
+# the layers row's warning, the Page tab's tick and the Save sheet.
+app-fonts-bar = { $count ->
+        [one] One font missing: { $fonts }. Showing saved outlines.
+       *[other] { $count } fonts missing: { $fonts }. Showing saved outlines.
+    }
+app-fonts-bar-name = { $name }
+app-fonts-bar-sep = {", "}
+app-fonts-bar-choose = Choose…
+app-fonts-bar-close = Close
+app-fonts-bar-close-tip = Hide this bar until the document is opened again
+app-missing-title = Missing fonts
+app-missing-intro = These fonts are not on this computer. Their text is drawn from the outlines saved in the file, which looks as designed but cannot be edited.
+app-missing-row = { $count ->
+        [one] { $font } (1 text box)
+       *[other] { $font } ({ $count } text boxes)
+    }
+app-missing-use-saved = Use saved outlines
+app-missing-substitute = Substitute: { $font }
+app-missing-other = Other font…
+app-missing-locate = Locate fonts…
+app-missing-locate-tip = Open the folder where fonts are added on this computer; fonts added there are used at once
+app-missing-remember = Remember for this document
+app-missing-remember-tip = Keep the fonts left as saved outlines from being named in the bar again
+app-missing-apply = Apply
+app-missing-cancel = Cancel
+app-missing-none = No fonts are missing.
+app-text-saved-outlines = ⚠ Saved outlines. { $font } is not on this computer.
+app-choose-a-font = Choose a font…
+app-layer-saved-outlines = Drawn from saved outlines: its font is not on this computer
+app-embed-fonts = Embed fonts
+app-embed-fonts-tip = Save the installed fonts this page uses inside the file, where their licences allow it
+app-sheet-title = Fonts installed on this computer
+app-sheet-intro = This page uses fonts installed on this computer. Someone without them sees other fonts unless the fonts are embedded.
+app-sheet-item = { $font }: { $status }
+app-sheet-embedded = embedded in the file
+app-sheet-off = not embedded: Embed fonts is off
+app-sheet-cannot = cannot be embedded: { $reason }
+app-sheet-fallback = (for letters the chosen font lacks)
+app-sheet-continue = Continue
+app-sheet-cancel = Cancel
+app-sheet-dont-warn = Don't warn again for this document

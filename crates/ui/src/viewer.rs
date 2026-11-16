@@ -19,16 +19,24 @@
 use quadrule_format::{Manifest, QuadFile, ReadOnly};
 use quadrule_i18n::Message;
 use quadrule_layout::snap::SnapToggles;
-use quadrule_layout::{DisplayList, Placed, display_list, lay_out_text, placed_objects};
-use quadrule_lint::{Finding, Options, Toolbar, lint_against};
+use quadrule_layout::{
+    DisplayList, Placed, SavedText, display_list, lay_out_text_saved, placed_objects,
+};
+use quadrule_lint::{
+    EmbedStatus, Finding, FontFacts, InstalledFont, MissingBox, Options, Toolbar, lint_against,
+};
 use quadrule_model::edit::History;
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Uuid};
 use quadrule_profiles::{Profile, builtin, builtin_for};
 use quadrule_render::{Gray, Math, encode_png, render, turn_clockwise};
-use quadrule_text::FontRegistry;
+use quadrule_text::embed::NoEmbed;
+use quadrule_text::{BundledFont, FontRegistry};
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
+
+/// The family the missing-fonts page names, which no computer has.
+pub const MISSING_PAGE_FONT: &str = "Quadrule Missing Test Font";
 
 /// Toolbar positions the viewer lints for, shows safe zones for, and snaps to: the docked ones,
 /// left, right and top (chris, 2026-11-10: "the safe area linting should look at all safe areas,
@@ -62,9 +70,12 @@ pub struct Page {
     pub image: Gray,
     /// Lint findings on this device.
     pub findings: Vec<Finding>,
-    /// True when the page used the outlines saved in the file because a font is missing here
-    /// (ADR-001 item 2).
+    /// True when some text box was drawn from the outlines saved in the file because its font is
+    /// missing here (ADR-001 item 2; rung 12a).
     pub saved_outlines: bool,
+    /// What the linter was told about fonts for this page (rung 12a): the boxes drawn from saved
+    /// outlines and the installed fonts used. The Save sheet lists the latter.
+    pub font_facts: FontFacts,
     /// Each object's shape on this device, bottom first, for picking (rung 3).
     pub placed: Vec<Placed>,
     /// What was drawn, for the graphics-chip canvas (rung 3 bbq Q4).
@@ -111,6 +122,24 @@ pub struct Open {
     /// The lint findings of the last page made from `doc` itself, by profile id. A page made
     /// from the preview shows these rather than running the linter on every frame of a drag.
     pub(crate) findings: BTreeMap<String, Vec<Finding>>,
+    /// The fonts the document names that are not on this computer, and the boxes that use them
+    /// (rung 12a). Made again after every change and every re-scan.
+    pub(crate) missing: Vec<MissingFont>,
+    /// The bar above the canvas was closed with its ×; it stays closed until the document is opened
+    /// again.
+    pub(crate) bar_closed: bool,
+}
+
+/// A font a document names that is not on this computer (napkin §7.3; rung 12a).
+#[derive(Clone, Debug, PartialEq)]
+pub struct MissingFont {
+    /// The family.
+    pub family: String,
+    /// The text boxes that use it, in document order.
+    pub boxes: Vec<Uuid>,
+    /// chris chose to keep it as saved outlines for this document ("Remember for this document"):
+    /// the bar does not name it.
+    pub kept: bool,
 }
 
 /// The two choices under Export (rung 2 bbq, Q8).
@@ -202,6 +231,9 @@ pub struct Viewer {
     /// What Align to is for two or more objects picked: the selection, until they pick otherwise.
     pub align_multi: quadrule_layout::align::AlignTo,
     pub(crate) fonts: FontRegistry,
+    /// Whether each installed or embedded family may be saved inside a file, found once per family
+    /// (rung 12a); made again after a re-scan.
+    pub(crate) embed_cache: BTreeMap<String, Result<(), NoEmbed>>,
     /// The typing session on the canvas, if any (rung 11b).
     pub(crate) typing: Option<crate::typing::Typing>,
     /// The re-scan of the installed fonts running now, if any (rung 11b).
@@ -260,6 +292,7 @@ impl Default for Viewer {
             align_single: quadrule_layout::align::AlignTo::Page,
             align_multi: quadrule_layout::align::AlignTo::Selection,
             fonts: FontRegistry::bundled_only(),
+            embed_cache: BTreeMap::new(),
             typing: None,
             font_scan: None,
             last_font_scan: None,
@@ -327,11 +360,13 @@ impl Viewer {
         self.fonts.has_italic(family)
     }
 
-    fn invalidate_pages(&mut self) {
+    pub(crate) fn invalidate_pages(&mut self) {
         self.revision += 1;
+        self.embed_cache.clear();
         if let Some(o) = &mut self.open {
             o.pages.clear();
         }
+        self.refresh_font_state();
     }
 
     /// Opens the rung 1 sample page.
@@ -408,6 +443,47 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 12a missing-fonts page: the text-box page with every text box in a font this
+    /// computer lacks, so it is drawn from saved outlines and the bar names the font. The saved
+    /// outlines are made here, with the bundled Caveat filed under a test-only family name. Like the
+    /// sample, it has no file.
+    pub fn open_missing_fonts(&mut self) {
+        let mut doc = quadrule_model::sample::textbox_document();
+        let ids: Vec<Uuid> = doc
+            .objects()
+            .filter(|o| matches!(o.kind, quadrule_model::ObjectKind::Text(_)))
+            .map(|o| o.id)
+            .collect();
+        for id in ids {
+            if let Some(o) = doc.object_mut(id)
+                && let quadrule_model::ObjectKind::Text(t) = &mut o.kind
+            {
+                t.family = MISSING_PAGE_FONT.into();
+                t.weight = 400;
+            }
+        }
+        let caveat = quadrule_text::BUNDLED.iter().find(|b| b.id == "caveat");
+        let mut saved = BTreeMap::new();
+        if let (Some(c), Ok(primary)) = (
+            caveat,
+            builtin_for(&doc.primary_profile_id, doc.page.orientation),
+        ) {
+            let mut reg = FontRegistry::bundled_only();
+            reg.set_embedded(&[(
+                MISSING_PAGE_FONT.into(),
+                std::sync::Arc::new(c.data.to_vec()),
+            )]);
+            for id in doc.profile_ids() {
+                if let Ok(t) = builtin_for(id, doc.page.orientation)
+                    && let Ok(l) = quadrule_layout::lay_out_text(&doc, &primary, &t, &mut reg)
+                {
+                    saved.insert(id.to_string(), l.outlines);
+                }
+            }
+        }
+        self.set_open(Source::Sample, doc, saved, None);
+    }
+
     /// The pattern page held sideways (rung 9).
     pub fn open_patterns_landscape(&mut self) {
         let doc = quadrule_model::sample::patterns_landscape_document();
@@ -451,7 +527,23 @@ impl Viewer {
         }
         builtin(&file.doc.primary_profile_id).map_err(|e| e.to_string())?;
         let read_only = file.read_only.clone();
+        // The fonts the file carries serve this document only; a damaged one is skipped (rung 12a).
+        let carried: Vec<(String, std::sync::Arc<Vec<u8>>)> = file
+            .manifest
+            .fonts
+            .iter()
+            .flat_map(|f| {
+                f.files.iter().filter_map(|ff| {
+                    file.font_files
+                        .get(&ff.path)
+                        .map(|b| (f.family.clone(), std::sync::Arc::new(b.clone())))
+                })
+            })
+            .collect();
         self.set_open(source, file.doc, file.outlines, Some(file.manifest));
+        if self.fonts.set_embedded(&carried) {
+            self.invalidate_pages();
+        }
         if let Some(o) = &mut self.open {
             o.read_only = read_only;
         }
@@ -468,8 +560,9 @@ impl Viewer {
         if !doc.profile_ids().contains(&self.profile_id.as_str()) {
             self.profile_id = doc.primary_profile_id.clone();
         }
-        // A session in the document that was open is over with it.
+        // A session in the document that was open is over with it; so are its carried fonts.
         self.typing = None;
+        self.fonts.set_embedded(&[]);
         self.open = Some(Open {
             source,
             doc,
@@ -480,7 +573,10 @@ impl Viewer {
             read_only: None,
             preview: None,
             findings: BTreeMap::new(),
+            missing: Vec::new(),
+            bar_closed: false,
         });
+        self.refresh_font_state();
         self.drag = None;
         self.draw = None;
         self.tool = crate::tools::Tool::Select;
@@ -522,18 +618,37 @@ impl Viewer {
 
     /// The page for device `id`, rendered on first use.
     pub fn page_for(&mut self, id: &str) -> Result<&Page, String> {
-        let Viewer { open, fonts, .. } = self;
+        let Viewer {
+            open,
+            fonts,
+            embed_cache,
+            ..
+        } = self;
         let open = open.as_mut().ok_or("nothing is open")?;
         if !open.pages.contains_key(id) {
             let page = match &open.preview {
                 // A frame of a drag: the linter is not run; the last findings stand.
                 Some(doc) => {
                     let known = open.findings.get(id).cloned();
-                    make_page(doc, &open.saved, id, fonts, Some(known.unwrap_or_default()))?
+                    make_page(
+                        doc,
+                        &open.saved,
+                        id,
+                        fonts,
+                        embed_cache,
+                        Some(known.unwrap_or_default()),
+                    )?
+                    .0
                 }
                 None => {
-                    let page = make_page(&open.doc, &open.saved, id, fonts, None)?;
+                    let (page, outlines) =
+                        make_page(&open.doc, &open.saved, id, fonts, embed_cache, None)?;
                     open.findings.insert(id.to_string(), page.findings.clone());
+                    // What was just drawn is the newest text there is: should a font go away later,
+                    // these are the shapes to fall back on, never ones from before an edit.
+                    if let Some(o) = outlines {
+                        open.saved.insert(id.to_string(), o);
+                    }
                     page
                 }
             };
@@ -682,27 +797,31 @@ pub fn ruler_px_per_mm(bar_points: f32, ppp: f32, reference_mm: f64) -> f64 {
     (bar_points * ppp) as f64 / reference_mm
 }
 
+/// Makes the page for device `id`. Also gives the outlines it was drawn from when they hold the
+/// newest text of every box (so the caller may remember them as the saved ones).
 fn make_page(
     doc: &Document,
     saved: &BTreeMap<String, ProfileOutlines>,
     id: &str,
     fonts: &mut FontRegistry,
+    embed_cache: &mut BTreeMap<String, Result<(), NoEmbed>>,
     known_findings: Option<Vec<Finding>>,
-) -> Result<Page, String> {
+) -> Result<(Page, Option<ProfileOutlines>), String> {
     let primary =
         builtin_for(&doc.primary_profile_id, doc.page.orientation).map_err(|e| e.to_string())?;
     let target = builtin_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
-    let laid = lay_out_text(doc, &primary, &target, fonts).map_err(|e| e.to_string())?;
-    // Live layout is what export would make; when a font is missing here, the outlines the file
-    // saved show the text as it was designed (ADR-001 item 2).
-    let (outlines, saved_outlines) = match saved.get(id) {
-        Some(s) if laid.missing_glyphs > 0 => (s.clone(), true),
-        _ => (laid.outlines, false),
-    };
+    // A box whose font is not on this computer is drawn from the shapes the file saved for it
+    // (napkin §7.3; ADR-001 items 2 and 7); the others are laid out live.
+    let (laid, how) =
+        lay_out_text_saved(doc, &primary, &target, fonts, saved).map_err(|e| e.to_string())?;
+    let saved_outlines = !how.from_saved.is_empty() || !how.reused.is_empty();
+    let font_facts = font_facts(doc, &laid, &how, fonts, embed_cache);
+    let outlines = laid.outlines;
     let dl = display_list(doc, &primary, &target, &outlines).map_err(|e| e.to_string())?;
     let image = render(&dl, Math::Fastest);
     let opts = Options {
         toolbars: TOOLBARS_IN_USE.to_vec(),
+        fonts: font_facts.clone(),
     };
     let findings = match known_findings {
         Some(f) => f,
@@ -710,8 +829,9 @@ fn make_page(
             // L15 compares a text box with its height on the primary page, so the text is laid out
             // there too (rung 11b).
             let primary_laid = (target.id != primary.id && doc.objects().any(|o| o.keeps_height()))
-                .then(|| lay_out_text(doc, &primary, &primary, fonts))
-                .and_then(Result::ok);
+                .then(|| lay_out_text_saved(doc, &primary, &primary, fonts, saved))
+                .and_then(Result::ok)
+                .map(|(l, _)| l);
             lint_against(
                 doc,
                 &primary,
@@ -749,16 +869,77 @@ fn make_page(
             })
         })
         .collect();
-    Ok(Page {
-        profile: target,
-        image,
-        findings,
-        saved_outlines,
-        placed,
-        display_list: dl,
-        repeats_capped,
-        overflows,
-    })
+    let fresh = how.from_saved.is_empty() && how.reused.is_empty() && how.needs_font.is_empty();
+    Ok((
+        Page {
+            profile: target,
+            image,
+            findings,
+            saved_outlines,
+            font_facts,
+            placed,
+            display_list: dl,
+            repeats_capped,
+            overflows,
+        },
+        fresh.then_some(outlines),
+    ))
+}
+
+/// What the linter is told about fonts on one device (rung 12a): the boxes drawn from saved outlines,
+/// and the installed or embedded fonts the page uses, chosen or as fallback, each with whether the
+/// file carries it.
+fn font_facts(
+    doc: &Document,
+    laid: &quadrule_text::Laid,
+    how: &SavedText,
+    fonts: &FontRegistry,
+    cache: &mut BTreeMap<String, Result<(), NoEmbed>>,
+) -> FontFacts {
+    let mut facts = FontFacts::default();
+    for id in &laid.unavailable {
+        if let Some(quadrule_model::ObjectKind::Text(t)) = doc.object(*id).map(|o| &o.kind) {
+            facts.missing.push(MissingBox {
+                id: *id,
+                family: t.family.clone(),
+                needs_font: how.needs_font.contains(id),
+            });
+        }
+    }
+    // Chosen families that are here but not bundled, then the fallback ones.
+    let mut used: BTreeMap<String, bool> = BTreeMap::new();
+    for o in doc.objects() {
+        if let quadrule_model::ObjectKind::Text(t) = &o.kind
+            && BundledFont::for_family(&t.family).is_none()
+            && fonts.has_family(&t.family)
+        {
+            used.insert(t.family.clone(), false);
+        }
+    }
+    for f in &laid.fallback {
+        if BundledFont::for_family(f).is_none() && fonts.has_family(f) {
+            used.entry(f.clone()).or_insert(true);
+        }
+    }
+    for (family, fallback) in used {
+        let embed = if !doc.page.fonts.embed {
+            EmbedStatus::Off
+        } else {
+            let verdict = cache
+                .entry(family.clone())
+                .or_insert_with(|| fonts.embed_verdict(&family));
+            match verdict {
+                Ok(()) => EmbedStatus::Embedded,
+                Err(r) => EmbedStatus::Cannot(r.message_id()),
+            }
+        };
+        facts.installed.push(InstalledFont {
+            family,
+            fallback,
+            embed,
+        });
+    }
+    facts
 }
 
 /// The safe zones that count for snapping on `p`, as pixel rectangles: those of the toolbars

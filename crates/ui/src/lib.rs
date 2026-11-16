@@ -31,6 +31,8 @@ pub mod draw;
 pub mod editor;
 pub mod emoji;
 pub mod fonts;
+pub mod missing;
+pub mod missing_ui;
 pub mod panels;
 pub mod recovery;
 pub mod repeat_tab;

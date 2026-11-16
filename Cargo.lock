@@ -2848,6 +2848,7 @@ dependencies = [
  "quadrule-text",
  "serde",
  "serde_json",
+ "zip",
 ]
 
 [[package]]

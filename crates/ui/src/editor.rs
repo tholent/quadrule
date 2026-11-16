@@ -19,9 +19,8 @@
 //! it is tested headless.
 
 use crate::viewer::{Source, Viewer};
-use quadrule_format::{FontRef, QuadFile};
+use quadrule_format::FontRef;
 use quadrule_i18n::Message;
-use quadrule_layout::lay_out_text;
 use quadrule_layout::units::{Axis, UnitContext};
 use quadrule_model::clipboard;
 use quadrule_model::edit::{
@@ -119,6 +118,10 @@ impl Viewer {
 
     /// After any change: drop the rendered pages (each is made again on first use), drop
     /// selected objects that are gone, and clear an outlined finding (its index may be stale).
+    pub(crate) fn changed_public(&mut self) {
+        self.changed();
+    }
+
     fn changed(&mut self) {
         self.revision += 1;
         self.selected = None;
@@ -138,6 +141,7 @@ impl Viewer {
             }
             self.entered.truncate(keep);
         }
+        self.refresh_font_state();
     }
 
     /// The primary profile and the profile on screen.
@@ -1145,40 +1149,6 @@ impl Viewer {
         }
     }
 
-    /// The file's bytes as Save would write them: the document and, for every profile it has,
-    /// its text outlines (ADR-001 item 2), through the `format` crate. A profile whose text
-    /// cannot be laid out here (a missing font) keeps the outlines the file had.
-    pub fn file_bytes(&mut self) -> Result<Vec<u8>, String> {
-        self.end_typing();
-        let Viewer { open, fonts, .. } = self;
-        let open = open.as_mut().ok_or("nothing is open")?;
-        if let Some(r) = &open.read_only {
-            return Err(format!("{r:?}"));
-        }
-        let doc = &open.doc;
-        let primary = builtin_for(&doc.primary_profile_id, doc.page.orientation)
-            .map_err(|e| e.to_string())?;
-        let mut outlines = Vec::new();
-        for id in doc.profile_ids() {
-            let target = builtin_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
-            let laid = lay_out_text(doc, &primary, &target, fonts);
-            let missing = laid.as_ref().map_or(true, |l| l.missing_glyphs > 0);
-            match open.saved.get(id) {
-                Some(saved) if missing => outlines.push(saved.clone()),
-                _ => outlines.push(laid.map_err(|e| e.to_string())?.outlines),
-            }
-        }
-        let mut file = QuadFile::new(doc.clone(), outlines, font_refs(doc));
-        if let Some(m) = &open.manifest {
-            // Keep what the file's manifest carried (extras, a newer version label); the font
-            // list is made fresh from the document.
-            let fonts = file.manifest.fonts.clone();
-            file.manifest = m.clone();
-            file.manifest.fonts = fonts;
-        }
-        file.to_bytes(SAVED_BY).map_err(|e| e.to_string())
-    }
-
     /// Saves to `path` (Save As, or Save to the file it came from) and makes `path` the
     /// document's file. Writes a new file beside it, then renames it over the old one, so a
     /// failed save never leaves half a file. On failure the notice says why.
@@ -1264,6 +1234,10 @@ fn edit_error_message(e: &EditError, doc: &Document) -> Message {
                 .unwrap_or_default(),
         ),
         EditError::TurnedGroup(id) => Message::new("notice-turned-group").text(
+            "name",
+            doc.object(*id).map(|o| o.name.clone()).unwrap_or_default(),
+        ),
+        EditError::TextReadOnly(id) => Message::new("notice-text-read-only").text(
             "name",
             doc.object(*id).map(|o| o.name.clone()).unwrap_or_default(),
         ),

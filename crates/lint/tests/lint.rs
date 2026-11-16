@@ -212,6 +212,7 @@ fn floating_toolbar_is_not_linted_unless_asked() {
     let laid = lay_out_text(&doc, &primary, &manta, &mut FontRegistry::bundled_only()).unwrap();
     let opts = Options {
         toolbars: Toolbar::ALL.to_vec(),
+        ..Options::default()
     };
     let f = lint_with(&doc, &primary, &manta, &laid.outlines, &opts);
     let l06: Vec<_> = f.iter().filter(|x| x.rule == "L06").collect();
@@ -257,6 +258,7 @@ fn only_chosen_toolbars() {
     let laid = lay_out_text(&doc, &primary, &manta, &mut FontRegistry::bundled_only()).unwrap();
     let opts = Options {
         toolbars: vec![Toolbar::Left, Toolbar::Top],
+        ..Options::default()
     };
     let chosen = lint_with(&doc, &primary, &manta, &laid.outlines, &opts);
     let msgs: Vec<String> = chosen
@@ -731,4 +733,102 @@ fn l17_judges_an_unbound_regions_spacing_against_the_rhythm_on_each_device() {
         sev && area
     );
     assert!(ok, "{words}");
+}
+
+#[test]
+fn l11_and_l20_name_the_missing_and_installed_fonts() {
+    // Rung 12a: L11 is one finding per text box per device whose font is missing; L20 is one finding
+    // for the document, said on the primary device, listing each installed font used and whether it
+    // is embedded. Both are Warn and read through Fluent.
+    let doc = textbox_document();
+    let texts: Vec<Uuid> = doc
+        .objects()
+        .filter(|o| matches!(o.kind, ObjectKind::Text(_)))
+        .map(|o| o.id)
+        .collect();
+    let (first, second) = (texts[0], texts[1]);
+    let manta = builtin(MANTA_ID).unwrap();
+    let nomad = builtin(NOMAD_ID).unwrap();
+    let primary = builtin(&doc.primary_profile_id).unwrap();
+    let facts = FontFacts {
+        missing: vec![
+            MissingBox {
+                id: first,
+                family: "Futura".into(),
+                needs_font: false,
+            },
+            MissingBox {
+                id: second,
+                family: "Gill Sans".into(),
+                needs_font: true,
+            },
+        ],
+        installed: vec![
+            InstalledFont {
+                family: "Garamond".into(),
+                fallback: false,
+                embed: EmbedStatus::Embedded,
+            },
+            InstalledFont {
+                family: "Droid Sans Fallback".into(),
+                fallback: true,
+                embed: EmbedStatus::Off,
+            },
+            InstalledFont {
+                family: "Helvetica".into(),
+                fallback: false,
+                embed: EmbedStatus::Cannot("lint-l20-reason-restricted"),
+            },
+        ],
+    };
+    let opts = Options {
+        fonts: facts,
+        ..Options::default()
+    };
+    let go = |target: &Profile| {
+        let laid = lay_out_text(&doc, &primary, target, &mut FontRegistry::bundled_only()).unwrap();
+        lint_with(&doc, &primary, target, &laid.outlines, &opts)
+    };
+    let (on_manta, on_nomad) = (go(&manta), go(&nomad));
+    let l11 = |f: &[Finding]| f.iter().filter(|x| x.rule == "L11").count();
+    let l20 = |f: &[Finding]| f.iter().filter(|x| x.rule == "L20").count();
+    let title = on_manta
+        .iter()
+        .find(|x| x.rule == "L11" && x.object == Some(first))
+        .map(text)
+        .unwrap_or_default();
+    let needs = on_manta
+        .iter()
+        .find(|x| x.rule == "L11" && x.object == Some(second))
+        .map(text)
+        .unwrap_or_default();
+    let fonts = on_manta
+        .iter()
+        .find(|x| x.rule == "L20")
+        .map(text)
+        .unwrap_or_default();
+    let warn = on_manta
+        .iter()
+        .filter(|x| x.rule == "L11" || x.rule == "L20")
+        .all(|x| x.severity == Severity::Warn);
+    let ok = l11(&on_manta) == 2
+        && l11(&on_nomad) == 2
+        && l20(&on_manta) == 1
+        && l20(&on_nomad) == 0
+        && warn
+        && title.contains("Futura")
+        && title.contains("drawn from the outlines saved")
+        && needs.contains("Gill Sans")
+        && needs.contains("not drawn")
+        && fonts.contains("Garamond (embedded in the file)")
+        && fonts.contains("Droid Sans Fallback (for letters the chosen font lacks; not embedded: Embed fonts is off)")
+        && fonts.contains("Helvetica (cannot be embedded: its licence does not allow it)");
+    println!(
+        "CHECK crate=lint name=l11_l20 result={} l11_per_device={}/{} l20_on_primary_only={} fonts={fonts:?}",
+        pass(ok),
+        l11(&on_manta),
+        l11(&on_nomad),
+        l20(&on_manta) == 1 && l20(&on_nomad) == 0
+    );
+    assert!(ok);
 }

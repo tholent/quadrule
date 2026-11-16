@@ -42,6 +42,53 @@ impl ProfileOutlines {
     pub fn text(&self, object_id: Uuid) -> Option<&TextOutlines> {
         self.texts.iter().find(|t| t.object_id == object_id)
     }
+
+    /// Puts the text of `object_id` from `from` into these outlines, with the letter shapes it needs
+    /// (found in a table of the same face here, or added), replacing the text already here for that
+    /// object. This is how a box whose font is missing is drawn from the shapes the file saved
+    /// (rung 12a). Returns false when `from` holds no such text.
+    pub fn take_text_from(&mut self, from: &ProfileOutlines, object_id: Uuid) -> bool {
+        let Some(src) = from.text(object_id) else {
+            return false;
+        };
+        let mut text = src.clone();
+        for g in &mut text.glyphs {
+            let Some(table) = from.tables.get(g.table()) else {
+                continue;
+            };
+            let here = match self.tables.iter().position(|t| t.face == table.face) {
+                Some(i) => i,
+                None => {
+                    self.tables.push(GlyphTable {
+                        face: table.face.clone(),
+                        units_per_em: table.units_per_em,
+                        glyphs: BTreeMap::new(),
+                        extra: Extra::new(),
+                    });
+                    self.tables.len() - 1
+                }
+            };
+            if let Some(shape) = table.glyphs.get(&g.glyph()) {
+                self.tables[here]
+                    .glyphs
+                    .entry(g.glyph())
+                    .or_insert_with(|| shape.clone());
+            }
+            g.0 = here as u16;
+        }
+        self.texts.retain(|t| t.object_id != object_id);
+        self.texts.push(text);
+        true
+    }
+
+    /// Puts the texts in the order of `ids` (the document's order); texts not named go last.
+    pub fn order_texts_like(&mut self, ids: &[Uuid]) {
+        self.texts.sort_by_key(|t| {
+            ids.iter()
+                .position(|i| *i == t.object_id)
+                .unwrap_or(usize::MAX)
+        });
+    }
 }
 
 /// Which face a table holds.

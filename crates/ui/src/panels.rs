@@ -266,6 +266,11 @@ impl ViewerUi {
                     self.paint_badge(ui);
                 }
                 let selected = self.viewer.selection.contains(&o.id);
+                // A text box drawn from saved outlines, because its font is missing (rung 12a, Q6).
+                if self.viewer.is_read_only_text(o.id) {
+                    ui.label(RichText::new("⚠").color(ui.visuals().warn_fg_color))
+                        .on_hover_text(self.t("app-layer-saved-outlines"));
+                }
                 if let Some(ev) = self.name_cell(
                     ui,
                     Renaming::Object(o.id, String::new()),
@@ -918,6 +923,17 @@ impl ViewerUi {
         ui.add_space(6.0);
         ui.strong(self.t("app-snapping"));
         self.snap_toggles(ui);
+
+        // Whether installed fonts the page uses are saved inside the file (rung 12a bbq, Q3).
+        ui.add_space(6.0);
+        let mut embed = doc.page.fonts.embed;
+        let label = self.t("app-embed-fonts");
+        let tick = ui
+            .checkbox(&mut embed, label)
+            .on_hover_text(self.t("app-embed-fonts-tip"));
+        if tick.changed() {
+            let _ = self.viewer.set_embed_fonts(embed);
+        }
     }
 
     /// The devices this page targets (rung 8a, Defaulted "Which devices a document targets" and
@@ -1982,7 +1998,24 @@ impl ViewerUi {
         let Some(cx) = self.viewer.unit_context(Axis::Y) else {
             return;
         };
-        let enabled = !self.viewer.editable_selection().is_empty();
+        // A box drawn from saved outlines is read-only (rung 12a bbq, Q6): the badge says why and
+        // offers the way out; the fields below are greyed.
+        let read_only = self.viewer.is_read_only_text(o.id);
+        if read_only {
+            ui.horizontal_wrapped(|ui| {
+                ui.colored_label(
+                    ui.visuals().warn_fg_color,
+                    self.strings.format(
+                        &Message::new("app-text-saved-outlines").text("font", t.family.clone()),
+                    ),
+                );
+                if ui.button(self.t("app-choose-a-font")).clicked() {
+                    self.open_missing_dialog();
+                }
+            });
+            ui.add_space(4.0);
+        }
+        let enabled = !self.viewer.editable_selection().is_empty() && !read_only;
         let edit_text =
             |v: &mut crate::viewer::Viewer, key: &str, f: &dyn Fn(&mut quadrule_model::TextBox)| {
                 let _ = v.edit_selected(Some(key), |x| {

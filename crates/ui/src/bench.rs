@@ -76,6 +76,9 @@ pub struct DragBench {
     pub fonts: bool,
     /// Opens the rung 11b text-box page when nothing is open yet (`--textbox-page`).
     pub textbox: bool,
+    /// Opens the rung 12a missing-fonts page when nothing is open yet (`--missing-fonts-page`): the
+    /// text-box page with every text box in a font this computer lacks, drawn from saved outlines.
+    pub missing_fonts: bool,
     /// Types into a long text box instead of dragging (rung 11b: `--bench-type`): a box of a page's
     /// worth of text is made, a letter is typed into it at each step (a new paragraph now and then),
     /// and the run is timed like a drag. The box is taken away again after.
@@ -107,6 +110,7 @@ impl DragBench {
             repeats: false,
             fonts: false,
             textbox: false,
+            missing_fonts: false,
             typing: false,
             secondary: false,
             no_strip: false,
@@ -149,6 +153,14 @@ impl DragBench {
     pub fn with_textbox(self) -> Self {
         DragBench {
             textbox: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark over the rung 12a missing-fonts page.
+    pub fn with_missing_fonts(self) -> Self {
+        DragBench {
+            missing_fonts: true,
             ..self
         }
     }

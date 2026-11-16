@@ -192,6 +192,16 @@ pub struct ViewerUi {
     pub(crate) font_picker: crate::fonts::FontPicker,
     /// The emoji picker window (rung 11a).
     pub(crate) emoji_picker: crate::emoji::EmojiPicker,
+    /// The Missing fonts dialog, while it shows (rung 12a).
+    pub(crate) missing_dialog: Option<crate::missing_ui::MissingDialog>,
+    /// The sheet that waits for an answer before Save, Save As or Export (rung 12a).
+    pub(crate) font_sheet: Option<crate::missing_ui::Sheet>,
+    /// The sheet's "Don't warn again for this document" tick.
+    pub(crate) sheet_dont_warn: bool,
+    /// The missing font the font picker is choosing a substitute for (Other font… in the dialog).
+    pub(crate) font_picker_for: Option<String>,
+    /// A pick the font picker made for a row of the dialog: (missing family, chosen family).
+    pub(crate) picked_for_missing: Option<(String, String)>,
     /// The id of the Text tab's text field on the last frame, whose cursor an emoji goes to.
     pub(crate) text_field_id: Option<egui::Id>,
     /// The middle of what the canvas shows, in device pixels of the page on screen.
@@ -277,6 +287,11 @@ impl ViewerUi {
             was_focused: true,
             font_picker: Default::default(),
             emoji_picker: Default::default(),
+            missing_dialog: None,
+            font_sheet: None,
+            sheet_dont_warn: false,
+            font_picker_for: None,
+            picked_for_missing: None,
             text_field_id: None,
             view_centre_px: None,
             closing: false,
@@ -343,6 +358,13 @@ impl ViewerUi {
             .frame(egui::Frame::NONE.fill(backdrop(ui.visuals())))
             .show(ui, |ui| {
                 if self.viewer.open.is_some() {
+                    // The bar for missing fonts stands above the canvas (rung 12a, Q5).
+                    if !self.viewer.bar_fonts().is_empty() {
+                        egui::Panel::top("fonts-bar")
+                            .frame(egui::Frame::NONE)
+                            .show_separator_line(false)
+                            .show(ui, |ui| self.font_bar(ui));
+                    }
                     self.canvas(ui);
                 } else {
                     self.empty(ui, &mut requests);
@@ -357,12 +379,14 @@ impl ViewerUi {
         }
         self.ruler_window(&ctx);
         self.font_picker_window(&ctx);
+        self.missing_dialog_window(&ctx);
         self.emoji_picker_window(&ctx);
         // The Text tab, if it showed, has taken the cursor by now; a request it could not use
         // (no text box selected) must not wait for a later selection.
         self.focus_text_content = false;
         self.new_dialog(&ctx, &mut requests);
         self.unsaved_prompt(&ctx, &mut requests);
+        self.font_sheet_window(&ctx, &mut requests);
         self.recovery_prompt(&ctx);
         requests
     }
@@ -416,7 +440,7 @@ impl ViewerUi {
         }
         // Most specific first: Ctrl+Shift+S before Ctrl+S.
         if key(shift_cmd, Key::S) {
-            requests.push(Request::SaveAsDialog(None));
+            self.ask(Request::SaveAsDialog(None), requests);
         } else if key(cmd, Key::S) {
             requests.extend(self.save());
         }
@@ -520,7 +544,7 @@ impl ViewerUi {
         let shift_cmd = Modifiers::COMMAND | Modifiers::SHIFT;
         if ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(shift_cmd, Key::S))) {
             self.viewer.end_typing();
-            requests.push(Request::SaveAsDialog(None));
+            self.ask(Request::SaveAsDialog(None), requests);
             return;
         }
         if ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(cmd, Key::S))) {
@@ -624,8 +648,18 @@ impl ViewerUi {
         }
     }
 
-    /// Save: to the document's file, or, when it has none (the sample page), by asking where.
+    /// Save: to the document's file, or, when it has none (the sample page), by asking where. A page
+    /// that uses installed fonts shows the sheet first (rung 12a, Q7); this is Save, never autosave.
     pub fn save(&mut self) -> Vec<Request> {
+        if !self.viewer.font_sheet_fonts().is_empty() {
+            self.font_sheet = Some(crate::missing_ui::Sheet::Save);
+            return Vec::new();
+        }
+        self.save_now()
+    }
+
+    /// [`ViewerUi::save`] with the sheet answered.
+    pub(crate) fn save_now(&mut self) -> Vec<Request> {
         match self.viewer.file_path().map(Path::to_path_buf) {
             Some(path) => {
                 self.save_as(&path, None);
@@ -746,6 +780,10 @@ impl ViewerUi {
             });
         });
         match choice {
+            Some(0) if !self.viewer.font_sheet_fonts().is_empty() => {
+                self.pending = None;
+                self.font_sheet = Some(crate::missing_ui::Sheet::SaveThen(after));
+            }
             Some(0) => {
                 self.pending = None;
                 match self.viewer.file_path().map(Path::to_path_buf) {
@@ -1034,7 +1072,7 @@ impl ViewerUi {
                     requests.extend(self.save());
                 }
                 if ui.button(self.t("app-save-as")).clicked() {
-                    requests.push(Request::SaveAsDialog(None));
+                    self.ask(Request::SaveAsDialog(None), requests);
                 }
             });
             ui.separator();
@@ -1143,10 +1181,10 @@ impl ViewerUi {
             ui.add_enabled_ui(open, |ui| {
                 ui.menu_button(self.t("app-export"), |ui| {
                     if ui.button(self.t("app-export-this")).clicked() {
-                        requests.push(Request::ExportDialog(ExportWhich::ThisDevice));
+                        self.ask(Request::ExportDialog(ExportWhich::ThisDevice), requests);
                     }
                     if ui.button(self.t("app-export-all")).clicked() {
-                        requests.push(Request::ExportDialog(ExportWhich::AllDevices));
+                        self.ask(Request::ExportDialog(ExportWhich::AllDevices), requests);
                     }
                 });
             });
@@ -1336,7 +1374,9 @@ impl ViewerUi {
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
-                    if b.textbox {
+                    if b.missing_fonts {
+                        self.viewer.open_missing_fonts();
+                    } else if b.textbox {
                         self.viewer.open_textbox();
                     } else if b.fonts {
                         self.viewer.open_fonts();
@@ -1506,7 +1546,9 @@ impl ViewerUi {
                     } else {
                         "release"
                     },
-                    if b.textbox {
+                    if b.missing_fonts {
+                        "missing_fonts"
+                    } else if b.textbox {
                         "textbox"
                     } else if b.fonts {
                         "fonts"

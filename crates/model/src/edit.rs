@@ -216,6 +216,10 @@ pub enum EditError {
     NothingToRepeat,
     /// The object with this id is not a repeat.
     NotARepeat(Uuid),
+    /// The text box with this id is drawn from saved outlines because its font is missing: moving,
+    /// turning, fading, copying, grouping and deleting are allowed, a change that would lay its text out
+    /// again is not (rung 12a bbq, Q6).
+    TextReadOnly(Uuid),
     /// The source of a repeat cannot be taken out of it or deleted (this repeat's): Expand the
     /// repeat, or delete the repeat itself.
     SourceStays(Uuid),
@@ -239,6 +243,10 @@ impl std::fmt::Display for EditError {
             EditError::TooFew => write!(f, "a group needs two or more objects"),
             EditError::NothingToRepeat => write!(f, "nothing is picked to repeat"),
             EditError::NotARepeat(id) => write!(f, "object {id} is not a repeat"),
+            EditError::TextReadOnly(id) => write!(
+                f,
+                "text box {id} is drawn from saved outlines; its font is missing"
+            ),
             EditError::SourceStays(id) => {
                 write!(f, "the source of repeat {id} cannot be taken out of it")
             }
@@ -861,6 +869,9 @@ pub struct History {
     next_id: u64,
     /// The id of the step on top of the undo stack when the document was last saved (0: none).
     saved_at: u64,
+    /// Text boxes drawn from saved outlines because their font is missing (rung 12a bbq, Q6): a
+    /// command that would lay their text out again is refused. Set by the viewer, which knows the fonts.
+    read_only_text: std::collections::BTreeSet<Uuid>,
 }
 
 impl History {
@@ -870,6 +881,31 @@ impl History {
             next_id: 1,
             ..Default::default()
         }
+    }
+
+    /// Names the text boxes that are read-only now (their font is missing): see
+    /// [`EditError::TextReadOnly`].
+    pub fn set_read_only_text(&mut self, ids: std::collections::BTreeSet<Uuid>) {
+        self.read_only_text = ids;
+    }
+
+    /// Whether the text box `id` is read-only now.
+    pub fn is_read_only_text(&self, id: Uuid) -> bool {
+        self.read_only_text.contains(&id)
+    }
+
+    /// [`History::apply`] without the read-only check: for the one command that is meant to lift it,
+    /// substituting another font for a missing one (rung 12a bbq, Q4).
+    pub fn apply_lifting_read_only(
+        &mut self,
+        doc: &mut Document,
+        cmd: Command,
+        merge: Option<&str>,
+    ) -> Result<(), EditError> {
+        let held = std::mem::take(&mut self.read_only_text);
+        let r = self.apply(doc, cmd, merge);
+        self.read_only_text = held;
+        r
     }
 
     /// Does `cmd` on `doc` as a new undo step, and clears what could be redone.
@@ -885,6 +921,9 @@ impl History {
         merge: Option<&str>,
     ) -> Result<(), EditError> {
         let setter = cmd.is_setter();
+        if !self.read_only_text.is_empty() {
+            check_read_only(doc, &cmd, &self.read_only_text)?;
+        }
         let undo = doc.apply(cmd)?;
         let id = self.fresh_id();
         self.redo.clear();
@@ -988,6 +1027,81 @@ impl History {
         self.next_id += 1;
         id
     }
+}
+
+/// Whether replacing `old` by `new` leaves the text of a read-only text box laid out as it was: its
+/// text and style, the size of its box on every device and its constraints are the same. Moving,
+/// turning and fading change none of these.
+fn text_layout_same(old: &Object, new: &Object) -> bool {
+    old.kind == new.kind
+        && old.frame.w_mm == new.frame.w_mm
+        && old.frame.h_mm == new.frame.h_mm
+        && old.constraints == new.constraints
+        && old.overrides.keys().chain(new.overrides.keys()).all(|k| {
+            let size = |o: &Object| o.overrides.get(k).and_then(|x| x.size);
+            let font = |o: &Object| o.overrides.get(k).and_then(|x| x.font_size_pt);
+            size(old) == size(new) && font(old) == font(new)
+        })
+}
+
+/// Refuses `cmd` when it would lay out again the text of a read-only text box in `ro`.
+fn check_read_only(
+    doc: &Document,
+    cmd: &Command,
+    ro: &std::collections::BTreeSet<Uuid>,
+) -> Result<(), EditError> {
+    fn walk(
+        old: &Object,
+        new: &Object,
+        ro: &std::collections::BTreeSet<Uuid>,
+    ) -> Result<(), EditError> {
+        if ro.contains(&old.id) && !text_layout_same(old, new) {
+            return Err(EditError::TextReadOnly(old.id));
+        }
+        for c in old.children() {
+            if let Some(n) = new.children().iter().find(|n| n.id == c.id) {
+                walk(c, n, ro)?;
+            }
+        }
+        Ok(())
+    }
+    fn walk_all(
+        old: &[Object],
+        new: &[Object],
+        ro: &std::collections::BTreeSet<Uuid>,
+    ) -> Result<(), EditError> {
+        for o in old {
+            if let Some(n) = new.iter().find(|n| n.id == o.id) {
+                walk(o, n, ro)?;
+            }
+        }
+        Ok(())
+    }
+    match cmd {
+        Command::SetObject(new) => {
+            if let Some(old) = doc.object(new.id) {
+                walk(old, new, ro)?;
+            }
+        }
+        Command::SetDesign { layers, .. } => {
+            for (a, b) in doc.layers.iter().zip(layers) {
+                walk_all(&a.objects, &b.objects, ro)?;
+            }
+        }
+        // The page held the other way round reflows boxes that follow its size.
+        Command::SetPage(p) if p.orientation != doc.page.orientation => {
+            if let Some(id) = doc.objects().map(|o| o.id).find(|id| ro.contains(id)) {
+                return Err(EditError::TextReadOnly(id));
+            }
+        }
+        Command::Batch(cmds) => {
+            for c in cmds {
+                check_read_only(doc, c, ro)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 /// Gives `o` and everything inside it new ids from `new_id`.

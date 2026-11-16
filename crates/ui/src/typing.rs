@@ -194,7 +194,9 @@ impl Viewer {
         let ObjectKind::Text(t) = &o.kind else {
             return false;
         };
+        // A box drawn from saved outlines (its font is missing) cannot be typed in (rung 12a, Q6).
         if o.locked
+            || self.is_read_only_text(id)
             || doc.effectively_hidden(id)
             || doc.layer_of(id).is_some_and(|l| doc.layers[l].locked)
         {

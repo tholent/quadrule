@@ -20,8 +20,9 @@
 //! L08 a Fixed text box leaves lines out (rung 11b),
 //! L10 off the page, L15 constraints cause trouble on a secondary device (rung 8a), L16 position
 //! off the rhythm, L18 rhythm fits the margins unevenly, L19 uneven physical-locked spacing. The gray, ink, text-size and handwriting rules (L03, L04, L05, L07,
-//! L09, L13, L14) wait for calibrated profile values; L11 and L12 wait for the
-//! features they check. Rung 10: a repeat's source is judged once, L06 and L10 judge every drawn
+//! L09, L13, L14) wait for calibrated profile values; L12 waits for the feature it checks. Rung 12a
+//! adds L11 (a text box drawn from saved outlines because its font is missing) and L20 (fonts
+//! installed on this computer are used). Rung 10: a repeat's source is judged once, L06 and L10 judge every drawn
 //! copy (one finding per repeat and device, with the count), and L16 and L17 judge its pitch.
 
 #![forbid(unsafe_code)]
@@ -144,14 +145,63 @@ impl Toolbar {
 pub struct Options {
     /// Toolbar positions the user uses; L06 ignores the others. Default: the docked ones.
     pub toolbars: Vec<Toolbar>,
+    /// What the window knows about fonts (rung 12a), which the linter cannot look up for itself.
+    pub fonts: FontFacts,
 }
 
 impl Default for Options {
     fn default() -> Self {
         Options {
             toolbars: Toolbar::DOCKED.to_vec(),
+            fonts: FontFacts::default(),
         }
     }
+}
+
+/// What the window knows about the document's fonts on this computer (rung 12a): which text boxes are
+/// drawn from saved outlines on the device being linted (L11), and which fonts installed here the
+/// page uses (L20).
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct FontFacts {
+    /// The text boxes whose font is missing here, as drawn on this device.
+    pub missing: Vec<MissingBox>,
+    /// The fonts the page uses that come from this computer's installed fonts or from the file's
+    /// embedded ones (not bundled ones), chosen or as fallback.
+    pub installed: Vec<InstalledFont>,
+}
+
+/// A text box whose font is missing on this computer.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MissingBox {
+    /// The text box.
+    pub id: Uuid,
+    /// The font it names.
+    pub family: String,
+    /// True when the file saved no shapes for it on this device and none could be borrowed from
+    /// another device (ADR-001 item 7): it draws nothing.
+    pub needs_font: bool,
+}
+
+/// A font used that is not bundled.
+#[derive(Clone, Debug, PartialEq)]
+pub struct InstalledFont {
+    /// The family.
+    pub family: String,
+    /// True when it is used only as fallback for a letter another font lacks (ADR-002 item 6).
+    pub fallback: bool,
+    /// Whether the file carries it.
+    pub embed: EmbedStatus,
+}
+
+/// Whether an installed font is saved inside the file.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EmbedStatus {
+    /// It is embedded.
+    Embedded,
+    /// It is not: "Embed fonts" is off for this document.
+    Off,
+    /// It cannot be: the id of the message that gives the licence reason.
+    Cannot(&'static str),
 }
 
 /// Lints the document on `target` with the default options (every toolbar position).
@@ -215,6 +265,43 @@ pub fn lint_against(
             Message::new("lint-l19")
                 .num("x", rhythm.unit_x, 2)
                 .num("y", rhythm.unit_y, 2),
+        );
+    }
+    // L20: fonts installed on this computer are used (rung 12a bbq, Q7). Per document, so it is said
+    // once, on the primary device.
+    if target.id == primary.id && !opts.fonts.installed.is_empty() {
+        let items: Vec<Message> = opts
+            .fonts
+            .installed
+            .iter()
+            .map(|f| {
+                let status = match f.embed {
+                    EmbedStatus::Embedded => Message::new("lint-l20-embedded"),
+                    EmbedStatus::Off => Message::new("lint-l20-off"),
+                    EmbedStatus::Cannot(reason) => Message::new("lint-l20-cannot")
+                        .arg("reason", Arg::Msg(Box::new(Message::new(reason)))),
+                };
+                Message::new(if f.fallback {
+                    "lint-l20-item-fallback"
+                } else {
+                    "lint-l20-item"
+                })
+                .text("font", f.family.clone())
+                .arg("status", Arg::Msg(Box::new(status)))
+            })
+            .collect();
+        push(
+            "L20",
+            Severity::Warn,
+            None,
+            None,
+            Message::new("lint-l20").arg(
+                "fonts",
+                Arg::List {
+                    items,
+                    sep: "lint-l20-sep",
+                },
+            ),
         );
     }
     // L18: the rhythm fits unevenly when the strip it leaves at one side of the margin box is
@@ -384,6 +471,21 @@ pub fn lint_against(
                     f64::from(laid.lines_hidden),
                     0,
                 ),
+            );
+        }
+
+        // L11: the font is missing here, so the box is drawn from the shapes the file saved (or, where
+        // it saved none for this device, not at all). Judged per box and per device (rung 12a, Q6).
+        if let Some(m) = opts.fonts.missing.iter().find(|m| m.id == o.id) {
+            push(
+                "L11",
+                Severity::Warn,
+                at(if m.needs_font {
+                    "lint-l11-needs"
+                } else {
+                    "lint-l11-saved"
+                })
+                .text("font", m.family.clone()),
             );
         }
 

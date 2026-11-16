@@ -50,3 +50,21 @@ lint-l10-repeat-gone = { $count } of the { $total } copies in "{ $name }" are en
 lint-l10-repeat-partly = { $count } of the { $total } copies in "{ $name }" run off the edge of the page on this device.
 lint-l16-repeat-pitch = The pitch of "{ $name }" ({ $axes }) is not a whole number of rhythm steps, so its copies drift off the rhythm. Use Auto, or a whole number of units.
 lint-l17-repeat = "{ $name }" repeats every { $spacing } px ({ $axes }), which is not a whole multiple or fraction of the rhythm's { $unit } px on this device. Bind the pitch to the rhythm (use u), or choose one that is.
+
+# Fonts (rung 12a). L11: a text box whose font is missing on this computer. $font is the family.
+lint-l11-saved = "{ $name }" uses the font { $font }, which is not on this computer. It is drawn from the outlines saved in the file, so it looks as designed, but its text cannot be changed until you choose a font.
+lint-l11-needs = "{ $name }" needs the font { $font }, which is not on this computer, and the file saved no outlines for it on this device, so it is not drawn. Install the font or choose another.
+
+# L20: fonts installed on this computer are used. Each is marked embedded or not, and why not.
+lint-l20 = This page uses fonts installed on this computer: { $fonts }. Someone without them sees other fonts unless they are embedded.
+lint-l20-item = { $font } ({ $status })
+lint-l20-item-fallback = { $font } (for letters the chosen font lacks; { $status })
+lint-l20-sep = {"; "}
+lint-l20-embedded = embedded in the file
+lint-l20-off = not embedded: Embed fonts is off
+lint-l20-cannot = cannot be embedded: { $reason }
+lint-l20-reason-restricted = its licence does not allow it
+lint-l20-reason-preview = its licence allows preview and print only
+lint-l20-reason-bitmap = it holds bitmaps only
+lint-l20-reason-collection = it is part of a font collection
+lint-l20-reason-unknown = it carries no licence information

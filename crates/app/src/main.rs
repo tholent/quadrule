@@ -33,7 +33,7 @@
 //! `--patterns-page` (the pattern page: every new pattern; the benchmarks then run over it). Rung 10 adds
 //! `--repeats-page` (the repeat page; the benchmarks then run over it and the drag moves the habit tracker). Rung 11a adds
 //! `--fonts-page` (the fonts page: a page of text; the benchmarks then run over it and the drag moves its dot grid). Rung 11b adds
-//! `--textbox-page` (the text-box page, same use) and `--bench-type [frames]` (type into a long text box; `name=type_bench`).
+//! `--textbox-page` (the text-box page, same use), `--missing-fonts-page` (the same page set in a font this computer lacks) and `--bench-type [frames]` (type into a long text box; `name=type_bench`).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -135,6 +135,8 @@ impl App {
         }
         if let Some(p) = path {
             ui.open_file(&p);
+        } else if args.missing_fonts_page {
+            ui.viewer.open_missing_fonts();
         } else if args.textbox_page {
             ui.viewer.open_textbox();
         } else if args.fonts_page {
@@ -174,7 +176,9 @@ impl App {
                 b
             };
             let b = if args.no_strip { b.without_strip() } else { b };
-            if args.textbox_page {
+            if args.missing_fonts_page {
+                b.with_missing_fonts()
+            } else if args.textbox_page {
                 b.with_textbox()
             } else if args.fonts_page {
                 b.with_fonts()
@@ -415,6 +419,10 @@ struct Args {
     /// Open the rung 11b text-box page instead of the empty start (`--textbox-page`); the benchmarks
     /// then run over it, and the drag moves its dot grid.
     textbox_page: bool,
+    /// Open the rung 12a missing-fonts page (`--missing-fonts-page`): the text-box page with every
+    /// text box in a font this computer lacks, drawn from saved outlines, with the bar above it; the
+    /// benchmarks then run over it.
+    missing_fonts_page: bool,
     /// Run the benchmark on the first secondary device, so a drag writes overrides
     /// (`--bench-secondary`).
     bench_secondary: bool,
@@ -477,6 +485,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.fonts_page = true;
         } else if a == "--textbox-page" {
             out.textbox_page = true;
+        } else if a == "--missing-fonts-page" {
+            out.missing_fonts_page = true;
         } else if a == "--bench-secondary" {
             out.bench_secondary = true;
         } else if a == "--no-strip" {

@@ -452,6 +452,109 @@ pub fn lay_out_text(
     Ok(quadrule_text::lay_out(reg, &target.id, &requests)?)
 }
 
+/// How a page's text was made when some boxes could not be laid out from the fonts (rung 12a).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SavedText {
+    /// Boxes drawn from the outlines the file saved for this device: their font is not on this
+    /// computer (napkin §7.3).
+    pub from_saved: Vec<Uuid>,
+    /// Boxes drawn from the outlines saved for another device where the box is the same size in mm
+    /// (ADR-001 item 7).
+    pub reused: Vec<Uuid>,
+    /// Boxes with no outlines to draw from on this device: their font is missing and the file saved
+    /// none for it (ADR-001 item 7). They draw nothing; L11 says "needs the font".
+    pub needs_font: Vec<Uuid>,
+}
+
+/// [`lay_out_text`] for a document that may have fonts missing here: a box whose font is not on this
+/// computer takes the shapes `saved` holds for it on `target` (all devices' outlines, by profile id);
+/// failing that, the shapes saved for another device where the box is the same size in mm; failing
+/// that it draws nothing and is listed in [`SavedText::needs_font`]. (A box whose font is here but
+/// has a letter no font has is laid out live, whatever the file saved: its text can be edited, so
+/// old shapes could be stale.) The returned outlines hold every text box of the document, in
+/// document order.
+pub fn lay_out_text_saved(
+    doc: &Document,
+    primary: &Profile,
+    target: &Profile,
+    reg: &mut FontRegistry,
+    saved: &std::collections::BTreeMap<String, ProfileOutlines>,
+) -> Result<(Laid, SavedText), LayoutError> {
+    let jobs = text_jobs(doc, primary, target);
+    let requests: Vec<TextRequest> = jobs.iter().map(TextJob::request).collect();
+    let mut laid = quadrule_text::lay_out(reg, &target.id, &requests)?;
+    let mut how = SavedText {
+        from_saved: Vec::new(),
+        reused: Vec::new(),
+        needs_font: Vec::new(),
+    };
+    if laid.unavailable.is_empty() {
+        return Ok((laid, how));
+    }
+    let own = saved.get(&target.id);
+    // The other devices' jobs, to compare the size a box has there with the size it has here.
+    let mut others: Vec<(&ProfileOutlines, Vec<TextJob>)> = Vec::new();
+    for id in doc.profile_ids() {
+        if id == target.id {
+            continue;
+        }
+        if let (Some(o), Ok(p)) = (
+            saved.get(id),
+            quadrule_profiles::builtin_for(id, doc.page.orientation),
+        ) {
+            others.push((o, text_jobs(doc, primary, &p)));
+        }
+    }
+    for id in laid.unavailable.clone() {
+        if own.is_some_and(|s| laid.outlines.take_text_from(s, id)) {
+            how.from_saved.push(id);
+            continue;
+        }
+        let Some(job) = jobs.iter().find(|j| j.object_id == id) else {
+            continue;
+        };
+        let same_size = |other: &TextJob| {
+            (other.width_mm - job.width_mm).abs() < 1e-6
+                && other.height_mm.is_some() == job.height_mm.is_some()
+                && other
+                    .height_mm
+                    .zip(job.height_mm)
+                    .is_none_or(|(a, b)| (a - b).abs() < 1e-6)
+                && (other.text.size_pt - job.text.size_pt).abs() < 1e-9
+        };
+        let reuse = others.iter().find_map(|(o, js)| {
+            js.iter()
+                .find(|j| j.object_id == id && same_size(j))
+                .map(|_| *o)
+        });
+        if let Some(o) = reuse
+            && laid.outlines.take_text_from(o, id)
+        {
+            how.reused.push(id);
+        } else {
+            // No shapes anywhere: an empty entry, so the page can still be drawn and saved.
+            let height = others
+                .iter()
+                .find_map(|(o, _)| o.text(id).map(|t| t.height_mm))
+                .unwrap_or(0.0);
+            laid.outlines
+                .texts
+                .push(quadrule_model::outlines::TextOutlines {
+                    object_id: id,
+                    size_mm: quadrule_model::pt_to_mm(job.text.size_pt) as f32,
+                    height_mm: height,
+                    lines_hidden: 0,
+                    glyphs: Vec::new(),
+                    extra: quadrule_model::Extra::new(),
+                });
+            how.needs_font.push(id);
+        }
+    }
+    let order: Vec<Uuid> = jobs.iter().map(|j| j.object_id).collect();
+    laid.outlines.order_texts_like(&order);
+    Ok((laid, how))
+}
+
 /// The laid-out height of every text box that is as tall as its text, from `outlines` (rung 11b):
 /// what the tree gives such a box wherever it reads a height ([`tree::Heights`]). A box the outlines
 /// do not hold is left out, and keeps its stored height.

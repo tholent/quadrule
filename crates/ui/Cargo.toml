@@ -24,6 +24,7 @@ serde_json.workspace = true
 
 [dev-dependencies]
 egui_kittest.workspace = true
+zip.workspace = true
 
 [lints]
 workspace = true

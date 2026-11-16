@@ -531,6 +531,29 @@ impl FontRegistry {
         Ok(out)
     }
 
+    /// Whether the family may be saved inside a file, from the licence bits of the first face of it
+    /// ([`crate::embed`]); the family's other faces carry the same licence. `Ok` for a family that is
+    /// not here (nothing to embed).
+    pub fn embed_verdict(&self, family: &str) -> Result<(), crate::embed::NoEmbed> {
+        if BundledFont::for_family(family).is_some() {
+            return Ok(());
+        }
+        let Some((cat, ids)) = lookup(&self.catalog, &self.embedded, family) else {
+            return Ok(());
+        };
+        let mut verdict = Ok(());
+        for id in ids {
+            if let Some(Err(e)) = cat
+                .db
+                .with_face_data(*id, |data, _| crate::embed::verdict(data))
+            {
+                verdict = Err(e);
+                break;
+            }
+        }
+        verdict
+    }
+
     /// True when `family` is installed on this computer (and not shadowed by a bundled family).
     pub fn is_installed(&self, family: &str) -> bool {
         BundledFont::for_family(family).is_none() && self.catalog.find(family).is_some()

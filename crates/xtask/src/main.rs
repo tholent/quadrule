@@ -198,14 +198,16 @@ fn lint(args: &[String]) -> Result<(), String> {
                 })
                 .collect::<Result<_, _>>()?
         },
+        ..quadrule_lint::Options::default()
     };
-    let doc = match path {
-        None => quadrule_model::sample::slice_document(),
+    // A file brings its saved outlines, which draw the text whose font this computer lacks (L11).
+    let (doc, saved) = match path {
+        None => (quadrule_model::sample::slice_document(), Default::default()),
         Some(path) => {
             let bytes = std::fs::read(&path).map_err(|e| format!("{path}: {e}"))?;
-            quadrule_format::QuadFile::from_bytes(&bytes)
-                .map_err(|e| format!("{path}: {e}"))?
-                .doc
+            let f = quadrule_format::QuadFile::from_bytes(&bytes)
+                .map_err(|e| format!("{path}: {e}"))?;
+            (f.doc, f.outlines)
         }
     };
     println!("toolbar positions checked: {toolbars}");
@@ -217,8 +219,19 @@ fn lint(args: &[String]) -> Result<(), String> {
     for id in doc.profile_ids() {
         let target =
             quadrule_profiles::builtin_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
-        let laid = quadrule_layout::lay_out_text(&doc, &primary, &target, &mut reg)
-            .map_err(|e| e.to_string())?;
+        let (laid, how) =
+            quadrule_layout::lay_out_text_saved(&doc, &primary, &target, &mut reg, &saved)
+                .map_err(|e| e.to_string())?;
+        let mut opts = opts.clone();
+        for id in &laid.unavailable {
+            if let Some(quadrule_model::ObjectKind::Text(t)) = doc.object(*id).map(|o| &o.kind) {
+                opts.fonts.missing.push(quadrule_lint::MissingBox {
+                    id: *id,
+                    family: t.family.clone(),
+                    needs_font: how.needs_font.contains(id),
+                });
+            }
+        }
         for f in quadrule_lint::lint_with(&doc, &primary, &target, &laid.outlines, &opts) {
             count += 1;
             let message = strings.format(&f.message);

@@ -195,6 +195,7 @@ impl ViewerUi {
             .on_hover_text(self.t("app-font-pick-tip"))
             .labelled_by(label);
         if r.clicked() {
+            self.font_picker_for = None;
             let fonts = &self.viewer.fonts;
             self.font_picker.open(fonts);
         }
@@ -208,19 +209,29 @@ impl ViewerUi {
         if !self.font_picker.open {
             return;
         }
-        // The text box the pick is for, and the device the preview is drawn for.
-        let Some(obj) = self
-            .viewer
-            .selection
-            .first()
-            .and_then(|id| self.viewer.doc().and_then(|d| d.object(*id)))
+        // The text box the pick is for, and the device the preview is drawn for. Choosing a
+        // substitute for a missing font (Other font… in the Missing fonts dialog) shows the first
+        // box that uses it.
+        let target = match &self.font_picker_for {
+            Some(missing) => self
+                .viewer
+                .missing_fonts()
+                .iter()
+                .find(|m| &m.family == missing)
+                .and_then(|m| m.boxes.first().copied()),
+            None => self.viewer.selection.first().copied(),
+        };
+        let Some(obj) = target
+            .and_then(|id| self.viewer.doc().and_then(|d| d.object(id)))
             .cloned()
         else {
             self.font_picker.open = false;
+            self.font_picker_for = None;
             return;
         };
         let ObjectKind::Text(tb) = &obj.kind else {
             self.font_picker.open = false;
+            self.font_picker_for = None;
             return;
         };
         let Some((_, shown)) = self.viewer.profiles() else {
@@ -420,7 +431,16 @@ impl ViewerUi {
                 self.font_picker.families = families;
             });
         self.font_picker.open = open && self.font_picker.open;
+        if !self.font_picker.open {
+            self.font_picker_for = None;
+        }
         if let Some(family) = picked {
+            if let Some(missing) = self.font_picker_for.take() {
+                // A substitute for a missing font: the dialog's row takes it.
+                self.picked_for_missing = Some((missing, family));
+                self.font_picker.open = false;
+                return;
+            }
             // One undo step per pick.
             if family != tb.family {
                 let _ = self.viewer.edit_selected(None, |x| {
