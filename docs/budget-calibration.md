@@ -58,3 +58,13 @@ at the fix's end; whether the second includes the first is not shown). Start 82 
 16-point share.** No stop line fired; chris set this week's 90 % hard stop aside for the rung ("go for 16 points and
 ignore the cap for this week"), and the meter passed 90 % under that ruling. Alone on the meter. K not refitted this
 session. Room left before Saturday's 5 pm EST reset: none under the normal stops; the reset brings them back.
+
+2026-11-16, rung 11 (text and fonts), one lead session (Opus 5.5 high) and four Sonnet 5.5 high builder legs: 11a with
+its rulings leg (450,487 tokens reported by the harness), 11b (688,463; stopped once by the 5-hour usage window and
+resumed), the chip-typing fix and its Windows CI leg (190,341). `spend-ledger.py measure --latest --meter 1 21 --lead
+"Opus 5.5, high"` → `| 2026-11-15 | quadrule [d013b232] | claude | Opus 5.5, high | 11-15 00:31 → 11-16 11:25 | fresh
+1.5k · cached 224.9M · written 3.7M · out 648k | 86% (3 files) | sonnet 86% · opus 14% | $63.71 | 1 → 21 · alone here ·
+20 pts |`. Start 1 % (chris: "0–2 %"), readings 8 % after 11a ("6–10 %"), 18 % after 11b ("16–20 %"), 21 % before
+the Windows leg ("20–22 %"). **About 20 points against a share of 15 raised to 21 by chris** ("+6 points") when the
+15-point line fired at the 18 % reading; the fix and Windows legs ran under the raised share. Alone on the meter. K not
+refitted this session. Room left before Saturday 2026-11-21's 5 pm EST reset: about 54 points under the 75 % hard stop.

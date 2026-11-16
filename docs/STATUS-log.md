@@ -1713,3 +1713,15 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - Fix: `patch_matches_whole` skips a software adapter (`result=skip reason=software_adapter`, or `reason=no_adapter`). It still runs on the Pi
   (V3DV, Vulkan) and wherever there is a graphics chip.
 - `make check-all` → `TESTS scope=workspace checks=477 check_fail=0 passed=443 failed=0 status=ok`; no golden line or fixture moved.
+
+## 2026-11-16 — rung 11 done; v0.11.0 (lead, Opus 5.5 high)
+
+- Chip-typing fix judged: lead's runs `--textbox-page --bench-type 150 --canvas chip` → `canvas=chip p90_ms=8.9`;
+  `--fonts-page` → `canvas=chip p90_ms=9.9`; `--textbox-page --bench-drag 150 --canvas chip` → `p90_ms=4.5`.
+- Windows CI: the new chip test crashed (`STATUS_ACCESS_VIOLATION`) on `61a7347`, `e34992e`, `34916d1`; the builder found
+  it in vello's first whole draw on the software adapter (`chip_adapter backend=Dx12 device_type=Cpu name="Microsoft
+  Basic Render Driver"`) and made the test skip a software adapter (`c05bcfa`); CI run 43855666375 green on all three
+  systems (`chip_patch result=skip reason=software_adapter` on Windows).
+- chris approved 11b: "11b looks good in the window; excellent job". Version 0.11.0 (`Cargo.toml`), release notes
+  `docs/arcs/v1/release-notes/v0.11.0.md`, ADR-002 built status updated (header values moved to its History), board
+  row and re-plan, rung 12 prompt `docs/arcs/v1/rung-12-PROMPT-2026-11-16.md`, calibration row.
