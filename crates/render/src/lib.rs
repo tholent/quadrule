@@ -177,10 +177,29 @@ fn gray(v: u8) -> AlphaColor<Srgb> {
 /// The optional PNG text note (napkin §11.1).
 #[derive(Clone, Copy, Debug)]
 pub struct PngMeta<'a> {
-    /// The app and its version, e.g. `Quadrule 0.1.0`.
+    /// The app and its version, e.g. `Quadrule 0.1.0`. Left out when empty.
     pub software: &'a str,
-    /// The source document's title.
+    /// The source document's title. Left out when empty.
     pub title: &'a str,
+}
+
+/// Adds one text chunk: a `tEXt` chunk (Latin-1) when every character fits Latin-1, else an `iTXt` chunk (UTF-8)
+/// (rung 15 bbq, Defaulted "Text note encoding"). A NUL cannot be in either, so it becomes a space.
+fn add_note(enc: &mut png::Encoder<&mut Vec<u8>>, keyword: &str, text: &str) {
+    if text.is_empty() {
+        return;
+    }
+    let text: String = text
+        .chars()
+        .map(|c| if c == '\0' { ' ' } else { c })
+        .collect();
+    if text.chars().all(|c| (c as u32) < 256) {
+        enc.add_text_chunk(keyword.into(), text)
+            .expect("text chunk");
+    } else {
+        enc.add_itxt_chunk(keyword.into(), text)
+            .expect("text chunk");
+    }
 }
 
 /// Encodes an 8-bit grayscale PNG, no alpha, with an optional text note (napkin §11.1).
@@ -194,10 +213,8 @@ pub fn encode_png(img: &Gray, meta: Option<PngMeta>) -> Vec<u8> {
         enc.set_compression(png::Compression::Balanced);
         enc.set_filter(png::Filter::Adaptive);
         if let Some(m) = meta {
-            enc.add_text_chunk("Software".into(), m.software.into())
-                .expect("text chunk");
-            enc.add_text_chunk("Title".into(), m.title.into())
-                .expect("text chunk");
+            add_note(&mut enc, "Software", m.software);
+            add_note(&mut enc, "Title", m.title);
         }
         let mut w = enc.write_header().expect("PNG header into a Vec");
         w.write_image_data(&img.data).expect("PNG data into a Vec");
