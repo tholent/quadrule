@@ -999,7 +999,7 @@ impl ViewerUi {
         // The paper sizes are their own group after the devices (rung 13b bbq, Defaulted "Paper in
         // the UI").
         ui.add_space(4.0);
-        ui.label(RichText::new(self.t("app-page-paper")).small().strong());
+        ui.strong(self.t("app-page-paper"));
         for id in &papers {
             self.device_row(ui, doc, &have, id);
         }
