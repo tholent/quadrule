@@ -1925,3 +1925,54 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - `v0.13.0` published 2026-11-17 14:14 UTC by the release workflow (run 44098096890, success) from the tag on `5c0cc0f`
   (CI, Fuzz and Coverage green there): pre-release, six installers and `SHA256SUMS.txt`
   (`gh release view v0.13.0`), https://github.com/tholent/quadrule/releases/tag/v0.13.0.
+
+## 2026-11-17 — rung 14a builder (Sonnet 5.5 high): the six rules, the lint block, format 0.15.0
+
+Built from `docs/bbq/2026-11-17-rung-14-lint-and-preflight.md` (Q2, Q3, Q4, Q7 saved-in-file parts, Q9, and the Defaulted
+list). On `main`, five commits (CI on `ad948c3` green: CI, Fuzz, Coverage):
+
+- `ad948c3` step 1: a `lint` block on every `Profile` (`LintThresholds`, every value optional, `#[serde(default)]`),
+  filled for the Nomad and the Manta from the sheets (comments cite the codes), paper sizes carry only 6 pt and 5 mm; the
+  Profiles window gets a **Lint checks** section (a field with Clear, or "skipped" with Set; covered by Save, Reset to
+  built-in, `.ron` export and import) and a **Delete** button on each damaged file (asks first).
+- `1da1b32` step 2a: `crates/render/tests/fixtures/v0.14/` (the overrides page with a third device, a user's profile the
+  file carries) written by the 0.14.0 build's output before any format code changed, then its carried profile text cut
+  back to what the 0.14 writer wrote (no `lint:` block), manifest checksum made to match. `SHA256SUMS` holds its three PNGs.
+- `c14628e` step 2: `FORMAT_VERSION` 0.15.0, `v0_14_to_v0_15` (rewrites nothing), `Document::ignored_rules` and
+  `Object::free_placement` (both left out of a file when default), `migrate_v014.rs`; the older "0.14.0" assertions moved to
+  0.15.0 (and the "newer file" test to 0.16.0).
+- `273f1cb` steps 3 and 4: `crates/lint/src/judge.rs` (L03, L05, L07, L09, L13, L14), ignored rules and Free placement
+  honoured, `skipped_checks` (reasons: Paper, Wallpaper, Ignored, NoGrayLevels, NoValue), the Lint tab's one line per
+  device, `lint.ftl` messages; L02's diagonal-line note moved to L14 (three old lint tests updated for it);
+  `SKIPPED_ON_PAPER` gained L13 and L14.
+- `547c39d` steps 5 to 7: `--lint-page` (`lint_document`, `Viewer::open_lint`, `DragBench::with_lint`, `make bench-drag LINT=1`),
+  `profiles_pointer.rs` (pointer tests for the collapsing sections, DragValues, the lint fields, the gray-list field, the
+  safe-zone table and the damaged-file Delete), README and DEVELOPMENT.
+
+Checks: `make check-all` on `547c39d` → `TESTS scope=workspace checks=622 check_fail=0 passed=576 failed=0 status=ok`.
+`(cd crates/render/tests/golden && sha256sum -c SHA256SUMS)` → 29 lines, none other than OK; `git diff 198707a --stat --
+crates/render/tests/golden crates/render/tests/fixtures` shows only the two added `v0.14/` files. New CHECK lines:
+`profiles lint_block_shipped|lint_block_file|lint_block_override`; `render migrate_v014|migrate_chain_0150|ignored_and_free_saved`;
+`lint l03_thresholds|l05_clean_levels|l07_text_size|l09_handwriting_step|l13_dark_fills|l14_soft_thin_lines|gray_on_the_page|
+rules_follow_the_profile_in_use|paper_skips_gray_rules|ignored_and_free_placement|skip_reasons|lint_page`; `ui lint_tab_skipped_lines|
+lint_page_opens|profiles_lint_block_file|profiles_pointer_lint|profiles_pointer_lists|profiles_pointer_delete_damaged`. All `pass`.
+
+Found on the way: the safe-zone table's orientation boxes had no accessible name (the pointer test's accessibility check
+caught it); they are named now ("Held <zone>").
+
+Paid from `docs/STATUS-debt.md` (removed there): the Profiles window pointer tests, the Delete button for a damaged file
+(`Registry::delete_damaged`), and the "L03 in `SKIPPED_ON_PAPER` names a rule that is not built" sentence. Not paid: the Page tab's
+PPI wrap (not asked of this builder).
+
+Defaulted beyond the record (each can be vetoed): field names (`lightest_gray_line_1px`, `lightest_gray_line_2px_up`,
+`lightest_gray_dot_2px|3px|4px_up`, `lightest_gray_fill`, `lightest_gray_text`, `smallest_text_pt`,
+`smallest_handwriting_step_mm`, `dark_fill_gray`, `dark_fill_page_share` as a fraction shown as a percentage in the window,
+`thin_line_px`); a dot under 2 px is judged by the 2 px value; the empty `lint` block is written as `lint: ()` so "no block" (an
+old override, which takes the shipped values) differs from "emptied on purpose"; a group's Free placement covers its children;
+L09 compares in pixels (the millimetres rounded as the rhythm is), says the rhythm once and a ruled (Lines) region only when its
+spacing is its own; L13 sums fills (clipped to the page, every repeat copy), reports one finding on the largest; L14 also covers
+isometric and hex patterns and turned patterns; the ignored-rule list shows ids the linter does not judge only if built (`Lxx` is
+dropped); the skip order is Paper, Wallpaper, Ignored, no gray levels, no value.
+
+Owed: see the new "Rung 14a, owed" line in `docs/STATUS-debt.md`. The look: `cargo run --release -p quadrule-app -- --lint-page`
+(Lint tab; Profiles window from the Page tab or `--profiles`, section "Lint checks").
