@@ -1784,3 +1784,29 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - Pi, release build, strip on, 150 frames, 3 runs each, `target/release/quadrule --pattern-angle-page <flag> 150 --canvas <c>` (90th percentile ms; limit 50):
   `--bench-drag` export 20.4, 20.9, 21.0, chip 3.6, 3.6, 3.6; `--bench-draw` export 20.7, 21.9, 21.0, chip 23.4, 23.4, 23.3 (first frame 45 to 52 ms).
 
+
+## 2026-11-16/17 — rung 12, lead (Opus 5.5 high)
+
+- Session start: `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` → `BUILD head=7ff14c3 dirty=no rebuilt=11`.
+  Meter 22 % (chris; `spend-ledger.py reading 22 --meter weekly`); share 12 points (chris). Parked questions asked again:
+  pattern rotation unparked by chris; the A5 X rhythm and the Label gray stay parked.
+- Embedding bits measured on the Pi (a small `fsType` reader over `fc-list` output, 181 files): 75 installable, 1
+  editable, 35 preview-and-print only, 70 Type 1 or unreadable; bundled 10 of 10 installable.
+- bbq, 9 questions (`docs/bbq/2026-11-16-rung-12-missing-fonts.md`): split 12a/12b, one `v0.12.0`; hinting to v1.1
+  (ADR-002 amended 2026-11-16, `adr-check: 15 ADRs, 0 failure(s)`); embed allowed fonts with an off switch; Substitute
+  rewrites the font; bar then dialog; move-not-reflow read-only text; L20 and a sheet; the region turns whole.
+- 12a builder (Sonnet 5.5 high) stopped at its third step by an account error ("Claude Code can't use your Claude
+  subscription", HTTP 403, `oauth_org_not_allowed`) with two steps pushed (CI green on `92ca3d9`) and the rest
+  uncommitted; resumed on chris's "please continue" and finished (`b8509df`, CI 43946396546 success). Lead checks: the
+  22 golden lines and fixtures v0.4–v0.11 unchanged (`git diff --stat 7ff14c3..HEAD -- crates/render/tests/golden
+  crates/render/tests/fixtures` shows only the new `v0.12/`); `cargo test --release -p quadrule-render` all ok.
+  chris: "I approve 12a" (meter 27 %).
+- 12b builder (Sonnet 5.5 high): `470dda3` (CI 43959317427 success). chris then asked for the pattern to turn inside
+  its frame; Q8 amended, Q10 and Q11 asked (`b5ff1f0`, meter 30 %); the same builder built it (`2d14552`, CI 43968390319
+  success). The lead looked at both new Nomad goldens. chris: "approved. 31% meter read".
+- Release: version 0.12.0 (`Cargo.toml`), notes `docs/arcs/v1/release-notes/v0.12.0.md`, ADR-001 and ADR-002 built
+  status (`adr-check: 15 ADRs, 0 failure(s)`), board re-planned, rung 13 prompt, STATUS.md trimmed to 292 lines
+  (`status-check: 292 lines, ceiling 300, 0 finding(s)`; the 2026-11-10 log bullets moved to the archive word for word).
+- Spend: `spend-ledger.py measure --latest --meter 22 31 --lead "Opus 5.5, high"` → `| 2026-11-16 | quadrule [25d30704] |
+  claude | Opus 5.5, high | 11-16 11:51 → 11-17 01:43 | fresh 842 · cached 92.6M · written 2.0M · out 365k | 82% (3 files)
+  | sonnet 82% · opus 18% | $28.89 | 22 → 31 · alone here · 9 pts |`.

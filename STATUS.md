@@ -1,6 +1,6 @@
 # STATUS — quadrule
 
-_Last updated: 2026-11-16_
+_Last updated: 2026-11-17_
 
 The project's live state. Update it when work lands. Every claim cites at least one file that exists.
 
@@ -175,6 +175,21 @@ The project's live state. Update it when work lands. Every claim cites at least 
   held in rows (`crates/app/src/chip.rs`). Speed on the Pi, 90th percentile, chip canvas: typing about 9 ms (was 82),
   dragging 4–6 ms, drawing 23–25 ms; export canvas about 20 ms throughout (`docs/STATUS-log.md`). Try it:
   `cargo run --release -p quadrule-app -- --textbox-page` or `-- --fonts-page`.
+- Rung 12, missing fonts and turning patterns, is done: 12a approved by chris 2026-11-16 ("I approve 12a"), 12b
+  2026-11-17 ("approved"), shipped together as `v0.12.0` (record `docs/bbq/2026-11-16-rung-12-missing-fonts.md`, with
+  its Amendments). **12a**: a page whose fonts are missing opens from its saved outlines with a yellow bar and a Missing
+  fonts dialog (Use saved outlines, read-only with a badge; Substitute by measured font signature, rewriting the font;
+  Locate fonts…; Remember for this document); installed fonts whose `fsType` allows it are embedded in
+  `assets/fonts/` (Embed fonts tick, on); missing characters may come from any installed font; lint L11 and L20 with a
+  sheet on Save, Save As and Export (`crates/ui/src/missing.rs`, `crates/ui/src/missing_ui.rs`,
+  `crates/text/src/registry.rs`, `crates/lint/src/lib.rs`). **12b**: pattern regions turn whole (handle, Rotation
+  field, groups), and a Pattern angle (Style tab) turns the ruling inside its frame, cut at the frame (chris's addition,
+  Q8 amended) (`crates/layout/src/pattern.rs`). Hinting moved to v1.1 (ADR-002 amendment 2026-11-16). File format
+  0.13.0 (`crates/render/tests/fixtures/v0.12/`). Four golden lines added (`patterns-turned_*`, `pattern-angle_*`);
+  the 22 older ones unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: missing-font
+  page drag 19.8 ms export, 5.2 chip; pattern-angle page drag about 21 export, 3.6 chip, draw about 21 export, 23.4 chip
+  (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --missing-fonts-page`,
+  `-- --turned-patterns-page` or `-- --pattern-angle-page`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -220,8 +235,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
-  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). Next: rung 12, missing fonts; the next lead's prompt is
-  `docs/arcs/v1/rung-12-PROMPT-2026-11-16.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
+  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). Next: rung 13, the profile system; the next
+  lead's prompt is `docs/arcs/v1/rung-13-PROMPT-2026-11-17.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
   buildable now; chris designs one per category (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
@@ -232,36 +247,12 @@ The project's live state. Update it when work lands. Every claim cites at least 
 
 Full debt list: `docs/STATUS-debt.md`.
 - The Manta's gray levels and pen shades are ruled equal to the Nomad's, not measured (`docs/STATUS-debt.md`).
-- ADR parts not built yet: font signature, fuzzing, hinting flag, system-font fallback and substitution, canvas
-  (`docs/STATUS-debt.md`).
+- ADR parts not built yet: the hinting flag and hinted outline tables (v1.1), parts of the canvas, snapping and
+  roles ADRs (`docs/decisions/INDEX.md`, `docs/STATUS-debt.md`).
 
 ## Log
 
 Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
-- 2026-11-10: rung 3 planned (bbq, 12 questions): the first editor (`docs/STATUS-log.md`).
-- 2026-11-10: rung 3 built (steps 1–9), chip canvas measured on the Pi; layers moved right; look approved
-  (`docs/STATUS-log.md`).
-- 2026-11-10: rung 4 planned (bbq, 12 questions): dragging and snapping, split 4a/4b (`docs/STATUS-log.md`).
-- 2026-11-10: rung 4a built (Sonnet 5.5, high): drag, handles, marquee, layer drag, snapping, overlay; measured on the Pi;
-  look approved with two safe-zone changes, built (`docs/STATUS-log.md`).
-- 2026-11-10: rung 4b built (Sonnet 5.5, high): point snap, smart guides, equal spacing, copy and paste; measured on the
-  Pi; waits for chris's look (`docs/STATUS-log.md`).
-- 2026-11-10: Makefile for testing and review (bbq, 4 questions), built (`docs/STATUS-log.md`).
-- 2026-11-10: README.md and DEVELOPMENT.md written (bbq, 12 questions); GitHub description blocked by a 403 (`docs/STATUS-log.md`).
-- 2026-11-10: rung 4b approved, rung 4 done; rung 5 planned (bbq, 12 questions): New and Insert (`docs/STATUS-log.md`).
-- 2026-11-10: ADR backlog sweep: ADR-004 to ADR-014 drafted and all ratified by chris; drag speed now the 90th
-  percentile (`docs/STATUS-log.md`, `docs/decisions/INDEX.md`).
-- 2026-11-10: rung 5 built (Sonnet 5.5, high): New, the tools bar, drawing; measured on the Pi; waits for chris's look
-  (`docs/STATUS-log.md`).
-- 2026-11-10: rung 5 approved by chris; L06 stops checking the floating toolbar (ADR-012 amended) (`docs/STATUS-log.md`).
-- 2026-11-10: arc v1 planned (Arc bbq, 20 questions): rungs 6–18 to v1.0 (`docs/arcs/v1/README.md`, `docs/STATUS-log.md`).
-- 2026-11-10: rungs 1–5 tagged at their approvals, `v0.1.0` to `v0.5.0` (4b is `v0.4.1`) (`docs/STATUS-log.md`).
-- 2026-11-10: v0.5.0 released on GitHub; release packages workflow built, dry run green on four systems (`docs/STATUS-log.md`).
-- 2026-11-10: v0.5.0 packages published; pixel grid now from 16× zoom, not 8× (chris) (`docs/STATUS-log.md`).
-- 2026-11-10: rung 6 kickoff: budget 15 points; grays calibration sheet added; rung 6 planned (bbq, 8 questions), split
-  6a/6b (`docs/STATUS-log.md`, `docs/bbq/2026-11-10-rung-6-shapes.md`).
-- 2026-11-10: rung 6a built (Sonnet 5.5, high): shapes, fill roles, dashes, caps, format 0.5.0; measured on the Pi;
-  waits for chris's look (`docs/STATUS-log.md`).
 - 2026-11-11: rung 6a approved by chris; `v0.6.0` tagged; its GitHub release waits on chris (`docs/STATUS-log.md`).
 - 2026-11-11: rung 6b built (Sonnet 5.5, high): rotation, lines any way, opacity, format 0.6.0; measured on the Pi
   (`docs/STATUS-log.md`).
@@ -295,3 +286,7 @@ skill's `scripts/status-check.py` checks both.
   11a/11b, built (four Sonnet 5.5 high legs), baseline gap and chip-typing fix at chris's word, approved; one release
   `v0.11.0`; ADR-002 amended; board re-planned; rung 12 prompt written (`docs/STATUS-log.md`,
   `docs/arcs/v1/rung-12-PROMPT-2026-11-16.md`).
+- 2026-11-16/17: rung 12 planned (bbq, 9 questions; pattern rotation unparked by chris, hinting to v1.1), split 12a/12b,
+  built (Sonnet 5.5 high: 12a, stopped once by an account error and resumed; 12b with chris's pattern-angle addition),
+  approved; one release `v0.12.0`; ADR-001 and ADR-002 built status; board re-planned; rung 13 prompt written
+  (`docs/STATUS-log.md`, `docs/arcs/v1/rung-13-PROMPT-2026-11-17.md`).

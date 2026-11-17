@@ -194,4 +194,10 @@ on any other model or effort, stop and say so before doing anything.
   **Q11 Control.** "Field in the Pattern tab (Recommended)": a Pattern angle field beside the pattern's spacing; no
   second canvas handle.
   Meter 29–30 % (chris, `/usage`; logged as 30), about 3 points for 12b's first leg.
+- 2026-11-17 (01:42 UTC), chris, at his look at 12b (turned regions and the pattern angle), word for word: "approved.
+  31% meter read". The builder's unsettled choices stand as built (the Pattern angle field sits in the Style tab, which
+  holds the pattern's settings, since there is no Pattern tab; a bound ruling turns about the frame's centre and an
+  unbound one is anchored at its top-left corner; Cornell and the staves turn as a block; the 90°/270° pivot rounded to a
+  whole pixel). Both parts approved, so rung 12 is done and ships as one `v0.12.0` (Q1). Meter 31 % (logged): about 9
+  points of the 12-point share.
 

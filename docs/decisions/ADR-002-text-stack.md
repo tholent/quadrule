@@ -6,8 +6,8 @@ ratified-on: "2026-11-09"
 owner: chris
 kind: architecture
 built: partial
-proof: "`crates/text/tests/text.rs::title_lays_out_with_no_missing_glyphs`, `crates/text/tests/text.rs::bold_draws_bolder_shapes_and_wider_text`, `crates/render/tests/slice.rs::slice_end_to_end`, `crates/text/tests/fonts.rs::rescan_reads_the_fonts_again_and_keeps_the_open_ones`, `crates/text/tests/textbox.rs::a_fixed_box_leaves_out_whole_lines_that_do_not_fit`, `crates/text/tests/textbox.rs::paragraph_spacing_goes_after_each_paragraph_but_the_last`"
-owed: "hinting flag (item 4; moved to v1.1, amendment 2026-11-16); fallback to any installed font with its save and export warning (item 6; rung 12, until then bundled fonts only, rung 11 bbq Q4); substitution by font signature (item 7; rung 12)"
+proof: "`crates/text/tests/text.rs::title_lays_out_with_no_missing_glyphs`, `crates/text/tests/text.rs::bold_draws_bolder_shapes_and_wider_text`, `crates/render/tests/slice.rs::slice_end_to_end`, `crates/text/tests/fonts.rs::rescan_reads_the_fonts_again_and_keeps_the_open_ones`, `crates/text/tests/textbox.rs::a_fixed_box_leaves_out_whole_lines_that_do_not_fit`, `crates/text/tests/textbox.rs::paragraph_spacing_goes_after_each_paragraph_but_the_last`, `crates/text/tests/missing.rs::an_installed_font_is_opened_as_fallback_for_a_letter_the_bundled_fonts_lack`, `crates/text/tests/missing.rs::the_bundled_fonts_are_classed_by_measurement`, `crates/text/tests/missing.rs::a_substitute_is_picked_by_signature`, `crates/lint/tests/lint.rs`"
+owed: "hinting flag (item 4; moved to v1.1, amendment 2026-11-16)"
 supersedes: nothing
 amends: nothing
 consulted: text spike worker (Opus 5.5 subagent); talk-through with Claude (docs/proposals/talk-2026-11-09-format-versions-and-hinting.md)
@@ -104,6 +104,9 @@ Drivers:
   overflow signal (item 3). Prior header values: proof ``crates/text/tests/text.rs::title_lays_out_with_no_missing_glyphs`, `crates/text/tests/text.rs::bold_draws_bolder_shapes_and_wider_text`, `crates/render/tests/slice.rs::slice_end_to_end``; owed `hinting flag (item 4); fallback to any installed font with its save and export warning (item 6); substitution by font signature (item 7); re-scan on focus (item 8); paragraph spacing, vertical alignment and the overflow signal (item 3)`.
 - 2026-11-16: amended by chris in the rung 12 bbq (Q2): the hinting flag (item 4) moves out of v1 to v1.1 (see
   Amendment — 2026-11-16 below). Prior header values: owed `hinting flag (item 4); fallback to any installed font with its save and export warning (item 6; rung 12, until then bundled fonts only, rung 11 bbq Q4); substitution by font signature (item 7; rung 12)`.
+- 2026-11-17: built status updated after rung 12 (approved by chris): fallback to any installed font with its save and
+  export warning (item 6: lint L20 and the Save/Export sheet) and substitution by measured font signature (item 7).
+  Prior header values: proof "`crates/text/tests/text.rs::title_lays_out_with_no_missing_glyphs`, `crates/text/tests/text.rs::bold_draws_bolder_shapes_and_wider_text`, `crates/render/tests/slice.rs::slice_end_to_end`, `crates/text/tests/fonts.rs::rescan_reads_the_fonts_again_and_keeps_the_open_ones`, `crates/text/tests/textbox.rs::a_fixed_box_leaves_out_whole_lines_that_do_not_fit`, `crates/text/tests/textbox.rs::paragraph_spacing_goes_after_each_paragraph_but_the_last`"; owed "hinting flag (item 4; moved to v1.1, amendment 2026-11-16); fallback to any installed font with its save and export warning (item 6; rung 12, until then bundled fonts only, rung 11 bbq Q4); substitution by font signature (item 7; rung 12)".
 
 ## Amendment — 2026-11-15, chris
 

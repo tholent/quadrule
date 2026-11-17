@@ -68,3 +68,12 @@ resumed), the chip-typing fix and its Windows CI leg (190,341). `spend-ledger.py
 the Windows leg ("20–22 %"). **About 20 points against a share of 15 raised to 21 by chris** ("+6 points") when the
 15-point line fired at the 18 % reading; the fix and Windows legs ran under the raised share. Alone on the meter. K not
 refitted this session. Room left before Saturday 2026-11-21's 5 pm EST reset: about 54 points under the 75 % hard stop.
+
+2026-11-17, rung 12 (missing fonts and turning patterns), one lead session (Opus 5.5 high) and two Sonnet 5.5 high
+builders: 12a (439,526 tokens reported by the harness; stopped once by an account error and resumed) and 12b with the
+pattern-angle leg (341,061 at its end; the 270,898 reported after its first leg is included). `spend-ledger.py measure
+--latest --meter 22 31 --lead "Opus 5.5, high"` → `fresh 842 · cached 92.6M · written 2.0M · out 365k | sonnet 82% · opus
+18% | $28.89 | 22 → 31 · alone here · 9 pts`. Readings (chris, `/usage`): 22 % start, 27 % after 12a, 29–30 % (logged
+30) after 12b's first leg, 31 % at approval. **9 points against a 12-point share.** No stop line fired. Alone on the
+meter. K not refitted this session. Room left before Saturday 2026-11-21's 5 pm EST reset: 44 points under the 75 %
+hard stop.
