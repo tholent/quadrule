@@ -157,3 +157,48 @@ fn autosave_writes_no_preview_and_an_old_file_gains_one_at_its_next_save() {
     );
     assert!(ok);
 }
+
+/// Times Save with and without the thumbnail (rung 15 leg 2): `cargo test --release -p quadrule-ui --test preview
+/// save_time -- --ignored --nocapture`. Reported, not judged.
+#[test]
+#[ignore = "a timing run, for a release build on the Pi"]
+fn save_time() {
+    fn median(mut v: Vec<f64>) -> f64 {
+        v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        v[v.len() / 2]
+    }
+    let dir = tmp("preview-time");
+    for (name, open) in [
+        ("sample", Viewer::open_sample as fn(&mut Viewer)),
+        ("groups", Viewer::open_groups as fn(&mut Viewer)),
+        ("paper", Viewer::open_paper as fn(&mut Viewer)),
+    ] {
+        let mut v = Viewer::default();
+        open(&mut v);
+        // Warm up: pages drawn, fonts loaded.
+        let _ = v.save_bytes().unwrap();
+        let _ = v.file_bytes().unwrap();
+        let (mut plain, mut with, mut thumb, mut save) = (vec![], vec![], vec![], vec![]);
+        for _ in 0..9 {
+            let t = std::time::Instant::now();
+            let _ = v.file_bytes().unwrap();
+            plain.push(t.elapsed().as_secs_f64() * 1e3);
+            let t = std::time::Instant::now();
+            let _ = v.save_bytes().unwrap();
+            with.push(t.elapsed().as_secs_f64() * 1e3);
+            let t = std::time::Instant::now();
+            let _ = v.preview_png().unwrap();
+            thumb.push(t.elapsed().as_secs_f64() * 1e3);
+            let t = std::time::Instant::now();
+            v.save_to(&dir.join(format!("{name}.quad"))).unwrap();
+            save.push(t.elapsed().as_secs_f64() * 1e3);
+        }
+        println!(
+            "CHECK crate=ui name=save_time page={name} runs=9 median_ms_without_preview={:.1} median_ms_with_preview={:.1} median_ms_preview_alone={:.1} median_ms_save_to={:.1}",
+            median(plain),
+            median(with),
+            median(thumb),
+            median(save)
+        );
+    }
+}

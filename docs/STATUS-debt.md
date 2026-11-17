@@ -283,14 +283,18 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   that has moved onto them first in a headless test (the sheet fades in over a few frames). `--look lint|style|preflight` is a
   screenshot flag the record did not ask for. The speed numbers are in the 14b log entry (none over 50 ms).
 
-- Rung 15 leg 1, owed (`crates/ui/src/export.rs`, `export_path.rs`, `settings.rs`): the Export sheet, Export again's
-  menu item and Ctrl+E / Ctrl+Shift+E, the completion sheet and the wording of every new word (Fluent ids `export-error-*`,
-  `export-preset-*`, `notice-settings-*` are proposals) are leg 2's; until then the template, the Set and the note tick are
-  edited by hand in `settings.ron`, and `ViewerUi::ask_export_again` (no key bound) falls back to the toolbar's folder
-  dialog when nothing was exported from the document. Judgement calls to look at: template dots, backslashes and colons
-  become hyphens; Windows reserved names get a `_`; parts are cut at 120 characters; paths are compared without case for
-  the "two devices on one path" mistake; no Title chunk for the sample page or an unsaved new page; the folder memory is
-  keyed by the file path as opened (a symlinked second path remembers separately); Save As keeps the window's session
-  export memory; a damaged preview in a `.quad` is skipped without a notice; a damaged `settings.ron` is left on disk until
-  the next change overwrites it; `chrono` (local `{date}`) and `ron` are new direct dependencies of `quadrule-ui`. Save's
-  time with the thumbnail is not measured yet (leg 2 reports it on the Pi, release build).
+- Rung 15, owed (`crates/ui/src/export.rs`, `export_path.rs`, `settings.rs`, `export_ui.rs`): the wording of every new word
+  (the Export and completion sheets, Fluent ids `app-exp-*`, `app-done-*`, `export-error-*`, `export-preset-*`,
+  `notice-settings-*`, `notice-reveal-failed`) is the builder's proposal, for chris's look. Judgement calls to look at:
+  the toolbar's **Export** stays a menu with two items, "Export…" (Ctrl+Shift+E) and "Export again" (Ctrl+E), because there is
+  no File menu to hold them; the presets are a combo box labelled "Presets" (egui's fonts have no ▾ glyph and panic on a
+  missing one); Reveal in folder starts the file manager (`xdg-open`, `open`, `explorer`) without waiting, so only a failure to
+  start is reported; the completion sheet shows the folder all the files share (the device folders sit under it); Ctrl+E and
+  Ctrl+Shift+E are ignored while a text field has focus or any export sheet is open (no clash with an existing key: E alone is
+  the Ellipse tool, and egui matches Ctrl exactly); a mistake in the path names the two devices by their short names. Template
+  dots, backslashes and colons become hyphens; Windows reserved names get a `_`; parts are cut at 120 characters; paths are
+  compared without case for the "two devices on one path" mistake; no Title chunk for the sample page or an unsaved new page;
+  the folder memory is keyed by the file path as opened (a symlinked second path remembers separately); Save As keeps the
+  window's session export memory; a damaged preview in a `.quad` is skipped without a notice; a damaged `settings.ron` is left
+  on disk until the next change overwrites it; `chrono` (local `{date}`) and `ron` are new direct dependencies of `quadrule-ui`.
+  Save with the preview costs about 23 ms more on the Pi (the log's leg 2 entry); it runs on the interface thread at Save.

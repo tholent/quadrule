@@ -2085,3 +2085,43 @@ the completion sheet, the menu and the shortcuts are leg 2). Worked on `main`; t
   page and an unsaved new page get no Title chunk; Save As keeps what the window exported this session; a damaged preview
   is skipped without a notice; `{date}` uses the new `chrono` dependency (local time); `ron` is a direct dependency of
   `quadrule-ui` now.
+
+## 2026-11-17 — rung 15 leg 2, builder (Sonnet 5.5, high): the sheets
+
+Brief: leg 2 of `docs/bbq/2026-11-17-rung-15-export.md` (Q2, Q7, Q9; its Amendments: chris keeps the Software and Title
+text chunks). Worked on `main`; token use was not measured by the builder.
+
+- Built (`c2bb14f`): `crates/ui/src/export_ui.rs`. The **Export sheet** (toolbar Export menu → "Export…", Ctrl+Shift+E):
+  This device / All devices, Folder with Change… (the app's folder dialog, starting at `export_dialog_start`), Path with a
+  Presets combo (Flat, Folder per device, Device then set), Set, the live list of files (a mistake in red, Export greyed), the
+  text-note tick, Cancel and Export. Every choice goes to `settings.ron` as it changes. Export closes the sheet; the one
+  preflight sheet follows when the 14b rules call for it (`Then::Run`), never stacked; then the files are written and the
+  **completion sheet** shows ("Exported N files", a thumbnail per file from the pixels just written, the names, "in
+  <shared folder>", "N files took the place of…" when any, the folded "Where do these go?" note remembered as
+  `completion_note_open`, Reveal in folder, Done). **Export again** (menu item, Ctrl+E) writes with the last choices behind
+  the same preflight sheet and says it in the one-line notice only; with nothing exported yet from the document it opens the
+  Export sheet. `Request::ExportDialog` and `Request::ExportAgain` are gone; `Request::ExportFolderDialog` and
+  `Request::RevealFolder` are the app's. The old items "Export this device…" and "Export all devices…" and their Fluent ids
+  are gone. `--look export|export-preset|export-mistake|exported|exported-open` (a look with no page opens the sample; a
+  look never writes the settings file; `exported*` writes into `/tmp/quadrule-look-export`).
+- Shortcut clash check: the keys the window takes are N, S, Shift+S, Z, Shift+Z, Y, D, G, Shift+G, [ and ] with Ctrl (Cmd on a
+  Mac), and V, L, T, P, R, E, Y alone for the tools. Ctrl+E and Ctrl+Shift+E are free: egui matches Ctrl exactly, so the
+  Ellipse tool's plain E does not fire on Ctrl+E (tested: `export_again_keys_and_menu`). Both ignore a press while a text field
+  has focus or an export sheet is open.
+- Checks (commands): `make check-all` → `TESTS scope=workspace checks=669 check_fail=0 passed=623 failed=0 status=ok`;
+  `cargo test -p quadrule-ui --test export_sheets` 6 passed (the pointer tests: open, presets and memory, a mistake greying
+  Export, Export → preflight → files → completion, Export again by key and menu, Reveal's command); `--test export` 10;
+  `--test window` 21 and `--test lint_pointer` 9 (their export steps now go through the sheet); `cd
+  crates/render/tests/golden && sha256sum -c SHA256SUMS` → 30 OK.
+- Speed (Pi, release build, strip on, 150 frames, 3 runs each, 90th percentile ms against 50, scratch `XDG_CONFIG_HOME` and
+  `XDG_DATA_HOME`, `./target/release/quadrule <page> --bench-drag|--bench-draw 150 --canvas export|chip`), every run
+  `result=pass`: sample page drag export 20.2, 20.1, 20.1, chip 23.5 ×3; draw export 20.1, 20.8, 19.9, chip 22.9, 22.9, 22.8.
+  `--groups-page` drag export 20.0, 20.1, 20.0, chip 30.5, 30.6, 30.5; draw export 19.9, 20.0, 20.0, chip 22.8 ×3.
+  `--lint-page` drag export 19.9, 20.0, 19.8, chip 17.5, 17.5, 17.6; draw export 20.1, 20.0, 20.1, chip 22.3, 22.3, 22.4.
+  `--shapes-page` drag export 20.0, 20.1, 20.0, chip 8.1, 7.8, 8.0; draw export 20.0, 20.1, 20.1, chip 22.7, 22.8, 22.8.
+  Nothing near 50 ms (the groups page on the chip canvas, 30.5, is the heaviest, as before).
+- Save with the 480 px preview (Pi, release build, `cargo test --release -p quadrule-ui --test preview save_time --
+  --ignored --nocapture`, median of 9): sample page file bytes without the preview 1.0 ms, with 23.5 ms (the preview alone
+  22.3, `save_to` 23.6); groups page 0.4 → 23.8; ISO A4 paper page 0.8 → 41.3. It runs on the interface thread at Save.
+- Seen on screen (grim, release build, scratch folders): `scratchpad/rung15/export.png`, `export-preset.png`,
+  `export-mistake.png`, `exported.png`, `exported-open.png`.
