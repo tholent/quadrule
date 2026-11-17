@@ -112,6 +112,8 @@ Notes:
 
 ### 3.3.1 Paper size profiles (v1.1)
 
+> Amended 2026-11-17, chris in the rung 13 bbq, Q10: "I would like to add new built-in profiles for "print" templates. These built-ins should include common print paper sizes (letter, legal, tabloid, A4, A5, etc...)". Paper profiles move from v1.1 into v1.0, built in rung 13b, with Tabloid and A3 added to the table below; the export PPI is chosen per page; line roles take the Nomad's values by physical size; a landscape paper page exports a wide PNG, not turned (record `docs/bbq/2026-11-17-rung-13-profile-system.md`, Q10–Q14).
+
 Alongside device profiles, Quadrule ships **paper profiles** for standard sizes. These are useful for other e-ink devices, for printing, or for designing a size-agnostic master layout. A paper profile is defined by its physical size plus an **export PPI** the user chooses (150, 200, **300** default, or 600).
 
 | Paper | Size (mm) | At 300 PPI (px) |
@@ -722,6 +724,7 @@ The `model`, `layout`, `lint` and `format` crates must be fully testable headles
 ### v1.1: Images and wallpapers
 - Remaining Supernote profiles (marked "Unverified" until calibrated on hardware).
 - Standard paper size profiles with selectable export PPI (§3.3.1).
+  > Amended 2026-11-17: moved into v1.0, rung 13b (chris, rung 13 bbq Q10; §3.3.1 note).
 - Optional downloadable font packs.
 - Raster image import with non-destructive GPU filter stack; gamut warnings.
 - Wallpaper document type.
