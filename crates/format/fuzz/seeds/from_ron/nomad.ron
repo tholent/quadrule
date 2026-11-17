@@ -1,0 +1,66 @@
+// Supernote Nomad (A6 X2). Resolution and PPI: napkin §3.3 (napkins/quadrule-spec.md:100).
+// Everything marked ESTIMATE is a placeholder until maintainer calibration on hardware
+// (napkin §8.4); calibration replaces these values here, with no code change.
+(
+    id: "supernote.a6x2",
+    display_name: "Supernote Nomad (A6 X2)",
+    short_name: "nomad",
+    width_px: 1404,
+    height_px: 1872,
+    ppi: 300.0,
+    diagonal_in: 7.8,
+    panel: "to verify",
+    // Measured 2026-11-12 on the grays sheet (chris; docs/device-measurements/supernote.a6x2/calibration.md):
+    // all 16 even steps are clean (flat, no speckle), and so are the grays between them. On a flat area 0-68 all
+    // look black and 238-255 white (229 already does); the middle 85-221 are 9 distinct grays, each between-step
+    // gray looking like one of its neighbours.
+    gray_levels: [0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255],
+    // Measured 2026-11-09 from docs/device-measurements/supernote.a6x2/nomad-pen-shades.png (chris):
+    // the gray each pen color writes, black, dark grey, light grey, white. Checked by
+    // crates/xtask/tests/pen_shades.rs.
+    ink_values: [1, 157, 201, 254],
+    // Measured 2026-11-09 by `cargo xtask safe-zones` from the portrait screenshots in
+    // docs/device-measurements/supernote.a6x2/ (toolbar docked left, right, top, and floating at its
+    // default place). Footer zones are covered in every screenshot: page navigation (left) and
+    // note name (right). Docked toolbars span their whole edge (their length depends on the
+    // icons chosen); only thickness is measured. Not yet measured: landscape, collapsed toolbar.
+    safe_zones: [
+        (name: "footer_left", orientation: Portrait, rect: (110, 1772, 325, 100), advisory: false),
+        (name: "footer_right", orientation: Portrait, rect: (948, 1772, 346, 100), advisory: false),
+        (name: "toolbar_floating_default", orientation: Portrait, rect: (534, 119, 100, 1245), advisory: true),
+        (name: "toolbar_left", orientation: Portrait, rect: (0, 0, 99, 1872), advisory: false),
+        (name: "toolbar_right", orientation: Portrait, rect: (1305, 0, 99, 1872), advisory: false),
+        (name: "toolbar_top", orientation: Portrait, rect: (0, 0, 1404, 99), advisory: false),
+    ],
+    // ESTIMATE.
+    default_margins_mm: (top: 6.0, right: 6.0, bottom: 6.0, left: 6.0),
+    // Landscape (rung 8b): a landscape design is exported turned a quarter turn clockwise into the portrait
+    // template (docs/device-measurements/supernote.a6x2/landscape-test.md), so the portrait zones above apply.
+    orientations: [Portrait, Landscape],
+    // Calibrated 2026-11-09 by chris on the device, from the calibration sheets; codes and
+    // rulings in docs/device-measurements/supernote.a6x2/calibration.md. Widths in device
+    // pixels, grays 0 = black .. 255 = white.
+    line_roles: (
+        whisper: (width_px: 1, gray: 119),    // LA8
+        guide: (width_px: 1, gray: 51),       // LA4, W1: the favourite line
+        structure: (width_px: 2, gray: 51),   // LB4
+        emphasis: (width_px: 3, gray: 0),     // LC1
+        dot_grid: (width_px: 3, gray: 51),    // W15, square: 2 px dots show but are not usable
+        text_gray: 51,                        // TD2, TL2 (9 pt reads comfortably)
+        label_gray: 153,                      // TD4, TL4
+    ),
+    // The gray each fill role resolves to (rung 6 bbq, Q3 and Q7), from the grays sheet, 2026-11-12 (chris): Block
+    // 68 looked black, so it moved to "A lighter dark gray" (102, G7); Shade 204 (G13) is clean and visible, kept.
+    fill_roles: (
+        shade: 204,
+        block: 102,
+    ),
+    calibration_meta: (
+        date: Some("2026-11-09"),
+        firmware: None,
+        method: "Calibration sheets (cargo xtask calibration-sheet) judged by eye on the device by chris; docs/device-measurements/supernote.a6x2/calibration.md. Gray levels measured on the grays sheet 2026-11-12; ink values are not measured yet.",
+        verified: true,
+    ),
+    // Napkin §11.3.
+    export_hints: ["Copy templates to the MyStyle folder; a subfolder appears under Customization."],
+)

@@ -9,6 +9,8 @@ on:
       # crates/format holds the reader and the fuzz target; crates/model is the document it reads.
       - "crates/format/**"
       - "crates/model/**"
+      # The profile loader the second target fuzzes, and the reader of carried profiles.
+      - "crates/profiles/**"
       # The workspace sets the reader's dependency versions.
       - "Cargo.toml"
       - ".github/workflows/fuzz.yml"
@@ -18,6 +20,8 @@ on:
       # crates/format holds the reader and the fuzz target; crates/model is the document it reads.
       - "crates/format/**"
       - "crates/model/**"
+      # The profile loader the second target fuzzes, and the reader of carried profiles.
+      - "crates/profiles/**"
       # The workspace sets the reader's dependency versions.
       - "Cargo.toml"
       - ".github/workflows/fuzz.yml"
@@ -55,6 +59,11 @@ jobs:
         run: |
           mkdir -p fuzz/corpus/open_quad
           cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad -- -max_total_time=60 -print_final_stats=1
+      - name: Fuzz the profile loader
+        working-directory: crates/format
+        run: |
+          mkdir -p fuzz/corpus/from_ron
+          cargo +nightly fuzz run from_ron fuzz/corpus/from_ron fuzz/seeds/from_ron -- -max_total_time=30 -print_final_stats=1
       - name: Upload a crashing input
         if: failure()
         uses: actions/upload-artifact@v7

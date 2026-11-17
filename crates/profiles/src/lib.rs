@@ -17,8 +17,13 @@
 
 #![forbid(unsafe_code)]
 
+pub mod active;
+pub mod limits;
+pub mod registry;
+
 pub use quadrule_model::Orientation;
 use quadrule_model::{Fill, FillRole, LineRole, MM_PER_IN, Margins};
+pub use registry::{Damaged, Incoming, Registry, Source};
 use serde::{Deserialize, Serialize};
 
 /// One target screen (napkin §3.2).
@@ -268,6 +273,8 @@ pub enum ProfileError {
     Unknown(String),
     /// The RON did not parse.
     Parse(String),
+    /// The RON parsed but a value is outside the limits, or the file is too large.
+    Invalid(String),
 }
 
 impl std::fmt::Display for ProfileError {
@@ -275,6 +282,7 @@ impl std::fmt::Display for ProfileError {
         match self {
             ProfileError::Unknown(id) => write!(f, "no built-in profile `{id}`"),
             ProfileError::Parse(e) => write!(f, "profile does not parse: {e}"),
+            ProfileError::Invalid(e) => write!(f, "profile is not acceptable: {e}"),
         }
     }
 }
@@ -284,6 +292,56 @@ impl std::error::Error for ProfileError {}
 /// Parses a profile from RON text.
 pub fn from_ron(src: &str) -> Result<Profile, ProfileError> {
     ron::from_str(src).map_err(|e| ProfileError::Parse(e.to_string()))
+}
+
+/// Why a profile file could not be loaded, with the line it stopped at when RON said so.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoadError {
+    /// What is wrong, in English (the Profiles window shows it as it is).
+    pub message: String,
+    /// The line of the text, from 1.
+    pub line: Option<usize>,
+}
+
+impl std::fmt::Display for LoadError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.line {
+            Some(l) => write!(f, "line {l}: {}", self.message),
+            None => write!(f, "{}", self.message),
+        }
+    }
+}
+
+/// Parses profile text and checks it against the [`limits`]. Never panics, whatever `src` holds:
+/// a file over [`limits::MAX_FILE_BYTES`] is refused before it is read.
+pub fn parse_checked(src: &str) -> Result<Profile, LoadError> {
+    if src.len() > limits::MAX_FILE_BYTES {
+        return Err(LoadError {
+            message: format!("the file is larger than {} bytes", limits::MAX_FILE_BYTES),
+            line: None,
+        });
+    }
+    let p: Profile = ron::from_str(src).map_err(|e| LoadError {
+        message: e.code.to_string(),
+        line: Some(e.span.start.line),
+    })?;
+    limits::check(&p).map_err(|message| LoadError {
+        message,
+        line: None,
+    })?;
+    Ok(p)
+}
+
+/// Like [`from_ron`], and checked against the [`limits`] (see [`parse_checked`]).
+pub fn from_ron_checked(src: &str) -> Result<Profile, ProfileError> {
+    parse_checked(src).map_err(|e| ProfileError::Invalid(e.to_string()))
+}
+
+/// A profile as RON text, the file Export… writes and a `.quad` carries. The same profile always
+/// gives the same text.
+pub fn to_ron(p: &Profile) -> String {
+    ron::ser::to_string_pretty(p, ron::ser::PrettyConfig::default())
+        .expect("a profile always serialises")
 }
 
 /// The ids of the built-in profiles.

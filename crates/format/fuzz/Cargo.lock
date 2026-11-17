@@ -13,6 +13,9 @@ name = "bitflags"
 version = "2.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ded4057c258ba199e2d26386d3af3780957ecaee6c4ef4041c6b4b8b97c0b06"
+dependencies = [
+ "serde_core",
+]
 
 [[package]]
 name = "block-buffer"
@@ -317,7 +320,7 @@ dependencies = [
 
 [[package]]
 name = "quadrule-format"
-version = "0.1.0"
+version = "0.12.0"
 dependencies = [
  "ciborium",
  "quadrule-model",
@@ -334,13 +337,25 @@ version = "0.0.0"
 dependencies = [
  "libfuzzer-sys",
  "quadrule-format",
+ "quadrule-profiles",
 ]
 
 [[package]]
 name = "quadrule-model"
-version = "0.1.0"
+version = "0.12.0"
 dependencies = [
  "ciborium",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "quadrule-profiles"
+version = "0.12.0"
+dependencies = [
+ "quadrule-model",
+ "ron",
  "serde",
  "uuid",
 ]
@@ -359,6 +374,19 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
+name = "ron"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97b3fe97c18ff24299ea56f802c5693eb34266fb0bc8317f4e101debc8a3ceaf"
+dependencies = [
+ "bitflags",
+ "serde",
+ "serde_derive",
+ "typeid",
+ "unicode-ident",
+]
 
 [[package]]
 name = "rustversion"
@@ -473,6 +501,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ce898823d8cd0f028662d2f349694b1af0a5cc9be83f1d213a00d3147445e1e"
 
 [[package]]
+name = "typeid"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc7d623258602320d5c55d1bc22793b57daff0ec7efc270ea7d55ce1d5f5471c"
+
+[[package]]
 name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -490,6 +524,7 @@ version = "1.29.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bed99139f7dac9b5cfe5f17be4d66dc7079a34dee1d74bcc77217119240e267c"
 dependencies = [
+ "getrandom",
  "js-sys",
  "serde_core",
  "wasm-bindgen",

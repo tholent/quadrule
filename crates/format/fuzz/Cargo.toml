@@ -1,6 +1,7 @@
 # Fuzzing the .quad reader (ADR-001 item 8). Not part of the main workspace: it needs nightly
 # Rust and is built only by cargo-fuzz:
 #   cd crates/format && cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad
+#   cd crates/format && cargo +nightly fuzz run from_ron fuzz/corpus/from_ron fuzz/seeds/from_ron
 [package]
 name = "quadrule-format-fuzz"
 version = "0.0.0"
@@ -14,6 +15,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 quadrule-format = { path = ".." }
+quadrule-profiles = { path = "../../profiles" }
 
 [workspace]
 members = ["."]
@@ -21,6 +23,14 @@ members = ["."]
 [[bin]]
 name = "open_quad"
 path = "fuzz_targets/open_quad.rs"
+test = false
+doc = false
+bench = false
+
+# Rung 13a: any text as a profile file.
+[[bin]]
+name = "from_ron"
+path = "fuzz_targets/from_ron.rs"
 test = false
 doc = false
 bench = false

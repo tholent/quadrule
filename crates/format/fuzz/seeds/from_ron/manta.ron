@@ -1,0 +1,65 @@
+// Supernote Manta (A5 X2). Resolution and PPI: napkin §3.3 (napkins/quadrule-spec.md:99).
+// Everything marked ESTIMATE is a placeholder until maintainer calibration on hardware
+// (napkin §8.4); calibration replaces these values here, with no code change.
+(
+    id: "supernote.a5x2",
+    display_name: "Supernote Manta (A5 X2)",
+    short_name: "manta",
+    width_px: 1920,
+    height_px: 2560,
+    ppi: 300.0,
+    diagonal_in: 10.7,
+    panel: "to verify",
+    // RULED EQUAL to the Nomad, not measured (chris, 2026-11-12: "Same as the Nomad"): all 16 even steps clean; on a
+    // flat area 0-68 look black and 238-255 white; the middle 85-221 are 9 distinct grays
+    // (docs/device-measurements/supernote.a6x2/calibration.md).
+    gray_levels: [0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255],
+    // ASSUMED from the Nomad (docs/device-measurements/supernote.a6x2/nomad-pen-shades.png,
+    // 2026-11-09): pen colors are set by the firmware, and chris finds the two screens alike. Not
+    // measured on the Manta; a Manta screenshot of the four pens would confirm it.
+    ink_values: [1, 157, 201, 254],
+    // Measured 2026-11-09 by `cargo xtask safe-zones` from the portrait screenshots in
+    // docs/device-measurements/supernote.a5x2/ (toolbar docked left, right, top, and floating at its
+    // default place). Footer zones are covered in every screenshot: page navigation (left) and
+    // note name (right). Docked toolbars span their whole edge (their length depends on the
+    // icons chosen); only thickness is measured. Not yet measured: landscape, collapsed toolbar.
+    safe_zones: [
+        (name: "footer_left", orientation: Portrait, rect: (130, 2444, 367, 116), advisory: false),
+        (name: "footer_right", orientation: Portrait, rect: (1421, 2444, 369, 116), advisory: false),
+        (name: "toolbar_floating_default", orientation: Portrait, rect: (848, 333, 116, 1457), advisory: true),
+        (name: "toolbar_left", orientation: Portrait, rect: (0, 0, 116, 2560), advisory: false),
+        (name: "toolbar_right", orientation: Portrait, rect: (1804, 0, 116, 2560), advisory: false),
+        (name: "toolbar_top", orientation: Portrait, rect: (0, 0, 1920, 116), advisory: false),
+    ],
+    // ESTIMATE.
+    default_margins_mm: (top: 8.0, right: 8.0, bottom: 8.0, left: 8.0),
+    // Landscape (rung 8b): a landscape design is exported turned a quarter turn clockwise into the portrait
+    // template (docs/device-measurements/supernote.a6x2/landscape-test.md), so the portrait zones above apply.
+    orientations: [Portrait, Landscape],
+    // Calibrated 2026-11-09 by chris on the device: "the same preferences and findings on the nomad
+    // hold true for the manta" (docs/device-measurements/supernote.a5x2/calibration.md), so these
+    // are the Nomad's values. Widths in device pixels, grays 0 = black .. 255 = white.
+    line_roles: (
+        whisper: (width_px: 1, gray: 119),    // LA8
+        guide: (width_px: 1, gray: 51),       // LA4, W1
+        structure: (width_px: 2, gray: 51),   // LB4
+        emphasis: (width_px: 3, gray: 0),     // LC1
+        dot_grid: (width_px: 3, gray: 51),    // W15, square
+        text_gray: 51,                        // TD2, TL2
+        label_gray: 153,                      // TD4, TL4
+    ),
+    // The gray each fill role resolves to (rung 6 bbq, Q3 and Q7), ruled equal to the Nomad (chris, 2026-11-12): Block
+    // 102 ("A lighter dark gray"), Shade 204.
+    fill_roles: (
+        shade: 204,
+        block: 102,
+    ),
+    calibration_meta: (
+        date: Some("2026-11-09"),
+        firmware: None,
+        method: "Calibration sheets (cargo xtask calibration-sheet) judged by eye on the device by chris, who found the Nomad's preferences and findings hold for the Manta; docs/device-measurements/supernote.a5x2/calibration.md. Gray levels ruled equal to the Nomad's grays-sheet reading, 2026-11-12 (not measured here); ink values are not measured yet.",
+        verified: true,
+    ),
+    // Napkin §11.3.
+    export_hints: ["Copy templates to the MyStyle folder; a subfolder appears under Customization."],
+)
