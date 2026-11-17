@@ -159,3 +159,14 @@ This session leads (Opus 5.5 at high effort; any other model or effort stops and
 builder for 14a from this record; judge it; show chris the window for 14a's look; then 14b the same way. After both
 looks: bump to `0.14.0`, commit `docs/arcs/v1/release-notes/v0.14.0.md`, push tag `v0.14.0`, re-plan the board, write
 the rung 15 prompt, update `STATUS.md`, `docs/STATUS-log.md`, `docs/STATUS-debt.md` and the calibration row.
+
+## Amendments
+
+- **2026-11-17, 14a look.** The lead opened `--lint-page` on the Pi (release build, scratch config folders): the window
+  starts and the Lint tab shows 14 findings; the builder's checks were confirmed (`sha256sum -c` on the goldens: 29
+  lines, none not OK; only `v0.14/` added under fixtures; CI green on `ad948c3` and `547c39d`). The lead put the
+  builder's taste calls to chris (the lint block's field names; an override saved before 0.15 takes the shipped lint
+  values; L13 summing all dark fills on the page into one finding, which departs from Defaulted "L13's area"; L14
+  covering isometric, hex and turned patterns; L03 and L05 both firing on one pale gray). chris, word for word:
+  **"approved. meter read is 46%."** 14a is approved with those calls as built; Defaulted "L13's area" is replaced by
+  the sum over the page. The Page tab's PPI wrap (Q9 debt) moves to 14b.
