@@ -58,6 +58,12 @@ pub enum Request {
     /// Show the system dialog to pick where to save, then call [`ViewerUi::save_as`] with the
     /// path and this follow-up.
     SaveAsDialog(Option<After>),
+    /// Show the system dialog to pick a profile \`.ron\` file, then import it
+    /// ([\`ViewerUi::profiles_import_path\`]).
+    ProfileImportDialog,
+    /// Show the system dialog to pick where to write the selected profile, with this suggested file
+    /// name, then call [\`ViewerUi::profiles_export_to\`].
+    ProfileExportDialog(String),
     /// Close the window: the user chose Save or Don't save at the unsaved-changes prompt.
     Close,
 }
@@ -194,6 +200,8 @@ pub struct ViewerUi {
     pub(crate) emoji_picker: crate::emoji::EmojiPicker,
     /// The Missing fonts dialog, while it shows (rung 12a).
     pub(crate) missing_dialog: Option<crate::missing_ui::MissingDialog>,
+    /// The Profiles window, while it shows (rung 13a).
+    pub(crate) profiles_win: Option<crate::profiles_win::ProfilesWindow>,
     /// The dialog that asks Merge, Rename or Not now for a carried profile that clashes (rung 13a).
     pub(crate) clash_dialog: Option<crate::profiles_ui::ClashDialog>,
     /// The sheet that waits for an answer before Save, Save As or Export (rung 12a).
@@ -291,6 +299,7 @@ impl ViewerUi {
             emoji_picker: Default::default(),
             missing_dialog: None,
             clash_dialog: None,
+            profiles_win: None,
             font_sheet: None,
             sheet_dont_warn: false,
             font_picker_for: None,
@@ -391,6 +400,7 @@ impl ViewerUi {
         self.font_picker_window(&ctx);
         self.missing_dialog_window(&ctx);
         self.clash_dialog_window(&ctx);
+        self.profiles_window_ui(&ctx, &mut requests);
         self.emoji_picker_window(&ctx);
         // The Text tab, if it showed, has taken the cursor by now; a request it could not use
         // (no text box selected) must not wait for a later selection.
@@ -1134,6 +1144,14 @@ impl ViewerUi {
                 .labelled_by(label.id);
             if chosen != current {
                 self.viewer.set_profile(&chosen);
+            }
+            // The menu entry for the Profiles window (rung 13a, Q5).
+            if ui
+                .button(self.t("profiles-open"))
+                .on_hover_text(self.t("profiles-open-tip"))
+                .clicked()
+            {
+                self.open_profiles_window();
             }
             ui.separator();
 

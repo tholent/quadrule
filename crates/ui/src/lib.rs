@@ -36,6 +36,8 @@ pub mod missing_ui;
 pub mod panels;
 pub mod profile_use;
 pub mod profiles_ui;
+pub mod profiles_win;
+pub mod profiles_win_ui;
 pub mod recovery;
 pub mod repeat_tab;
 pub mod strip;
@@ -56,6 +58,7 @@ pub use editor::{DropOn, RowZone, Toward, layer_drop_place, object_drop_place, r
 pub use panels::Tab;
 pub use profile_use::{Clash, ProfileChoice, ProfileUse};
 pub use profiles_ui::{ClashDialog, ClashRow, Pick};
+pub use profiles_win::{Confirm, ImportAsk, ImportPick, ListEntry, NewForm, ProfilesWindow};
 pub use recovery::{Autosave, Recovered, Recovery};
 pub use tools::Tool;
 pub use typing::{Start, Typing, TypingView};

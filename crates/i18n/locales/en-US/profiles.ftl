@@ -35,3 +35,98 @@ profiles-clash-notnow = Not now: show the file's copy this time
 profiles-clash-new-name = { $name } (from file)
 profiles-clash-apply = Apply
 profiles-clash-later = Not now for all
+
+# The Profiles window (rung 13a, Q5).
+profiles-open = Profiles…
+profiles-open-tip = Open the Profiles window: see and change the values each device is drawn with
+profiles-title = Profiles
+profiles-group-builtin = BUILT IN
+profiles-group-mine = MINE
+profiles-none-mine = None yet. New… makes one.
+profiles-group-damaged = DAMAGED FILES (skipped)
+profiles-damaged = { $file }: { $error }
+profiles-damaged-line = { $file }, line { $line }: { $error }
+profiles-name-unverified = { $name } · Unverified
+profiles-screen = Screen
+profiles-name = Name
+profiles-size = Size
+profiles-size-locked = { $w } × { $h } px (locked)
+profiles-ppi = PPI
+profiles-ppi-locked = { $ppi } (locked)
+profiles-short-name = Short name
+profiles-short-name-tip = Lowercase letters, digits and hyphens; it names exported files
+profiles-margins = Margins
+profiles-margin-top = Top margin, millimetres
+profiles-margin-right = Right margin, millimetres
+profiles-margin-bottom = Bottom margin, millimetres
+profiles-margin-left = Left margin, millimetres
+profiles-orientations = Held
+profiles-line-roles = Line roles
+profiles-calibrated = Calibrated on the device. Change them only when you have measured.
+profiles-width-px = Width, px
+profiles-gray = Gray (0 black, 255 white)
+profiles-fill-roles = Fill roles
+profiles-grays = Gray levels and pen grays
+profiles-gray-levels-label = Gray levels the screen renders cleanly
+profiles-pen-grays-label = Grays the pens write
+profiles-grays-bad = Use whole numbers from 0 to 255, separated by commas.
+profiles-safe-zones =
+    { $count ->
+        [one] Safe zones (1 box, px)
+       *[other] Safe zones ({ $count } boxes, px)
+    }
+profiles-zone-name = Name
+profiles-zone-orientation = Held
+profiles-zone-w = Width
+profiles-zone-h = Height
+profiles-zone-movable = Movable
+profiles-zone-remove = Remove the zone { $name }
+profiles-zone-add = Add a zone
+profiles-zone-new = zone
+profiles-about = About
+profiles-verified = Verified on a device
+profiles-date = Date
+profiles-notes = Notes
+profiles-id = id { $id }
+profiles-new = New…
+profiles-duplicate = Duplicate
+profiles-import = Import…
+profiles-export = Export…
+profiles-reset = Reset to built-in
+profiles-delete = Delete
+profiles-cancel = Cancel
+profiles-save = Save
+profiles-new-title = New profile
+profiles-new-default-name = My profile
+profiles-start-from = Start from
+profiles-create = Create
+profiles-copy-name = { $name } copy
+profiles-reset-title = Reset to built-in
+profiles-reset-body = This puts back the values { $name } shipped with and deletes your edits. It cannot be undone.
+profiles-reset-yes = Reset
+profiles-delete-title = Delete profile
+profiles-delete-body = Delete { $name }? Pages that use it still open, because each file carries its own copy. This cannot be undone.
+profiles-delete-yes = Delete
+profiles-keep = Keep
+profiles-import-title = Import profile
+profiles-import-row-id = “{ $name }” has the same id as your “{ $mine }”, with other values.
+profiles-import-row-name = “{ $name }” has the same name as your “{ $mine }”.
+profiles-import-replace = Replace mine
+profiles-import-both = Keep both
+profiles-import-rename = Rename and add
+
+profiles-saved = Saved.
+profiles-created = Made “{ $name }”.
+profiles-deleted = Deleted.
+profiles-was-reset = Back to the built-in values.
+profiles-imported = Imported “{ $name }”.
+profiles-import-same = This computer already has that profile.
+profiles-import-bad = That file is not a usable profile: { $error }
+profiles-exported = Wrote { $path }.
+profiles-error = { $error }
+
+notice-profiles-damaged =
+    { $count ->
+        [one] A profile file in the config folder is damaged and was skipped. The Profiles window lists it.
+       *[other] { $count } profile files in the config folder are damaged and were skipped. The Profiles window lists them.
+    }

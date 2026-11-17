@@ -958,7 +958,17 @@ impl ViewerUi {
     /// primary marked and fixed, and Make primary on the others.
     fn devices_section(&mut self, ui: &mut egui::Ui, doc: &Document) {
         ui.add_space(6.0);
-        ui.strong(self.t("app-page-devices"));
+        ui.horizontal(|ui| {
+            ui.strong(self.t("app-page-devices"));
+            // The Profiles window (rung 13a, Q5): beside the device ticks.
+            if ui
+                .button(self.t("profiles-open"))
+                .on_hover_text(self.t("profiles-open-tip"))
+                .clicked()
+            {
+                self.open_profiles_window();
+            }
+        });
         ui.label(RichText::new(self.t("app-device-primary-tip")).small());
         let have: Vec<String> = doc.profile_ids().into_iter().map(String::from).collect();
         let all: Vec<String> = quadrule_profiles::active::device_ids();

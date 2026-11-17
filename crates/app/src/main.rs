@@ -191,6 +191,10 @@ impl App {
                     .with_tool(args.bench_tool.unwrap_or(quadrule_ui::Tool::Pattern))
             })
         };
+        if args.profiles {
+            ui.open_profiles_window();
+        }
+        ui.note_damaged_profiles();
         ui.bench = bench.map(|b| {
             let b = if args.bench_secondary {
                 b.on_secondary()
@@ -266,6 +270,23 @@ impl App {
             Request::Close => {
                 self.closing = true;
                 self.ctx_close = true;
+            }
+            Request::ProfileImportDialog => {
+                let picked = rfd::FileDialog::new()
+                    .add_filter("profile", &["ron"])
+                    .pick_file();
+                if let Some(path) = picked {
+                    self.ui.profiles_import_path(&path);
+                }
+            }
+            Request::ProfileExportDialog(name) => {
+                let picked = rfd::FileDialog::new()
+                    .add_filter("profile", &["ron"])
+                    .set_file_name(name)
+                    .save_file();
+                if let Some(path) = picked {
+                    self.ui.profiles_export_to(&path);
+                }
             }
             Request::ExportDialog(which) => {
                 let mut dialog = rfd::FileDialog::new();
@@ -448,6 +469,8 @@ struct Args {
     /// Open the rung 11a fonts page instead of the empty start (`--fonts-page`); the benchmarks
     /// then run over it, and the drag moves its dot grid.
     fonts_page: bool,
+    /// Open the Profiles window at start (`--profiles`), for a look at it (rung 13a).
+    profiles: bool,
     /// Open the rung 11b text-box page instead of the empty start (`--textbox-page`); the benchmarks
     /// then run over it, and the drag moves its dot grid.
     textbox_page: bool,
@@ -517,6 +540,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.turned_patterns_page = true;
         } else if a == "--repeats-page" {
             out.repeats_page = true;
+        } else if a == "--profiles" {
+            out.profiles = true;
         } else if a == "--fonts-page" {
             out.fonts_page = true;
         } else if a == "--textbox-page" {
@@ -702,6 +727,13 @@ mod tests {
                 Ok(Args {
                     bench_drag: Some(40),
                     repeats_page: true,
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--profiles"]),
+                Ok(Args {
+                    profiles: true,
                     ..Args::default()
                 }),
             ),
