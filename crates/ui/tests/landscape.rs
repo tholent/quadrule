@@ -91,6 +91,7 @@ fn object(n: u128, frame: Frame, c: Constraints, kind: ObjectKind) -> Object {
         opacity_pct: 100,
         overrides: Default::default(),
         kind,
+        free_placement: false,
         extra: Extra::new(),
     }
 }

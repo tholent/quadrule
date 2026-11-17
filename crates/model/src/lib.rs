@@ -74,12 +74,21 @@ pub struct Document {
     pub rhythm: Rhythm,
     /// Drawn in order: the first layer is the bottom one.
     pub layers: Vec<Layer>,
+    /// The lint rules this page turns off, on every device, by id (`"L03"`; format 0.15, rung 14 bbq,
+    /// Q7). Left out of a file when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ignored_rules: Vec<String>,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
 }
 
 impl Document {
+    /// Whether this page turns lint rule `rule` off.
+    pub fn ignores_rule(&self, rule: &str) -> bool {
+        self.ignored_rules.iter().any(|r| r == rule)
+    }
+
     /// The ids of the document's profiles, primary first.
     pub fn profile_ids(&self) -> Vec<&str> {
         self.profiles
@@ -455,6 +464,10 @@ pub struct Object {
     /// stored design); one for a device the document does not target is kept, unused.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub overrides: BTreeMap<String, Override>,
+    /// Placed off the rhythm on purpose (format 0.15, rung 14 bbq, Q7): the linter's L16 leaves it, and a
+    /// group's flag covers what is inside. Nothing else changes. A file without it reads as off.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub free_placement: bool,
     /// What the object is.
     pub kind: ObjectKind,
     /// Fields from newer versions.

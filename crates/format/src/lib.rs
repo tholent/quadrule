@@ -33,6 +33,8 @@
 //! and never stops a file opening. Format 0.14 carries profiles (the user's own, and an edited Manta
 //! or Nomad) as the same RON text Export… writes; a carried profile outside the limits is skipped
 //! the same way, and the page opens with that profile missing.
+//! Format 0.15 adds the document's list of ignored lint rules, an object's Free placement flag and the `lint`
+//! block of a profile; each is left out of a file when it holds its default.
 
 #![forbid(unsafe_code)]
 
@@ -51,7 +53,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, DateTime, System, ZipArchive, ZipWriter};
 
 /// The format version this build writes. Pre-1.0 while the format settles.
-pub const FORMAT_VERSION: &str = "0.14.0";
+pub const FORMAT_VERSION: &str = "0.15.0";
 
 /// Required features this build understands. A file that requires any other opens read-only.
 pub const KNOWN_FEATURES: &[&str] = &["text-outlines"];

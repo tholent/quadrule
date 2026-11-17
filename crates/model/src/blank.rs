@@ -152,6 +152,7 @@ pub fn blank_document(
             objects: Vec::new(),
             extra: Extra::new(),
         }],
+        ignored_rules: Vec::new(),
         extra: Extra::new(),
     }
 }

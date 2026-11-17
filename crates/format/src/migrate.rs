@@ -38,6 +38,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.11.0", "0.12.0", v0_11_to_v0_12),
     ("0.12.0", "0.13.0", v0_12_to_v0_13),
     ("0.13.0", "0.14.0", v0_13_to_v0_14),
+    ("0.14.0", "0.15.0", v0_14_to_v0_15),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -159,6 +160,16 @@ fn v0_12_to_v0_13(scene: &mut Value) -> Result<(), FormatError> {
 /// 0.13 scene needs no rewriting: a 0.13 file carries none, and every profile it names is one this
 /// build ships. A 0.13 build keeps the new entries as unknown ones.
 fn v0_13_to_v0_14(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.15 adds two optional fields (rung 14 bbq, Q2 and Q7): `ignored_rules` on the document (the lint rules
+/// this page turns off, on every device) and `free_placement` on an object (L16 leaves it), and the
+/// `lint` block in a carried profile (`profiles/<id>.ron`, which has a default of every value empty). Each
+/// is left out of a file when it holds its default, so a 0.14 scene needs no rewriting: no rule ignored,
+/// no object free, and a carried 0.14 profile reads with its lint values empty (those checks are skipped on
+/// it until the person fills them in). A 0.14 build keeps the new fields as unknown ones on a save.
+fn v0_14_to_v0_15(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

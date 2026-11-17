@@ -69,6 +69,7 @@ fn object(
         rotation_deg: 0.0,
         opacity_pct: 100,
         overrides: Default::default(),
+        free_placement: false,
         kind,
         extra: Extra::new(),
     }
@@ -181,6 +182,7 @@ pub fn slice_document() -> Document {
                 extra: Extra::new(),
             },
         ],
+        ignored_rules: Vec::new(),
         extra: Extra::new(),
     }
 }
