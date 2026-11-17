@@ -199,6 +199,8 @@ fn export_bytes_unchanged_after_edit_and_undo() {
     v.undo();
     v.undo();
     let dir = tmp("export_after_undo");
+    // The goldens carry no text note.
+    v.settings.note = false;
     let files = v.export(&dir, ExportWhich::AllDevices).unwrap();
     let shas: Vec<String> = files
         .iter()

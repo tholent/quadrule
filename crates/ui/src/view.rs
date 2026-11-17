@@ -55,6 +55,9 @@ pub enum Request {
     OpenDialog,
     /// Show the system dialog to pick a folder, then export.
     ExportDialog(ExportWhich),
+    /// Export once more with the remembered choices, into the remembered folder, with no dialog
+    /// ([`Viewer::export_again`]).
+    ExportAgain,
     /// Show the system dialog to pick where to save, then call [`ViewerUi::save_as`] with the
     /// path and this follow-up.
     SaveAsDialog(Option<After>),

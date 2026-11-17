@@ -27,8 +27,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   right-to-left translation.
 - Rung 2 viewer, owed (`crates/ui/src/view.rs`, `crates/app/src/main.rs`): the controls' font on macOS is looked up as
   `.AppleSystemUIFont`, unverified (no Mac here); if fontdb cannot find it, egui's own font shows. Ctrl + scroll
-  keeps the point under the pointer still since 8a, untested headless (`egui_kittest` cannot make a scroll-zoom). The export writes no PNG text note (napkin
-  §11.1 has it on by default), so its bytes match rung 1's goldens; the note belongs with the export settings.
+  keeps the point under the pointer still since 8a, untested headless (`egui_kittest` cannot make a scroll-zoom).
 - The graphics-chip canvas (built in rung 3, `crates/app/src/chip.rs`) is measured only on the Pi at Fit zoom (40 ms
   a frame, release build); still to measure zoomed in, while scrolling, and on a desktop graphics card (rung 3 bbq
   Q7). It redraws the visible area on every scroll step.
@@ -284,3 +283,14 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   that has moved onto them first in a headless test (the sheet fades in over a few frames). `--look lint|style|preflight` is a
   screenshot flag the record did not ask for. The speed numbers are in the 14b log entry (none over 50 ms).
 
+- Rung 15 leg 1, owed (`crates/ui/src/export.rs`, `export_path.rs`, `settings.rs`): the Export sheet, Export again's
+  menu item and Ctrl+E / Ctrl+Shift+E, the completion sheet and the wording of every new word (Fluent ids `export-error-*`,
+  `export-preset-*`, `notice-settings-*` are proposals) are leg 2's; until then the template, the Set and the note tick are
+  edited by hand in `settings.ron`, and `ViewerUi::ask_export_again` (no key bound) falls back to the toolbar's folder
+  dialog when nothing was exported from the document. Judgement calls to look at: template dots, backslashes and colons
+  become hyphens; Windows reserved names get a `_`; parts are cut at 120 characters; paths are compared without case for
+  the "two devices on one path" mistake; no Title chunk for the sample page or an unsaved new page; the folder memory is
+  keyed by the file path as opened (a symlinked second path remembers separately); Save As keeps the window's session
+  export memory; a damaged preview in a `.quad` is skipped without a notice; a damaged `settings.ron` is left on disk until
+  the next change overwrites it; `chrono` (local `{date}`) and `ron` are new direct dependencies of `quadrule-ui`. Save's
+  time with the thumbnail is not measured yet (leg 2 reports it on the Pi, release build).

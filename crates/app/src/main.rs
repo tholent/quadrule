@@ -102,6 +102,12 @@ impl App {
             },
         );
         let mut ui = ViewerUi::new(Viewer::default());
+        // What Export remembers (rung 15): the path template, the folders, the note tick, in
+        // `settings.ron` beside `profiles/`. A timing run reads none and writes none.
+        if !timing && let Some(d) = directories::ProjectDirs::from("org", "quadrule", "quadrule") {
+            ui.viewer
+                .use_settings_file(d.config_dir().join(quadrule_ui::settings::FILE_NAME));
+        }
         // Text can use the fonts installed on this computer as well as the bundled ones (rung 11a).
         ui.viewer.use_system_fonts();
         if let Some(storage) = cc.storage {
@@ -302,9 +308,15 @@ impl App {
                     self.ui.profiles_export_to(&path);
                 }
             }
+            Request::ExportAgain => {
+                // A failure is shown in the status bar by the viewer itself.
+                let _ = self.ui.viewer.export_again();
+            }
             Request::ExportDialog(which) => {
                 let mut dialog = rfd::FileDialog::new();
-                if let Some(dir) = &self.ui.viewer.export_dir {
+                // Where this document last exported, else the last folder used, else its own folder,
+                // else home (rung 15 bbq, Q4).
+                if let Some(dir) = self.ui.viewer.export_start_folder() {
                     dialog = dialog.set_directory(dir);
                 }
                 if let Some(dir) = dialog.pick_folder() {

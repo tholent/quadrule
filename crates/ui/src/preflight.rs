@@ -120,6 +120,28 @@ impl Viewer {
 }
 
 impl ViewerUi {
+    /// Asks to export again with the remembered choices (the next leg binds it to Ctrl+E and the menu). When
+    /// something was exported from this document before, the request goes on at once or, when the preflight
+    /// rules call for it, behind the one preflight sheet for the remembered devices. When nothing was, it asks
+    /// for the folder dialog as the toolbar's items do, standing in for the Export sheet.
+    pub fn ask_export_again(&mut self, requests: &mut Vec<Request>) {
+        let which = self.viewer.settings.devices.into();
+        if !self.viewer.can_export_again() {
+            self.ask_export(which, requests);
+            return;
+        }
+        let request = Request::ExportAgain;
+        if self.viewer.preflight_report(which).needs_sheet() {
+            self.preflight = Some(Preflight {
+                request,
+                which,
+                notes_open: false,
+            });
+        } else {
+            requests.push(request);
+        }
+    }
+
     /// Whether the preflight sheet is showing.
     pub fn preflight_open(&self) -> bool {
         self.preflight.is_some()

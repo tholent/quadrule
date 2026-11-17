@@ -59,13 +59,12 @@ fn names(files: &[PathBuf]) -> Vec<String> {
 fn the_paper_page_exports_each_size_at_its_ppi_as_the_golden_images() {
     let mut v = Viewer::default();
     v.open_paper();
+    // The bytes are the goldens', which carry no text note.
+    v.settings.note = false;
     let dir = tmp("ui-export-paper");
     let all = v.export(&dir, ExportWhich::AllDevices).unwrap();
     let got = names(&all);
-    let want = [
-        "rung-13b-paper_a4_2480x3508.png",
-        "rung-13b-paper_a5_3496x4961.png",
-    ];
+    let want = ["rung-13b-paper-a4.png", "rung-13b-paper-a5.png"];
     let goldens = [
         "paper_paper.a4_2480x3508.png",
         "paper_paper.a5_3496x4961.png",
@@ -76,6 +75,7 @@ fn the_paper_page_exports_each_size_at_its_ppi_as_the_golden_images() {
         .all(|(p, g)| std::fs::read(p).unwrap() == golden(g));
     let mut l = Viewer::default();
     l.open_paper_landscape();
+    l.settings.note = false;
     let ldir = tmp("ui-export-paper-landscape");
     let lall = l.export(&ldir, ExportWhich::ThisDevice).unwrap();
     let lgot = names(&lall);
@@ -87,7 +87,7 @@ fn the_paper_page_exports_each_size_at_its_ppi_as_the_golden_images() {
         && encode_png(&export_pixels(page), None) == std::fs::read(&lall[0]).unwrap();
     let ok = got == want
         && bytes
-        && lgot == ["rung-13b-paper-landscape_letter_3300x2550.png"]
+        && lgot == ["rung-13b-paper-landscape-letter.png"]
         && wide
         && not_turned
         && lbytes;
@@ -165,9 +165,12 @@ fn new_on_a_paper_size_makes_that_paper_alone_with_ten_millimetre_margins() {
     let size = (p.width_px, p.height_px) == (2480, 3508);
     let mut wide = Viewer::default();
     wide.open_new(&spec(Orientation::Landscape)).unwrap();
+    // The size tokens give the PNG's own size: the paper page is held wide, not turned.
     let name = {
-        let page = wide.page_for(PAPER_A4_ID).unwrap().clone();
-        wide.export_name(&page.profile)
+        let mut req = wide.export_request(Some(ExportWhich::ThisDevice), PathBuf::new());
+        req.devices = vec![PAPER_A4_ID.into()];
+        req.template = "{title}_{device}_{width}x{height}.png".into();
+        wide.plan_export(&req).unwrap().remove(0).1
     };
     let landscape = name == "notebook_a4_3508x2480.png";
     // A rhythm whose step is 6 mm rounds the 10 mm up to a whole step, 12.

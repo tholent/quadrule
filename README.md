@@ -69,7 +69,13 @@ and error.
   with an inner radius. Curves and slanted edges are smooth; straight edges stay sharp on whole pixels.
 - Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock and reorder layers;
   unlimited undo and redo; autosave with recovery after a crash.
-- Export a PNG for the Manta or the Nomad, named like `{title}_{manta|nomad}_{w}x{h}.png`.
+- Export a PNG for the Manta or the Nomad, named like `isometric-5mm-manta.png`. The name comes from one path template
+  for the whole app (`{title}-{device}.png` to start with; a `/` in it makes folders, and the tokens are `{title}
+  {device} {profile} {model} {width} {height} {orientation} {type} {date} {version} {set}`), kept with the folder you
+  last exported each document to, the Set, and the "text note" tick in `settings.ron` in the config folder (on Linux
+  `~/.config/quadrule/`). Until the Export sheet arrives (the next step of this work), the template is edited in that
+  file, and Export… still asks for a folder. Each PNG carries a text note (Software `quadrule <version>`, Title the
+  document's title) unless the note is turned off in the same file; the pixels are the same either way.
 - Text boxes: double-click one (or draw a new one) to type in it, right where the letters are, with a caret, Shift to
   select, Ctrl+A, Ctrl+C, Ctrl+X and Ctrl+V as plain text, Enter for a new paragraph, Ctrl+Z back through the words you
   typed, and Escape or a click outside to finish (the whole session is one undo step). In the Text tab, Sizing is Auto
@@ -191,8 +197,8 @@ built and tested on Linux, macOS and Windows. Setup details, tests and the code 
 ## Putting a template on your Supernote
 
 Export a PNG, then copy it to the tablet's `MyStyle` folder. Files in a subfolder of `MyStyle` appear under the
-Customization tab when you pick a template in a note. Use a plain filename of letters, digits, hyphens and
-underscores; Supernote advises against special characters.
+Customization tab when you pick a template in a note. Quadrule names files with letters, digits, hyphens and
+underscores only, because Supernote advises against special characters.
 
 ## Help and feedback
 

@@ -2048,3 +2048,40 @@ The look: `cargo run --release -p quadrule-app -- --lint-page` then the Lint tab
   reason=version-only`; every other recent `Cargo.lock` commit, a range with code, a pull request, a new branch and an
   unreadable base → `run=true`; in a scratch clone, an outside package's version in `Cargo.lock`, a dependency in
   `Cargo.toml` and an edition change → `run=true`.
+
+## 2026-11-17 — rung 15 leg 1, builder (Sonnet 5.5, high): the export engine and the file format
+
+Brief: `docs/bbq/2026-11-17-rung-15-export.md` (Q1–Q10 and the Defaulted list), leg 1 of 2 (headless; the Export sheet,
+the completion sheet, the menu and the shortcuts are leg 2). Worked on `main`; token use was not measured by the builder.
+
+- Step 1, file format 0.16.0 (`ec1b626`): `previews/<primary_profile_id>.png`, 8-bit gray, longest side 480 px, from the
+  main device's export pixels (`export_pixels`, so a landscape design is turned like its PNG), shrunk by `viewer::shrink`,
+  never enlarged. Written by `Viewer::save_bytes` (Save and Save As); `file_bytes` (the recovery file, so autosave) writes
+  none. `QuadFile.previews` carries the bytes; a damaged or missing one is skipped, never an error. Migration step 0.15 to
+  0.16 rewrites nothing; fixture `crates/render/tests/fixtures/v0.15/` (the `v0.14` page resaved by the 0.15.0 build before
+  the change, same export hashes). The `migrate_v0N.rs` tests' `FORMAT_VERSION == "0.15.0"` guards became `"0.16.0"`, as
+  at every earlier format change.
+- Step 4, PNG text note (`73766f4`): Software = `quadrule <version>` (the editor's `SAVED_BY`), Title = the document's
+  title (or the file's name); a chunk is `tEXt` when every character is Latin-1, else `iTXt`; an empty value is left out,
+  a NUL becomes a space. `encode_png(img, None)` is untouched. One new golden `noted_supernote.a6x2_1404x1872.png`
+  (Software `tEXt`, Title `iTXt`, version fixed in the test), its line appended to `golden/SHA256SUMS` after the 29 frozen
+  ones.
+- Steps 2, 3, 5 (the rest): `crates/ui/src/export_path.rs` (the template: tokens, safe names, mistakes as data),
+  `crates/ui/src/settings.rs` (`settings.ron`), `crates/ui/src/export.rs` (the engine). The old fixed `export_name` and
+  `write_pngs` are gone; the toolbar's two items now run through the engine with the remembered settings
+  (`Viewer::export(dir, which)`), the folder dialog starts in `Viewer::export_start_folder`, and the app reads
+  `settings.ron` from the config folder (not in a timing run). Headless for leg 2: `Viewer::plan_export` (live preview),
+  `run_export`, `export_again`, `can_export_again`, `ViewerUi::ask_export_again` and `Request::ExportAgain` (behind the one
+  preflight sheet). Existing tests that expected the old names or the golden bytes now expect the new default names, and
+  switch the note off where they compare bytes with the goldens (`v.settings.note = false`).
+- Checks (commands): `make check-all` → `TESTS scope=workspace checks=663 check_fail=0 passed=617 failed=0 status=ok`;
+  `cargo test -p quadrule-ui --test export` 10 passed; `--test preview` 3; `cargo test -p quadrule-format --test previews`
+  3; `cargo test -p quadrule-render --test migrate_v015` 3; `--test noted` 2; `cd crates/render/tests/golden && sha256sum
+  -c SHA256SUMS` → 30 OK (29 frozen + the noted one). The window started on a damaged `settings.ron` in a scratch
+  `XDG_CONFIG_HOME` (15 s, debug build, no crash).
+- Judgement calls (record words closest, each also a debt line): a template's dot, backslash and colon become hyphens
+  (only a closing `.png` is read as the extension); Windows reserved names (`con`, `nul`, `com1`…) get an underscore; a
+  part is cut at 120 characters; two devices on one path are compared without regard to case; with no title, the sample
+  page and an unsaved new page get no Title chunk; Save As keeps what the window exported this session; a damaged preview
+  is skipped without a notice; `{date}` uses the new `chrono` dependency (local time); `ron` is a direct dependency of
+  `quadrule-ui` now.

@@ -72,6 +72,17 @@ notice-exported = { $count ->
    *[other] Exported { $count } files
 } to { $folder }. Copy them to the device's MyStyle folder.
 notice-export-failed = Could not export: { $error }
+export-error-nothing-open = There is nothing open to export.
+export-error-unknown-token = The export path has a word in braces that Quadrule does not know: { $token }
+export-error-unclosed = The export path has a { "{" } with no { "}" } after it.
+export-error-no-file-name = The export path leaves no file name.
+export-error-same-path = { $first } and { $second } would both write { $path }. Put { "{device}" } in the path to give each device its own file.
+# The three path presets under the export path field (rung 15).
+export-preset-flat = Flat
+export-preset-folder-per-device = Folder per device
+export-preset-device-then-set = Device, then set
+notice-settings-damaged = Quadrule could not read its settings file, so it is using the defaults: { $error }
+notice-settings-save-failed = Could not save the settings: { $error }
 notice-saved = Saved { $path }.
 notice-save-failed = Could not save: { $error }
 notice-locked = The selection is locked.

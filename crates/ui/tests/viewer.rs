@@ -137,6 +137,8 @@ fn export_writes_the_golden_bytes() {
     let mut v = Viewer::default();
     v.open_sample();
     v.set_profile("supernote.a6x2");
+    // The bytes are rung 1's goldens, which carry no text note: the note is off here.
+    v.settings.note = false;
     let one_dir = tmp("ui-export-one");
     let one = v.export(&one_dir, ExportWhich::ThisDevice).unwrap();
     let all_dir = tmp("ui-export-all");
@@ -149,10 +151,7 @@ fn export_writes_the_golden_bytes() {
         .iter()
         .zip(["supernote.a5x2", "supernote.a6x2"])
         .all(|(p, id)| std::fs::read(p).unwrap() == golden(id));
-    let want = [
-        "rung-1-slice_manta_1920x2560.png",
-        "rung-1-slice_nomad_1404x1872.png",
-    ];
+    let want = ["rung-1-slice-manta.png", "rung-1-slice-nomad.png"];
     let notice = v
         .notice
         .as_ref()

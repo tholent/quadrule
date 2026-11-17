@@ -372,16 +372,15 @@ fn the_page_tab_switch_is_one_undo_step() {
 fn export_writes_the_portrait_png_turned() {
     let mut v = Viewer::default();
     v.open_landscape();
+    // The bytes are the goldens', which carry no text note.
+    v.settings.note = false;
     let dir = tmp("ui-export-landscape");
     let all = v.export(&dir, ExportWhich::AllDevices).unwrap();
     let names: Vec<String> = all
         .iter()
         .map(|p| p.file_name().unwrap().to_string_lossy().into_owned())
         .collect();
-    let want = [
-        "rung-8b-landscape_manta_1920x2560.png",
-        "rung-8b-landscape_nomad_1404x1872.png",
-    ];
+    let want = ["rung-8b-landscape-manta.png", "rung-8b-landscape-nomad.png"];
     let golden = |id: &str, (w, h): (u32, u32)| {
         std::fs::read(
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))

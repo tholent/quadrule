@@ -132,6 +132,8 @@ pub struct Open {
     /// What the profiles the page uses need: carried copies this computer lacks, clashes to settle
     /// (rung 13a).
     pub(crate) profile_use: crate::profile_use::ProfileUse,
+    /// The folder this document last exported to, this session (Export again; rung 15 bbq).
+    pub(crate) exported_to: Option<PathBuf>,
 }
 
 /// A font a document names that is not on this computer (napkin §7.3; rung 12a).
@@ -206,6 +208,13 @@ pub struct Viewer {
     pub notice: Option<Notice>,
     /// The folder the last export went to, this session (rung 2 bbq, Defaulted "Export").
     pub export_dir: Option<PathBuf>,
+    /// What Export remembers between runs (rung 15 bbq): the path template, the Set, the note tick, the devices
+    /// choice, the folder of each document. Kept in `settings.ron` when the app gives it a file.
+    pub settings: crate::settings::Settings,
+    /// The settings file, when the app gave one; changes are written there.
+    pub settings_path: Option<PathBuf>,
+    /// A fixed day for the `{date}` token (a test sets it); `None` is today.
+    pub export_date: Option<String>,
     /// Which snap helpers are on (rung 4 bbq, Defaulted "Toggles"): app settings, not saved in
     /// the `.quad` file.
     pub snap: SnapToggles,
@@ -286,6 +295,9 @@ impl Default for Viewer {
             screen_px_per_mm: None,
             notice: None,
             export_dir: None,
+            settings: crate::settings::Settings::default(),
+            settings_path: None,
+            export_date: None,
             snap: SnapToggles::default(),
             paste_run: None,
             show_rhythm: false,
@@ -635,6 +647,7 @@ impl Viewer {
             missing: Vec::new(),
             bar_closed: false,
             profile_use: Default::default(),
+            exported_to: None,
         });
         self.refresh_font_state();
         self.drag = None;
@@ -742,63 +755,6 @@ impl Viewer {
         let w = ((px.width as f64 * scale).round() as u32).max(1);
         let h = ((px.height as f64 * scale).round() as u32).max(1);
         Some((preview_path(&id), encode_png(&shrink(&px, w, h), None)))
-    }
-
-    /// The export file name for device `id` (napkin §11.2's default scheme,
-    /// `{title}_{profile}_{width}x{height}.png`, slugified per §11.3). The size is the PNG's, the
-    /// device's own portrait size, for a landscape design too (rung 8b, ADR-013).
-    pub fn export_name(&self, profile: &Profile) -> String {
-        let title = slug(
-            self.title()
-                .unwrap_or(match self.open.as_ref().map(|o| &o.source) {
-                    Some(Source::Sample) => "sample",
-                    _ => "untitled",
-                }),
-        );
-        format!(
-            "{title}_{}_{}x{}.png",
-            profile_token(profile),
-            profile.device_size().0,
-            profile.device_size().1
-        )
-    }
-
-    /// Writes PNGs into `dir`: the device on screen, or every device. Returns the files written.
-    /// The bytes are the export renderer's (ADR-003), the same as rung 1's golden images.
-    /// On failure the notice says why.
-    pub fn export(&mut self, dir: &Path, which: ExportWhich) -> Result<Vec<PathBuf>, String> {
-        self.end_typing();
-        let result = self.write_pngs(dir, which);
-        if let Err(e) = &result {
-            self.notice = Some(Notice {
-                message: Message::new("notice-export-failed").text("error", e.clone()),
-                error: true,
-            });
-        }
-        result
-    }
-
-    fn write_pngs(&mut self, dir: &Path, which: ExportWhich) -> Result<Vec<PathBuf>, String> {
-        let ids = match which {
-            ExportWhich::ThisDevice => vec![self.profile_id.clone()],
-            ExportWhich::AllDevices => self.profile_ids(),
-        };
-        let mut written = Vec::new();
-        for id in ids {
-            let page = self.page_for(&id)?.clone();
-            let path = dir.join(self.export_name(&page.profile));
-            std::fs::write(&path, encode_png(&export_pixels(&page), None))
-                .map_err(|e| format!("{}: {e}", path.display()))?;
-            written.push(path);
-        }
-        self.export_dir = Some(dir.to_path_buf());
-        self.notice = Some(Notice {
-            message: Message::new("notice-exported")
-                .num("count", written.len() as f64, 0)
-                .text("folder", dir.display().to_string()),
-            error: false,
-        });
-        Ok(written)
     }
 
     /// Screen points per device pixel for the current zoom. `canvas` is the canvas size in points,
@@ -1062,19 +1018,7 @@ pub fn profile_token(p: &Profile) -> String {
 /// ASCII letters, digits, hyphens and underscores only (napkin §11.3): letters lowercased, any
 /// other run of characters becomes one hyphen, none at either end. Never empty.
 pub fn slug(s: &str) -> String {
-    let mut out = String::new();
-    let mut gap = false;
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() || c == '_' {
-            if gap && !out.is_empty() {
-                out.push('-');
-            }
-            gap = false;
-            out.push(c.to_ascii_lowercase());
-        } else {
-            gap = true;
-        }
-    }
+    let out = crate::export_path::slug_or_empty(s);
     if out.is_empty() {
         "untitled".into()
     } else {
