@@ -446,10 +446,25 @@ fn the_window_draws_and_a_changed_role_redraws_the_page_fast() {
     let _ = h.state_mut().viewer.page_for(NOMAD_ID).unwrap();
     let ms = t.elapsed().as_secs_f64() * 1000.0;
     h.run();
+    // A whole frame with the window open, after another change: the form, the strip and the canvas.
+    let t = std::time::Instant::now();
+    h.state_mut()
+        .profiles_edit(|p| p.line_roles.structure.gray = 30);
+    h.step();
+    let frame_ms = t.elapsed().as_secs_f64() * 1000.0;
     let dirty = h.state().profiles_dirty();
+    // The same frame with nothing changed, and the same redraw with the window closed (Cancel changes
+    // the page back), to tell what the window itself costs.
+    let t = std::time::Instant::now();
+    h.step();
+    let idle_ms = t.elapsed().as_secs_f64() * 1000.0;
+    h.state_mut().profiles_cancel();
+    let t = std::time::Instant::now();
+    h.step();
+    let closed_ms = t.elapsed().as_secs_f64() * 1000.0;
     let ok = missing.is_empty() && titled && reset_disabled && dirty;
     println!(
-        "CHECK crate=ui name=profiles_window_draws result={} missing={missing:?} role_change_redraw_ms={ms:.1} build={}",
+        "CHECK crate=ui name=profiles_window_draws result={} missing={missing:?} role_change_redraw_ms={ms:.1} frame_with_window_ms={frame_ms:.1} idle_frame_with_window_ms={idle_ms:.1} same_redraw_window_closed_ms={closed_ms:.1} build={}",
         pass(ok),
         if cfg!(debug_assertions) {
             "debug"

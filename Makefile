@@ -135,9 +135,10 @@ safe-zones: ## Print the safe zones measured from the device screenshots (PROFIL
 lint: ## Lint a document (FILE=page.quad, or the sample page)
 	cargo xtask lint $(FILE)
 
-fuzz: ## Fuzz the .quad reader for SECS=60 (needs nightly Rust and cargo-fuzz)
-	cd crates/format && mkdir -p fuzz/corpus/open_quad && \
-	cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad -- -max_total_time=$(SECS)
+fuzz: ## Fuzz the .quad reader and the profile loader for SECS=60 each (needs nightly Rust and cargo-fuzz)
+	cd crates/format && mkdir -p fuzz/corpus/open_quad fuzz/corpus/from_ron && \
+	cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad -- -max_total_time=$(SECS) && \
+	cargo +nightly fuzz run from_ron fuzz/corpus/from_ron fuzz/seeds/from_ron -- -max_total_time=$(SECS)
 
 # ---- review --------------------------------------------------------------------------------------------------
 

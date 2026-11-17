@@ -24,7 +24,14 @@ and error.
 
 - **Device profiles.** Each Supernote model is a profile: its exact resolution and pixel density, and the areas the
   tablet's own toolbar and footer cover. The built-in profiles are the Manta (A5 X2, 1920 × 2560) and the Nomad
-  (A6 X2, 1404 × 1872).
+  (A6 X2, 1404 × 1872). The **Profiles window** (a button beside the device ticks in the Page tab, and one in the
+  toolbar) shows the values each device is drawn with and lets you change them: an edited Manta or Nomad is a local
+  override marked **Edited** (Reset to built-in puts the shipped values back), and New…, Duplicate and Import… make
+  profiles of your own for other screens. They live in `profiles/` in the config folder (on Linux
+  `~/.config/quadrule/profiles/`, one `.ron` file each; Export… writes the same file to share). A `.quad` file carries
+  every profile its page uses that is not an unedited built-in, so it opens on a computer that lacks it ("Uses a
+  profile you don't have: X. Add to my profiles"), and a profile that clashes with one you have asks Merge, Rename or
+  Not now. A damaged profile file is skipped and listed, never a crash.
 - **Exact previews.** The editor shows the same pixels the export will write, per device, with a pixel grid and a
   real-size view.
 - **Line roles.** Instead of picking a width and a gray for every line, you give it a role (Whisper, Guide,
@@ -100,7 +107,7 @@ and error.
   it); click a picture to put that device on screen, or fold the strip shut. The Page tab lists the devices: tick them
   in and out (taking one out asks first if it has changes), and **Make primary** makes a device's layout the design
   without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
-  top of another object or squeezed thin on a secondary device. Files are saved as format 0.9.0; older files open
+  top of another object or squeezed thin on a secondary device. Files are saved as format 0.14.0; older files open
   unchanged.
 - Landscape pages. Pick **Portrait** or **Landscape** in New… or in the Page tab (one undo step: objects follow their
   own constraints onto the turned page). A landscape page is designed upright on screen and exported turned a quarter

@@ -41,7 +41,7 @@ command it runs, so you can always run that directly.
 | `make run` | Open the app (`FILE=page.quad` to open a file) |
 | `make bench-drag`, `make bench-draw`, `make bench-rotate`, `make bench-type` | Time dragging, drawing, turning and typing (into a long text box) in a release build (`SHAPES=1`, `TRANSFORMS=1`, `GROUPS=1`, `DEVICES=1`, `LANDSCAPE=1` or `PATTERNS=1` or `ANGLE=1` (the pattern-angle page) or `TURNED=1` (the turned-patterns page; `make bench-rotate TURNED=1` turns its 45 degree grid) or `REPEATS=1` or `FONTS=1`, `TEXTBOX=1` or `MISSING=1` over the shapes, transforms, groups, overrides, landscape, pattern or repeat page, `NOMAD=1` to run on the Nomad so a drag writes overrides, `NOSTRIP=1` to fold the device previews strip shut (it is open in a bench otherwise), `TOOL=rect` to draw with another tool) |
 | `make lint` | Lint a document from the command line |
-| `make fuzz` | Fuzz the `.quad` reader (needs nightly Rust and `cargo-fuzz`) |
+| `make fuzz` | Fuzz the `.quad` reader and the profile loader (needs nightly Rust and `cargo-fuzz`) |
 
 Without `make`, CI's three steps are:
 
@@ -52,7 +52,7 @@ cargo test --workspace
 ```
 
 CI is `.github/workflows/ci.yml` (rustfmt, clippy and tests, on all three), `fuzz.yml` (a 60-second fuzz of the
-`.quad` reader) and `coverage.yml` (line coverage of the whole workspace with `cargo-llvm-cov`, published as the
+`.quad` reader and a 30-second one of the profile loader) and `coverage.yml` (line coverage of the whole workspace with `cargo-llvm-cov`, published as the
 README's coverage badge through a `badges` branch by `.github/scripts/publish-badge.sh`). The badges show the latest
 run on `main` of each; the workflows run only when files they test change.
 
@@ -67,14 +67,14 @@ numbers refer to the design spec.
 | Crate | What it holds |
 |---|---|
 | `model` | The document model: objects (lines, text, patterns with their own settings, rectangles, ellipses, polygons and stars, each with an angle and an opacity; a line's diagonal; groups, which hold other objects, to any depth; repeats (`repeat`), which hold one source and draw it again, with their settings and alternation rules) and geometry in millimetres, with the constraint maths and the editing commands, no graphics or UI (§5) |
-| `profiles` | Device profiles (the Manta and the Nomad) as RON data: line roles, fill roles, safe zones (§3), and each profile as a landscape design sees it (`oriented`: the page turned, the zones turned into its frame) |
+| `profiles` | Device profiles (the Manta and the Nomad) as RON data: line roles, fill roles, safe zones (§3), and each profile as a landscape design sees it (`oriented`: the page turned, the zones turned into its frame). The **registry** (`registry`) is the one lookup: the shipped built-ins, the user's overrides of them, the user's own profiles (UUID v4 ids, `<config folder>/profiles/<id>.ron`, saved through a temporary file and a rename) and the open document's carried copies; `limits` is what a profile file may hold (anything else is damaged and skipped, listed with its line); `active` is the registry the app looks up in, one per thread, so a test never sees the config folder. `builtin` and `builtin_for` give the shipped values only, for tests, goldens and the calibration tools; production code uses `active::lookup` and `lookup_for` (a test scans for strays) |
 | `layout` | Constraints, the rhythm (rectangular or isometric), pixel snapping, the patterns drawn (`pattern`: lines, dots, grid, isometric, hex, Cornell and music staff, their major lines and unbound spacing, one path for all of a region's slanted lines; a turned region is drawn upright in its own axes and then turned whole about its middle, `pattern_items_turned`; a region's own ruling angle is laid out over a covering box and cut at the frame, `ruling_items`), the snapping rules, shapes with their dashes and caps, rotation and line direction (`rotate`), the tree of groups laid out (`tree`: every object resolves against the page by its own constraints, a group's box is round its children), align and distribute (`align`: the maths on the objects' turned boxes, on the pixel grid or in millimetres), the display list with its opacity groups (§10), per-device overrides (`tree` reads them, a group's override scales what is in it into its box), the copies of a repeat on each device in whole pixels (`repeat`: counts, Fill, the step, Centre, alternation, the 5,000-copy cap, Expand), and `device` (Make primary, which devices a page targets, what Ungroup bakes in, turning the page between portrait and landscape) |
-| `format` | The `.quad` file: a ZIP of CBOR entries, with embedded fonts under `assets/fonts/` (§12, ADR-001) |
+| `format` | The `.quad` file: a ZIP of CBOR entries, with embedded fonts under `assets/fonts/` and carried profiles under `profiles/<id>.ron`, read through the profile limits (§12, ADR-001) |
 | `text` | Fonts and text layout in millimetres, drawn as plain outlines (§7, ADR-002): the bundled fonts with their OFL texts (`crates/text/fonts/`), fonts installed on the computer (re-scanned when the window regains focus), optical size, the measured font signature and substitute ranking, fonts carried inside a file, the embed rule, and a fallback that goes bundled fonts first, then installed ones |
 | `render` | The export renderer: `vello_cpu` to an 8-bit grayscale PNG (ADR-003), and the exact quarter turn a landscape page is exported with (`turn_clockwise`) |
 | `lint` | The linter: rules that recommend and explain, never block (§8.3) |
 | `i18n` | Every string on screen, through Project Fluent; English first (§14) |
-| `ui` | The egui widgets and the editor's state: canvas, panels, dragging, the tools bar and drawing, the shapes' and patterns' inspector fields, the rhythm overlay, the Arrange tab's align and distribute commands (`arrange`) (§15.1) |
+| `ui` | The egui widgets and the editor's state: the Profiles window (`profiles_win` is its state and what its buttons do, tested headless; `profiles_win_ui` the widgets), the bar and the Merge / Rename / Not now dialog for profiles a file carries (`profile_use`, `profiles_ui`), canvas, panels, dragging, the tools bar and drawing, the shapes' and patterns' inspector fields, the rhythm overlay, the Arrange tab's align and distribute commands (`arrange`) (§15.1) |
 | `app` | The program itself: window setup and preferences |
 | `xtask` | Maintainer tools, run as `cargo xtask` |
 

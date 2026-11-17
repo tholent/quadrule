@@ -971,7 +971,13 @@ impl ViewerUi {
         });
         ui.label(RichText::new(self.t("app-device-primary-tip")).small());
         let have: Vec<String> = doc.profile_ids().into_iter().map(String::from).collect();
-        let all: Vec<String> = quadrule_profiles::active::device_ids();
+        let mut all: Vec<String> = quadrule_profiles::active::device_ids();
+        // A device the page uses from the file's own copy (not added to this computer) still lists.
+        for id in &have {
+            if !all.contains(id) {
+                all.push(id.clone());
+            }
+        }
         for id in &all {
             let name = {
                 let n = self.device_name(id);

@@ -321,3 +321,45 @@ fn a_broken_carried_profile_leaves_that_device_out_and_the_page_still_opens() {
     );
     assert!(ok);
 }
+
+#[test]
+fn the_bar_and_the_page_tab_name_a_carried_profile_this_computer_lacks() {
+    computer("tab-a");
+    let id = active::with_mut(|r| r.create(NOMAD, "Kindle Scribe")).unwrap();
+    let bytes = saved_sample(&[MANTA, NOMAD, &id]);
+    computer("tab-b");
+    let mut ui = quadrule_ui::ViewerUi::new(Viewer::default());
+    ui.viewer.open_bytes(Source::Untitled, &bytes).unwrap();
+    let mut h = egui_kittest::Harness::builder()
+        .with_size(egui::vec2(1280.0, 900.0))
+        .with_max_steps(16)
+        .build_ui_state(
+            |ui, w: &mut quadrule_ui::ViewerUi| {
+                let _ = w.show(ui);
+            },
+            ui,
+        );
+    h.run();
+    use egui_kittest::kittest::Queryable;
+    let bar = h
+        .query_all_by_label_contains("Uses a profile you don't have: Kindle Scribe")
+        .count()
+        > 0;
+    let tick = h
+        .query_all_by_label_contains("Target Kindle Scribe")
+        .count()
+        > 0;
+    h.get_by_label("Add to my profiles").click();
+    h.run();
+    let gone = h
+        .query_all_by_label_contains("Uses a profile you don't have")
+        .count()
+        == 0;
+    let added = active::device_ids().contains(&id);
+    let ok = bar && tick && gone && added;
+    println!(
+        "CHECK crate=ui name=profiles_bar_and_page_tab result={} bar={bar} page_tab_ticks_it={tick} add_clears_bar={gone}",
+        pass(ok)
+    );
+    assert!(ok);
+}
