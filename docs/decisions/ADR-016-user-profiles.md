@@ -57,7 +57,7 @@ Drivers:
 
 ## Alternatives
 
-### GUID ids with Merge or Rename on a same-named profile (chosen, chris's Q6 ruling)
+### GUID ids with Merge or Rename on a same-named profile (chosen: ids never collide and the user decides what a same name means; chris's Q6 ruling)
 - Good: no two people's profiles collide; the user decides what a same-named profile means.
 - Bad: an edited Manta or Nomad still shares its id with everyone else's, so it always meets the clash dialog when
   someone else's edited copy arrives.
