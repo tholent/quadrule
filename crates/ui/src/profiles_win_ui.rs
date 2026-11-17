@@ -65,19 +65,21 @@ impl ViewerUi {
         let (mut new, mut dup, mut import, mut export) = (false, false, false, false);
         let (mut reset, mut delete, mut cancel, mut save) = (false, false, false, false);
         let mut open = true;
+        // The lists and the form scroll inside what the screen allows, so the buttons stay in view.
+        let body_h = (ctx.content_rect().height() - 220.0).clamp(150.0, 440.0);
         egui::Window::new(self.t("profiles-title"))
             .open(&mut open)
             .collapsible(false)
-            .default_size([780.0, 560.0])
+            .default_size([780.0, body_h + 90.0])
             .show(ctx, |ui| {
                 ui.horizontal_top(|ui| {
                     ui.allocate_ui_with_layout(
-                        egui::vec2(210.0, 440.0),
+                        egui::vec2(210.0, body_h),
                         egui::Layout::top_down(egui::Align::Min),
                         |ui| {
                             egui::ScrollArea::vertical()
                                 .id_salt("profiles-list")
-                                .max_height(400.0)
+                                .max_height(body_h)
                                 .show(ui, |ui| {
                                     ui.label(
                                         RichText::new(self.t("profiles-group-builtin"))
@@ -131,12 +133,20 @@ impl ViewerUi {
                                 });
                         },
                     );
-                    ui.separator();
+                    // A rule between the list and the form, as tall as they are (a plain separator would
+                    // take the whole height the window may have).
+                    let (rule, _) =
+                        ui.allocate_exact_size(egui::vec2(1.0, body_h), egui::Sense::hover());
+                    ui.painter().vline(
+                        rule.center().x,
+                        rule.y_range(),
+                        ui.visuals().widgets.noninteractive.bg_stroke,
+                    );
                     ui.vertical(|ui| {
                         if let Some(p) = edited.as_mut() {
                             egui::ScrollArea::vertical()
                                 .id_salt("profiles-form")
-                                .max_height(440.0)
+                                .max_height(body_h)
                                 .auto_shrink([false, false])
                                 .show(ui, |ui| self.profile_form(ui, p, builtin));
                         }
