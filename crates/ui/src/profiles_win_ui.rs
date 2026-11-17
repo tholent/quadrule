@@ -970,7 +970,8 @@ impl ViewerUi {
                             .char_limit(limits::MAX_NAME_CHARS),
                     )
                     .on_hover_text(self.t("profiles-zone-name"));
-                    egui::ComboBox::from_id_salt(("zone-orientation", i))
+                    let held = format!("{} {}", self.t("profiles-zone-orientation"), z.name);
+                    let combo = egui::ComboBox::from_id_salt(("zone-orientation", i))
                         .selected_text(self.t(match z.orientation {
                             Orientation::Portrait => "app-orientation-portrait",
                             Orientation::Landscape => "app-orientation-landscape",
@@ -988,6 +989,10 @@ impl ViewerUi {
                                 self.t("app-orientation-landscape"),
                             );
                         });
+                    // The box needs a name of its own for a screen reader, and for the pointer tests.
+                    combo
+                        .response
+                        .widget_info(|| WidgetInfo::labeled(Role::ComboBox, true, &held));
                     let (x, y, zw, zh) = &mut z.rect;
                     ui.add(egui::DragValue::new(x).range(0..=w.saturating_sub(1)))
                         .on_hover_text("x");

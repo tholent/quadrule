@@ -228,11 +228,9 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Rung 13a, owed (`crates/profiles/src/registry.rs`, `crates/ui/src/profiles_win.rs`, `crates/ui/src/profiles_win_ui.rs`, `crates/ui/src/profile_use.rs`):
   the registry is one per thread (`quadrule_profiles::active`), right while everything that draws runs on the window's thread; a worker
   thread that looked a profile up would see only the built-ins. The Profiles window's logic is tested headless
-  (`crates/ui/tests/profiles_window.rs`) and the window is drawn in a harness, but no test drives its DragValues, the
-  safe-zone table, the gray-list fields or the collapsing sections with the pointer, and the Import… and Export… system
+  (`crates/ui/tests/profiles_window.rs`) and the window is drawn in a harness; the Import… and Export… system
   dialogs (`rfd`) are untested; chris's look is their first real check. One screenshot only, with the sections folded
-  (the Pi screen is 1440 x 720, the window was made to fit it). A damaged file is listed but the window has no button to
-  delete it (`Registry::delete_damaged` exists, unused); Reset to built-in does remove a damaged override. Two of
+  (the Pi screen is 1440 x 720, the window was made to fit it). Reset to built-in does remove a damaged override. Two of
   the user's profiles may share a name (Keep both makes that); a Merge by name then goes into the first by id. Merge
   into a built-in keeps the shipped id, size, ppi and short name and drops the incoming ones without saying so. A
   carried profile that is damaged is dropped when the page is saved again, and a secondary device that is neither here
@@ -252,6 +250,22 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   300 PPI is kept in the profile file next to the size in mm (made consistent on reading), so a hand-edited file whose two disagree is silently corrected. A test holds the paper role values equal to the Nomad's; a
   recalibration of the Nomad fails it on purpose. The Page tab's PPI combo, the mm fields of a paper copy and the New… list's Paper group are not driven with a pointer in any test; one screenshot each of the
   Page tab and the Profiles window was taken (the Page tab's Paper list continues below the fold and scrolls). A paper page's `.quad` is not fuzz-seeded with a non-default PPI. A 13a build opening a file whose page uses
-  a paper size refuses it (it has no such profile; a paper built-in is not carried), and keeps a non-default `ppi` as an unknown field. The L03 entry in `SKIPPED_ON_PAPER` names a rule that is not built.
+  a paper size refuses it (it has no such profile; a paper built-in is not carried), and keeps a non-default `ppi` as an unknown field.
 - Rung 13, seen by the lead at the 13b look: in the Page tab a ticked secondary paper with **Make primary** pushes its
   PPI choice onto a second line (`crates/ui/src/panels.rs`; screenshot in the 13b builder's log entry).
+
+- Rung 14a, owed (`crates/lint/src/judge.rs`, `crates/lint/src/lib.rs`, `crates/profiles/src/lib.rs`, `crates/ui/src/profiles_win_ui.rs`):
+  the lint block's field names (`lightest_gray_line_1px` …, `smallest_text_pt`, `smallest_handwriting_step_mm`,
+  `dark_fill_gray`, `dark_fill_page_share`, `thin_line_px`) are the builder's proposal and not yet looked at by chris. L09, L13 and
+  L14's values are not measured (5 mm, 102 and 10 %, 2 px; the record's Q4). A repeat's alternation roles (a copy given another line
+  or fill role) are not judged by L03, L05 or L13: the source's own style is. Pattern regions' major lines (their own role) are
+  not judged by L03 or L05; only the region's main stroke is. L05 and L03 can both fire on one very pale gray (the record
+  names no rule to hold one back). An override saved before the lint block existed takes the shipped lint values while the
+  file has no `lint:` text; a block the person empties on purpose is kept empty (the empty block is written as `lint: ()`), but
+  the Profiles window gives no one-click way to restore only the lint block (Reset to built-in resets the whole profile). A
+  carried copy of a profile (a 0.14 file's edited Manta or Nomad) reads with an empty lint block, so every lint check is
+  skipped on it until the lint values are filled in; the Lint tab says so. L09 judges the rhythm per device in pixels
+  (the profile's 5 mm rounded to pixels), so a 4.99 mm step passes on a pixel-locked rhythm. The Lint tab's skip line
+  is listed per device but the device picker, the preflight sheet and the Ignore / Free placement buttons are 14b's; the
+  saved fields and the lint behaviour are in. `Registry::delete_damaged` has a pointer test only for a file at the top of the
+  profiles folder. The Page tab's PPI wrap (rung 13 debt line, Q9) was not touched.

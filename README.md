@@ -38,8 +38,8 @@ and error.
   millimetres; each page picks its export resolution (150, 200, 300 or 600 PPI, beside the ticked size in the Page
   tab) and the PNG is that size in pixels (A4 at 300 PPI is 2480 × 3508). Line widths are the Nomad's, by physical
   size. A paper size can be the primary profile or a secondary one. A landscape paper page exports a wide PNG, not
-  turned. A paper size has no safe zones or gray levels, so the lint rules that need them (L03 to L06) do not run on
-  it. They are marked Unverified: they are not measured on paper.
+  turned. A paper size has no safe zones or gray levels, so the lint rules that need them (L03 to L06, L13 and L14) do not run on
+  it; the text-size and handwriting rules (L07, L09) do. They are marked Unverified: they are not measured on paper.
 - **Exact previews.** The editor shows the same pixels the export will write, per device, with a pixel grid and a
   real-size view.
 - **Line roles.** Instead of picking a width and a gray for every line, you give it a role (Whisper, Guide,
@@ -78,7 +78,12 @@ and error.
   the export, and lint rule L08 says how many). Fixed boxes can put their text at the top, middle or bottom; paragraph
   spacing is added after each paragraph; "Align baselines to rhythm" makes the line height a whole number of rhythm steps
   and stands every line of type on a rung of the rhythm, as handwriting stands on ruled paper.
-- Check a page with the linter (ten rules so far).
+- Check a page with the linter (eighteen rules so far). Rung 14a added six, which read numbers each profile carries in a
+  **Lint checks** section of the Profiles window (leave a number empty to skip its check on that device): L03 a gray too
+  light to show, L05 a gray off the device's clean levels, L07 text under the smallest size that reads, L09 a rhythm or ruled
+  region under the smallest comfortable handwriting step, L13 large dark fills, L14 a thin line that is slanted or curved.
+  The Lint tab says, one line per device, which checks did not run and why. A page can list rules it ignores, and an
+  object can be marked free of the rhythm (both saved in the file; their buttons come in 14b).
 - Turn a line or a shape with the round handle above its top edge (it catches at 0, 90, 180 and 270 degrees; Shift
   holds 15-degree steps) or type an angle in the Arrange tab; a turned shape resizes along its own sides. Lines point any
   way (draw one up and to the right, or drag its ends past each other). Opacity, 0 to 100 percent, is in the Style tab;
@@ -115,7 +120,7 @@ and error.
   it); click a picture to put that device on screen, or fold the strip shut. The Page tab lists the devices: tick them
   in and out (taking one out asks first if it has changes), and **Make primary** makes a device's layout the design
   without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
-  top of another object or squeezed thin on a secondary device. Files are saved as format 0.14.0; older files open
+  top of another object or squeezed thin on a secondary device. Files are saved as format 0.15.0; older files open
   unchanged.
 - Landscape pages. Pick **Portrait** or **Landscape** in New… or in the Page tab (one undo step: objects follow their
   own constraints onto the turned page). A landscape page is designed upright on screen and exported turned a quarter
@@ -172,7 +177,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

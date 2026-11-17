@@ -3329,3 +3329,218 @@ pub fn paper_landscape_document() -> Document {
         true,
     )
 }
+
+/// Fixed ids for the lint page's objects.
+pub mod lint_ids {
+    use crate::Uuid;
+    /// The `n`th object of the lint page (1-based); the dot grid is [`super::ids::DOTS`].
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0014_4000_8000_0000_0000_0000 + n)
+    }
+}
+
+/// The lint page (rung 14a, docs/bbq/2026-11-17-rung-14-lint-and-preflight.md, Q3 and Q4): a Template with
+/// objects that make each of L03 (gray too light, as a line, a fill, text and dots), L05 (a gray between the
+/// clean levels), L07 (text under 6 pt), L09 (a ruled region under 5 mm (3 mm apart, half the 6 mm rhythm)), L13 (a dark fill over a tenth of
+/// the page) and L14 (a thin slanted line and a thin curve) fire, beside objects of the same kinds that pass.
+/// Every object is named for what it shows, and sits on the 6 mm rhythm inside the margins and clear of the
+/// Supernotes' toolbars, so the only findings are the ones meant. It holds the sample's dot grid
+/// ([`ids::DOTS`]) so the benchmarks can run over it. Designed on the Manta, also targeting the Nomad.
+pub fn lint_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Rung 14a lint".into();
+    doc.metadata.description =
+        "The rung 14a lint page: objects that make L03, L05, L07, L09, L13 and L14 fire, and objects that pass."
+            .into();
+    let mut dots = doc.layers[0].objects[0].clone();
+    let rule = doc.layers[1].objects[1].clone();
+    // The pixel-locked rhythm on the Manta: its origin at the 8 mm margin is 94 px and its step 71 px (6 mm is 70.87),
+    // so a place k steps along is (94 + 71 k) px, which is what L16 counts as on the rhythm.
+    let at = |k: f64| (94.0 + 71.0 * k) * MM_PER_IN / 300.0;
+    dots.frame = Frame::new(at(1.0), at(29.0), 132.0, 12.0);
+    // Scaled with the page, so the Nomad's smaller page holds it too.
+    dots.constraints = Constraints::default();
+    let mut objs: Vec<Object> = Vec::new();
+    let mut n = 0u128;
+    let mut add = |name: &str, frame: Frame, style: Style, fill: Option<Fill>, kind: ObjectKind| {
+        n += 1;
+        let mut o = rule.clone();
+        o.id = lint_ids::nth(n);
+        o.name = name.into();
+        o.frame = frame;
+        o.constraints = Constraints::default();
+        o.style = style;
+        o.fill = fill;
+        o.kind = kind;
+        objs.push(o);
+    };
+    let px = |px: f64, gray: u8| Style::Custom {
+        width_mm: px * MM_PER_IN / 300.0,
+        gray,
+    };
+    let line = || ObjectKind::Line(Line::default());
+    let text = |content: &str, size_pt: f64, weight: u16| {
+        ObjectKind::Text(TextBox {
+            content: content.into(),
+            family: ATKINSON.into(),
+            weight,
+            size_pt,
+            ..TextBox::default()
+        })
+    };
+    let region = |pattern: Pattern| ObjectKind::Pattern(PatternRegion::new(pattern));
+    let ruled_3mm = {
+        let mut pr = PatternRegion::new(Pattern::Lines);
+        pr.bound = false;
+        pr.v_spacing_mm = Some(3.0);
+        ObjectKind::Pattern(pr)
+    };
+    let (guide, structure, emphasis, text_role) = (
+        Style::Role(LineRole::Guide),
+        Style::Role(LineRole::Structure),
+        Style::Role(LineRole::Emphasis),
+        Style::Role(LineRole::Text),
+    );
+
+    // Left column (x = 14 mm).
+    add(
+        "L03 line, gray 230",
+        Frame::new(at(1.0), at(1.0), 60.0, 0.0),
+        px(1.0, 230),
+        None,
+        line(),
+    );
+    add(
+        "Passes: 1 px line, Guide role",
+        Frame::new(at(1.0), at(2.0), 60.0, 0.0),
+        guide,
+        None,
+        line(),
+    );
+    add(
+        "L03 fill, gray 230",
+        Frame::new(at(1.0), at(3.0), 60.0, 12.0),
+        Style::None,
+        Some(Fill::Gray(230)),
+        ObjectKind::Rect(RectShape::default()),
+    );
+    add(
+        "L03 text, gray 200",
+        Frame::new(at(1.0), at(6.0), 60.0, 6.0),
+        px(1.0, 200),
+        None,
+        text("Pale heading", 12.0, 400),
+    );
+    add(
+        "L07 text, 5 pt",
+        Frame::new(at(1.0), at(8.0), 60.0, 6.0),
+        text_role,
+        None,
+        text("Fine print", 5.0, 400),
+    );
+    add(
+        "Passes: text, 9 pt",
+        Frame::new(at(1.0), at(9.0), 60.0, 6.0),
+        text_role,
+        None,
+        text("Reading text", 9.0, 400),
+    );
+    add(
+        "L05 line, gray 120",
+        Frame::new(at(1.0), at(10.0), 60.0, 0.0),
+        px(1.0, 120),
+        None,
+        line(),
+    );
+    add(
+        "L14 diagonal line, 1 px",
+        Frame::new(at(1.0), at(11.0), 60.0, 12.0),
+        px(1.0, 51),
+        None,
+        line(),
+    );
+    add(
+        "L14 ellipse, 1 px",
+        Frame::new(at(1.0), at(14.0), 30.0, 18.0),
+        px(1.0, 51),
+        None,
+        ObjectKind::Ellipse(EllipseShape::default()),
+    );
+    add(
+        "Passes: diagonal line, Emphasis (3 px)",
+        Frame::new(at(1.0), at(18.0), 60.0, 12.0),
+        emphasis,
+        None,
+        line(),
+    );
+    add(
+        "Passes: Shade fill",
+        Frame::new(at(1.0), at(21.0), 60.0, 6.0),
+        Style::None,
+        Some(Fill::Role(FillRole::Shade)),
+        ObjectKind::Rect(RectShape::default()),
+    );
+
+    // Right column (x = 86 mm).
+    add(
+        "L03 dots, 2 px at gray 150",
+        Frame::new(at(13.0), at(1.0), 60.0, 18.0),
+        px(2.0, 150),
+        None,
+        region(Pattern::Dots),
+    );
+    add(
+        "Passes: dot grid, Dot grid role",
+        Frame::new(at(13.0), at(5.0), 60.0, 18.0),
+        Style::Role(LineRole::DotGrid),
+        None,
+        region(Pattern::Dots),
+    );
+    add(
+        "L09 ruled lines 3 mm apart",
+        Frame::new(at(13.0), at(9.0), 60.0, 24.0),
+        guide,
+        None,
+        ruled_3mm,
+    );
+    add(
+        "Passes: ruled lines on the rhythm",
+        Frame::new(at(13.0), at(14.0), 60.0, 24.0),
+        guide,
+        None,
+        region(Pattern::Lines),
+    );
+    add(
+        "Passes: Structure line",
+        Frame::new(at(13.0), at(19.0), 60.0, 0.0),
+        structure,
+        None,
+        line(),
+    );
+
+    // The dark fill: 132 mm by 36 mm is 13 percent of the Manta page.
+    add(
+        "L13 dark fill, Block role",
+        Frame::new(at(1.0), at(23.0), 132.0, 30.0),
+        Style::None,
+        Some(Fill::Role(FillRole::Block)),
+        ObjectKind::Rect(RectShape::default()),
+    );
+    doc.layers = vec![
+        Layer {
+            name: "Grid".into(),
+            visible: true,
+            locked: false,
+            objects: vec![dots],
+            extra: Extra::new(),
+        },
+        Layer {
+            name: "Lint".into(),
+            visible: true,
+            locked: false,
+            objects: objs,
+            extra: Extra::new(),
+        },
+    ];
+    doc
+}

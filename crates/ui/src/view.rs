@@ -1423,6 +1423,8 @@ impl ViewerUi {
                         self.viewer.open_textbox();
                     } else if b.fonts {
                         self.viewer.open_fonts();
+                    } else if b.lint {
+                        self.viewer.open_lint();
                     } else if b.paper {
                         self.viewer.open_paper();
                     } else if b.pattern_angle {
@@ -1603,6 +1605,8 @@ impl ViewerUi {
                         "textbox"
                     } else if b.fonts {
                         "fonts"
+                    } else if b.lint {
+                        "lint"
                     } else if b.paper {
                         "paper"
                     } else if b.pattern_angle {

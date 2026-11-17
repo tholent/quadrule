@@ -152,7 +152,7 @@ fn l03_fires_one_gray_past_each_threshold_on_both_devices() {
             )
         }
     };
-    let fill = |g: u8| {
+    let fill = move |g: u8| {
         let mut o = obj(
             1,
             rect_frame,

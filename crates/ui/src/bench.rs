@@ -77,6 +77,9 @@ pub struct DragBench {
     /// Opens the rung 13b paper page when nothing is open yet (`--paper-page`); the drag then moves
     /// its dot region.
     pub paper: bool,
+    /// Opens the rung 14a lint page when nothing is open yet (`--lint-page`); the drag then moves its
+    /// dot grid.
+    pub lint: bool,
     /// Opens the rung 10 repeat page when nothing is open yet (`--repeats-page`); the drag then
     /// moves its habit tracker.
     pub repeats: bool,
@@ -118,6 +121,7 @@ impl DragBench {
             patterns: false,
             turned_patterns: false,
             pattern_angle: false,
+            lint: false,
             paper: false,
             repeats: false,
             fonts: false,
@@ -159,6 +163,11 @@ impl DragBench {
             paper: true,
             ..self
         }
+    }
+
+    /// The same benchmark over the rung 14a lint page.
+    pub fn with_lint(self) -> Self {
+        DragBench { lint: true, ..self }
     }
 
     /// The same benchmark over the rung 12b pattern-angle page.

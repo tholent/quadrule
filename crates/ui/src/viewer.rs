@@ -443,6 +443,13 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 14a lint page: objects that make L03, L05, L07, L09, L13 and L14 fire beside ones
+    /// that pass (the benchmarks drag its dot grid). Like the sample, it has no file.
+    pub fn open_lint(&mut self) {
+        let doc = quadrule_model::sample::lint_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens the rung 13b paper page: ISO A4 at 300 PPI, also targeting ISO A5 at 600 PPI (the
     /// benchmarks drag its dot region). Like the sample, it has no file.
     pub fn open_paper(&mut self) {
