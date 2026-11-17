@@ -2840,6 +2840,7 @@ dependencies = [
  "egui_kittest",
  "emojis",
  "kurbo",
+ "png",
  "quadrule-format",
  "quadrule-i18n",
  "quadrule-layout",

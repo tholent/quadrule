@@ -1173,7 +1173,7 @@ impl Viewer {
     /// document's file. Writes a new file beside it, then renames it over the old one, so a
     /// failed save never leaves half a file. On failure the notice says why.
     pub fn save_to(&mut self, path: &Path) -> Result<(), String> {
-        let result = self.file_bytes().and_then(|bytes| {
+        let result = self.save_bytes().and_then(|bytes| {
             write_replacing(path, &bytes).map_err(|e| format!("{}: {e}", path.display()))
         });
         match &result {

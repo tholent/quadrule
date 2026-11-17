@@ -16,7 +16,7 @@
 //! lint findings, zoom maths and export. The egui widgets in [`crate::view`] only read and change
 //! this, so everything here is tested headless. Editing (rung 3) adds to it in [`crate::editor`].
 
-use quadrule_format::{Manifest, QuadFile, ReadOnly};
+use quadrule_format::{Manifest, PREVIEW_SIDE, QuadFile, ReadOnly, preview_path};
 use quadrule_i18n::Message;
 use quadrule_layout::snap::SnapToggles;
 use quadrule_layout::{
@@ -728,6 +728,20 @@ impl Viewer {
             Source::File(p) => p.file_stem().and_then(|s| s.to_str()),
             Source::Sample | Source::Untitled => None,
         }
+    }
+
+    /// The main device's thumbnail for the `.quad` file (format 0.16, rung 15 bbq, Q8): the path it is
+    /// stored at and its PNG bytes. 8-bit gray, longest side [`PREVIEW_SIDE`] px (never enlarged), from
+    /// the main device's export pixels (turned like the PNG for a landscape design), shrunk by averaging.
+    /// `None` when nothing is open or the main device's page cannot be made.
+    pub fn preview_png(&mut self) -> Option<(String, Vec<u8>)> {
+        let id = self.open.as_ref()?.doc.primary_profile_id.clone();
+        let page = self.page_for(&id).ok()?;
+        let px = export_pixels(page);
+        let scale = (PREVIEW_SIDE as f64 / px.width.max(px.height) as f64).min(1.0);
+        let w = ((px.width as f64 * scale).round() as u32).max(1);
+        let h = ((px.height as f64 * scale).round() as u32).max(1);
+        Some((preview_path(&id), encode_png(&shrink(&px, w, h), None)))
     }
 
     /// The export file name for device `id` (napkin §11.2's default scheme,

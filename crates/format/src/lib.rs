@@ -22,19 +22,24 @@
 //! ├── scene.cbor               the Document
 //! ├── outlines/<profile>.cbor  text outlines, one file per document profile (ADR-001 item 2)
 //! ├── assets/fonts/<sha256>.<ttf|otf>  embedded installed fonts, whole files (rung 12a)
-//! └── profiles/<id>.ron        the profiles the page uses that are not an unedited built-in (rung 13a)
+//! ├── profiles/<id>.ron        the profiles the page uses that are not an unedited built-in (rung 13a)
+//! └── previews/<id>.png        the main device's thumbnail, 8-bit gray, longest side 480 px (rung 15, format 0.16)
 //! ```
 //!
 //! The same document always gives the same bytes, on every machine: entries are written in a
 //! fixed order with fixed timestamps, permissions and system byte.
 //!
-//! Not built yet: `previews/` and image assets (napkin §12.1). Font signatures in the manifest
+//! Not built yet: image assets (napkin §12.1). Font signatures in the manifest
 //! (ADR-001 item 6) and embedded fonts came with format 0.13; a damaged embedded font is skipped
 //! and never stops a file opening. Format 0.14 carries profiles (the user's own, and an edited Manta
 //! or Nomad) as the same RON text Export… writes; a carried profile outside the limits is skipped
 //! the same way, and the page opens with that profile missing.
 //! Format 0.15 adds the document's list of ignored lint rules, an object's Free placement flag and the `lint`
 //! block of a profile; each is left out of a file when it holds its default.
+//! Format 0.16 adds `previews/<primary_profile_id>.png` (rung 15 bbq, Q8): one thumbnail, of the main device only,
+//! made by the app at Save and Save As (never at autosave). The library only carries the bytes: it does not draw
+//! them. A file without a preview is as valid as one with it, a reader may ignore previews, and a damaged one is
+//! skipped like a damaged font; an old file gets its preview at its next save.
 
 #![forbid(unsafe_code)]
 
@@ -53,7 +58,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, DateTime, System, ZipArchive, ZipWriter};
 
 /// The format version this build writes. Pre-1.0 while the format settles.
-pub const FORMAT_VERSION: &str = "0.15.0";
+pub const FORMAT_VERSION: &str = "0.16.0";
 
 /// Required features this build understands. A file that requires any other opens read-only.
 pub const KNOWN_FEATURES: &[&str] = &["text-outlines"];
@@ -144,6 +149,17 @@ pub const PROFILE_DIR: &str = "profiles/";
 /// The path a carried profile is stored at: `profiles/<id>.ron`.
 pub fn profile_path(id: &str) -> String {
     format!("{PROFILE_DIR}{id}.ron")
+}
+
+/// The folder previews are kept in (format 0.16).
+pub const PREVIEW_DIR: &str = "previews/";
+
+/// The longest side of a preview in pixels (rung 15 bbq, Q8).
+pub const PREVIEW_SIDE: u32 = 480;
+
+/// The path a preview is stored at: `previews/<profile id>.png`.
+pub fn preview_path(profile_id: &str) -> String {
+    format!("{PREVIEW_DIR}{profile_id}.png")
 }
 
 /// One embedded font file (format 0.13): a whole font file under `assets/fonts/`.
@@ -247,6 +263,9 @@ pub struct QuadFile {
     pub font_files: BTreeMap<String, Vec<u8>>,
     /// The profiles the file carries, by id (format 0.14). Each was read through the profile limits.
     pub profiles: BTreeMap<String, Profile>,
+    /// The previews the file holds (format 0.16), PNG bytes by their path in the archive
+    /// (`previews/<profile id>.png`). Empty for a file that has none; the app puts one in at Save.
+    pub previews: BTreeMap<String, Vec<u8>>,
     /// Carried profiles that were damaged or outside the limits and were skipped on opening, each
     /// as (its path in the archive, why); the file still opened.
     pub damaged_profiles: Vec<(String, String)>,
@@ -283,6 +302,7 @@ impl QuadFile {
             outlines,
             font_files: BTreeMap::new(),
             profiles: BTreeMap::new(),
+            previews: BTreeMap::new(),
             damaged_profiles: Vec::new(),
             damaged_fonts: Vec::new(),
             read_only: None,
@@ -326,6 +346,9 @@ impl QuadFile {
             quadrule_profiles::limits::check(p)
                 .map_err(|e| FormatError::Profile(format!("{id}: {e}")))?;
             files.push((profile_path(id), to_ron(p).into_bytes()));
+        }
+        for (path, bytes) in &self.previews {
+            files.push((path.clone(), bytes.clone()));
         }
         let mut m = self.manifest.clone();
         m.carried_profiles = self
@@ -407,9 +430,11 @@ impl QuadFile {
         let mut damaged_fonts = Vec::new();
         let mut profiles = BTreeMap::new();
         let mut damaged_profiles = Vec::new();
+        let mut previews = BTreeMap::new();
         for (name, info) in &manifest.entries {
             let embedded_font = name.starts_with(FONT_DIR);
             let carried_profile = name.starts_with(PROFILE_DIR);
+            let preview = name.starts_with(PREVIEW_DIR);
             let read = read_entry(&mut z, name).and_then(|b| {
                 if b.len() as u64 != info.size || sha256_hex(&b) != info.sha256 {
                     Err(FormatError::Checksum(name.clone()))
@@ -430,6 +455,11 @@ impl QuadFile {
                     Err(e) => damaged_profiles.push((name.clone(), e)),
                 },
                 Err(e) if carried_profile => damaged_profiles.push((name.clone(), e.to_string())),
+                Ok(b) if preview => {
+                    previews.insert(name.clone(), b);
+                }
+                // A damaged preview is skipped: it is only a picture, and the next save makes a new one.
+                Err(_) if preview => {}
                 Ok(b) => {
                     blobs.insert(name.clone(), b);
                 }
@@ -467,6 +497,7 @@ impl QuadFile {
             outlines,
             font_files,
             profiles,
+            previews,
             damaged_profiles,
             damaged_fonts,
             read_only,

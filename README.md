@@ -127,8 +127,9 @@ and error.
   it); click a picture to put that device on screen, or fold the strip shut. The Page tab lists the devices: tick them
   in and out (taking one out asks first if it has changes), and **Make primary** makes a device's layout the design
   without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
-  top of another object or squeezed thin on a secondary device. Files are saved as format 0.15.0; older files open
-  unchanged.
+  top of another object or squeezed thin on a secondary device. Files are saved as format 0.16.0, which adds a small picture of the main device's page
+  inside the file (written at Save and Save As, so a gallery can show the file); older files open unchanged and get the
+  picture at their next save.
 - Landscape pages. Pick **Portrait** or **Landscape** in New… or in the Page tab (one undo step: objects follow their
   own constraints onto the turned page). A landscape page is designed upright on screen and exported turned a quarter
   turn clockwise into the tablet's ordinary portrait PNG, the design's top along the tablet's right edge: read it in

@@ -39,6 +39,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.12.0", "0.13.0", v0_12_to_v0_13),
     ("0.13.0", "0.14.0", v0_13_to_v0_14),
     ("0.14.0", "0.15.0", v0_14_to_v0_15),
+    ("0.15.0", "0.16.0", v0_15_to_v0_16),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -170,6 +171,14 @@ fn v0_13_to_v0_14(_scene: &mut Value) -> Result<(), FormatError> {
 /// no object free, and a carried 0.14 profile reads with its lint values empty (those checks are skipped on
 /// it until the person fills them in). A 0.14 build keeps the new fields as unknown ones on a save.
 fn v0_14_to_v0_15(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.16 adds `previews/<primary_profile_id>.png` (rung 15 bbq, Q8): a thumbnail of the main device, written at Save
+/// and Save As. Nothing in the scene changes, so a 0.15 scene needs no rewriting: a 0.15 file has no preview and
+/// stays valid, and it gets one at its next save. A 0.15 build ignores the new entry (it is not the scene or an
+/// outline, so it reads past it) and drops it on a save.
+fn v0_15_to_v0_16(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

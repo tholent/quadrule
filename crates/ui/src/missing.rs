@@ -307,8 +307,23 @@ impl Viewer {
     /// (Q6 makes its text read-only, so they cannot be stale). For every font the document uses, the
     /// manifest holds its measured signature, and, with "Embed fonts" on, the whole file of each
     /// installed face whose licence allows it.
+    ///
+    /// This is the recovery file's content too: it holds no preview (rung 15 bbq, Q8). Save and Save As
+    /// use [`Viewer::save_bytes`], which adds one.
     pub fn file_bytes(&mut self) -> Result<Vec<u8>, String> {
+        self.file_bytes_with(false)
+    }
+
+    /// The file's bytes as Save and Save As write them: [`Viewer::file_bytes`] plus
+    /// `previews/<primary_profile_id>.png`, the main device's thumbnail (format 0.16, rung 15 bbq, Q8).
+    pub fn save_bytes(&mut self) -> Result<Vec<u8>, String> {
+        self.file_bytes_with(true)
+    }
+
+    fn file_bytes_with(&mut self, preview: bool) -> Result<Vec<u8>, String> {
         self.end_typing();
+        // A picture that cannot be made is left out: the file is as valid without it.
+        let preview = if preview { self.preview_png() } else { None };
         let faces = self.faces_used();
         let Viewer { open, fonts, .. } = self;
         let open = open.as_mut().ok_or("nothing is open")?;
@@ -370,6 +385,7 @@ impl Viewer {
         }
         let mut file = QuadFile::new(doc.clone(), outlines, refs);
         file.font_files = files;
+        file.previews.extend(preview);
         // A profile the page uses that is not an unedited built-in travels in the file (rung 13a, Q4):
         // what is saved on this computer, not what the Profiles window is trying out.
         file.profiles = quadrule_profiles::active::with(|r| {
