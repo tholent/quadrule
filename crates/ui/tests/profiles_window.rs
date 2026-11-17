@@ -361,8 +361,8 @@ fn a_damaged_file_is_listed_with_its_error_and_the_app_goes_on() {
             ui,
         );
     h.run();
-    let drawn =
-        h.query_by_label_contains("typo.ron").is_some() && h.query_by_label("Profiles").is_some();
+    let drawn = h.query_all_by_label_contains("typo.ron").count() >= 1
+        && h.query_by_label("Profiles").is_some();
     let ok = noted && listed.len() == 2 && with_line && nomad_ok && drawn;
     println!(
         "CHECK crate=ui name=profiles_damaged_listed result={} damaged={} line_given={with_line} start_note={noted} broken_override_uses_shipped={nomad_ok} listed_in_window={drawn}",

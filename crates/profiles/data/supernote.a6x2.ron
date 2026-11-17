@@ -55,6 +55,25 @@
         shade: 204,
         block: 102,
     ),
+    // What the linter judges a page against (rung 14 bbq, Q2 to Q4, 2026-11-17), from the Nomad sheets. Grays are
+    // 0 = black .. 255 = white; "lightest" is the lightest gray that still shows, so anything lighter is flagged (L03).
+    // Sheet codes are in docs/device-measurements/supernote.a6x2/calibration.md. An empty (left out) value means the
+    // rule is skipped on this profile.
+    lint: (
+        lightest_gray_line_1px: Some(187),      // 1 px lines: LA12 is the last visible (lines sheet)
+        lightest_gray_line_2px_up: Some(204),   // 2 px and wider: LB13 to LF13 are the last visible; 221 and 238 vanish
+        lightest_gray_dot_2px: Some(102),       // square 2 px dots: PB3 (dots sheet)
+        lightest_gray_dot_3px: Some(170),       // square 3 px dots: PC5
+        lightest_gray_dot_4px_up: Some(187),    // square 4 px dots and larger: PD6
+        lightest_gray_fill: Some(204),          // fills: Shade 204 (G13, grays sheet) shows
+        lightest_gray_text: Some(153),          // text: 153 (TD4, TL4) is the lightest tested
+        smallest_text_pt: Some(6.0),            // 6 pt is the smallest tested; every sample was legible (TA3, TI3)
+        // Not measured (rung 14 bbq, Q4); retune here without code.
+        smallest_handwriting_step_mm: Some(5.0), // Supernote's own grid is 5 mm
+        dark_fill_gray: Some(102),              // the Block fill role (G7)
+        dark_fill_page_share: Some(0.1),
+        thin_line_px: Some(2),
+    ),
     calibration_meta: (
         date: Some("2026-11-09"),
         firmware: None,

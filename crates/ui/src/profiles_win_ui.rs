@@ -69,6 +69,7 @@ impl ViewerUi {
             .and_then(|w| w.message.clone())
             .map(|m| self.strings.format(&m));
         let mut pick: Option<String> = None;
+        let mut delete_damaged: Option<String> = None;
         let mut edited = current.clone();
         let (mut new, mut dup, mut import, mut export) = (false, false, false, false);
         let (mut reset, mut delete, mut cancel, mut save) = (false, false, false, false);
@@ -146,6 +147,19 @@ impl ViewerUi {
                                                     .small()
                                                     .color(ui.visuals().warn_fg_color),
                                             );
+                                            let tip = self.strings.format(
+                                                &Message::new("profiles-damaged-delete-tip")
+                                                    .text("file", d.file.clone()),
+                                            );
+                                            let del = ui
+                                                .small_button(self.t("profiles-damaged-delete"))
+                                                .on_hover_text(tip.clone());
+                                            del.widget_info(|| {
+                                                WidgetInfo::labeled(Role::Button, true, &tip)
+                                            });
+                                            if del.clicked() {
+                                                delete_damaged = Some(d.file.clone());
+                                            }
                                         }
                                     }
                                 });
@@ -203,6 +217,9 @@ impl ViewerUi {
         }
         if let Some(id) = pick {
             self.profiles_select(&id);
+        }
+        if let Some(file) = delete_damaged {
+            self.profiles_ask(Confirm::DeleteDamaged(file));
         }
         if new {
             let from = if selected.is_empty() {
@@ -282,6 +299,7 @@ impl ViewerUi {
                 Confirm::Reset(id) | Confirm::Delete(id) => {
                     quadrule_profiles::active::display_name(id).unwrap_or_default()
                 }
+                Confirm::DeleteDamaged(file) => file.clone(),
             };
             let (title, body, go) = match &c {
                 Confirm::Reset(_) => (
@@ -292,6 +310,11 @@ impl ViewerUi {
                 Confirm::Delete(_) => (
                     "profiles-delete-title",
                     "profiles-delete-body",
+                    "profiles-delete-yes",
+                ),
+                Confirm::DeleteDamaged(_) => (
+                    "profiles-damaged-title",
+                    "profiles-damaged-body",
                     "profiles-delete-yes",
                 ),
             };
@@ -672,6 +695,9 @@ impl ViewerUi {
                         }
                     });
             });
+        egui::CollapsingHeader::new(self.t("profiles-lint"))
+            .id_salt("profiles-lint")
+            .show(ui, |ui| self.lint_section(ui, p));
         // A paper size has no gray levels, pen grays or safe zones (napkin §3.3.1).
         if !paper {
             egui::CollapsingHeader::new(self.t("profiles-grays"))
@@ -747,6 +773,132 @@ impl ViewerUi {
                     .monospace(),
                 );
             });
+    }
+
+    /// The lint numbers (rung 14a bbq, Q2): each can be left empty, which skips the check that reads it.
+    fn lint_section(&self, ui: &mut egui::Ui, p: &mut Profile) {
+        ui.label(RichText::new(self.t("profiles-lint-note")).small().weak());
+        egui::Grid::new("profiles-lint-grid")
+            .num_columns(3)
+            .spacing([12.0, 4.0])
+            .show(ui, |ui| {
+                let l = &mut p.lint;
+                for (v, id) in [
+                    (&mut l.lightest_gray_line_1px, "profiles-lint-line-1px"),
+                    (&mut l.lightest_gray_line_2px_up, "profiles-lint-line-2px"),
+                    (&mut l.lightest_gray_dot_2px, "profiles-lint-dot-2px"),
+                    (&mut l.lightest_gray_dot_3px, "profiles-lint-dot-3px"),
+                    (&mut l.lightest_gray_dot_4px_up, "profiles-lint-dot-4px"),
+                    (&mut l.lightest_gray_fill, "profiles-lint-fill"),
+                    (&mut l.lightest_gray_text, "profiles-lint-text-gray"),
+                    (&mut l.dark_fill_gray, "profiles-lint-dark-gray"),
+                ] {
+                    self.lint_row(ui, id, v, 128, 0..=255, 0, 1.0);
+                }
+                self.lint_row(
+                    ui,
+                    "profiles-lint-text-pt",
+                    &mut l.smallest_text_pt,
+                    6.0,
+                    1.0..=1_000.0,
+                    1,
+                    0.1,
+                );
+                self.lint_row(
+                    ui,
+                    "profiles-lint-step-mm",
+                    &mut l.smallest_handwriting_step_mm,
+                    5.0,
+                    0.5..=1_000.0,
+                    1,
+                    0.1,
+                );
+                // The share is held as 0 to 1 and shown as a percentage.
+                let mut pct = l
+                    .dark_fill_page_share
+                    .map(|s| (s * 100.0 * 1e6).round() / 1e6);
+                let before = pct;
+                self.lint_row(
+                    ui,
+                    "profiles-lint-dark-share",
+                    &mut pct,
+                    10.0,
+                    0.0..=100.0,
+                    1,
+                    0.5,
+                );
+                if pct != before {
+                    l.dark_fill_page_share = pct.map(|v| v / 100.0);
+                }
+                self.lint_row(
+                    ui,
+                    "profiles-lint-thin-px",
+                    &mut l.thin_line_px,
+                    2,
+                    0..=*limits::ROLE_PX.end(),
+                    0,
+                    1.0,
+                );
+            });
+    }
+
+    /// One lint number: a field with a Clear button, or "skipped" with a Set button when it is empty.
+    #[allow(clippy::too_many_arguments)]
+    fn lint_row<T: egui::emath::Numeric>(
+        &self,
+        ui: &mut egui::Ui,
+        label_id: &str,
+        value: &mut Option<T>,
+        default: T,
+        range: std::ops::RangeInclusive<T>,
+        decimals: usize,
+        speed: f64,
+    ) {
+        let label = ui.label(self.t(label_id));
+        match value {
+            Some(v) => {
+                ui.add(
+                    egui::DragValue::new(v)
+                        .range(range)
+                        .max_decimals(decimals)
+                        .speed(speed),
+                )
+                .labelled_by(label.id);
+                let name = self.t(label_id);
+                let clear = ui
+                    .button(self.t("profiles-lint-clear"))
+                    .on_hover_text(self.t("profiles-lint-clear-tip"));
+                clear.widget_info(|| {
+                    WidgetInfo::labeled(
+                        Role::Button,
+                        true,
+                        format!("{} {name}", self.t("profiles-lint-clear")),
+                    )
+                });
+                if clear.clicked() {
+                    *value = None;
+                }
+            }
+            None => {
+                ui.label(RichText::new(self.t("profiles-lint-skipped")).weak())
+                    .labelled_by(label.id);
+                let name = self.t(label_id);
+                let set = ui
+                    .button(self.t("profiles-lint-set"))
+                    .on_hover_text(self.t("profiles-lint-set-tip"));
+                set.widget_info(|| {
+                    WidgetInfo::labeled(
+                        Role::Button,
+                        true,
+                        format!("{} {name}", self.t("profiles-lint-set")),
+                    )
+                });
+                if set.clicked() {
+                    *value = Some(default);
+                }
+            }
+        }
+        ui.end_row();
     }
 
     /// A list of grays typed as "0, 17, 34", kept in the form until it parses.

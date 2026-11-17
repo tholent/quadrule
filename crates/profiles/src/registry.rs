@@ -164,7 +164,15 @@ impl Registry {
         }
         let text =
             String::from_utf8(bytes).map_err(|_| ("the file is not text".to_string(), None))?;
-        let p = parse_checked(&text).map_err(|e| (e.message, e.line))?;
+        let mut p = parse_checked(&text).map_err(|e| (e.message, e.line))?;
+        // An override saved before the lint block existed (build 0.13 and earlier) has none; the
+        // person never chose to leave every threshold empty, so the shipped ones apply until they edit
+        // the block (rung 14a, Defaulted).
+        if let Some(s) = self.shipped.iter().find(|s| s.id == stem)
+            && !text.contains("lint:")
+        {
+            p.lint = s.lint.clone();
+        }
         if p.id != stem {
             return Err((
                 format!("the id `{}` does not match the file name", p.id),

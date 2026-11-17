@@ -119,6 +119,35 @@ fn check_paper(p: &Profile, size: PaperSize) -> Result<(), String> {
     Ok(())
 }
 
+/// The lint block's numbers (rung 14a): sizes and steps finite and from 0 to 1000, the page share 0 to 1,
+/// the thin-line width within the role widths. A gray is a whole number 0 to 255 already.
+fn check_lint(l: &crate::LintThresholds) -> Result<(), String> {
+    for (what, v, hi) in [
+        ("the smallest text size", l.smallest_text_pt, 1_000.0),
+        (
+            "the smallest handwriting step",
+            l.smallest_handwriting_step_mm,
+            1_000.0,
+        ),
+        ("the dark fill page share", l.dark_fill_page_share, 1.0),
+    ] {
+        if let Some(v) = v
+            && (!v.is_finite() || !(0.0..=hi).contains(&v))
+        {
+            return Err(format!("{what} must be a number from 0 to {hi}"));
+        }
+    }
+    if let Some(w) = l.thin_line_px
+        && !(0..=*ROLE_PX.end()).contains(&w)
+    {
+        return Err(format!(
+            "the thin line width must be 0 to {} px",
+            ROLE_PX.end()
+        ));
+    }
+    Ok(())
+}
+
 /// Checks `p` against the limits. The error says which value is out and why.
 pub fn check(p: &Profile) -> Result<(), String> {
     check_id(&p.id)?;
@@ -163,6 +192,7 @@ pub fn check(p: &Profile) -> Result<(), String> {
             ));
         }
     }
+    check_lint(&p.lint)?;
     if p.safe_zones.len() > MAX_ZONES {
         return Err(format!("more than {MAX_ZONES} safe zones"));
     }

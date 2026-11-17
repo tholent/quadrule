@@ -36,6 +36,8 @@ pub enum Confirm {
     Reset(String),
     /// Delete this profile of the user's.
     Delete(String),
+    /// Delete this damaged file (its name) from the profiles folder (rung 14a, paying the 13a debt).
+    DeleteDamaged(String),
 }
 
 /// The New… dialog.
@@ -413,7 +415,7 @@ impl ViewerUi {
             return;
         }
         let id = match &c {
-            Confirm::Reset(i) | Confirm::Delete(i) => i.clone(),
+            Confirm::Reset(i) | Confirm::Delete(i) | Confirm::DeleteDamaged(i) => i.clone(),
         };
         if let Some(w) = self.win() {
             w.drafts.remove(&id);
@@ -423,10 +425,14 @@ impl ViewerUi {
             match &c {
                 Confirm::Reset(i) => r.reset_builtin(i),
                 Confirm::Delete(i) => r.delete_mine(i),
+                Confirm::DeleteDamaged(f) => r.delete_damaged(f),
             }
         });
         self.restore_other_previews();
         match result {
+            Ok(()) if matches!(c, Confirm::DeleteDamaged(_)) => {
+                self.profiles_said(Message::new("profiles-damaged-deleted").text("file", id));
+            }
             Ok(()) => {
                 if matches!(c, Confirm::Delete(_)) {
                     let first =

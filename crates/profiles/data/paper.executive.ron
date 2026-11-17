@@ -34,6 +34,12 @@
         shade: 204,
         block: 102,
     ),
+    // Paper carries only the values that need no screen (rung 14 bbq, Defaulted "Paper profiles' lint blocks"): the
+    // smallest text size (the Nomad's, 6 pt) and the smallest handwriting step (5 mm).
+    lint: (
+        smallest_text_pt: Some(6.0),
+        smallest_handwriting_step_mm: Some(5.0),
+    ),
     calibration_meta: (
         date: None,
         firmware: None,

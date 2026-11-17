@@ -67,6 +67,11 @@ pub struct Profile {
     pub fill_roles: FillRoles,
     /// Where the preset values came from.
     pub calibration_meta: CalibrationMeta,
+    /// What the linter judges a page against on this profile (format 0.15; rung 14a bbq, Q2). Every
+    /// value is optional: a file without the block reads as all empty, and a rule whose value is empty
+    /// is skipped on this profile.
+    #[serde(default)]
+    pub lint: LintThresholds,
     /// Where to copy files on the device; shown as instructions only.
     pub export_hints: Vec<String>,
     /// Set on the copy [`Profile::oriented`] makes for a landscape design: `width_px` and
@@ -167,6 +172,77 @@ pub struct FillRoles {
     pub shade: u8,
     /// The Block role: a dark solid.
     pub block: u8,
+}
+
+/// The numbers the linter judges a page against on one profile (rung 14a bbq, Q2 to Q4). Each is
+/// optional; an empty one means "no value here", and the rule that reads it is skipped on this
+/// profile (the Lint tab says so). Grays are 0 = black .. 255 = white; "lightest" is the lightest
+/// gray that still shows, so a gray above it is too light.
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub struct LintThresholds {
+    /// L03: the lightest gray a 1 px stroke may have.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lightest_gray_line_1px: Option<u8>,
+    /// L03: the lightest gray a stroke 2 px or wider may have.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lightest_gray_line_2px_up: Option<u8>,
+    /// L03: the lightest gray a square dot 2 px wide may have.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lightest_gray_dot_2px: Option<u8>,
+    /// L03: the lightest gray a square dot 3 px wide may have.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lightest_gray_dot_3px: Option<u8>,
+    /// L03: the lightest gray a square dot 4 px or wider may have.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lightest_gray_dot_4px_up: Option<u8>,
+    /// L03: the lightest gray a fill may have.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lightest_gray_fill: Option<u8>,
+    /// L03: the lightest gray text may have.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lightest_gray_text: Option<u8>,
+    /// L07: the smallest text size that reads, in points.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub smallest_text_pt: Option<f64>,
+    /// L09: the smallest comfortable handwriting step, in millimetres.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub smallest_handwriting_step_mm: Option<f64>,
+    /// L13: a fill at this gray or darker counts as a dark fill.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dark_fill_gray: Option<u8>,
+    /// L13: the share of the page (0 to 1) dark fills may cover before it is noted.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dark_fill_page_share: Option<f64>,
+    /// L14: a stroke this many device pixels wide or thinner counts as a thin line.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub thin_line_px: Option<u32>,
+}
+
+impl LintThresholds {
+    /// Whether every value is empty.
+    pub fn is_empty(&self) -> bool {
+        *self == LintThresholds::default()
+    }
+
+    /// The lightest gray a 1 px stroke may have, or a wider one, by the stroke's width in pixels.
+    pub fn lightest_gray_line(&self, width_px: u32) -> Option<u8> {
+        if width_px <= 1 {
+            self.lightest_gray_line_1px
+        } else {
+            self.lightest_gray_line_2px_up
+        }
+    }
+
+    /// The lightest gray a square dot `side_px` wide may have: the value for the nearest listed size at
+    /// or below it, and for a dot under 2 px the 2 px value (a smaller dot is judged at least as hard).
+    pub fn lightest_gray_dot(&self, side_px: u32) -> Option<u8> {
+        match side_px {
+            0..=2 => self.lightest_gray_dot_2px,
+            3 => self.lightest_gray_dot_3px,
+            _ => self.lightest_gray_dot_4px_up,
+        }
+    }
 }
 
 /// Provenance of the preset values (napkin §3.2, §8.4).
