@@ -1976,3 +1976,44 @@ dropped); the skip order is Paper, Wallpaper, Ignored, no gray levels, no value.
 
 Owed: see the new "Rung 14a, owed" line in `docs/STATUS-debt.md`. The look: `cargo run --release -p quadrule-app -- --lint-page`
 (Lint tab; Profiles window from the Page tab or `--profiles`, section "Lint checks").
+
+## 2026-11-17 — rung 14b builder (Sonnet 5.5): the Lint tab's buttons, the preflight sheet, the gray swatches
+
+Built from `docs/bbq/2026-11-17-rung-14-lint-and-preflight.md` (Q5 to Q9, the Defaulted list and the 14a-look Amendment), start `e215aec`, on `main`.
+No file-format change (`FORMAT_VERSION` stays 0.15.0); the one model addition is the command `SetIgnoredRules` (ADR-010: every change is a command).
+
+Commits (CI for the last code commit below):
+- `6245bc8` step 2: `crates/lint/src/fix.rs` (`offered`, `plan`, `plan_snap_all` as `Edit`s, no screen in it), `Command::SetIgnoredRules`, `rule_title`, the `lint-fix-*`, `lint-ignore*` and `lint-rule-*` strings, `crates/lint/tests/fixes.rs`.
+- `418a411` steps 1, 3, 4, 5, 6 (one commit, since they share `panels.rs`, `view.rs` and `app.ftl`): the Lint tab (`lint_ui.rs`: device picker "Findings for", each finding's quick-fix and Ignore buttons, "Ignored rules (N)" with Turn back on),
+  `lint_fixes.rs` (what the buttons do: findings on every device, a fix as one undo step, through the device's overrides for a place or a text size), Free placement in the Arrange tab (`Mixed::free_placement`),
+  the preflight sheet (`preflight.rs`), the gray swatches and role badge (`swatches.rs`), the Page tab's PPI combo narrowed to one line; README, DEVELOPMENT, the paid debt line; pointer tests.
+- Test changes in `crates/ui/tests/window.rs`, both from the new behaviour: `dialogs_are_requested_not_opened` now expects the sheet on the sample page (it has warnings) and presses Export anyway; `findings_zoom_and_theme` scrolls the L16 row into view (the list is longer now).
+
+What each part does, in the window:
+- **Lint tab**: "Findings for" combo (All devices by default; view state, not saved); with All, each row names its device; a row click shows that device and outlines the finding. Buttons per finding: its quick fixes, then "Ignore this rule for this document".
+  Ignored rules list at the end with "Turn back on". Every click is one undo step (tested, with undo).
+- **Quick fixes** (`Fix`): Snap to pixel grid (L01/L02, a Custom width to whole pixels of that device), Use nearest clean gray (L03/L05: the gray nearest the current one whose blend on the page is a clean level and not too light, darker on a tie;
+  a Role style becomes Custom at its width), Use <Role> role (roles within a pixel of the width that pass L03 and L05), Move inside safe area (L06: the smallest move that clears every docked-toolbar and footer zone and stays on the page),
+  Use <N> pt (L07), Snap to rhythm / Snap all to rhythm (L16, primary only, Free placement and locked objects left alone), Bind to rhythm (L17: a region's `bound` on; a repeat's unbound axes to Auto), Center rhythm origin (L18).
+  A move or a text size on a secondary device is an override of that device (design untouched, tested on the Nomad); a width, gray, role or binding is the shared design.
+- **Preflight**: Export (this device or all) opens "Before you export" when a device being exported has a Warn finding or L20 applies; groups by device then Document (L20); Jump to object (closes the sheet, shows the device, selects the object, outlines the finding),
+  Ignore, the quick fix; Info findings fold under "N notes"; a line per paper device being exported says its checks do not run; Cancel and Export anyway. No warning and no L20: the folder dialog opens at once, and rung 12's font sheet is no longer shown for an Export.
+  Save and Save As keep rung 12's sheet as it was (tested, including its "Don't warn again").
+- **Style tab**: under Custom the gray is the profile's clean levels as swatches (8 a row), the chosen one outlined, "Show all grays" opens the 0 to 255 slider (held open when the gray is off the levels); paper shows the slider only; fill and text grays the same;
+  swatches are named "Gray 51" / "Fill gray 51"; "matches <Role>" when width and gray equal a role on the device shown, else "Use recommended" (nearest role by width, Guide when two tie; gray-only roles by gray for text).
+
+New CHECK lines (all `pass`): `lint fix_snap_to_pixel_grid|fix_nearest_gray_and_role|fix_move_inside_safe_area|fix_use_min_text_size|fix_snap_to_rhythm|fix_bind_and_center|fix_none_for_the_rest`;
+`ui lint_pointer_device_picker|lint_pointer_ignore_and_restore|lint_pointer_quick_fixes|lint_pointer_secondary_device|lint_pointer_free_placement|preflight_pointer_sheet|preflight_pointer_rows|preflight_pointer_fonts_and_save|preflight_pointer_paper_and_scope|swatches_pointer_stroke|swatches_pointer_fill_text_paper|swatches_pointer_badge|page_tab_ppi_one_line`
+(the last fails with the old combo width: checked by setting the width back to 110 points).
+`make check-all` (fmt, clippy `-D warnings`, tests) on the tree of `418a411` → `TESTS scope=workspace checks=642 check_fail=0 passed=596 failed=0 status=ok`.
+Frozen bytes: `(cd crates/render/tests/golden && sha256sum -c SHA256SUMS)` → 29 lines, none other than OK; `git diff e215aec --stat -- crates/render/tests/golden crates/render/tests/fixtures` shows nothing.
+
+Speed (Pi, release build, strip on, 150 frames, 3 runs each, 90th percentile ms against 50, `XDG_CONFIG_HOME` and `XDG_DATA_HOME` in a scratch folder, `./target/release/quadrule <page> --bench-drag|--bench-draw 150 --canvas export|chip`), every run `result=pass`:
+`--lint-page` drag export 20.7, 20.2, 20.1, chip 17.6, 17.5, 17.5; draw export 19.9, 20.4, 20.5, chip 22.7, 22.4, 22.6. With the Lint tab showing (`--lint-page --look lint --bench-drag`): export 20.1 ×3, chip 17.6 ×3.
+`--groups-page` (the heaviest on the chip canvas in the rung 7a entry) drag export 20.0, 20.1, 20.7, chip 30.5, 30.5, 30.6; draw export 20.0, 20.0, 20.2, chip 22.8, 22.9, 22.8.
+`--shapes-page` drag export 20.1, 20.0, 20.1, chip 8.1 ×3; draw export 20.0, 20.3, 20.0, chip 22.8, 22.9, 22.8. Nothing over 50 ms. Seen on screen (grim, scratch folders): `scratchpad/look-lint.png`, `look-preflight.png`, `look-style.png`, `look-paper.png` (the Page tab's PPI on one line).
+
+Defaulted beyond the record (each can be vetoed): the combo's label "Findings for" (not "Device", which the toolbar's combo already has); the extra `--look lint|style|preflight` flag so a window can be opened already showing a part (for screenshots); Snap all to rhythm hides when fewer than two objects are off the rhythm;
+no fix for the pitch of a repeat or for L06 on a repeat's copies; the preflight sheet lists the devices being exported and puts L20 under Document whichever device is shown, hiding it when the document says "Don't warn again"; the sheet's L20 row has Ignore but no Jump;
+small buttons on the rows; the notes fold is not remembered. Owed: see the "Rung 14b, owed" line in `docs/STATUS-debt.md` (wording of every new button and line is a taste call for chris).
+The look: `cargo run --release -p quadrule-app -- --lint-page` then the Lint tab (or `--look lint`); Export, then "Export this device…" opens the sheet (or `--look preflight`); click a pale line ("L03 line, gray 230") and the Style tab (or `--look style`); the Arrange tab's Free placement on any selected object; `--paper-page` for the Page tab's PPI row.

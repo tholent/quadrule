@@ -282,5 +282,5 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   says "Don't warn again" (rung 12's tick); its list scrolls when long. The Info "N notes" fold is not remembered between sheets.
   Several buttons share one accessible name (every row's "Ignore this rule for this document"). The sheet's controls need a pointer
   that has moved onto them first in a headless test (the sheet fades in over a few frames). `--look lint|style|preflight` is a
-  screenshot flag the record did not ask for. No speed number above 50 ms was seen; see the 14b log entry.
+  screenshot flag the record did not ask for. The speed numbers are in the 14b log entry (none over 50 ms).
 
