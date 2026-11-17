@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Lint on a paper size (rung 13b; napkin §3.3.1, rung 13 record Defaulted "Paper lint"): the rules that read
-//! safe zones, gray levels or pen grays (L03 to L06) are skipped on paper, whatever the profile holds, and the
+//! safe zones, gray levels or pen grays (L03 to L06, and since rung 14a L13 and L14) are skipped on paper, whatever the profile holds, and the
 //! rest run as on a device. Each test prints one structured `CHECK` line (run with `-- --nocapture`).
 
 use quadrule_layout::lay_out_text;
@@ -109,8 +109,12 @@ fn device_only_rules_are_skipped_on_paper_and_the_others_still_run() {
 }
 
 #[test]
-fn the_skipped_list_is_l03_to_l06() {
-    let ok = SKIPPED_ON_PAPER == ["L03", "L04", "L05", "L06"];
+fn the_skipped_list_is_l03_to_l06_and_l13_l14() {
+    // Rung 14a bbq, Defaulted "Paper profiles' lint blocks": L13 and L14 are skipped on paper too; L07 and
+    // L09 run there.
+    let ok = SKIPPED_ON_PAPER == ["L03", "L04", "L05", "L06", "L13", "L14"]
+        && !SKIPPED_ON_PAPER.contains(&"L07")
+        && !SKIPPED_ON_PAPER.contains(&"L09");
     println!("CHECK crate=lint name=skipped_on_paper result={}", pass(ok));
     assert!(ok);
 }

@@ -15,17 +15,21 @@
 //! The linter (napkin §8.3): checks a document on one profile and explains what may not look
 //! right on that device. It recommends and never blocks (§8.1).
 //!
-//! Built so far, the rules that need no calibration values:
+//! Rung 14a adds the rules that read the profile's `lint` block ([`judge`]): L03 gray too light, L05 gray off
+//! the clean levels, L07 text too small, L09 handwriting step, L13 dark fills and L14 soft thin lines; the
+//! document's ignored rules and an object's Free placement are honoured, and [`skipped_checks`] says which
+//! checks did not run on a device and why. Built before that, the rules that need no calibration values:
 //! L01 stroke thinner than 1 px, L02 stroke not pixel-aligned, L06 content in a safe zone,
 //! L08 a Fixed text box leaves lines out (rung 11b),
 //! L10 off the page, L15 constraints cause trouble on a secondary device (rung 8a), L16 position
-//! off the rhythm, L18 rhythm fits the margins unevenly, L19 uneven physical-locked spacing. The gray, ink, text-size and handwriting rules (L03, L04, L05, L07,
-//! L09, L13, L14) wait for calibrated profile values; L12 waits for the feature it checks. Rung 12a
+//! off the rhythm, L18 rhythm fits the margins unevenly, L19 uneven physical-locked spacing. L04 (ink) waits for v1.1 and L12 waits for the feature it checks. Rung 12a
 //! adds L11 (a text box drawn from saved outlines because its font is missing) and L20 (fonts
 //! installed on this computer are used). Rung 10: a repeat's source is judged once, L06 and L10 judge every drawn
 //! copy (one finding per repeat and device, with the count), and L16 and L17 judge its pitch.
 
 #![forbid(unsafe_code)]
+
+mod judge;
 
 use quadrule_i18n::{Arg, Message};
 use quadrule_layout::tree::{Heights, Node, resolve_nodes_with};
@@ -347,6 +351,24 @@ pub fn lint_against(
         }
     }
 
+    // L09 and L13 are for a Template; a Wallpaper is not handwritten on (rung 14 bbq, Defaulted).
+    let judged_for_template = judge::template_only(doc);
+    // L09: the rhythm's own vertical step is under the profile's smallest comfortable handwriting step.
+    if judged_for_template
+        && let Some((min_mm, min_px)) = judge::handwriting_min_px(target)
+        && rhythm.unit_y + 1e-9 < min_px
+    {
+        push(
+            "L09",
+            Severity::Info,
+            None,
+            None,
+            Message::new("lint-l09")
+                .num("step", doc.rhythm.steps_mm().1, 1)
+                .num("min", min_mm, 1),
+        );
+    }
+
     // Every leaf object at its resolved, turned place (rung 7a bbq, Defaulted "Lint"): a group has
     // no rules of its own, and what it holds is judged where it falls on the page. The places come
     // from layout, the one copy of the maths.
@@ -435,7 +457,9 @@ pub fn lint_against(
                 );
             }
         }
-        // A line is diagonal when its two ends, turned as the line is, differ in both x and y.
+        // A line is diagonal when its two ends, turned as the line is, differ in both x and y. That is a
+        // soft thin line (L14, below), no longer an L02 note: L02 keeps only straight edges (rung 14 bbq, Q4).
+        let mut diagonal = false;
         if let ObjectKind::Line(line) = &o.kind {
             let ((x0, y0), (x1, y1)) = quadrule_layout::rotate::rotated_line_ends(
                 (
@@ -447,8 +471,46 @@ pub fn lint_against(
                 line.direction,
                 rotation,
             );
-            if (x1 - x0).abs() > 1e-6 && (y1 - y0).abs() > 1e-6 {
-                push("L02", Severity::Info, at("lint-l02-diagonal"));
+            diagonal = (x1 - x0).abs() > 1e-6 && (y1 - y0).abs() > 1e-6;
+        }
+
+        // L03, L05, L07 and L14: gray, text size and thin soft lines, read from this profile's lint block.
+        let size_pt = match &o.kind {
+            ObjectKind::Text(t) if on_secondary => Some(
+                o.override_on(&target.id)
+                    .and_then(|x| x.font_size_pt)
+                    .filter(|s| s.is_finite() && *s > 0.0)
+                    .unwrap_or(t.size_pt),
+            ),
+            ObjectKind::Text(t) => Some(t.size_pt),
+            _ => None,
+        };
+        for h in judge::object_hits(doc, o, target, size_pt, rotation, diagonal) {
+            push(h.rule, h.severity, h.message);
+        }
+
+        // L09 for a ruled region: its own vertical step is under the handwriting step. A region bound to
+        // the rhythm with nothing of its own is already said by the rhythm's finding.
+        if judged_for_template
+            && let Some((min_mm, min_px)) = judge::handwriting_min_px(target)
+            && let ObjectKind::Pattern(pr) = &o.kind
+            && matches!(pr.pattern, quadrule_model::Pattern::Lines)
+        {
+            let env = quadrule_layout::pattern::Env {
+                target,
+                rhythm: &doc.rhythm,
+                rhythm_px: rhythm,
+            };
+            let (_, step_px) = quadrule_layout::pattern::region_spacing_px(pr, &env);
+            let same_as_rhythm = pr.bound && (step_px - rhythm.unit_y).abs() < 1e-9;
+            if step_px + 1e-9 < min_px && !(same_as_rhythm && rhythm.unit_y + 1e-9 < min_px) {
+                push(
+                    "L09",
+                    Severity::Info,
+                    at("lint-l09-region")
+                        .num("step", step_px / target.mm_to_px(1.0), 1)
+                        .num("min", min_mm, 1),
+                );
             }
         }
 
@@ -681,7 +743,12 @@ pub fn lint_against(
         }
 
         // L16: position on the rhythm (checked where the design is made, on the primary).
-        if target.id == primary.id && !matches!(o.kind, ObjectKind::Pattern(_)) && !inside_repeat {
+        let free = free_placement(doc, o);
+        if target.id == primary.id
+            && !matches!(o.kind, ObjectKind::Pattern(_))
+            && !inside_repeat
+            && !free
+        {
             let on = |pos: f64, origin: f64, unit: f64| {
                 ((pos - origin).rem_euclid(unit)).min(unit - (pos - origin).rem_euclid(unit)) < 0.5
             };
@@ -766,7 +833,7 @@ pub fn lint_against(
                     _ => "lint-axes-down",
                 })))
             };
-            if target.id == primary.id && (off_x || off_y) {
+            if target.id == primary.id && (off_x || off_y) && !free {
                 push(
                     "L16",
                     Severity::Warn,
@@ -939,19 +1006,175 @@ pub fn lint_against(
             );
         }
     }
+    // L13: dark fills (gray 102 or darker on the Supernotes) cover more of the page than the profile allows.
+    // Each fill's own laid-out area counts, every copy of a repeat as well, not the union of overlaps.
+    if judged_for_template
+        && let (Some(dark), Some(share)) =
+            (target.lint.dark_fill_gray, target.lint.dark_fill_page_share)
+    {
+        let mut total = 0.0;
+        let mut count = 0usize;
+        let mut largest: Option<(f64, Uuid, Bounds)> = None;
+        for p in &placed_all {
+            let hidden = if p.copy {
+                doc.effectively_hidden(p.id)
+            } else {
+                p.node.hidden
+            };
+            let Some(o) = doc.object(p.id) else { continue };
+            if hidden || p.node.group || !o.kind.is_shape() {
+                continue;
+            }
+            let Some(fill) = o.fill else { continue };
+            let g = judge::gray_on_page(
+                target.fill_gray(fill),
+                judge::opacity_on_page(doc, o),
+                doc.page.background_gray,
+            );
+            if g > dark {
+                continue;
+            }
+            let area = judge::fill_area_px(o, &p.shape, (pw, ph));
+            if area <= 0.0 {
+                continue;
+            }
+            total += area;
+            count += 1;
+            if largest.is_none_or(|(a, _, _)| area > a) {
+                largest = Some((area, o.id, bounds(&p.shape, false, 0.0)));
+            }
+        }
+        let covered = total / (pw * ph);
+        if let Some((_, id, b)) = largest
+            && covered > share + 1e-9
+        {
+            push(
+                "L13",
+                Severity::Info,
+                Some(id),
+                Some(b),
+                Message::new("lint-l13")
+                    .num("count", count as f64, 0)
+                    .num("percent", covered * 100.0, 0)
+                    .num("limit", share * 100.0, 0)
+                    .num("gray", f64::from(dark), 0),
+            );
+        }
+    }
+
     // A paper size has no device data to judge against (napkin §3.3.1; rung 13b): the rules that
     // read safe zones, gray levels or pen grays do not run on it, whatever the profile file holds.
     if target.is_paper() {
         out.retain(|f| !SKIPPED_ON_PAPER.contains(&f.rule));
     }
+    // The rules this page turns off, on every device (rung 14 bbq, Q7).
+    if !doc.ignored_rules.is_empty() {
+        out.retain(|f| !doc.ignores_rule(f.rule));
+    }
     out
 }
 
+/// Whether the object, or a group round it, is marked Free placement: L16 leaves it (rung 14 bbq, Q7).
+fn free_placement(doc: &Document, o: &quadrule_model::Object) -> bool {
+    o.free_placement
+        || doc
+            .ancestors(o.id)
+            .iter()
+            .filter_map(|a| doc.object(*a))
+            .any(|a| a.free_placement)
+}
+
+/// Why a check did not run on a device (rung 14a bbq, Q2; shown by the Lint tab and the preflight sheet).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SkipReason {
+    /// A paper size has no screen to judge against (napkin §3.3.1).
+    Paper,
+    /// A Wallpaper is not handwritten on.
+    Wallpaper,
+    /// The document turned this rule off, on every device.
+    Ignored,
+    /// The profile lists no clean gray levels.
+    NoGrayLevels,
+    /// The profile has no value for the numbers this rule reads.
+    NoValue,
+}
+
+/// One check that did not run on a device, and why.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Skipped {
+    /// The rule, e.g. `L03`.
+    pub rule: &'static str,
+    /// Why it did not run.
+    pub reason: SkipReason,
+}
+
+/// The rules that read the profile's numbers or its kind of page, in the order they are listed.
+const JUDGED: [&str; 7] = ["L03", "L05", "L06", "L07", "L09", "L13", "L14"];
+
+/// The checks that did not run on `target` for `doc`, with the reason for each (rung 14a bbq, Q2): a paper
+/// size's missing device data, a Wallpaper, a rule the document ignores, no clean gray levels, or no value
+/// for the rule in the profile. Rules the document ignores that this list does not judge are named too.
+pub fn skipped_checks(doc: &Document, target: &Profile) -> Vec<Skipped> {
+    let t = &target.lint;
+    let mut out = Vec::new();
+    let mut ids: Vec<&'static str> = JUDGED.to_vec();
+    for r in &doc.ignored_rules {
+        if let Some(known) = KNOWN_RULES.iter().find(|k| **k == r.as_str())
+            && !ids.contains(known)
+        {
+            ids.push(known);
+        }
+    }
+    for rule in ids {
+        let has_value = match rule {
+            "L03" => [
+                t.lightest_gray_line_1px,
+                t.lightest_gray_line_2px_up,
+                t.lightest_gray_dot_2px,
+                t.lightest_gray_dot_3px,
+                t.lightest_gray_dot_4px_up,
+                t.lightest_gray_fill,
+                t.lightest_gray_text,
+            ]
+            .iter()
+            .any(Option::is_some),
+            "L07" => t.smallest_text_pt.is_some(),
+            "L09" => t.smallest_handwriting_step_mm.is_some(),
+            "L13" => t.dark_fill_gray.is_some() && t.dark_fill_page_share.is_some(),
+            "L14" => t.thin_line_px.is_some(),
+            _ => true,
+        };
+        let reason = if target.is_paper() && SKIPPED_ON_PAPER.contains(&rule) {
+            Some(SkipReason::Paper)
+        } else if !judge::template_only(doc) && matches!(rule, "L09" | "L13") {
+            Some(SkipReason::Wallpaper)
+        } else if doc.ignores_rule(rule) {
+            Some(SkipReason::Ignored)
+        } else if rule == "L05" && target.gray_levels.is_empty() {
+            Some(SkipReason::NoGrayLevels)
+        } else if !has_value {
+            Some(SkipReason::NoValue)
+        } else {
+            None
+        };
+        if let Some(reason) = reason {
+            out.push(Skipped { rule, reason });
+        }
+    }
+    out
+}
+
+/// Every rule the linter has an id for that is built (L04 waits for v1.1, L12 for images).
+const KNOWN_RULES: [&str; 18] = [
+    "L01", "L02", "L03", "L05", "L06", "L07", "L08", "L09", "L10", "L11", "L13", "L14", "L15",
+    "L16", "L17", "L18", "L19", "L20",
+];
+
 /// The rules that need a device's safe zones, clean gray levels or pen grays, and so are skipped on
-/// a paper size (napkin §3.3.1): L04 competes with ink, L05 grays off the clean levels, L06 safe
-/// zones. L03 (gray too light for the device) reads the device's grays too and is skipped when it
-/// is built. The other rules run on paper as on a device.
-pub const SKIPPED_ON_PAPER: [&str; 4] = ["L03", "L04", "L05", "L06"];
+/// a paper size (napkin §3.3.1): L03 gray too light, L04 competes with ink, L05 grays off the clean
+/// levels, L06 safe zones, L13 dark fills and L14 soft thin lines (the last two since rung 14a; a paper
+/// size prints at a PPI the page picks). L07 and L09 run on paper as on a device, like the others.
+pub const SKIPPED_ON_PAPER: [&str; 6] = ["L03", "L04", "L05", "L06", "L13", "L14"];
 
 /// Which of a pattern's two spacings it uses: (across, down). Rows alone for ruled lines, an
 /// isometric grid and a staff; columns alone for pointy hexagons.

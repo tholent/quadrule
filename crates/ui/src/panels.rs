@@ -2464,6 +2464,55 @@ impl ViewerUi {
         });
     }
 
+    /// One plain line per device of the page: the checks that did not run on it and why (a paper size, a
+    /// Wallpaper, a rule the page ignores, no clean grays, no value in the profile). A device where
+    /// every check ran says so.
+    pub fn lint_skipped_lines(&self) -> Vec<String> {
+        use quadrule_lint::{SkipReason, skipped_checks};
+        let Some(doc) = self.viewer.doc() else {
+            return Vec::new();
+        };
+        doc.profile_ids()
+            .into_iter()
+            .filter_map(|id| {
+                let target = quadrule_profiles::active::lookup_in(doc, id).ok()?;
+                let device = self.device_name(id);
+                let skipped = skipped_checks(doc, &target);
+                if skipped.is_empty() {
+                    return Some(
+                        self.strings
+                            .format(&Message::new("lint-skipped-none").text("device", device)),
+                    );
+                }
+                let items = skipped
+                    .iter()
+                    .map(|k| {
+                        let why = match k.reason {
+                            SkipReason::Paper => "lint-skip-paper",
+                            SkipReason::Wallpaper => "lint-skip-wallpaper",
+                            SkipReason::Ignored => "lint-skip-ignored",
+                            SkipReason::NoGrayLevels => "lint-skip-no-grays",
+                            SkipReason::NoValue => "lint-skip-no-value",
+                        };
+                        Message::new("lint-skipped-item")
+                            .text("rule", k.rule)
+                            .arg("why", quadrule_i18n::Arg::Msg(Box::new(Message::new(why))))
+                    })
+                    .collect();
+                Some(
+                    self.strings
+                        .format(&Message::new("lint-skipped").text("device", device).arg(
+                            "items",
+                            quadrule_i18n::Arg::List {
+                                items,
+                                sep: "lint-skipped-sep",
+                            },
+                        )),
+                )
+            })
+            .collect()
+    }
+
     fn lint_tab(&mut self, ui: &mut egui::Ui) {
         let strings = &self.strings;
         let Some(page) = self.viewer.page() else {
@@ -2478,6 +2527,12 @@ impl ViewerUi {
         ui.separator();
         if findings.is_empty() {
             ui.label(strings.get("app-lint-none"));
+        }
+        // One plain line per device on the checks that did not run on it, and why (rung 14a bbq, Q2).
+        let skipped = self.lint_skipped_lines();
+        let strings = &self.strings;
+        for line in &skipped {
+            ui.label(RichText::new(line).small().weak());
         }
         for (i, f) in findings.iter().enumerate() {
             let icon = match f.severity {

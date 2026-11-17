@@ -61,6 +61,7 @@ fn line(id: u128, frame: Frame, style: Style) -> Object {
         rotation_deg: 0.0,
         opacity_pct: 100,
         overrides: Default::default(),
+        free_placement: false,
         kind: ObjectKind::Line(Line::default()),
         extra: Extra::new(),
     }
@@ -130,7 +131,8 @@ fn stroke_rules() {
     let r = |id| rules(&f, Some(Uuid::from_u128(id)));
     let ok = r(10).contains("L01")
         && r(11).contains("L02")
-        && r(12).contains("L02")
+        && !r(12).contains("L02")
+        && r(12).contains("L14")
         && !r(13).contains("L01")
         && !r(13).contains("L02");
     println!(
@@ -343,8 +345,8 @@ fn english_wording_unchanged() {
             ),
         ),
         (
-            got("L02", Some(12)),
-            "\"line 12\" is a diagonal line, so its edges cannot sit on whole pixels and are soft."
+            got("L14", Some(12)),
+            "\"line 12\" is a slanted or curved line only 1 px wide, so most of its pixels come out as in-between grays and it looks soft. Make it thicker, or accept the softer look."
                 .to_string(),
         ),
         (
@@ -586,7 +588,7 @@ fn l02_reads_straight_edges_only_and_a_quarter_turn_keeps_them() {
 
 #[test]
 fn a_diagonal_line_is_judged_by_its_real_ends() {
-    // L02's "diagonal" finding: a line in a box with width and height is diagonal; turned by 90
+    // The "diagonal" note moved from L02 to L14 in rung 14a (a Structure line is 2 px, a thin line): a line in a box with width and height is diagonal; turned by 90
     // a horizontal line is vertical (no finding), and a line pointing up is as diagonal as one
     // pointing down.
     let manta = builtin(MANTA_ID).unwrap();
@@ -603,7 +605,7 @@ fn a_diagonal_line_is_judged_by_its_real_ends() {
         let doc = one_object_page(o);
         run(&doc, &manta)
             .iter()
-            .any(|f| f.rule == "L02" && f.object == Some(Uuid::from_u128(30)))
+            .any(|f| f.rule == "L14" && f.object == Some(Uuid::from_u128(30)))
     };
     let down = diag(mk(Frame::new(40.0, 60.0, 30.0, 20.0), LineDir::Down, 0.0));
     let up = diag(mk(Frame::new(40.0, 60.0, 30.0, 20.0), LineDir::Up, 0.0));

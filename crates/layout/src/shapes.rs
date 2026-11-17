@@ -569,6 +569,21 @@ pub fn has_axis_aligned_edge(kind: &ObjectKind, rotation_deg: f64) -> bool {
     }
 }
 
+/// Whether every edge of a polygon runs along an axis (a rectangle drawn as a polygon, say): the opposite of
+/// having a slanted edge. Any other kind of shape answers true; callers judge those by their rotation.
+pub fn has_only_axis_aligned_edges(kind: &ObjectKind) -> bool {
+    match kind {
+        ObjectKind::Polygon(pg) => {
+            let pts = polygon_unit_points(pg);
+            (0..pts.len()).all(|i| {
+                let (a, b) = (pts[i], pts[(i + 1) % pts.len()]);
+                (a.0 - b.0).abs() < 1e-9 || (a.1 - b.1).abs() < 1e-9
+            })
+        }
+        _ => true,
+    }
+}
+
 /// A polygon or star filling the box, starting at the corner nearest the top-left.
 pub fn polygon_path((x0, y0, x1, y1): (f64, f64, f64, f64), pg: &PolygonShape) -> BezPath {
     let unit = polygon_unit_points(pg);

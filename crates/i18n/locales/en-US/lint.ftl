@@ -5,8 +5,24 @@
 
 lint-l01-thin = "{ $name }" has a { $px } px stroke on this device, thinner than one pixel: it is drawn 1 px wide and may look heavier than meant. Use a role, or at least { $min_mm } mm.
 lint-l02-fraction = "{ $name }" has a { $px } px stroke on this device; it is drawn { $drawn } px wide. A role, or a width of whole pixels, keeps it exact.
-lint-l02-diagonal = "{ $name }" is a diagonal line, so its edges cannot sit on whole pixels and are soft.
 lint-l02-turned-pattern = "{ $name }" is a pattern region with its frame or its ruling turned off a quarter turn, so its lines and dots cannot sit on whole pixels and come out softer.
+lint-l03-stroke = "{ $name }" is gray { $gray } on the page. Lines lighter than { $lightest } may not show on this device. Use a darker gray, or a line role.
+lint-l03-dots = "{ $name }" has dots { $px } px wide at gray { $gray } on the page. Dots that size lighter than { $lightest } may not show on this device. Use a darker gray, or make the dots larger.
+lint-l03-fill = "{ $name }" has a fill of gray { $gray } on the page. Fills lighter than { $lightest } may not show on this device. Use a darker gray, or a fill role.
+lint-l03-text = "{ $name }" has text of gray { $gray } on the page. Text lighter than { $lightest } may be hard to read on this device. Use a darker gray, or a text role.
+lint-l05 = "{ $name }" has a { $what } of gray { $gray } on the page, which is not one of the clean grays this device draws flat. It may band or dither. Use one of the device's clean grays.
+lint-l05-line = line
+lint-l05-dots = dot
+lint-l05-fill = fill
+lint-l05-text = text
+lint-l07 = "{ $name }" is set at { $pt } pt, smaller than the { $min } pt that reads on this device. Make the text larger.
+lint-l09 = The rhythm steps { $step } mm down the page, less than the { $min } mm that is comfortable to write between. A larger vertical step leaves room for handwriting.
+lint-l09-region = "{ $name }" is ruled { $step } mm apart, less than the { $min } mm that is comfortable to write between. Give it a larger spacing.
+lint-l13 = { $count ->
+        [one] One dark fill covers
+       *[other] { $count } dark fills cover
+    } about { $percent } % of the page, more than the { $limit } % this device handles well (gray { $gray } or darker). Large dark areas can ghost or refresh slowly. Lighten them, or make them smaller.
+lint-l14 = "{ $name }" is a slanted or curved line only { $px } px wide, so most of its pixels come out as in-between grays and it looks soft. Make it thicker, or accept the softer look.
 lint-l06-fixed = "{ $name }" is under the { $zones } on this device. Move it inside the safe area, or widen the margins.
 lint-l06-movable = "{ $name }" can be covered by the { $zones } where it first appears; it can be moved.
 lint-l08 = "{ $name }" is too small for its text on { $device }: { $count ->
@@ -69,3 +85,14 @@ lint-l20-reason-preview = its licence allows preview and print only
 lint-l20-reason-bitmap = it holds bitmaps only
 lint-l20-reason-collection = it is part of a font collection
 lint-l20-reason-unknown = it carries no licence information
+
+# Checks that did not run on a device (rung 14a): one line per device in the Lint tab.
+lint-skipped = On { $device }, these checks did not run: { $items }.
+lint-skipped-item = { $rule } ({ $why })
+lint-skipped-sep = {", "}
+lint-skip-paper = paper has no screen to judge against
+lint-skip-wallpaper = a wallpaper is not written on
+lint-skip-ignored = this page ignores it
+lint-skip-no-grays = this device lists no clean grays
+lint-skip-no-value = this device has no value for it
+lint-skipped-none = No checks were skipped on { $device }.
