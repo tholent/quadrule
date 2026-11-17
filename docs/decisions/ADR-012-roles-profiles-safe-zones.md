@@ -6,8 +6,8 @@ ratified-on: "2026-11-10"
 owner: chris
 kind: design
 built: partial
-proof: "`crates/profiles/tests/profiles.rs::verified_profiles_have_a_record`, `crates/profiles/tests/profiles.rs::role_grays_are_clean_levels`, `crates/xtask/tests/safezones.rs::profiles_match_their_screenshots`, `crates/lint/tests/lint.rs::every_toolbar_zone_is_known`, `crates/ui/tests/drag.rs::the_right_toolbar_zone_is_shown_and_caught_by_default`, `crates/layout/tests/snap.rs::union_outline_leaves_out_borders_inside_the_combined_area`"
-owed: "clean gray levels measured on both devices; the Manta's pen shades (assumed equal to the Nomad's); safe zones for landscape, a collapsed toolbar and other floating positions; the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14)"
+proof: "`crates/profiles/tests/profiles.rs::verified_profiles_have_a_record`, `crates/profiles/tests/profiles.rs::role_grays_are_clean_levels`, `crates/xtask/tests/safezones.rs::profiles_match_their_screenshots`, `crates/lint/tests/lint.rs::every_toolbar_zone_is_known`, `crates/ui/tests/drag.rs::the_right_toolbar_zone_is_shown_and_caught_by_default`, `crates/layout/tests/snap.rs::union_outline_leaves_out_borders_inside_the_combined_area`, `crates/profiles/tests/lint_block.rs::both_supernotes_carry_the_measured_values_and_paper_only_two`, `crates/lint/tests/gray_rules.rs::a_rule_follows_an_edited_overrides_lint_block_and_an_edited_role`"
+owed: "the Manta's gray levels and pen shades (ruled equal to the Nomad's, not measured); safe zones for a collapsed toolbar and other floating positions; measured values for L09, L13 and L14 (chosen, not measured)"
 supersedes: nothing
 amends: nothing
 ---
@@ -53,6 +53,15 @@ amends: nothing
   rounds, chris's choice); awaiting ratification`.
 - 2026-11-10: amended by chris, after trying rung 5: the linter no longer checks the floating toolbar (see the
   Amendment below). Header values unchanged.
+- 2026-11-17: amended by chris, rung 14a: lint thresholds live in profile data (see the Amendment of 2026-11-17).
+  Prior header values, word for word: proof `"`crates/profiles/tests/profiles.rs::verified_profiles_have_a_record`,
+  `crates/profiles/tests/profiles.rs::role_grays_are_clean_levels`,
+  `crates/xtask/tests/safezones.rs::profiles_match_their_screenshots`, `crates/lint/tests/lint.rs::every_toolbar_zone_is_known`,
+  `crates/ui/tests/drag.rs::the_right_toolbar_zone_is_shown_and_caught_by_default`,
+  `crates/layout/tests/snap.rs::union_outline_leaves_out_borders_inside_the_combined_area`"`; owed `"clean gray levels
+  measured on both devices; the Manta's pen shades (assumed equal to the Nomad's); safe zones for landscape, a collapsed
+  toolbar and other floating positions; the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14)"`.
+  Status unchanged (`accepted`); built unchanged (`partial`).
 
 ## Amendment — 2026-11-10, chris
 
@@ -75,3 +84,29 @@ the same three toolbar positions. The floating position stays in the code as an 
 (`app-lint-toolbars`). Proof: `crates/lint/tests/lint.rs::floating_toolbar_is_not_linted_unless_asked`,
 `crates/ui/tests/drag.rs::the_floating_toolbar_zone_is_not_shown_or_caught`. The sample page's Manta findings went from
 7 to 5 (`crates/ui/tests/window.rs::empty_start_then_sample`).
+
+## Amendment — 2026-11-17, chris
+
+**Touches:** Decision item 2 ("Values come from calibration, never code"). Its text above stands as ruled; this extends
+it from role values to lint thresholds.
+
+chris, word for word, in the rung 14 bbq (`docs/bbq/2026-11-17-rung-14-lint-and-preflight.md`), Q2: "A lint block in
+profiles (Recommended)"; Q3 and Q4: "Accept as listed (Recommended)"; at the 14a look: "approved. meter read is 46%.";
+asked whether to record it here: "ratify now".
+
+**What changes:** the numbers the lint rules judge against live in profile data too, never in code. Each profile has a
+`lint` block (`LintThresholds` in `crates/profiles/src/lib.rs`, file format 0.15.0): the lightest visible gray for
+1 px and wider strokes, for square dots by size, for fills and for text (L03); the smallest legible text size (L07);
+the smallest comfortable handwriting step (L09); the dark-fill gray and page share (L13); the thin-line width (L14).
+L05 reads the profile's `gray_levels`. The Supernote values come from chris's calibration sheets, each cited by its
+sheet code in the RON files and `docs/device-measurements/supernote.a6x2/calibration.md`; the L09, L13 and L14 values
+were chosen by chris, not measured. A value left empty skips its rule on that profile, and lint says which checks were
+skipped and why. Like role values, the block is editable in the Profiles window as a local override with Reset to
+built-in (ADR-016), and every rule reads the profile in use, never the shipped one.
+
+**Why:** so each device, a user's own profile and later ones (the A5 X in v1.1) judge against their own measured
+numbers, and recalibration changes data, not code, as item 2 already rules for roles.
+
+**Built:** rung 14a (`ad948c3`, `c14628e`, `273f1cb`). Proof:
+`crates/profiles/tests/lint_block.rs::both_supernotes_carry_the_measured_values_and_paper_only_two`,
+`crates/lint/tests/gray_rules.rs::a_rule_follows_an_edited_overrides_lint_block_and_an_edited_role`.
