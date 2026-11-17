@@ -205,3 +205,11 @@ then 13b, its look, and one `v0.13.0`.
   them: each row of the clash dialog starts on Not now; Keep both keeps the incoming name; Save keeps the window open;
   saving a built-in's shipped values deletes its override. ADR-016 is accepted. Meter 36 % (logged), so 13a spent
   4 points of the 10; 13b starts under the same share.
+- **2026-11-17, the 13b look.** chris, word for word, answering "Approve 13b, or what to change", "A, B or C for large
+  pages" and "Your meter reading now": "1. approved 2. C 3. 41%". 13b is approved as built (`ef76e05` to `5fc3071`),
+  with the builder's choices in `docs/STATUS-log.md` (2026-11-17, rung 13b) standing. **Large pages: C**, left as debt
+  for rung 17: on the export-pixels canvas a Tabloid or A3 page at 600 PPI draws at 410–440 ms a frame (p90, the Pi)
+  against the 50 ms line, while the graphics-chip canvas keeps about 4 ms; the options not taken were A (draw at screen
+  resolution when zoomed out, exact pixels from 1:1 up; the lead's recommendation, overruled) and B (switch pages over
+  about 20 M px to the chip canvas). Meter 41 % (logged): rung 13 spent 9 points of the 10. One `v0.13.0` follows
+  (Q11).

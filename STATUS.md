@@ -190,6 +190,21 @@ The project's live state. Update it when work lands. Every claim cites at least 
   page drag 19.8 ms export, 5.2 chip; pattern-angle page drag about 21 export, 3.6 chip, draw about 21 export, 23.4 chip
   (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --missing-fonts-page`,
   `-- --turned-patterns-page` or `-- --pattern-angle-page`.
+- Rung 13, the profile system and paper sizes, is done: 13a and 13b approved by chris 2026-11-17 ("approved" each),
+  shipped together as `v0.13.0` (record `docs/bbq/2026-11-17-rung-13-profile-system.md`, with its Amendments; ADR-016
+  ratified). **13a**: a Profiles window (toolbar and Page tab) to edit every profile; an edited Manta or Nomad is a local
+  override marked Edited, with Reset to built-in; New…, Duplicate, Delete, `.ron` Import and Export; user profiles get
+  GUID ids and live in the config folder's `profiles/`; a `.quad` carries the profiles it uses that are not plain
+  built-ins, and a same-named incoming one offers Merge (its values update yours), Rename or Not now; a damaged profile
+  file is skipped and listed (`crates/profiles/src/registry.rs`, `crates/profiles/src/active.rs`,
+  `crates/ui/src/profiles_win.rs`). **13b**: eleven built-in paper sizes (A3 to Tabloid), PPI per page (150/200/300/600),
+  the Nomad's line weights by physical size, wide landscape exports, safe-zone lint skipped on paper
+  (`crates/profiles/src/lib.rs`, `crates/layout/src/device.rs`). File format 0.14.0
+  (`crates/render/tests/fixtures/v0.13/`). Three golden lines added (`paper_*`, `paper-landscape_*`); the 26 older ones
+  unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: A4 at 300 PPI 34–35 ms export,
+  4–12 ms chip; Tabloid at 600 PPI 410–440 ms export (over the 50 ms line; ruled debt for rung 17 by chris, "C"), 4 ms
+  chip (`docs/STATUS-log.md`, `docs/STATUS-debt.md`). Try it: `cargo run --release -p quadrule-app -- --profiles` or
+  `-- --paper-page`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -235,8 +250,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
-  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). Next: rung 13, the profile system; the next
-  lead's prompt is `docs/arcs/v1/rung-13-PROMPT-2026-11-17.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
+  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). Next: rung 14, lint and preflight; the
+  next lead's prompt is `docs/arcs/v1/rung-14-PROMPT-2026-11-17.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
   buildable now; chris designs one per category (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
@@ -253,14 +268,6 @@ Full debt list: `docs/STATUS-debt.md`.
 ## Log
 
 Session history: `docs/STATUS-log.md`. Finished work: `docs/STATUS-archive.md`.
-- 2026-11-11: rung 6a approved by chris; `v0.6.0` tagged; its GitHub release waits on chris (`docs/STATUS-log.md`).
-- 2026-11-11: rung 6b built (Sonnet 5.5, high): rotation, lines any way, opacity, format 0.6.0; measured on the Pi
-  (`docs/STATUS-log.md`).
-- 2026-11-11: rung 6b approved with one change (handles turn with the object), built; `v0.6.1` tagged; rung 6 done;
-  board re-planned; rung 7 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-7-PROMPT-2026-11-11.md`).
-- 2026-11-12: rung 7 kickoff: budget 10 points; planned (bbq, 8 questions), split 7a/7b; 7a built (Sonnet 5.5, high):
-  groups, format 0.7.0; measured on the Pi; approved with the Figma constraints change, built; `v0.7.0` tagged
-  (`docs/STATUS-log.md`).
 
 ## How this file is kept
 
@@ -269,13 +276,6 @@ debt in `docs/STATUS-debt.md`, each session in `docs/STATUS-log.md` (dated, newe
 month when it grows), and finished entries, moved word for word, in `docs/STATUS-archive.md`. Every bullet under Now, Next
 and Known debt cites at least one file that exists. Keep this file under 300 lines; the project-prep
 skill's `scripts/status-check.py` checks both.
-- 2026-11-12: rung 7b built (Sonnet 5.5, high): align and distribute, "mixed" fields; approved by chris; `v0.7.1`
-  tagged; rung 7 done; board re-planned; rung 8 prompt written (`docs/STATUS-log.md`,
-  `docs/arcs/v1/rung-8-PROMPT-2026-11-12.md`).
-- 2026-11-12/13: rung 8 planned (bbq, 8 questions), split 8a/8b; 8a built (Sonnet 5.5, high); its look deferred by
-  chris; 8b finished, tested and measured by the lead; both wait for chris's look (`docs/STATUS-log.md`).
-- 2026-11-13: rung 8 approved by chris (8a and 8b); version 0.8.0, one release `v0.8.0`; board re-planned; rung 9
-  prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`).
 - 2026-11-13: rung 9 planned (bbq, 8 questions; one rung, one look), built (Sonnet 5.5, high), changed at chris's look
   (isometric turned 90°, hex cut at the frame, bigger major dots; ADR-014 amended), approved; `v0.9.0`; board
   re-planned; rung 10 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`).
@@ -290,3 +290,7 @@ skill's `scripts/status-check.py` checks both.
   built (Sonnet 5.5 high: 12a, stopped once by an account error and resumed; 12b with chris's pattern-angle addition),
   approved; one release `v0.12.0`; ADR-001 and ADR-002 built status; board re-planned; rung 13 prompt written
   (`docs/STATUS-log.md`, `docs/arcs/v1/rung-13-PROMPT-2026-11-17.md`).
+- 2026-11-17: rung 13 planned (bbq, 14 questions; GUID ids by chris; paper sizes pulled in from v1.1 by chris), split
+  13a/13b, built (two Sonnet 5.5 high builders), approved; ADR-016 ratified; large paper pages on the export canvas
+  ruled debt for rung 17; one release `v0.13.0`; board re-planned; rung 14 prompt written (`docs/STATUS-log.md`,
+  `docs/arcs/v1/rung-14-PROMPT-2026-11-17.md`).

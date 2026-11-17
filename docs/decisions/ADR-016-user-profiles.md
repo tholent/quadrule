@@ -5,9 +5,8 @@ ratified-by: chris
 ratified-on: "2026-11-17"
 owner: chris
 kind: design
-built: partial
-proof: "`crates/profiles/tests/registry.rs::every_damaged_shape_is_refused_without_a_panic`, `crates/profiles/tests/registry.rs::an_override_wins_and_a_broken_one_falls_back_marked`, `crates/profiles/tests/registry.rs::lookup_order_and_carried_copies`, `crates/profiles/tests/call_sites.rs::production_code_looks_profiles_up_in_the_registry`, `crates/ui/tests/profiles_window.rs::an_override_changes_the_export_and_reset_restores_the_shipped_bytes_exactly`, `crates/ui/tests/profiles_carried.rs::a_missing_profile_opens_from_the_carried_copy_and_can_be_added`, `crates/ui/tests/profiles_carried.rs::an_edited_builtin_clashes_and_each_choice_does_what_it_says`, `crates/render/tests/migrate_v013.rs::v013_files_open_migrate_and_export_the_same_bytes`"
-owed: "the paper built-ins (`paper.a4` and the rest, item 1), rung 13b"
+built: landed
+proof: "`crates/profiles/tests/registry.rs::every_damaged_shape_is_refused_without_a_panic`, `crates/profiles/tests/registry.rs::an_override_wins_and_a_broken_one_falls_back_marked`, `crates/profiles/tests/registry.rs::lookup_order_and_carried_copies`, `crates/profiles/tests/call_sites.rs::production_code_looks_profiles_up_in_the_registry`, `crates/ui/tests/profiles_window.rs::an_override_changes_the_export_and_reset_restores_the_shipped_bytes_exactly`, `crates/ui/tests/profiles_carried.rs::a_missing_profile_opens_from_the_carried_copy_and_can_be_added`, `crates/ui/tests/profiles_carried.rs::an_edited_builtin_clashes_and_each_choice_does_what_it_says`, `crates/render/tests/migrate_v013.rs::v013_files_open_migrate_and_export_the_same_bytes`, `crates/format/tests/paper_ppi.rs`"
 supersedes: nothing
 amends: "napkin §12.1 (the `.quad` container gains `profiles/<id>.ron`)"
 consulted: the rung 13 lead (Opus 5.5) and the rung 13a builder (Sonnet 5.5), who built items 1 to 6
@@ -95,3 +94,6 @@ profile per fork.
   drafted 2026-11-17 by the rung 13 lead from the rung 13 bbq record (Defaulted "ADR"); awaiting ratification at the
   13a look`; `built: none`; `proof: ""`; `owed: all of it: rung 13a builds the registry, overrides, carrying and
   Merge/Rename; rung 13b the paper built-ins`; `consulted: the rung 13 lead (Opus 5.5)`.
+- 2026-11-17: the paper built-ins (item 1) built in rung 13b (`ef76e05` to `5fc3071`), approved by chris ("approved").
+  Earlier header values, word for word: `built: partial`; `owed: the paper built-ins (`paper.a4` and the rest, item
+  1), rung 13b`; proof without `crates/format/tests/paper_ppi.rs`.

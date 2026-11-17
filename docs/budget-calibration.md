@@ -77,3 +77,11 @@ pattern-angle leg (341,061 at its end; the 270,898 reported after its first leg 
 30) after 12b's first leg, 31 % at approval. **9 points against a 12-point share.** No stop line fired. Alone on the
 meter. K not refitted this session. Room left before Saturday 2026-11-21's 5 pm EST reset: 44 points under the 75 %
 hard stop.
+
+2026-11-17, rung 13 (the profile system and paper sizes), one lead session (Opus 5.5 high) and two Sonnet 5.5 high
+builders: 13a (387,601 tokens reported by the harness) and 13b (388,875). `spend-ledger.py measure --latest --meter 32
+41 --lead "Opus 5.5, high"` → `fresh 824 · cached 98.8M · written 1.5M · out 387k | sonnet 80% · opus 20% | $29.84 |
+32 → 41 · alone here · 9 pts`. Readings (chris): 32 % start, 36 % after 13a, 41 % after 13b. **9 points against a
+10-point share**; the share line (42 %) was one point away at 13b's approval, so no further builder was started and the
+close (release, docs, prompt) was the lead's own. No stop line fired. Alone on the meter. K not refitted this session.
+Room left before Saturday 2026-11-21's 5 pm EST reset: 34 points under the 75 % hard stop.

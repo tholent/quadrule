@@ -1897,3 +1897,28 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - Seen on screen (grim, release build, scratch config and data folders, 1440 × 720): `scratchpad/paper-page.png` (the paper page, the Page tab with the Paper group: ISO A3, A4 primary at 300 PPI, A5 at 600 PPI, the device strip with both sizes) and
   `scratchpad/paper-profiles.png` (the Profiles window on ISO A4: 210 × 297 mm, 2480 × 3508 px at 300 PPI (locked), PPI chosen per page, margins 10, Line roles / Fill roles / About only).
   Not driven by a pointer: the PPI combo, the mm DragValues of a copy of a paper size, the New… list's Paper group (the logic under them is tested headless).
+
+## 2026-11-17 — rung 13 lead session (Opus 5.5 high): planned, two builders, approved, `v0.13.0`
+
+- Kickoff: `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` → `BUILD head=979bd59 dirty=no rebuilt=11`. Budget 10
+  points by chris, alone on the weekly meter, start 32 % (given by chris, logged). Parked questions (A5 X rhythm, Label
+  gray) asked again: chris, "Keep both parked".
+- bbq, 14 questions (`docs/bbq/2026-11-17-rung-13-profile-system.md`, `3f3ebb3`): chris ruled GUID ids for user
+  profiles with Merge or Rename on a same name (Q6, his own words; Q9 Merge = theirs updates mine), and added built-in
+  paper sizes at Q10, pulled from v1.1; split 13a/13b, one release (Q11). ADR-016 drafted, spec §3.3.1 and §16 got dated
+  notes, board row split (`bc51934`).
+- 13a built by a Sonnet 5.5 high builder (387,601 tokens; `797cc9d` to `10a249b`, its own log entry above). Lead
+  checks: golden and fixtures diff only the new `v0.13/`; CI green on `e3afe74`; no worker thread in layout, render, ui
+  or app reads profiles (`grep -rn "thread::spawn\|std::thread\|rayon"` on those crates' `src`, nothing found), so the
+  per-thread registry reaches every drawing. A bench run had saved `~/.local/share/quadrule/app.ron` (22:42 EST
+  2026-11-16); chris was told. chris: "1. approved 2. ratified 3. 36%" — 13a approved, ADR-016 accepted
+  (`a78516a`, `debc1ea`, format fix for `adr-check.py` → `16 ADRs, 0 failure(s)`).
+- 13b built by a second Sonnet 5.5 high builder (388,875 tokens; `ef76e05` to `5fc3071`). Lead checks: golden diff
+  only three added lines and PNGs; CI and Coverage green on `37b1769`; looked at
+  `paper-landscape_paper.letter_3300x2550.png` (wide, upright, round circle). The builder stopped and reported Tabloid at
+  600 PPI on the export canvas at 410–440 ms p90; chris: "1. approved 2. C 3. 41%" — 13b approved, large pages left as
+  rung 17 debt.
+- Close: version 0.13.0 (`Cargo.toml`, `Cargo.lock`), release notes `docs/arcs/v1/release-notes/v0.13.0.md`, ADR-016
+  built landed, board re-planned (rung 17 grows by the large-page item), `STATUS.md` (old log lines moved word for word
+  to `docs/STATUS-archive.md`; `status-check.py` → `296 lines, ceiling 300, 0 finding(s)`), calibration row, rung 14
+  prompt `docs/arcs/v1/rung-14-PROMPT-2026-11-17.md`; tag `v0.13.0` pushed after CI.
