@@ -1922,3 +1922,6 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   built landed, board re-planned (rung 17 grows by the large-page item), `STATUS.md` (old log lines moved word for word
   to `docs/STATUS-archive.md`; `status-check.py` → `296 lines, ceiling 300, 0 finding(s)`), calibration row, rung 14
   prompt `docs/arcs/v1/rung-14-PROMPT-2026-11-17.md`; tag `v0.13.0` pushed after CI.
+- `v0.13.0` published 2026-11-17 14:14 UTC by the release workflow (run 44098096890, success) from the tag on `5c0cc0f`
+  (CI, Fuzz and Coverage green there): pre-release, six installers and `SHA256SUMS.txt`
+  (`gh release view v0.13.0`), https://github.com/tholent/quadrule/releases/tag/v0.13.0.
