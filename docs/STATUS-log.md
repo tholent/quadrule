@@ -2037,3 +2037,14 @@ The look: `cargo run --release -p quadrule-app -- --lint-page` then the Lint tab
   12 bullet and two Log lines moved word for word to `docs/STATUS-archive.md`); rung 15 prompt
   `docs/arcs/v1/rung-15-PROMPT-2026-11-17.md`; calibration row. `spend-ledger.py measure --latest --meter 42 52` →
   `sonnet 86% · opus 14% | $36.24 | 42 → 52 · alone here · 10 pts`.
+- After the release, chris asked why a rung's end runs CI, Fuzz and Coverage and then the release again. The lead found
+  the sign-off commit's only code change is the version bump in `Cargo.toml` and `Cargo.lock`, which all three
+  workflows watch; the release workflow builds but runs no tests, so CI on that commit is the only test of the tagged
+  code, while Fuzz and Coverage repeat the last run. chris, word for word: "yes, let's go with option 2": skip Fuzz and
+  Coverage when only the version moved. Built: `.github/scripts/version-only.py` (compares `Cargo.toml` without
+  `[workspace.package] version` and `Cargo.lock` without the quadrule packages' versions; anything it cannot tell
+  runs) and a `changes` job ahead of each of `fuzz.yml` and `coverage.yml`. Checked on the history (`version-only.py
+  push <c>^ <c>`): the sign-offs `ed28d36`, `5c0cc0f`, `9ed31ee`, `97bfe32`, `26f552f`, `8a22065` → `run=false
+  reason=version-only`; every other recent `Cargo.lock` commit, a range with code, a pull request, a new branch and an
+  unreadable base → `run=true`; in a scratch clone, an outside package's version in `Cargo.lock`, a dependency in
+  `Cargo.toml` and an edition change → `run=true`.

@@ -15,6 +15,7 @@ on:
       - ".cargo/**"
       - "docs/device-measurements/**/*.png"
       - ".github/workflows/coverage.yml"
+      - ".github/scripts/version-only.py"
       - ".github/scripts/publish-badge.sh"
   workflow_dispatch:
 
@@ -31,8 +32,24 @@ env:
   CARGO_TERM_COLOR: never
 
 jobs:
+  # A rung's sign-off commit only moves the version number; this run would repeat the last one, so it is
+  # skipped then (.github/scripts/version-only.py; chris, 2026-11-17). CI still tests that commit.
+  changes:
+    name: what changed
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: check
+        run: python3 .github/scripts/version-only.py "${{ github.event_name }}" "${{ github.event.before }}" "${{ github.sha }}"
+
   coverage:
     name: coverage (whole workspace)
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
