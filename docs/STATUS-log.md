@@ -1810,3 +1810,7 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
 - Spend: `spend-ledger.py measure --latest --meter 22 31 --lead "Opus 5.5, high"` → `| 2026-11-16 | quadrule [25d30704] |
   claude | Opus 5.5, high | 11-16 11:51 → 11-17 01:43 | fresh 842 · cached 92.6M · written 2.0M · out 365k | 82% (3 files)
   | sonnet 82% · opus 18% | $28.89 | 22 → 31 · alone here · 9 pts |`.
+- v0.12.0 published: tag `v0.12.0` pushed at `9ed31ee` after CI 43997940859 passed; the release workflow, run
+  43999330846, succeeded and published https://github.com/tholent/quadrule/releases/tag/v0.12.0 (pre-release, not a
+  draft) with 7 files: AppImage and `.deb` for Linux x86-64 and ARM64, the universal `.dmg`, the `.msi`, and
+  `SHA256SUMS.txt` (`gh release view v0.12.0 --json assets`).
