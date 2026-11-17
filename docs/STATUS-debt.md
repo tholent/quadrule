@@ -2,8 +2,8 @@
 
 Known debt and owed work. One line each. When an item is paid, remove it and note it in `STATUS-log.md`.
 
-- Parked for chris: rendering — Scale vs pixel-locked rhythm on A5 X; the build-folder instruction the render worker
-  reports (`spikes/render/FINDINGS.md`). (Canvas fallback to vello_cpu on weak GPUs: ruled yes, 2026-11-09.)
+- Parked for chris: rendering — the build-folder instruction the render worker reports (`spikes/render/FINDINGS.md`).
+  (Scale vs pixel-locked rhythm on A5 X: ruled 2026-11-17, today's behaviour ratified; `docs/bbq/2026-11-17-rung-14-lint-and-preflight.md`.) (Canvas fallback to vello_cpu on weak GPUs: ruled yes, 2026-11-09.)
 - Calibration: the Manta's gray levels are ruled equal to the Nomad's, not measured (chris, 2026-11-12: "Same as the
   Nomad"; `docs/device-measurements/supernote.a5x2/calibration.md`); the Manta's pen shades likewise (arc v1 bbq Q8).
 - The `gh` token expires 90 days after it was made (chris, 2026-11-09); if made 2026-11-09, that is about 2027-02-07.

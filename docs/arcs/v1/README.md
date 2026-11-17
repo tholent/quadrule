@@ -80,7 +80,7 @@ tastetest says READY; the release candidate has had testers on macOS and Windows
 
 ## Out of this arc
 
-L04 (v1.1, Q7). Clicking the overrides dot to open the Overrides tab (v1.1, chris 2026-11-13). The A5 X rhythm question (parked until the A5 X profile, v1.1, Q16). Winget and Flathub listings
+L04 (v1.1, Q7). Clicking the overrides dot to open the Overrides tab (v1.1, chris 2026-11-13). The A5 X profile (v1.1); its rhythm question was ruled 2026-11-17 (rhythm wins for spacing, frames follow constraints; rung 14 record). Winget and Flathub listings
 (after v1.0, Q12). Everything the spec puts in v1.1 or later.
 
 ## Re-plans

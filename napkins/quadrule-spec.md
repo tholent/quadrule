@@ -318,6 +318,11 @@ Every document has its own **rhythm**: a horizontal unit and a vertical unit tha
 
 **Per-profile resolution:** Each profile resolves the rhythm to device pixels. In **pixel-locked** mode, the unit rounds to a whole number of device pixels (5 mm at 300 PPI = 59 px, i.e. 4.995 mm). Lines then stay perfectly crisp and evenly spaced, with no drift across the page. In **physical-locked** mode, exact millimetres are kept and pixel snapping places each line on the nearest pixel, which can make spacing vary by 1 px. The inspector shows the resolved value per profile, e.g. "5 mm → 59 px (Manta), 44 px (A5 X)." Secondary profiles can override the rhythm, like any other per-profile property.
 
+> Amended 2026-11-17, chris at the rung 14 start (`docs/bbq/2026-11-17-rung-14-lint-and-preflight.md`, "Asked again"):
+> "Ratify today's behaviour (Recommended)". On another device, **the rhythm wins for spacing** (a bound pattern's lines,
+> a repeat's pitch in `u`: the rhythm resolved in mm on that device, never scaled; 6 mm is 53 px on the A5 X), and
+> **frames follow their constraints** (Scale by default). This closes "Scale vs pixel-locked rhythm on A5 X" (arc Q16).
+
 **What rhythm drives by default:**
 - **Snapping:** Object edges, line endpoints and sizes snap to rhythm units or subdivisions.
 - **Pattern regions:** Spacing bound to the rhythm (or a multiple of it).
