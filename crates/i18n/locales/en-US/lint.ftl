@@ -96,3 +96,45 @@ lint-skip-ignored = this page ignores it
 lint-skip-no-grays = this device lists no clean grays
 lint-skip-no-value = this device has no value for it
 lint-skipped-none = No checks were skipped on { $device }.
+
+# Quick fixes (rung 14b): the button on a finding. $role is a role's name, $pt a size in points.
+lint-fix-pixel = Snap to pixel grid
+lint-fix-gray = Use nearest clean gray
+lint-fix-role = Use { $role } role
+lint-fix-safe = Move inside safe area
+lint-fix-pt = Use { $pt } pt
+lint-fix-rhythm = Snap to rhythm
+lint-fix-rhythm-all = Snap all to rhythm
+lint-fix-bind = Bind to rhythm
+lint-fix-center = Center rhythm origin
+lint-fix-none = That fix found nothing to change.
+lint-fix-locked = That object is locked.
+lint-fix-done = Done. Undo puts it back.
+
+# Ignoring a rule for a document (rung 14b).
+lint-ignore = Ignore this rule for this document
+lint-ignore-short = Ignore
+lint-ignore-tip = Turn this rule off for this document, on every device. It is listed at the end of the Lint tab, where it can be turned back on.
+lint-ignored-heading = Ignored rules ({ $count })
+lint-ignored-on = Turn back on
+
+# A rule's short name, for the Ignored rules list and the preflight sheet.
+lint-rule-l01 = Stroke thinner than one pixel
+lint-rule-l02 = Stroke not pixel-aligned
+lint-rule-l03 = Gray too light
+lint-rule-l05 = Gray not a clean level
+lint-rule-l06 = Content in a safe zone
+lint-rule-l07 = Text too small
+lint-rule-l08 = Text overflows its box
+lint-rule-l09 = Handwriting step too small
+lint-rule-l10 = Off the page
+lint-rule-l11 = Missing font
+lint-rule-l13 = Large dark fills
+lint-rule-l14 = Soft thin lines
+lint-rule-l15 = Differs on another device
+lint-rule-l16 = Off the rhythm
+lint-rule-l17 = Mixed rhythm
+lint-rule-l18 = Rhythm fits unevenly
+lint-rule-l19 = Uneven pixel spacing
+lint-rule-l20 = Installed fonts used
+lint-rule-other = { $rule }

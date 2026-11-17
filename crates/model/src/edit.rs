@@ -78,6 +78,9 @@ pub enum Command {
     SetMetadata(Metadata),
     /// Sets the display unit.
     SetUnits(Unit),
+    /// Replaces the lint rules this page turns off, on every device (rung 14b: Ignore this rule for this
+    /// document, and turning it back on). No file-format change: the field is 0.15.0's.
+    SetIgnoredRules(Vec<String>),
     /// Puts an object into a layer at `index` (0 is the bottom).
     Insert {
         /// The layer's index.
@@ -645,6 +648,10 @@ impl Document {
                 m,
             ))),
             Command::SetUnits(u) => Ok(Command::SetUnits(std::mem::replace(&mut self.units, u))),
+            Command::SetIgnoredRules(r) => Ok(Command::SetIgnoredRules(std::mem::replace(
+                &mut self.ignored_rules,
+                r,
+            ))),
             Command::Insert {
                 layer,
                 index,
@@ -843,7 +850,8 @@ impl Command {
             | Command::SetPage(_)
             | Command::SetRhythm(_)
             | Command::SetMetadata(_)
-            | Command::SetUnits(_) => true,
+            | Command::SetUnits(_)
+            | Command::SetIgnoredRules(_) => true,
             Command::Batch(c) => c.iter().all(Command::is_setter),
             _ => false,
         }

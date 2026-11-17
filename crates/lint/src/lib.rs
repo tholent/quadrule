@@ -29,7 +29,10 @@
 
 #![forbid(unsafe_code)]
 
+mod fix;
 mod judge;
+
+pub use fix::{Edit, Fix, NoFix, RoleChoice, offered, plan, plan_snap_all};
 
 use quadrule_i18n::{Arg, Message};
 use quadrule_layout::tree::{Heights, Node, resolve_nodes_with};
@@ -1082,6 +1085,32 @@ fn free_placement(doc: &Document, o: &quadrule_model::Object) -> bool {
             .iter()
             .filter_map(|a| doc.object(*a))
             .any(|a| a.free_placement)
+}
+
+/// A rule's short name, as a message: "Gray too light" for `L03` (the Ignored rules list and the preflight sheet).
+/// A rule this build does not judge gets its id as the name.
+pub fn rule_title(rule: &str) -> Message {
+    Message::new(match rule {
+        "L01" => "lint-rule-l01",
+        "L02" => "lint-rule-l02",
+        "L03" => "lint-rule-l03",
+        "L05" => "lint-rule-l05",
+        "L06" => "lint-rule-l06",
+        "L07" => "lint-rule-l07",
+        "L08" => "lint-rule-l08",
+        "L09" => "lint-rule-l09",
+        "L10" => "lint-rule-l10",
+        "L11" => "lint-rule-l11",
+        "L13" => "lint-rule-l13",
+        "L14" => "lint-rule-l14",
+        "L15" => "lint-rule-l15",
+        "L16" => "lint-rule-l16",
+        "L17" => "lint-rule-l17",
+        "L18" => "lint-rule-l18",
+        "L19" => "lint-rule-l19",
+        "L20" => "lint-rule-l20",
+        _ => return Message::new("lint-rule-other").text("rule", rule),
+    })
 }
 
 /// Why a check did not run on a device (rung 14a bbq, Q2; shown by the Lint tab and the preflight sheet).

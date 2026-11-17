@@ -62,6 +62,10 @@ fn every_kind(doc: &Document) -> Vec<(&'static str, Command)> {
         ("SetMetadata", Command::SetMetadata(meta)),
         ("SetUnits", Command::SetUnits(Unit::Pt)),
         (
+            "SetIgnoredRules",
+            Command::SetIgnoredRules(vec!["L03".to_string()]),
+        ),
+        (
             "Insert",
             Command::Insert {
                 layer: 1,
