@@ -37,6 +37,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.10.0", "0.11.0", v0_10_to_v0_11),
     ("0.11.0", "0.12.0", v0_11_to_v0_12),
     ("0.12.0", "0.13.0", v0_12_to_v0_13),
+    ("0.13.0", "0.14.0", v0_13_to_v0_14),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -150,6 +151,14 @@ fn v0_12_to_v0_13(scene: &mut Value) -> Result<(), FormatError> {
             }
         }
     }
+    Ok(())
+}
+
+/// 0.14 adds profiles carried inside the file (`profiles/<id>.ron` entries, `carried_profiles` in the
+/// manifest; rung 13a bbq, Q4 and Defaulted "Carrying in the file"). Nothing in the scene changes, so a
+/// 0.13 scene needs no rewriting: a 0.13 file carries none, and every profile it names is one this
+/// build ships. A 0.13 build keeps the new entries as unknown ones.
+fn v0_13_to_v0_14(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

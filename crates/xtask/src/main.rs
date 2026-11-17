@@ -207,6 +207,10 @@ fn lint(args: &[String]) -> Result<(), String> {
             let bytes = std::fs::read(&path).map_err(|e| format!("{path}: {e}"))?;
             let f = quadrule_format::QuadFile::from_bytes(&bytes)
                 .map_err(|e| format!("{path}: {e}"))?;
+            // The profiles the file carries stand in for any this computer lacks (rung 13a).
+            quadrule_profiles::active::with_mut(|r| {
+                r.set_carried(f.profiles.values().cloned().collect(), Default::default());
+            });
             (f.doc, f.outlines)
         }
     };

@@ -21,7 +21,8 @@
 //! ├── manifest.cbor            format version, last saver, title, profiles, fonts, checksums
 //! ├── scene.cbor               the Document
 //! ├── outlines/<profile>.cbor  text outlines, one file per document profile (ADR-001 item 2)
-//! └── assets/fonts/<sha256>.<ttf|otf>  embedded installed fonts, whole files (rung 12a)
+//! ├── assets/fonts/<sha256>.<ttf|otf>  embedded installed fonts, whole files (rung 12a)
+//! └── profiles/<id>.ron        the profiles the page uses that are not an unedited built-in (rung 13a)
 //! ```
 //!
 //! The same document always gives the same bytes, on every machine: entries are written in a
@@ -29,7 +30,9 @@
 //!
 //! Not built yet: `previews/` and image assets (napkin §12.1). Font signatures in the manifest
 //! (ADR-001 item 6) and embedded fonts came with format 0.13; a damaged embedded font is skipped
-//! and never stops a file opening.
+//! and never stops a file opening. Format 0.14 carries profiles (the user's own, and an edited Manta
+//! or Nomad) as the same RON text Export… writes; a carried profile outside the limits is skipped
+//! the same way, and the page opens with that profile missing.
 
 #![forbid(unsafe_code)]
 
@@ -37,6 +40,7 @@ pub mod migrate;
 
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Extra, FontSignature};
+use quadrule_profiles::{Profile, parse_checked, to_ron};
 use semver::Version;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -47,7 +51,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, DateTime, System, ZipArchive, ZipWriter};
 
 /// The format version this build writes. Pre-1.0 while the format settles.
-pub const FORMAT_VERSION: &str = "0.13.0";
+pub const FORMAT_VERSION: &str = "0.14.0";
 
 /// Required features this build understands. A file that requires any other opens read-only.
 pub const KNOWN_FEATURES: &[&str] = &["text-outlines"];
@@ -71,6 +75,9 @@ pub struct Manifest {
     pub profiles: Vec<String>,
     /// Fonts the document uses.
     pub fonts: Vec<FontRef>,
+    /// The profiles saved inside the file (format 0.14), each also an entry under `profiles/`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub carried_profiles: Vec<ProfileRef>,
     /// Features a reader must understand to edit the file.
     pub required_features: Vec<String>,
     /// Every other entry's path, with its checksum and size.
@@ -113,6 +120,28 @@ impl FontRef {
             extra: Extra::new(),
         }
     }
+}
+
+/// A profile saved inside the file (format 0.14), so a computer without it can still show the page.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct ProfileRef {
+    /// The profile's id.
+    pub id: String,
+    /// Its name, readable without parsing the profile.
+    pub name: String,
+    /// Where it is in the archive: `profiles/<id>.ron`.
+    pub path: String,
+    /// Fields from newer versions.
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+/// The folder carried profiles are kept in.
+pub const PROFILE_DIR: &str = "profiles/";
+
+/// The path a carried profile is stored at: `profiles/<id>.ron`.
+pub fn profile_path(id: &str) -> String {
+    format!("{PROFILE_DIR}{id}.ron")
 }
 
 /// One embedded font file (format 0.13): a whole font file under `assets/fonts/`.
@@ -191,6 +220,8 @@ pub enum FormatError {
     },
     /// The readable JSON debug form did not parse.
     Json(String),
+    /// A profile to be carried is not acceptable (outside the limits, or filed under another id).
+    Profile(String),
 }
 
 impl std::fmt::Display for FormatError {
@@ -212,6 +243,11 @@ pub struct QuadFile {
     pub outlines: BTreeMap<String, ProfileOutlines>,
     /// The embedded font files, by their path in the archive (format 0.13).
     pub font_files: BTreeMap<String, Vec<u8>>,
+    /// The profiles the file carries, by id (format 0.14). Each was read through the profile limits.
+    pub profiles: BTreeMap<String, Profile>,
+    /// Carried profiles that were damaged or outside the limits and were skipped on opening, each
+    /// as (its path in the archive, why); the file still opened.
+    pub damaged_profiles: Vec<(String, String)>,
     /// Embedded font files that were damaged or missing and were skipped on opening; the file
     /// still opened (rung 12a bbq, Defaulted "Embedding in detail").
     pub damaged_fonts: Vec<String>,
@@ -230,6 +266,7 @@ impl QuadFile {
             title: doc.metadata.title.clone(),
             profiles: vec![],
             fonts,
+            carried_profiles: Vec::new(),
             required_features: vec!["text-outlines".into()],
             entries: BTreeMap::new(),
             extra: Extra::new(),
@@ -243,6 +280,8 @@ impl QuadFile {
             doc,
             outlines,
             font_files: BTreeMap::new(),
+            profiles: BTreeMap::new(),
+            damaged_profiles: Vec::new(),
             damaged_fonts: Vec::new(),
             read_only: None,
             migrated_from: None,
@@ -278,7 +317,25 @@ impl QuadFile {
         for (path, bytes) in &self.font_files {
             files.push((path.clone(), bytes.clone()));
         }
+        for (id, p) in &self.profiles {
+            if *id != p.id {
+                return Err(FormatError::Profile(format!("{id} holds profile {}", p.id)));
+            }
+            quadrule_profiles::limits::check(p)
+                .map_err(|e| FormatError::Profile(format!("{id}: {e}")))?;
+            files.push((profile_path(id), to_ron(p).into_bytes()));
+        }
         let mut m = self.manifest.clone();
+        m.carried_profiles = self
+            .profiles
+            .values()
+            .map(|p| ProfileRef {
+                id: p.id.clone(),
+                name: p.display_name.clone(),
+                path: profile_path(&p.id),
+                extra: Extra::new(),
+            })
+            .collect();
         // A newer file keeps its own label, so its unknown fields stay labelled (ADR-001 item 5).
         let ours = Version::parse(FORMAT_VERSION).expect("FORMAT_VERSION is semver");
         let theirs =
@@ -346,8 +403,11 @@ impl QuadFile {
         let mut blobs = BTreeMap::new();
         let mut font_files = BTreeMap::new();
         let mut damaged_fonts = Vec::new();
+        let mut profiles = BTreeMap::new();
+        let mut damaged_profiles = Vec::new();
         for (name, info) in &manifest.entries {
             let embedded_font = name.starts_with(FONT_DIR);
+            let carried_profile = name.starts_with(PROFILE_DIR);
             let read = read_entry(&mut z, name).and_then(|b| {
                 if b.len() as u64 != info.size || sha256_hex(&b) != info.sha256 {
                     Err(FormatError::Checksum(name.clone()))
@@ -359,6 +419,15 @@ impl QuadFile {
                 Ok(b) if embedded_font => {
                     font_files.insert(name.clone(), b);
                 }
+                // A carried profile goes through the same limits as an imported one; one that
+                // breaks them is skipped, and the page opens with that profile missing.
+                Ok(b) if carried_profile => match carried(name, &b) {
+                    Ok(p) => {
+                        profiles.insert(p.id.clone(), p);
+                    }
+                    Err(e) => damaged_profiles.push((name.clone(), e)),
+                },
+                Err(e) if carried_profile => damaged_profiles.push((name.clone(), e.to_string())),
                 Ok(b) => {
                     blobs.insert(name.clone(), b);
                 }
@@ -395,11 +464,23 @@ impl QuadFile {
             doc,
             outlines,
             font_files,
+            profiles,
+            damaged_profiles,
             damaged_fonts,
             read_only,
             migrated_from,
         })
     }
+}
+
+/// A carried profile's text, read through the limits; the file name must say the profile's id.
+fn carried(path: &str, bytes: &[u8]) -> Result<Profile, String> {
+    let text = std::str::from_utf8(bytes).map_err(|_| "the profile is not text".to_string())?;
+    let p = parse_checked(text).map_err(|e| e.to_string())?;
+    if profile_path(&p.id) != path {
+        return Err(format!("the profile `{}` is filed under {path}", p.id));
+    }
+    Ok(p)
 }
 
 fn read_entry(z: &mut ZipArchive<Cursor<&[u8]>>, name: &str) -> Result<Vec<u8>, FormatError> {
@@ -444,4 +525,66 @@ pub fn to_debug_json(doc: &Document) -> Result<String, FormatError> {
 /// Opens the readable JSON form.
 pub fn from_debug_json(s: &str) -> Result<Document, FormatError> {
     serde_json::from_str(s).map_err(|e| FormatError::Json(e.to_string()))
+}
+
+/// The document with profile `from` called `to` everywhere it is named: the primary profile, the
+/// document's profile list, and each object's per-device overrides, in groups and repeats too. Used
+/// when a clash is settled by giving an incoming profile another id (rung 13a bbq, Q9). Text outlines
+/// are keyed by profile too: [`rename_profile_outlines`].
+pub fn rename_profile(doc: &Document, from: &str, to: &str) -> Result<Document, FormatError> {
+    let mut v = ciborium::Value::serialized(doc).map_err(|e| FormatError::Cbor(e.to_string()))?;
+    rename_in_value(&mut v, from, to);
+    v.deserialized::<Document>()
+        .map_err(|e| FormatError::Cbor(e.to_string()))
+}
+
+/// The saved outlines with profile `from` called `to`.
+pub fn rename_profile_outlines(
+    outlines: &BTreeMap<String, ProfileOutlines>,
+    from: &str,
+    to: &str,
+) -> BTreeMap<String, ProfileOutlines> {
+    outlines
+        .iter()
+        .map(|(k, o)| {
+            if k == from {
+                let mut o = o.clone();
+                o.profile_id = to.to_string();
+                (to.to_string(), o)
+            } else {
+                (k.clone(), o.clone())
+            }
+        })
+        .collect()
+}
+
+fn rename_in_value(v: &mut ciborium::Value, from: &str, to: &str) {
+    use ciborium::Value;
+    match v {
+        Value::Array(items) => {
+            for i in items {
+                rename_in_value(i, from, to);
+            }
+        }
+        Value::Map(entries) => {
+            for (k, val) in entries.iter_mut() {
+                let key = k.as_text().unwrap_or("");
+                match (key, &mut *val) {
+                    ("primary_profile_id" | "profile_id", Value::Text(t)) if t == from => {
+                        *t = to.to_string();
+                    }
+                    ("overrides", Value::Map(per_device)) => {
+                        for (dk, dv) in per_device.iter_mut() {
+                            if dk.as_text() == Some(from) {
+                                *dk = Value::Text(to.to_string());
+                            }
+                            rename_in_value(dv, from, to);
+                        }
+                    }
+                    _ => rename_in_value(val, from, to),
+                }
+            }
+        }
+        _ => {}
+    }
 }

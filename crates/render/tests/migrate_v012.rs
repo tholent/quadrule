@@ -70,7 +70,7 @@ fn export(file: &QuadFile, id: &str) -> Vec<u8> {
 #[test]
 fn v012_files_open_migrate_and_export_the_same_bytes() {
     let sums = saved_sums();
-    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.13.0";
+    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.14.0";
     let mut parts = Vec::new();
     let mut matched = 0;
     for name in ["textbox"] {
@@ -103,7 +103,7 @@ fn v012_files_open_migrate_and_export_the_same_bytes() {
             && again.migrated_from.is_none()
             && again.doc == file.doc;
         ok &= resaved;
-        parts.push(format!("{name}:resaved_0130={resaved}"));
+        parts.push(format!("{name}:resaved_0140={resaved}"));
         for id in again.doc.profile_ids() {
             ok &= export(&again, id) == export(&file, id);
         }
@@ -134,7 +134,7 @@ fn the_chain_has_the_0_12_to_0_13_step() {
         .any(|(f, t, _)| *f == "0.12.0" && *t == "0.13.0");
     let ok = at == current && has_step;
     println!(
-        "\nCHECK crate=render name=migrate_chain_0130 result={} from=0.1.0 to={at} steps={steps} has_0_12_to_0_13={has_step}",
+        "\nCHECK crate=render name=migrate_chain_0140 result={} from=0.1.0 to={at} steps={steps} has_0_12_to_0_13={has_step}",
         pass(ok)
     );
     assert!(ok);

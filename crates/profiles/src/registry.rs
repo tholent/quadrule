@@ -70,6 +70,7 @@ pub struct Registry {
     mine: BTreeMap<String, Profile>,
     carried: BTreeMap<String, Profile>,
     carried_first: BTreeSet<String>,
+    previews: BTreeMap<String, Profile>,
     damaged: Vec<Damaged>,
 }
 
@@ -92,6 +93,7 @@ impl Registry {
             mine: BTreeMap::new(),
             carried: BTreeMap::new(),
             carried_first: BTreeSet::new(),
+            previews: BTreeMap::new(),
             damaged: Vec::new(),
         }
     }
@@ -227,6 +229,15 @@ impl Registry {
     /// shipped values; else one of the user's own; else the open document's carried copy. A carried
     /// copy the user put off deciding about (Not now) comes first.
     pub fn get(&self, id: &str) -> Option<&Profile> {
+        if let Some(p) = self.previews.get(id) {
+            return Some(p);
+        }
+        self.get_saved(id)
+    }
+
+    /// Like [\`Registry::get\`], without the values the Profiles window is trying out: what is saved
+    /// on this computer, or in the open document. A file carries these.
+    pub fn get_saved(&self, id: &str) -> Option<&Profile> {
         if self.carried_first.contains(id)
             && let Some(c) = self.carried.get(id)
         {
@@ -261,9 +272,30 @@ impl Registry {
         self.carried.contains_key(id).then_some(Source::Carried)
     }
 
+    // ---- values being tried out -----------------------------------------------------------------
+
+    /// Shows `p` instead of what is saved under its id, until [`Registry::clear_previews`]: the
+    /// Profiles window redraws the open page as its fields change. Nothing is written.
+    pub fn set_preview(&mut self, p: Profile) {
+        self.previews.insert(p.id.clone(), p);
+    }
+
+    /// Stops showing the values tried out.
+    pub fn clear_previews(&mut self) {
+        self.previews.clear();
+    }
+
+    /// The values being tried out, by id.
+    pub fn previews(&self) -> &BTreeMap<String, Profile> {
+        &self.previews
+    }
+
     /// Whether built-in `id` carries a local override (the **Edited** mark).
     pub fn is_edited(&self, id: &str) -> bool {
-        self.overrides.contains_key(id)
+        match self.previews.get(id) {
+            Some(p) => self.shipped(id).is_some_and(|s| s != p),
+            None => self.overrides.contains_key(id),
+        }
     }
 
     /// Whether built-in `id` has an override file that could not be used, so the shipped values

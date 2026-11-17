@@ -371,6 +371,17 @@ impl Viewer {
         }
         let mut file = QuadFile::new(doc.clone(), outlines, refs);
         file.font_files = files;
+        // A profile the page uses that is not an unedited built-in travels in the file (rung 13a, Q4):
+        // what is saved on this computer, not what the Profiles window is trying out.
+        file.profiles = quadrule_profiles::active::with(|r| {
+            doc.profile_ids()
+                .into_iter()
+                .filter_map(|id| {
+                    let p = r.get_saved(id)?;
+                    (r.shipped(id) != Some(p)).then(|| (p.id.clone(), p.clone()))
+                })
+                .collect()
+        });
         if let Some(m) = &open.manifest {
             // Keep what the file's manifest carried (extras, a newer version label); the font
             // list is made fresh from the document.

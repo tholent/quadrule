@@ -29,7 +29,7 @@ use quadrule_model::edit::History;
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Uuid};
 use quadrule_profiles::Profile;
-use quadrule_profiles::active::{lookup, lookup_for};
+use quadrule_profiles::active::{self, lookup, lookup_for};
 use quadrule_render::{Gray, Math, encode_png, render, turn_clockwise};
 use quadrule_text::embed::NoEmbed;
 use quadrule_text::{BundledFont, FontRegistry};
@@ -129,6 +129,9 @@ pub struct Open {
     /// The bar above the canvas was closed with its ×; it stays closed until the document is opened
     /// again.
     pub(crate) bar_closed: bool,
+    /// What the profiles the page uses need: carried copies this computer lacks, clashes to settle
+    /// (rung 13a).
+    pub(crate) profile_use: crate::profile_use::ProfileUse,
 }
 
 /// A font a document names that is not on this computer (napkin §7.3; rung 12a).
@@ -177,6 +180,9 @@ pub const CARD_WIDTH_MM: f64 = 85.6;
 pub struct Viewer {
     /// The open document; `None` on the empty start screen (rung 2 bbq, Q7).
     pub open: Option<Open>,
+    /// The profiles a file being opened carries, handed to the registry when its document is set
+    /// (rung 13a): the copies and the ids whose copy shows first.
+    pub(crate) pending_carried: Option<(Vec<Profile>, std::collections::BTreeSet<String>)>,
     /// Counts the documents opened, so the window knows when to redraw its page texture.
     pub generation: u64,
     /// Counts changes to the open document (edits, undo, redo), for the same purpose.
@@ -268,6 +274,7 @@ impl Default for Viewer {
     fn default() -> Self {
         Viewer {
             open: None,
+            pending_carried: None,
             generation: 0,
             revision: 0,
             selection: Vec::new(),
@@ -536,12 +543,10 @@ impl Viewer {
 
     /// Opens a `.quad` file's bytes.
     pub fn open_bytes(&mut self, source: Source, bytes: &[u8]) -> Result<(), String> {
-        let file = QuadFile::from_bytes(bytes).map_err(|e| e.to_string())?;
-        // Every profile the document names must be one this build knows, or nothing can show.
-        for id in file.doc.profile_ids() {
-            lookup(id).map_err(|e| e.to_string())?;
-        }
-        lookup(&file.doc.primary_profile_id).map_err(|e| e.to_string())?;
+        let mut file = QuadFile::from_bytes(bytes).map_err(|e| e.to_string())?;
+        // The profiles the page uses: here, or carried in the file (rung 13a). A secondary device that
+        // is neither is left out; the primary missing refuses the file.
+        let uses = self.meet_profiles(&mut file)?;
         let read_only = file.read_only.clone();
         // The fonts the file carries serve this document only; a damaged one is skipped (rung 12a).
         let carried: Vec<(String, std::sync::Arc<Vec<u8>>)> = file
@@ -560,8 +565,25 @@ impl Viewer {
         if self.fonts.set_embedded(&carried) {
             self.invalidate_pages();
         }
+        let left_out = uses.left_out.clone();
+        let damaged = uses.damaged.clone();
         if let Some(o) = &mut self.open {
             o.read_only = read_only;
+            o.profile_use = uses;
+            if !left_out.is_empty() {
+                o.history.mark_unsaved();
+            }
+        }
+        if !left_out.is_empty() || !damaged.is_empty() {
+            let message = if left_out.is_empty() {
+                Message::new("notice-profile-carried-damaged").num("count", damaged.len() as f64, 0)
+            } else {
+                Message::new("notice-profile-left-out").text("profiles", left_out.join(", "))
+            };
+            self.notice = Some(Notice {
+                message,
+                error: true,
+            });
         }
         Ok(())
     }
@@ -576,9 +598,12 @@ impl Viewer {
         if !doc.profile_ids().contains(&self.profile_id.as_str()) {
             self.profile_id = doc.primary_profile_id.clone();
         }
-        // A session in the document that was open is over with it; so are its carried fonts.
+        // A session in the document that was open is over with it; so are its carried fonts and
+        // profiles (a file being opened has put its own in \`pending_carried\`).
         self.typing = None;
         self.fonts.set_embedded(&[]);
+        let (carried, first) = self.pending_carried.take().unwrap_or_default();
+        active::with_mut(|r| r.set_carried(carried, first));
         self.open = Some(Open {
             source,
             doc,
@@ -591,6 +616,7 @@ impl Viewer {
             findings: BTreeMap::new(),
             missing: Vec::new(),
             bar_closed: false,
+            profile_use: Default::default(),
         });
         self.refresh_font_state();
         self.drag = None;

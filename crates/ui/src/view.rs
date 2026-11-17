@@ -194,6 +194,8 @@ pub struct ViewerUi {
     pub(crate) emoji_picker: crate::emoji::EmojiPicker,
     /// The Missing fonts dialog, while it shows (rung 12a).
     pub(crate) missing_dialog: Option<crate::missing_ui::MissingDialog>,
+    /// The dialog that asks Merge, Rename or Not now for a carried profile that clashes (rung 13a).
+    pub(crate) clash_dialog: Option<crate::profiles_ui::ClashDialog>,
     /// The sheet that waits for an answer before Save, Save As or Export (rung 12a).
     pub(crate) font_sheet: Option<crate::missing_ui::Sheet>,
     /// The sheet's "Don't warn again for this document" tick.
@@ -288,6 +290,7 @@ impl ViewerUi {
             font_picker: Default::default(),
             emoji_picker: Default::default(),
             missing_dialog: None,
+            clash_dialog: None,
             font_sheet: None,
             sheet_dont_warn: false,
             font_picker_for: None,
@@ -365,6 +368,13 @@ impl ViewerUi {
                             .show_separator_line(false)
                             .show(ui, |ui| self.font_bar(ui));
                     }
+                    // The bar for profiles the file carries (rung 13a, Q4).
+                    if self.viewer.profile_bar().is_some() {
+                        egui::Panel::top("profiles-bar")
+                            .frame(egui::Frame::NONE)
+                            .show_separator_line(false)
+                            .show(ui, |ui| self.profile_bar(ui));
+                    }
                     self.canvas(ui);
                 } else {
                     self.empty(ui, &mut requests);
@@ -380,6 +390,7 @@ impl ViewerUi {
         self.ruler_window(&ctx);
         self.font_picker_window(&ctx);
         self.missing_dialog_window(&ctx);
+        self.clash_dialog_window(&ctx);
         self.emoji_picker_window(&ctx);
         // The Text tab, if it showed, has taken the cursor by now; a request it could not use
         // (no text box selected) must not wait for a later selection.
