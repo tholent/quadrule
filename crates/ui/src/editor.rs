@@ -30,7 +30,7 @@ use quadrule_model::edit::{
 };
 use quadrule_model::{Document, Frame, Object, ObjectKind, Uuid};
 use quadrule_profiles::Profile;
-use quadrule_profiles::active::lookup_for;
+use quadrule_profiles::active::lookup_in;
 use quadrule_text::BundledFont;
 use std::path::Path;
 
@@ -149,8 +149,8 @@ impl Viewer {
     pub fn profiles(&self) -> Option<(Profile, Profile)> {
         let doc = self.doc()?;
         Some((
-            lookup_for(&doc.primary_profile_id, doc.page.orientation).ok()?,
-            lookup_for(&self.profile_id, doc.page.orientation).ok()?,
+            lookup_in(doc, &doc.primary_profile_id).ok()?,
+            lookup_in(doc, &self.profile_id).ok()?,
         ))
     }
 
@@ -680,6 +680,25 @@ impl Viewer {
             return Ok(());
         }
         match quadrule_layout::device::set_orientation(doc, to) {
+            Ok(cmd) => self.edit(cmd, None),
+            Err(e) => {
+                self.notice = Some(crate::viewer::Notice {
+                    message: Message::new("notice-edit-failed").text("error", e.to_string()),
+                    error: true,
+                });
+                Ok(())
+            }
+        }
+    }
+
+    /// Sets the export PPI the page uses on paper size `id` (the Page tab's PPI choice, rung 13b):
+    /// one of 150, 200, 300 and 600. One undo step; the design is kept in millimetres, so only the
+    /// pixels and the line widths change.
+    pub fn set_paper_ppi(&mut self, id: &str, ppi: u32) -> Result<(), EditError> {
+        let Some(doc) = self.doc() else {
+            return Ok(());
+        };
+        match quadrule_layout::device::set_paper_ppi(doc, id, ppi) {
             Ok(cmd) => self.edit(cmd, None),
             Err(e) => {
                 self.notice = Some(crate::viewer::Notice {

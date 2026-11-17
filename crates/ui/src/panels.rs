@@ -681,9 +681,18 @@ impl ViewerUi {
             }
             ui.end_row();
             if doc.page.orientation == Orientation::Landscape {
-                ui.label("");
-                ui.label(RichText::new(self.t("app-orientation-landscape-tip")).small());
-                ui.end_row();
+                let paper_of = |id: &&str| quadrule_profiles::active::with(|r| r.is_paper(id));
+                let ids = doc.profile_ids();
+                if ids.iter().any(|id| !paper_of(id)) {
+                    ui.label("");
+                    ui.label(RichText::new(self.t("app-orientation-landscape-tip")).small());
+                    ui.end_row();
+                }
+                if ids.iter().any(paper_of) {
+                    ui.label("");
+                    ui.label(RichText::new(self.t("app-orientation-landscape-paper-tip")).small());
+                    ui.end_row();
+                }
             }
 
             // Background.
@@ -908,7 +917,7 @@ impl ViewerUi {
             });
         // The unit as each device resolves it (napkin §6.3: "5 mm → 59 px (Manta)").
         for id in doc.profile_ids() {
-            if let Ok(p) = quadrule_profiles::active::lookup_for(id, doc.page.orientation) {
+            if let Ok(p) = quadrule_profiles::active::lookup_in(&doc, id) {
                 let rp = RhythmPx::new(&doc, &p);
                 let px = if rp.unit_x == rp.unit_y {
                     trim_number(rp.unit_x, 2)
@@ -971,56 +980,28 @@ impl ViewerUi {
         });
         ui.label(RichText::new(self.t("app-device-primary-tip")).small());
         let have: Vec<String> = doc.profile_ids().into_iter().map(String::from).collect();
-        let mut all: Vec<String> = quadrule_profiles::active::device_ids();
+        let is_paper = |id: &str| quadrule_profiles::active::with(|r| r.is_paper(id));
+        let mut screens: Vec<String> = quadrule_profiles::active::device_ids();
+        let mut papers: Vec<String> = quadrule_profiles::active::paper_ids();
         // A device the page uses from the file's own copy (not added to this computer) still lists.
         for id in &have {
-            if !all.contains(id) {
-                all.push(id.clone());
+            if !screens.contains(id) && !papers.contains(id) {
+                if is_paper(id) {
+                    papers.push(id.clone());
+                } else {
+                    screens.push(id.clone());
+                }
             }
         }
-        for id in &all {
-            let name = {
-                let n = self.device_name(id);
-                self.marked(id, n)
-            };
-            let is_primary = *id == doc.primary_profile_id;
-            let mut on = have.contains(id);
-            ui.horizontal(|ui| {
-                let label = self
-                    .strings
-                    .format(&Message::new("app-device-target").text("device", name.clone()));
-                let tick = ui.add_enabled(!is_primary, egui::Checkbox::new(&mut on, label.clone()));
-                tick.widget_info(|| WidgetInfo::selected(Role::CheckBox, !is_primary, on, &label));
-                if tick.changed() {
-                    if on {
-                        let mut ids: Vec<&str> = have.iter().map(String::as_str).collect();
-                        ids.push(id);
-                        let _ = self.viewer.set_targets(&ids);
-                    } else if doc.has_overrides_on(id) {
-                        // Ask first: taking the device out drops what is changed on it.
-                        self.take_out = Some(id.clone());
-                    } else {
-                        let ids: Vec<&str> = have
-                            .iter()
-                            .map(String::as_str)
-                            .filter(|h| *h != id)
-                            .collect();
-                        let _ = self.viewer.set_targets(&ids);
-                    }
-                }
-                if is_primary {
-                    ui.label(RichText::new(self.t("app-device-primary")).small());
-                } else if on {
-                    let make = self.strings.format(
-                        &Message::new("app-device-make-primary-name").text("device", name.clone()),
-                    );
-                    let btn = ui.button(self.t("app-device-make-primary"));
-                    btn.widget_info(|| WidgetInfo::labeled(Role::Button, true, &make));
-                    if btn.on_hover_text(make).clicked() {
-                        let _ = self.viewer.make_primary(id);
-                    }
-                }
-            });
+        for id in &screens {
+            self.device_row(ui, doc, &have, id);
+        }
+        // The paper sizes are their own group after the devices (rung 13b bbq, Defaulted "Paper in
+        // the UI").
+        ui.add_space(4.0);
+        ui.label(RichText::new(self.t("app-page-paper")).small().strong());
+        for id in &papers {
+            self.device_row(ui, doc, &have, id);
         }
         if let Some(id) = self.take_out.clone() {
             let name = self.device_name(&id);
@@ -1054,6 +1035,80 @@ impl ViewerUi {
                 });
             });
         }
+    }
+
+    /// One device or paper size in the Page tab's list: its tick, primary or Make primary, and for a
+    /// paper size the page picks, the export PPI.
+    fn device_row(&mut self, ui: &mut egui::Ui, doc: &Document, have: &[String], id: &String) {
+        let name = {
+            let n = self.device_name(id);
+            self.marked(id, n)
+        };
+        let is_primary = *id == doc.primary_profile_id;
+        let mut on = have.contains(id);
+        let paper = quadrule_profiles::active::with(|r| r.is_paper(id));
+        ui.horizontal_wrapped(|ui| {
+            let label = self
+                .strings
+                .format(&Message::new("app-device-target").text("device", name.clone()));
+            let tick = ui.add_enabled(!is_primary, egui::Checkbox::new(&mut on, label.clone()));
+            tick.widget_info(|| WidgetInfo::selected(Role::CheckBox, !is_primary, on, &label));
+            if tick.changed() {
+                if on {
+                    let mut ids: Vec<&str> = have.iter().map(String::as_str).collect();
+                    ids.push(id);
+                    let _ = self.viewer.set_targets(&ids);
+                } else if doc.has_overrides_on(id) {
+                    // Ask first: taking the device out drops what is changed on it.
+                    self.take_out = Some(id.clone());
+                } else {
+                    let ids: Vec<&str> = have
+                        .iter()
+                        .map(String::as_str)
+                        .filter(|h| *h != id)
+                        .collect();
+                    let _ = self.viewer.set_targets(&ids);
+                }
+            }
+            if is_primary {
+                ui.label(RichText::new(self.t("app-device-primary")).small());
+            } else if on {
+                let make = self.strings.format(
+                    &Message::new("app-device-make-primary-name").text("device", name.clone()),
+                );
+                let btn = ui.button(self.t("app-device-make-primary"));
+                btn.widget_info(|| WidgetInfo::labeled(Role::Button, true, &make));
+                if btn.on_hover_text(make).clicked() {
+                    let _ = self.viewer.make_primary(id);
+                }
+            }
+            // The export PPI this page uses on a paper size (rung 13b bbq, Q12): one undo step.
+            if paper && on {
+                let was = doc.ppi_of(id);
+                let mut ppi = was;
+                let option = |p: u32| {
+                    self.strings
+                        .format(&Message::new("app-paper-ppi-option").num("ppi", f64::from(p), 0))
+                };
+                let described = self
+                    .strings
+                    .format(&Message::new("app-paper-ppi-name").text("device", name.clone()));
+                let combo = egui::ComboBox::from_id_salt(("paper-ppi", id.as_str()))
+                    .selected_text(option(was))
+                    .show_ui(ui, |ui| {
+                        for p in quadrule_model::PAPER_PPIS {
+                            ui.selectable_value(&mut ppi, p, option(p));
+                        }
+                    });
+                combo
+                    .response
+                    .widget_info(|| WidgetInfo::labeled(Role::ComboBox, true, &described));
+                combo.response.on_hover_text(self.t("app-paper-ppi-tip"));
+                if ppi != was {
+                    let _ = self.viewer.set_paper_ppi(id, ppi);
+                }
+            }
+        });
     }
 
     fn arrange_tab(&mut self, ui: &mut egui::Ui) {
@@ -1391,7 +1446,7 @@ impl ViewerUi {
                 .response
                 .labelled_by(label.id);
                 if want != was {
-                    let device = quadrule_profiles::active::lookup(&self.viewer.profile_id).ok();
+                    let device = self.viewer.profiles().map(|(_, shown)| shown);
                     // Start from what the role draws on the device on screen.
                     let from_role = |r: LineRole| {
                         let (w, g) = device.as_ref().map_or((1, 0), |p| {
@@ -1858,7 +1913,7 @@ impl ViewerUi {
         self.combo(ui, "fill", label.id, &mut want, &options);
         if want != was {
             // A custom fill starts from the gray the role gave on the device on screen.
-            let device = quadrule_profiles::active::lookup(&self.viewer.profile_id).ok();
+            let device = self.viewer.profiles().map(|(_, shown)| shown);
             let start = match (o.fill, &device) {
                 (Some(f), Some(p)) => p.fill_gray(f),
                 _ => 204,

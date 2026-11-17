@@ -24,7 +24,7 @@ use quadrule_i18n::Message;
 use quadrule_lint::InstalledFont;
 use quadrule_model::edit::{Command, EditError};
 use quadrule_model::{ObjectKind, Uuid};
-use quadrule_profiles::active::lookup_for;
+use quadrule_profiles::active::lookup_in;
 use quadrule_text::{BundledFont, Match, Want};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
@@ -316,12 +316,11 @@ impl Viewer {
             return Err(format!("{r:?}"));
         }
         let doc = &open.doc;
-        let primary =
-            lookup_for(&doc.primary_profile_id, doc.page.orientation).map_err(|e| e.to_string())?;
+        let primary = lookup_in(doc, &doc.primary_profile_id).map_err(|e| e.to_string())?;
         let mut outlines = Vec::new();
         let mut fallback: BTreeSet<String> = BTreeSet::new();
         for id in doc.profile_ids() {
-            let target = lookup_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
+            let target = lookup_in(doc, id).map_err(|e| e.to_string())?;
             let (laid, _) =
                 quadrule_layout::lay_out_text_saved(doc, &primary, &target, fonts, &open.saved)
                     .map_err(|e| e.to_string())?;

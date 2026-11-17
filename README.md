@@ -32,6 +32,14 @@ and error.
   every profile its page uses that is not an unedited built-in, so it opens on a computer that lacks it ("Uses a
   profile you don't have: X. Add to my profiles"), and a profile that clashes with one you have asks Merge, Rename or
   Not now. A damaged profile file is skipped and listed, never a crash.
+- **Paper sizes.** For printing, or a screen Quadrule has no profile for, eleven paper sizes are built in (ISO A3 to
+  A6, ISO and JIS B5, US Letter, US Legal, Tabloid, Half Letter and Executive), listed as their own group after the
+  devices in New… and in the Page tab, and under Paper in the Profiles window. A paper size is a physical size in
+  millimetres; each page picks its export resolution (150, 200, 300 or 600 PPI, beside the ticked size in the Page
+  tab) and the PNG is that size in pixels (A4 at 300 PPI is 2480 × 3508). Line widths are the Nomad's, by physical
+  size. A paper size can be the primary profile or a secondary one. A landscape paper page exports a wide PNG, not
+  turned. A paper size has no safe zones or gray levels, so the lint rules that need them (L03 to L06) do not run on
+  it. They are marked Unverified: they are not measured on paper.
 - **Exact previews.** The editor shows the same pixels the export will write, per device, with a pixel grid and a
   real-size view.
 - **Line roles.** Instead of picking a width and a gray for every line, you give it a role (Whisper, Guide,
@@ -164,7 +172,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

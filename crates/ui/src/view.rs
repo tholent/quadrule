@@ -844,6 +844,7 @@ impl ViewerUi {
     pub fn set_new_device(&mut self, id: &str) {
         if quadrule_profiles::active::device_ids()
             .iter()
+            .chain(quadrule_profiles::active::paper_ids().iter())
             .any(|d| d == id)
         {
             self.new_device = id.to_string();
@@ -877,6 +878,20 @@ impl ViewerUi {
                     .selected_text(self.full_name(&spec.device_id))
                     .show_ui(ui, |ui| {
                         for id in quadrule_profiles::active::device_ids() {
+                            ui.selectable_value(
+                                &mut spec.device_id,
+                                id.clone(),
+                                self.full_name(&id),
+                            );
+                        }
+                        // The paper sizes are their own group after the devices (rung 13b).
+                        ui.separator();
+                        ui.label(
+                            egui::RichText::new(self.t("new-group-paper"))
+                                .small()
+                                .strong(),
+                        );
+                        for id in quadrule_profiles::active::paper_ids() {
                             ui.selectable_value(
                                 &mut spec.device_id,
                                 id.clone(),
@@ -1408,6 +1423,8 @@ impl ViewerUi {
                         self.viewer.open_textbox();
                     } else if b.fonts {
                         self.viewer.open_fonts();
+                    } else if b.paper {
+                        self.viewer.open_paper();
                     } else if b.pattern_angle {
                         self.viewer.open_pattern_angle();
                     } else if b.turned_patterns {
@@ -1586,6 +1603,8 @@ impl ViewerUi {
                         "textbox"
                     } else if b.fonts {
                         "fonts"
+                    } else if b.paper {
+                        "paper"
                     } else if b.pattern_angle {
                         "pattern_angle"
                     } else if b.turned_patterns {

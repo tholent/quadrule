@@ -34,6 +34,14 @@ fn parse_grays(text: &str) -> Option<Vec<u8>> {
     out.filter(|v| v.len() <= limits::MAX_LIST)
 }
 
+/// A paper size's side in millimetres (rung 13b), held to the paper limits.
+fn mm_field(v: &mut f64) -> egui::DragValue<'_> {
+    egui::DragValue::new(v)
+        .range(limits::PAPER_MM)
+        .max_decimals(2)
+        .speed(0.5)
+}
+
 fn join_grays(v: &[u8]) -> String {
     v.iter().map(u8::to_string).collect::<Vec<_>>().join(", ")
 }
@@ -86,7 +94,17 @@ impl ViewerUi {
                                             .small()
                                             .strong(),
                                     );
-                                    for e in list.iter().filter(|e| e.built_in) {
+                                    for e in list.iter().filter(|e| e.built_in && !e.paper) {
+                                        self.list_row(ui, e, &selected, &mut pick);
+                                    }
+                                    // The paper sizes sit under Built in, as their own group (rung 13b).
+                                    ui.add_space(4.0);
+                                    ui.label(
+                                        RichText::new(self.t("profiles-group-paper"))
+                                            .small()
+                                            .weak(),
+                                    );
+                                    for e in list.iter().filter(|e| e.built_in && e.paper) {
                                         self.list_row(ui, e, &selected, &mut pick);
                                     }
                                     ui.add_space(6.0);
@@ -241,7 +259,12 @@ impl ViewerUi {
                 .strings
                 .format(&Message::new("profiles-name-unverified").text("name", name));
         }
-        if ui.selectable_label(e.id == selected, name).clicked() {
+        let row = ui.selectable_label(e.id == selected, name);
+        let row = match &e.detail {
+            Some(d) => row.on_hover_text(d),
+            None => row,
+        };
+        if row.clicked() {
             *pick = Some(e.id.clone());
         }
     }
@@ -297,7 +320,8 @@ impl ViewerUi {
         if let Some(mut form) = new_form {
             let mut create = false;
             let mut cancel = false;
-            let ids = quadrule_profiles::active::device_ids();
+            let mut ids = quadrule_profiles::active::device_ids();
+            ids.extend(quadrule_profiles::active::paper_ids());
             egui::Modal::new(egui::Id::unique("profiles-new")).show(ctx, |ui| {
                 ui.set_width(340.0);
                 ui.heading(self.t("profiles-new-title"));
@@ -432,7 +456,50 @@ impl ViewerUi {
                 ui.end_row();
 
                 let label = ui.label(self.t("profiles-size"));
-                if builtin {
+                if let Some(mut size) = p.paper {
+                    // A paper size is a physical size; its pixels follow it at 300 PPI (rung 13b).
+                    let (pw, ph) = size.px_at(quadrule_model::DEFAULT_PAPER_PPI);
+                    let mm = |v: f64| quadrule_layout::units::trim_number(v, 2);
+                    if builtin {
+                        let text = self.strings.format(
+                            &Message::new("profiles-size-paper-locked")
+                                .text("w", mm(size.width_mm))
+                                .text("h", mm(size.height_mm))
+                                .num("pw", f64::from(pw), 0)
+                                .num("ph", f64::from(ph), 0),
+                        );
+                        ui.label(text).labelled_by(label.id);
+                    } else {
+                        ui.vertical(|ui| {
+                            ui.horizontal(|ui| {
+                                let tip = self.t("profiles-size-mm");
+                                ui.add(mm_field(&mut size.width_mm))
+                                    .on_hover_text(tip.clone())
+                                    .labelled_by(label.id);
+                                ui.label("×");
+                                ui.add(mm_field(&mut size.height_mm))
+                                    .on_hover_text(tip)
+                                    .labelled_by(label.id);
+                                ui.label("mm");
+                            });
+                            ui.label(
+                                RichText::new(
+                                    self.strings.format(
+                                        &Message::new("profiles-size-paper-px")
+                                            .num("pw", f64::from(pw), 0)
+                                            .num("ph", f64::from(ph), 0),
+                                    ),
+                                )
+                                .small()
+                                .weak(),
+                            );
+                        });
+                        if Some(size) != p.paper {
+                            p.paper = Some(size);
+                            p.sync_paper();
+                        }
+                    }
+                } else if builtin {
                     let text = self.strings.format(
                         &Message::new("profiles-size-locked")
                             .num("w", p.width_px as f64, 0)
@@ -458,7 +525,10 @@ impl ViewerUi {
                 ui.end_row();
 
                 let label = ui.label(self.t("profiles-ppi"));
-                if builtin {
+                if p.is_paper() {
+                    ui.label(self.t("profiles-ppi-per-page"))
+                        .labelled_by(label.id);
+                } else if builtin {
                     ui.label(
                         self.strings
                             .format(&Message::new("profiles-ppi-locked").num("ppi", p.ppi, 0)),
@@ -533,10 +603,19 @@ impl ViewerUi {
             });
         ui.add_space(6.0);
 
+        let paper = p.is_paper();
         egui::CollapsingHeader::new(self.t("profiles-line-roles"))
             .id_salt("profiles-line-roles")
             .show(ui, |ui| {
-                ui.label(RichText::new(self.t("profiles-calibrated")).small().weak());
+                if paper {
+                    ui.label(
+                        RichText::new(self.t("profiles-paper-roles-note"))
+                            .small()
+                            .weak(),
+                    );
+                } else {
+                    ui.label(RichText::new(self.t("profiles-calibrated")).small().weak());
+                }
                 egui::Grid::new("profiles-lines")
                     .num_columns(3)
                     .spacing([12.0, 4.0])
@@ -593,22 +672,25 @@ impl ViewerUi {
                         }
                     });
             });
-        egui::CollapsingHeader::new(self.t("profiles-grays"))
-            .id_salt("profiles-grays")
-            .show(ui, |ui| {
-                self.gray_list(
-                    ui,
-                    "profiles-gray-levels",
-                    "profiles-gray-levels-label",
-                    &mut p.gray_levels,
-                );
-                self.gray_list(
-                    ui,
-                    "profiles-pen-grays",
-                    "profiles-pen-grays-label",
-                    &mut p.ink_values,
-                );
-            });
+        // A paper size has no gray levels, pen grays or safe zones (napkin §3.3.1).
+        if !paper {
+            egui::CollapsingHeader::new(self.t("profiles-grays"))
+                .id_salt("profiles-grays")
+                .show(ui, |ui| {
+                    self.gray_list(
+                        ui,
+                        "profiles-gray-levels",
+                        "profiles-gray-levels-label",
+                        &mut p.gray_levels,
+                    );
+                    self.gray_list(
+                        ui,
+                        "profiles-pen-grays",
+                        "profiles-pen-grays-label",
+                        &mut p.ink_values,
+                    );
+                });
+        }
         let zones = self
             .strings
             .format(&Message::new("profiles-safe-zones").num(
@@ -616,9 +698,11 @@ impl ViewerUi {
                 p.safe_zones.len() as f64,
                 0,
             ));
-        egui::CollapsingHeader::new(zones)
-            .id_salt("profiles-safe-zones")
-            .show(ui, |ui| self.zone_table(ui, p));
+        if !paper {
+            egui::CollapsingHeader::new(zones)
+                .id_salt("profiles-safe-zones")
+                .show(ui, |ui| self.zone_table(ui, p));
+        }
         egui::CollapsingHeader::new(self.t("profiles-about"))
             .id_salt("profiles-about")
             .show(ui, |ui| {

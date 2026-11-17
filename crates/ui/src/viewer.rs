@@ -29,7 +29,7 @@ use quadrule_model::edit::History;
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Uuid};
 use quadrule_profiles::Profile;
-use quadrule_profiles::active::{self, lookup, lookup_for};
+use quadrule_profiles::active::{self, lookup, lookup_in};
 use quadrule_render::{Gray, Math, encode_png, render, turn_clockwise};
 use quadrule_text::embed::NoEmbed;
 use quadrule_text::{BundledFont, FontRegistry};
@@ -443,6 +443,20 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 13b paper page: ISO A4 at 300 PPI, also targeting ISO A5 at 600 PPI (the
+    /// benchmarks drag its dot region). Like the sample, it has no file.
+    pub fn open_paper(&mut self) {
+        let doc = quadrule_model::sample::paper_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
+    /// Opens the rung 13b landscape paper page: US Letter held sideways, exported wide. Like the
+    /// sample, it has no file.
+    pub fn open_paper_landscape(&mut self) {
+        let doc = quadrule_model::sample::paper_landscape_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens the rung 10 repeat page: rows, columns, a habit tracker, a Fill repeat with Centre, a
     /// group as the source and a hatch (the benchmarks drag the habit tracker). Like the sample, it
     /// has no file.
@@ -487,17 +501,14 @@ impl Viewer {
         }
         let caveat = quadrule_text::BUNDLED.iter().find(|b| b.id == "caveat");
         let mut saved = BTreeMap::new();
-        if let (Some(c), Ok(primary)) = (
-            caveat,
-            lookup_for(&doc.primary_profile_id, doc.page.orientation),
-        ) {
+        if let (Some(c), Ok(primary)) = (caveat, lookup_in(&doc, &doc.primary_profile_id)) {
             let mut reg = FontRegistry::bundled_only();
             reg.set_embedded(&[(
                 MISSING_PAGE_FONT.into(),
                 std::sync::Arc::new(c.data.to_vec()),
             )]);
             for id in doc.profile_ids() {
-                if let Ok(t) = lookup_for(id, doc.page.orientation)
+                if let Ok(t) = lookup_in(&doc, id)
                     && let Ok(l) = quadrule_layout::lay_out_text(&doc, &primary, &t, &mut reg)
                 {
                     saved.insert(id.to_string(), l.outlines);
@@ -849,9 +860,8 @@ fn make_page(
     embed_cache: &mut BTreeMap<String, Result<(), NoEmbed>>,
     known_findings: Option<Vec<Finding>>,
 ) -> Result<(Page, Option<ProfileOutlines>), String> {
-    let primary =
-        lookup_for(&doc.primary_profile_id, doc.page.orientation).map_err(|e| e.to_string())?;
-    let target = lookup_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
+    let primary = lookup_in(doc, &doc.primary_profile_id).map_err(|e| e.to_string())?;
+    let target = lookup_in(doc, id).map_err(|e| e.to_string())?;
     // A box whose font is not on this computer is drawn from the shapes the file saved for it
     // (napkin §7.3; ADR-001 items 2 and 7); the others are laid out live.
     let (laid, how) =
@@ -1009,7 +1019,10 @@ pub(crate) fn active_zone_rects(p: &Profile) -> Vec<quadrule_layout::snap::PxRec
 /// short name with a capital (`Manta`, `Nomad`); its id when the build has no such profile.
 pub fn device_label(id: &str) -> String {
     match lookup(id) {
-        Ok(p) if !quadrule_profiles::active::with(|r| r.is_builtin(id)) => p.display_name,
+        // The user's own, and the paper sizes (`ISO A4`, `US Letter`), show their full names.
+        Ok(p) if p.is_paper() || !quadrule_profiles::active::with(|r| r.is_builtin(id)) => {
+            p.display_name
+        }
         Ok(p) => {
             let mut c = p.short_name.chars();
             c.next()

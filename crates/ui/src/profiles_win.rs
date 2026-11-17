@@ -88,6 +88,10 @@ pub struct ListEntry {
     pub unverified: bool,
     /// Changed in this window and not saved yet.
     pub unsaved: bool,
+    /// A paper size, not a screen (rung 13b).
+    pub paper: bool,
+    /// For a paper size, its size in mm and px at 300 PPI, as the row's tip says it.
+    pub detail: Option<String>,
 }
 
 /// The Profiles window.
@@ -164,6 +168,17 @@ impl ViewerUi {
                     edited: built_in && r.is_edited(&p.id),
                     unverified: !shown.calibration_meta.verified,
                     unsaved: draft.is_some(),
+                    paper: shown.is_paper(),
+                    detail: shown.paper.map(|s| {
+                        let (w, h) = s.px_at(quadrule_model::DEFAULT_PAPER_PPI);
+                        self.strings.format(
+                            &Message::new("profiles-paper-list-tip")
+                                .text("w", quadrule_layout::units::trim_number(s.width_mm, 2))
+                                .text("h", quadrule_layout::units::trim_number(s.height_mm, 2))
+                                .num("pw", f64::from(w), 0)
+                                .num("ph", f64::from(h), 0),
+                        )
+                    }),
                 });
             };
             for id in r.builtin_ids() {
