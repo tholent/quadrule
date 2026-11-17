@@ -207,15 +207,31 @@ impl Registry {
         self.shipped.iter().find(|p| p.id == id)
     }
 
-    /// The ids of the devices a page can target on this computer: the built-ins, then the user's own
-    /// by name.
+    /// The ids of the devices (screens) a page can target on this computer: the built-in ones, then
+    /// the user's own by name. The paper sizes are [`Registry::paper_ids`].
     pub fn device_ids(&self) -> Vec<String> {
-        let mut mine: Vec<&Profile> = self.mine.values().collect();
-        mine.sort_by_key(|p| (p.display_name.to_lowercase(), p.id.clone()));
-        self.builtin_ids()
-            .into_iter()
-            .chain(mine.into_iter().map(|p| p.id.clone()))
+        self.shipped
+            .iter()
+            .filter(|p| !p.is_paper())
+            .chain(self.mine().into_iter().filter(|p| !p.is_paper()))
+            .map(|p| p.id.clone())
             .collect()
+    }
+
+    /// The ids of the paper sizes a page can target (rung 13b): the built-in ones in shipped order,
+    /// then the user's own by name.
+    pub fn paper_ids(&self) -> Vec<String> {
+        self.shipped
+            .iter()
+            .filter(|p| p.is_paper())
+            .chain(self.mine().into_iter().filter(|p| p.is_paper()))
+            .map(|p| p.id.clone())
+            .collect()
+    }
+
+    /// Whether profile `id`, as this computer shows it, is a paper size.
+    pub fn is_paper(&self, id: &str) -> bool {
+        self.get(id).is_some_and(Profile::is_paper)
     }
 
     /// The user's own profiles, by name.
@@ -440,6 +456,7 @@ impl Registry {
         p.width_px = shipped.width_px;
         p.height_px = shipped.height_px;
         p.ppi = shipped.ppi;
+        p.paper = shipped.paper;
         p.short_name = shipped.short_name.clone();
         p.turned = false;
         limits::check(&p)?;
@@ -592,7 +609,10 @@ impl Registry {
 fn locked_difference(shipped: &Profile, p: &Profile) -> Option<&'static str> {
     if p.id != shipped.id {
         Some("id")
-    } else if p.width_px != shipped.width_px || p.height_px != shipped.height_px {
+    } else if p.width_px != shipped.width_px
+        || p.height_px != shipped.height_px
+        || p.paper != shipped.paper
+    {
         Some("size")
     } else if p.ppi != shipped.ppi {
         Some("ppi")

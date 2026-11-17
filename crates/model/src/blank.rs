@@ -108,10 +108,7 @@ pub fn blank_document(
     margins: Margins,
     now: &str,
 ) -> Document {
-    let profile = |id: &str| ProfileContext {
-        profile_id: id.into(),
-        extra: Extra::new(),
-    };
+    let profile = |id: &str| ProfileContext::new(id);
     Document {
         metadata: Metadata {
             title: title.into(),

@@ -22,7 +22,7 @@ pub mod limits;
 pub mod registry;
 
 pub use quadrule_model::Orientation;
-use quadrule_model::{Fill, FillRole, LineRole, MM_PER_IN, Margins};
+use quadrule_model::{DEFAULT_PAPER_PPI, Fill, FillRole, LineRole, MM_PER_IN, Margins, PAPER_PPIS};
 pub use registry::{Damaged, Incoming, Registry, Source};
 use serde::{Deserialize, Serialize};
 
@@ -42,6 +42,11 @@ pub struct Profile {
     pub height_px: u32,
     /// Pixels per inch, for mm ↔ px.
     pub ppi: f64,
+    /// Set on a paper profile (napkin §3.3.1; rung 13b): its physical size. The pixel size and
+    /// the line widths are then those at 300 PPI, the default; [`Profile::at_ppi`] gives them at
+    /// the PPI a page picks. A screen has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paper: Option<PaperSize>,
     /// Screen diagonal in inches (informational).
     pub diagonal_in: f64,
     /// Panel name (informational).
@@ -70,6 +75,24 @@ pub struct Profile {
     /// file.
     #[serde(skip)]
     pub turned: bool,
+}
+
+/// A paper profile's physical size in millimetres (napkin §3.3.1; rung 13b bbq, Q12).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct PaperSize {
+    /// The short side or the width, in mm.
+    pub width_mm: f64,
+    /// The long side or the height, in mm.
+    pub height_mm: f64,
+}
+
+impl PaperSize {
+    /// The size in whole pixels at `ppi`: mm × PPI ÷ 25.4, rounded, as napkin §3.3.1's table has
+    /// it (A4 at 300 PPI is 2480 × 3508).
+    pub fn px_at(self, ppi: u32) -> (u32, u32) {
+        let px = |mm: f64| (mm * f64::from(ppi) / MM_PER_IN).round().clamp(1.0, 1.0e6) as u32;
+        (px(self.width_mm), px(self.height_mm))
+    }
 }
 
 /// An area covered by system UI, in device pixels (napkin §3.5).
@@ -160,6 +183,68 @@ pub struct CalibrationMeta {
 }
 
 impl Profile {
+    /// Whether this is a paper profile (a physical size), not a screen.
+    pub fn is_paper(&self) -> bool {
+        self.paper.is_some()
+    }
+
+    /// A paper profile made consistent: its pixel size is the physical size at 300 PPI, its ppi 300
+    /// and its page held upright. A screen is left alone. Reading a file runs it, so the pixels
+    /// and the size in mm never disagree. Its safe zones, gray levels and pen grays are emptied: a
+    /// paper size has none (napkin §3.3.1).
+    pub fn sync_paper(&mut self) {
+        if let Some(p) = self.paper {
+            let (w, h) = p.px_at(DEFAULT_PAPER_PPI);
+            self.width_px = w.min(h);
+            self.height_px = w.max(h);
+            self.ppi = f64::from(DEFAULT_PAPER_PPI);
+            self.turned = false;
+            // No device-specific data (napkin §3.3.1).
+            self.safe_zones.clear();
+            self.gray_levels.clear();
+            self.ink_values.clear();
+        }
+    }
+
+    /// This paper profile at `ppi` (one of [`PAPER_PPIS`], else 300): the physical size in whole
+    /// pixels, and each line width scaled by `ppi / 300`, rounded, at least 1 (rung 13b bbq, Q13:
+    /// the role values are the Nomad's by physical size). Grays stay. A screen comes back as it
+    /// is, and so does a paper profile asked for the PPI it already has. The page keeps the way it
+    /// is held (wide stays wide).
+    pub fn at_ppi(&self, ppi: u32) -> Profile {
+        let Some(size) = self.paper else {
+            return self.clone();
+        };
+        let ppi = if PAPER_PPIS.contains(&ppi) {
+            ppi
+        } else {
+            DEFAULT_PAPER_PPI
+        };
+        let (a, b) = size.px_at(ppi);
+        let wide = self.width_px > self.height_px;
+        let mut out = self.clone();
+        (out.width_px, out.height_px) = if wide {
+            (a.max(b), a.min(b))
+        } else {
+            (a.min(b), a.max(b))
+        };
+        out.ppi = f64::from(ppi);
+        // The stored widths are those at 300 PPI.
+        let scale = |s: RoleStyle| RoleStyle {
+            width_px: ((f64::from(s.width_px) * f64::from(ppi) / f64::from(DEFAULT_PAPER_PPI))
+                .round() as u32)
+                .max(1),
+            gray: s.gray,
+        };
+        let r = &mut out.line_roles;
+        r.whisper = scale(r.whisper);
+        r.guide = scale(r.guide);
+        r.structure = scale(r.structure);
+        r.emphasis = scale(r.emphasis);
+        r.dot_grid = scale(r.dot_grid);
+        out
+    }
+
     /// The gray a fill role resolves to on this profile.
     pub fn fill_role_gray(&self, role: FillRole) -> u8 {
         match role {
@@ -211,8 +296,21 @@ impl Profile {
     /// Asked of a profile that is already turned, it works from the device's own size, so the
     /// result never depends on how many times it is called.
     pub fn oriented(&self, orientation: Orientation) -> Profile {
-        let (dw, dh) = self.device_size();
         let mut out = self.clone();
+        if self.is_paper() {
+            // Paper is not turned: a landscape page is the wide one (rung 13b bbq, Q14), exported
+            // as it is drawn, so `turned` stays false and there are no safe zones to move.
+            let (short, long) = (
+                self.width_px.min(self.height_px),
+                self.width_px.max(self.height_px),
+            );
+            (out.width_px, out.height_px) = match orientation {
+                Orientation::Portrait => (short, long),
+                Orientation::Landscape => (long, short),
+            };
+            return out;
+        }
+        let (dw, dh) = self.device_size();
         match orientation {
             Orientation::Portrait => {
                 if self.turned {
@@ -264,6 +362,24 @@ impl Profile {
 const BUILTIN_RON: &[(&str, &str)] = &[
     ("supernote.a5x2", include_str!("../data/supernote.a5x2.ron")),
     ("supernote.a6x2", include_str!("../data/supernote.a6x2.ron")),
+    // The paper sizes (rung 13b), in the order a list shows them.
+    ("paper.a3", include_str!("../data/paper.a3.ron")),
+    ("paper.a4", include_str!("../data/paper.a4.ron")),
+    ("paper.a5", include_str!("../data/paper.a5.ron")),
+    ("paper.a6", include_str!("../data/paper.a6.ron")),
+    ("paper.b5-iso", include_str!("../data/paper.b5-iso.ron")),
+    ("paper.b5-jis", include_str!("../data/paper.b5-jis.ron")),
+    ("paper.letter", include_str!("../data/paper.letter.ron")),
+    ("paper.legal", include_str!("../data/paper.legal.ron")),
+    ("paper.tabloid", include_str!("../data/paper.tabloid.ron")),
+    (
+        "paper.half-letter",
+        include_str!("../data/paper.half-letter.ron"),
+    ),
+    (
+        "paper.executive",
+        include_str!("../data/paper.executive.ron"),
+    ),
 ];
 
 /// Why a profile could not be loaded.
@@ -321,10 +437,12 @@ pub fn parse_checked(src: &str) -> Result<Profile, LoadError> {
             line: None,
         });
     }
-    let p: Profile = ron::from_str(src).map_err(|e| LoadError {
+    let mut p: Profile = ron::from_str(src).map_err(|e| LoadError {
         message: e.code.to_string(),
         line: Some(e.span.start.line),
     })?;
+    // A paper profile's size in mm is the truth; its pixels follow it.
+    p.sync_paper();
     limits::check(&p).map_err(|message| LoadError {
         message,
         line: None,
@@ -344,9 +462,30 @@ pub fn to_ron(p: &Profile) -> String {
         .expect("a profile always serialises")
 }
 
-/// The ids of the built-in profiles.
+/// The ids of the built-in screens (the devices), in shipped order. A new page targets these; the
+/// paper sizes are [`builtin_paper_ids`].
 pub fn builtin_ids() -> impl Iterator<Item = &'static str> {
-    BUILTIN_RON.iter().map(|(id, _)| *id)
+    BUILTIN_RON
+        .iter()
+        .map(|(id, _)| *id)
+        .filter(|id| !id.starts_with(PAPER_ID_PREFIX))
+}
+
+/// The ids of the built-in paper sizes (rung 13b), in shipped order.
+pub fn builtin_paper_ids() -> impl Iterator<Item = &'static str> {
+    BUILTIN_RON
+        .iter()
+        .map(|(id, _)| *id)
+        .filter(|id| id.starts_with(PAPER_ID_PREFIX))
+}
+
+/// What every built-in paper id starts with.
+pub const PAPER_ID_PREFIX: &str = "paper.";
+
+/// A built-in profile as a page sees it at export PPI `ppi` (paper only), held `orientation`: the
+/// shipped values, which is what the golden images and tests use.
+pub fn builtin_at(id: &str, orientation: Orientation, ppi: u32) -> Result<Profile, ProfileError> {
+    Ok(builtin(id)?.at_ppi(ppi).oriented(orientation))
 }
 
 /// A built-in profile by id, as a design held `orientation` sees it ([`Profile::oriented`]).

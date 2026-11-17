@@ -625,7 +625,7 @@ pub fn lint_against(
         // (A repeat and what is in its source are judged over all copies below.)
         let mut fixed = Vec::new();
         let mut movable = Vec::new();
-        for z in &target.safe_zones {
+        for z in target.safe_zones.iter().filter(|_| !target.is_paper()) {
             // A toolbar position the user does not use is skipped; a toolbar zone the linter
             // does not know is checked, so a new profile zone is never silently ignored.
             if let Ok(Some(t)) = Toolbar::of_zone(&z.name)
@@ -856,7 +856,7 @@ pub fn lint_against(
                 partly += 1;
             }
             let (mut cell_fixed, mut cell_movable) = (false, false);
-            for z in &target.safe_zones {
+            for z in target.safe_zones.iter().filter(|_| !target.is_paper()) {
                 if let Ok(Some(t)) = Toolbar::of_zone(&z.name)
                     && !opts.toolbars.contains(&t)
                 {
@@ -939,8 +939,19 @@ pub fn lint_against(
             );
         }
     }
+    // A paper size has no device data to judge against (napkin §3.3.1; rung 13b): the rules that
+    // read safe zones, gray levels or pen grays do not run on it, whatever the profile file holds.
+    if target.is_paper() {
+        out.retain(|f| !SKIPPED_ON_PAPER.contains(&f.rule));
+    }
     out
 }
+
+/// The rules that need a device's safe zones, clean gray levels or pen grays, and so are skipped on
+/// a paper size (napkin §3.3.1): L04 competes with ink, L05 grays off the clean levels, L06 safe
+/// zones. L03 (gray too light for the device) reads the device's grays too and is skipped when it
+/// is built. The other rules run on paper as on a device.
+pub const SKIPPED_ON_PAPER: [&str; 4] = ["L03", "L04", "L05", "L06"];
 
 /// Which of a pattern's two spacings it uses: (across, down). Rows alone for ruled lines, an
 /// isometric grid and a staff; columns alone for pointy hexagons.

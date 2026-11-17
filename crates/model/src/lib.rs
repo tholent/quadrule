@@ -88,6 +88,18 @@ impl Document {
             .collect()
     }
 
+    /// The export PPI the page uses on paper profile `id`: the one saved with it when that is one
+    /// of [`PAPER_PPIS`], else 300 (a file with another number is read as 300 and keeps its
+    /// number). A device ignores it.
+    pub fn ppi_of(&self, id: &str) -> u32 {
+        self.profiles
+            .iter()
+            .find(|c| c.profile_id == id)
+            .map(|c| c.ppi)
+            .filter(|p| PAPER_PPIS.contains(p))
+            .unwrap_or(DEFAULT_PAPER_PPI)
+    }
+
     /// Every object in the document, groups and everything inside them (format 0.7) included, in
     /// drawing order: a group comes before its children.
     pub fn objects(&self) -> impl Iterator<Item = &Object> {
@@ -155,9 +167,42 @@ pub enum Unit {
 pub struct ProfileContext {
     /// A profile id such as `supernote.a5x2`.
     pub profile_id: String,
+    /// The export PPI the page uses on this profile when it is a paper size (format 0.14; rung 13b
+    /// bbq, Q12): one of [`PAPER_PPIS`], 300 unless the person chose another. A device has a PPI of
+    /// its own and ignores it. Left out of a file when it is 300, so a file saved before the field
+    /// existed reads, and saves, unchanged.
+    #[serde(
+        default = "default_paper_ppi",
+        skip_serializing_if = "is_default_paper_ppi"
+    )]
+    pub ppi: u32,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+/// The export PPIs a page can pick for a paper size (rung 13b bbq, Q12).
+pub const PAPER_PPIS: [u32; 4] = [150, 200, 300, 600];
+/// The export PPI a paper page starts with.
+pub const DEFAULT_PAPER_PPI: u32 = 300;
+
+fn default_paper_ppi() -> u32 {
+    DEFAULT_PAPER_PPI
+}
+
+fn is_default_paper_ppi(ppi: &u32) -> bool {
+    *ppi == DEFAULT_PAPER_PPI
+}
+
+impl ProfileContext {
+    /// A context for profile `id` with the default export PPI.
+    pub fn new(id: impl Into<String>) -> ProfileContext {
+        ProfileContext {
+            profile_id: id.into(),
+            ppi: DEFAULT_PAPER_PPI,
+            extra: Extra::new(),
+        }
+    }
 }
 
 /// Page-wide settings (napkin §5.1).

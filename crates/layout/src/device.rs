@@ -25,10 +25,13 @@ use quadrule_model::edit::{
     set_visible_override, strip_overrides,
 };
 use quadrule_model::{
-    Document, Layer, Object, ObjectKind, Orientation, Override, Position, ProfileContext, Size,
-    Uuid,
+    Document, Layer, Object, ObjectKind, Orientation, Override, PAPER_PPIS, Position,
+    ProfileContext, Size, Uuid,
 };
-use quadrule_profiles::{Profile, active::lookup_for};
+use quadrule_profiles::{
+    Profile,
+    active::{lookup, lookup_in},
+};
 use std::collections::{BTreeMap, HashMap};
 
 /// Why a device change could not be made.
@@ -42,6 +45,9 @@ pub enum DeviceError {
     IsPrimary(String),
     /// The device's profile does not list the orientation (rung 8b).
     OrientationNotSupported(String),
+    /// The export PPI is not one the page can pick (rung 13b), or the device is a screen, which
+    /// has a PPI of its own.
+    PpiNotOffered(String),
 }
 
 impl std::fmt::Display for DeviceError {
@@ -53,6 +59,9 @@ impl std::fmt::Display for DeviceError {
             DeviceError::OrientationNotSupported(id) => {
                 write!(f, "{id} does not support that orientation")
             }
+            DeviceError::PpiNotOffered(id) => {
+                write!(f, "{id} has no export PPI to choose, or not that one")
+            }
         }
     }
 }
@@ -60,8 +69,19 @@ impl std::fmt::Display for DeviceError {
 impl std::error::Error for DeviceError {}
 
 /// Device `id` as a design held `orientation` sees it.
-fn profile(id: &str, orientation: Orientation) -> Result<Profile, DeviceError> {
-    lookup_for(id, orientation).map_err(|_| DeviceError::Unknown(id.to_string()))
+fn profile(doc: &Document, id: &str) -> Result<Profile, DeviceError> {
+    lookup_in(doc, id).map_err(|_| DeviceError::Unknown(id.to_string()))
+}
+
+/// Device `id` at the PPI the page picked for it, as a design held `orientation` sees it.
+fn profile_held(
+    doc: &Document,
+    id: &str,
+    orientation: Orientation,
+) -> Result<Profile, DeviceError> {
+    lookup(id)
+        .map(|p| p.at_ppi(doc.ppi_of(id)).oriented(orientation))
+        .map_err(|_| DeviceError::Unknown(id.to_string()))
 }
 
 fn index_nodes(nodes: Vec<Node>) -> HashMap<Uuid, Node> {
@@ -86,7 +106,7 @@ pub fn ungroup_overrides(
         if dev == primary.id {
             continue;
         }
-        let Ok(target) = profile(dev, doc.page.orientation) else {
+        let Ok(target) = profile(doc, dev) else {
             continue;
         };
         let nodes = index_nodes(resolve_nodes_on(
@@ -251,8 +271,8 @@ pub fn make_primary(doc: &Document, new_id: &str) -> Result<Command, DeviceError
     if new_id == old_id {
         return Err(DeviceError::IsPrimary(new_id.to_string()));
     }
-    let old_primary = profile(&old_id, doc.page.orientation)?;
-    let new_primary = profile(new_id, doc.page.orientation)?;
+    let old_primary = profile(doc, &old_id)?;
+    let new_primary = profile(doc, new_id)?;
 
     // What each device shows now.
     let mut before: BTreeMap<String, HashMap<Uuid, Before>> = BTreeMap::new();
@@ -260,7 +280,7 @@ pub fn make_primary(doc: &Document, new_id: &str) -> Result<Command, DeviceError
         if dev == new_id {
             continue;
         }
-        let target = profile(dev, doc.page.orientation)?;
+        let target = profile(doc, dev)?;
         let key = override_key(&old_primary, &target);
         let nodes = resolve_nodes_on(doc, old_primary.page_mm(), target.page_mm(), key);
         let mut map = HashMap::new();
@@ -318,7 +338,7 @@ pub fn make_primary(doc: &Document, new_id: &str) -> Result<Command, DeviceError
         if dev == new_id {
             continue;
         }
-        let target = profile(dev, doc.page.orientation)?;
+        let target = profile(doc, dev)?;
         for l in &mut next.layers {
             for o in &mut l.objects {
                 drop_group_boxes(o, dev);
@@ -377,11 +397,8 @@ pub fn set_targets(doc: &Document, ids: &[&str]) -> Result<Command, DeviceError>
         .collect();
     for id in ids {
         if !profiles.iter().any(|c| c.profile_id == *id) {
-            profile(id, doc.page.orientation)?;
-            profiles.push(ProfileContext {
-                profile_id: (*id).to_string(),
-                extra: Default::default(),
-            });
+            profile(doc, id)?;
+            profiles.push(ProfileContext::new((*id).to_string()));
         }
     }
     let mut layers: Vec<Layer> = doc.layers.clone();
@@ -392,6 +409,33 @@ pub fn set_targets(doc: &Document, ids: &[&str]) -> Result<Command, DeviceError>
         primary_profile_id: doc.primary_profile_id.clone(),
         profiles,
         layers,
+    })
+}
+
+/// The command that makes the page export paper size `id` at `ppi` (rung 13b bbq, Q12): one of
+/// [`PAPER_PPIS`], for a paper size the document targets. The design is kept in millimetres, so
+/// nothing but the PPI changes (one undo step); asking for the PPI it has gives an empty batch.
+pub fn set_paper_ppi(doc: &Document, id: &str, ppi: u32) -> Result<Command, DeviceError> {
+    if !doc.profile_ids().contains(&id) {
+        return Err(DeviceError::NotATarget(id.to_string()));
+    }
+    let is_paper = lookup(id)
+        .map_err(|_| DeviceError::Unknown(id.to_string()))?
+        .is_paper();
+    if !is_paper || !PAPER_PPIS.contains(&ppi) {
+        return Err(DeviceError::PpiNotOffered(id.to_string()));
+    }
+    if doc.ppi_of(id) == ppi {
+        return Ok(Command::Batch(Vec::new()));
+    }
+    let mut profiles = doc.profiles.clone();
+    if let Some(c) = profiles.iter_mut().find(|c| c.profile_id == id) {
+        c.ppi = ppi;
+    }
+    Ok(Command::SetDesign {
+        primary_profile_id: doc.primary_profile_id.clone(),
+        profiles,
+        layers: doc.layers.clone(),
     })
 }
 
@@ -464,13 +508,13 @@ pub fn set_orientation(doc: &Document, to: Orientation) -> Result<Command, Devic
         return Ok(Command::Batch(Vec::new()));
     }
     for id in doc.profile_ids() {
-        if !profile(id, to)?.orientations.contains(&to) {
+        if !profile_held(doc, id, to)?.orientations.contains(&to) {
             return Err(DeviceError::OrientationNotSupported(id.to_string()));
         }
     }
     let (old_primary, new_primary) = (
-        profile(&doc.primary_profile_id, from)?,
-        profile(&doc.primary_profile_id, to)?,
+        profile_held(doc, &doc.primary_profile_id, from)?,
+        profile_held(doc, &doc.primary_profile_id, to)?,
     );
     let nodes = index_nodes(resolve_nodes(
         doc,
@@ -479,7 +523,10 @@ pub fn set_orientation(doc: &Document, to: Orientation) -> Result<Command, Devic
     ));
     let mut scales: BTreeMap<String, (f64, f64)> = BTreeMap::new();
     for id in doc.profile_ids() {
-        let (a, b) = (profile(id, from)?.page_mm(), profile(id, to)?.page_mm());
+        let (a, b) = (
+            profile_held(doc, id, from)?.page_mm(),
+            profile_held(doc, id, to)?.page_mm(),
+        );
         scales.insert(id.to_string(), (b.0 / a.0, b.1 / a.1));
     }
     let mut layers = doc.layers.clone();

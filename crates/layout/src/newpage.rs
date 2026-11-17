@@ -96,13 +96,19 @@ pub struct NewPage {
 
 /// The blank template for `spec`: designed on the chosen device and also targeting every other
 /// built-in one, margins clearing the toolbars and footers of all of them, `now` as the created
-/// and modified time (RFC 3339).
+/// and modified time (RFC 3339). A page designed on a paper size targets that paper alone (the
+/// devices can be ticked in the Page tab), at 300 PPI, with margins of whole rhythm units that are
+/// at least the paper profile's own (10 mm; rung 13b bbq, Defaulted "Paper margins").
 pub fn new_document(spec: &NewPage, now: &str) -> Result<Document, ProfileError> {
     let primary = active::lookup(&spec.device_id)?;
-    let others: Vec<String> = builtin_ids()
-        .filter(|id| *id != primary.id)
-        .map(String::from)
-        .collect();
+    let others: Vec<String> = if primary.is_paper() {
+        Vec::new()
+    } else {
+        builtin_ids()
+            .filter(|id| *id != primary.id)
+            .map(String::from)
+            .collect()
+    };
     let mut profiles = vec![primary.oriented(spec.orientation)];
     for id in &others {
         profiles.push(active::lookup(id)?.oriented(spec.orientation));
@@ -111,7 +117,18 @@ pub fn new_document(spec: &NewPage, now: &str) -> Result<Document, ProfileError>
     // The margins are whole steps of what snapping uses: for an isometric rhythm, a column
     // across and half a side down.
     let (step_x, step_y) = spec.rhythm.steps_mm();
-    let margins = clearing_margins(&profiles, step_x, step_y);
+    let mut margins = clearing_margins(&profiles, step_x, step_y);
+    if primary.is_paper() {
+        // The paper's own margins, rounded up to whole steps, when they are more than one step.
+        let m = &primary.default_margins_mm;
+        let up = |own: f64, step: f64| (own / step - 1e-9).ceil().max(1.0) * step;
+        margins = Margins {
+            top: margins.top.max(up(m.top, step_y)),
+            right: margins.right.max(up(m.right, step_x)),
+            bottom: margins.bottom.max(up(m.bottom, step_y)),
+            left: margins.left.max(up(m.left, step_x)),
+        };
+    }
     let others: Vec<&str> = others.iter().map(String::as_str).collect();
     let mut doc = blank_document(&spec.title, &primary.id, &others, unit, margins, now);
     doc.page.orientation = spec.orientation;

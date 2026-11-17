@@ -1,0 +1,42 @@
+// ISO A3, a paper size (napkin §3.3.1; rung 13 record docs/bbq/2026-11-17-rung-13-profile-system.md, Q12 to Q14).
+// A paper profile is a physical size, not a screen: `paper` is the size in mm, and `width_px` and `height_px` are
+// that size at 300 PPI, the default. A page picks its export PPI (150, 200, 300 or 600) and the pixel size and the
+// line widths below follow it: a width is scaled by PPI / 300, rounded to whole pixels, at least 1.
+// The role values are the Nomad's (docs/device-measurements/supernote.a6x2/calibration.md) taken by physical size,
+// not measured on paper, so the profile is Unverified. No safe zones, no gray levels, no pen grays (napkin §3.3.1).
+(
+    id: "paper.a3",
+    display_name: "ISO A3",
+    short_name: "a3",
+    width_px: 3508,
+    height_px: 4961,
+    ppi: 300.0,
+    paper: Some((width_mm: 297.0, height_mm: 420.0)),
+    diagonal_in: 20.25,
+    panel: "paper",
+    gray_levels: [],
+    ink_values: [],
+    safe_zones: [],
+    default_margins_mm: (top: 10.0, right: 10.0, bottom: 10.0, left: 10.0),
+    orientations: [Portrait, Landscape],
+    line_roles: (
+        whisper: (width_px: 1, gray: 119),
+        guide: (width_px: 1, gray: 51),
+        structure: (width_px: 2, gray: 51),
+        emphasis: (width_px: 3, gray: 0),
+        dot_grid: (width_px: 3, gray: 51),
+        text_gray: 51,
+        label_gray: 153,
+    ),
+    fill_roles: (
+        shade: 204,
+        block: 102,
+    ),
+    calibration_meta: (
+        date: None,
+        firmware: None,
+        method: "The Nomad's role values by physical size (rung 13 record, Q13); not measured on paper.",
+        verified: false,
+    ),
+    export_hints: [],
+)

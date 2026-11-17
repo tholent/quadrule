@@ -145,16 +145,7 @@ pub fn slice_document() -> Document {
         },
         document_type: DocumentType::Template,
         primary_profile_id: MANTA_ID.into(),
-        profiles: vec![
-            ProfileContext {
-                profile_id: MANTA_ID.into(),
-                extra: Extra::new(),
-            },
-            ProfileContext {
-                profile_id: NOMAD_ID.into(),
-                extra: Extra::new(),
-            },
-        ],
+        profiles: vec![ProfileContext::new(MANTA_ID), ProfileContext::new(NOMAD_ID)],
         units: Unit::Mm,
         page: PageSettings {
             background_gray: 255,
@@ -3096,4 +3087,243 @@ fn repeats_page(landscape: bool) -> Document {
         extra: Extra::new(),
     }];
     doc
+}
+
+/// Fixed ids for the paper pages' objects.
+pub mod paper_ids {
+    use crate::Uuid;
+    /// The `n`th object of the paper pages (both have the same objects).
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0012_4000_8000_0000_0000_0000 + n)
+    }
+}
+
+/// The id of the ISO A4 paper profile, the paper page's primary.
+pub const PAPER_A4_ID: &str = "paper.a4";
+/// The id of the ISO A5 paper profile, which the paper page also targets, at 600 PPI.
+pub const PAPER_A5_ID: &str = "paper.a5";
+/// The id of the US Letter paper profile, which the landscape paper page is designed on.
+pub const PAPER_LETTER_ID: &str = "paper.letter";
+
+/// A paper page (rung 13b bbq, Defaulted "13b goldens"): a band and headline, a dot grid and ruled
+/// lines between 10 mm margins, a frame on the margin box, a mark in each corner and a circle in
+/// the middle (a squashed or stretched page shows as an oval). `w` by `h` mm is the page as it is
+/// held; `landscape` holds it sideways, wide. Designed on `primary`, also targeting `secondary`
+/// at the PPI given.
+fn paper_page(
+    title: &str,
+    headline: &str,
+    primary: &str,
+    secondary: Option<(&str, u32)>,
+    (w, h): (f64, f64),
+    landscape: bool,
+) -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = title.into();
+    doc.metadata.description =
+        "The rung 13b paper page: a band, dots, ruled lines, a margin frame, corner marks and a circle."
+            .into();
+    let margin = 10.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.page.orientation = if landscape {
+        Orientation::Landscape
+    } else {
+        Orientation::Portrait
+    };
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    doc.rhythm.major_every = Some(5);
+    doc.primary_profile_id = primary.into();
+    doc.profiles = vec![ProfileContext::new(primary)];
+    if let Some((id, ppi)) = secondary {
+        let mut c = ProfileContext::new(id);
+        c.ppi = ppi;
+        doc.profiles.push(c);
+    }
+    let inner_w = w - 2.0 * margin;
+    let top_wide = Constraints {
+        h: HConstraint::LeftRight,
+        v: VConstraint::Top,
+    };
+    let rule = doc.layers[1].objects[1].clone();
+    let mut dots = doc.layers[0].objects[0].clone();
+    let mut lines = doc.layers[0].objects[1].clone();
+    let mut headline_box = doc.layers[1].objects[0].clone();
+    let mk = |n: u128, name: &str, frame: Frame, c: Constraints, style: Style, fill, kind| {
+        let mut o = rule.clone();
+        o.id = paper_ids::nth(n);
+        o.name = name.into();
+        o.frame = frame;
+        o.constraints = c;
+        o.style = style;
+        o.fill = fill;
+        o.kind = kind;
+        o
+    };
+    let structure = Style::Role(LineRole::Structure);
+    let frame_box = mk(
+        1,
+        "Margin frame",
+        Frame::new(margin, margin, inner_w, h - 2.0 * margin),
+        Constraints {
+            h: HConstraint::LeftRight,
+            v: VConstraint::TopBottom,
+        },
+        Style::Role(LineRole::Whisper),
+        None,
+        ObjectKind::Rect(RectShape::default()),
+    );
+    let band = mk(
+        2,
+        "Header band",
+        Frame::new(margin + 2.0, margin + 2.0, inner_w - 4.0, 12.0),
+        top_wide,
+        structure,
+        Some(Fill::Role(FillRole::Shade)),
+        ObjectKind::Rect(RectShape::default()),
+    );
+    headline_box.id = paper_ids::nth(3);
+    headline_box.name = "Headline".into();
+    headline_box.frame = Frame::new(margin + 5.0, margin + 4.5, inner_w - 10.0, 8.0);
+    headline_box.constraints = top_wide;
+    if let ObjectKind::Text(t) = &mut headline_box.kind {
+        t.content = headline.into();
+        t.size_pt = 14.0;
+    }
+    dots.frame = Frame::new(margin + 2.0, margin + 20.0, inner_w - 4.0, 60.0);
+    dots.constraints = top_wide;
+    lines.frame = Frame::new(
+        margin + 2.0,
+        margin + 86.0,
+        inner_w - 4.0,
+        // Down to just above the bottom corner marks.
+        h - margin - 14.0 - (margin + 86.0),
+    );
+    lines.constraints = Constraints {
+        h: HConstraint::LeftRight,
+        v: VConstraint::TopBottom,
+    };
+    let corner = |n: u128, name: &str, x: f64, y: f64, hc, vc| {
+        mk(
+            n,
+            name,
+            Frame::new(x, y, 6.0, 6.0),
+            Constraints { h: hc, v: vc },
+            structure,
+            Some(Fill::Role(FillRole::Block)),
+            ObjectKind::Rect(RectShape::default()),
+        )
+    };
+    let (far_x, far_y) = (w - margin - 3.0 - 6.0, h - margin - 3.0 - 6.0);
+    let mut objs = vec![
+        frame_box,
+        band,
+        headline_box,
+        corner(
+            4,
+            "Corner, top left",
+            margin + 3.0,
+            margin + 3.0 + 14.0,
+            HConstraint::Left,
+            VConstraint::Top,
+        ),
+        corner(
+            5,
+            "Corner, top right",
+            far_x,
+            margin + 3.0 + 14.0,
+            HConstraint::Right,
+            VConstraint::Top,
+        ),
+        corner(
+            6,
+            "Corner, bottom left",
+            margin + 3.0,
+            far_y,
+            HConstraint::Left,
+            VConstraint::Bottom,
+        ),
+        corner(
+            7,
+            "Corner, bottom right",
+            far_x,
+            far_y,
+            HConstraint::Right,
+            VConstraint::Bottom,
+        ),
+    ];
+    // A circle: it stays round only when the page and its pixels are not stretched.
+    let circle = 36.0;
+    objs.push(mk(
+        8,
+        "Circle",
+        Frame::new((w - circle) / 2.0, margin + 24.0, circle, circle),
+        Constraints {
+            h: HConstraint::Center,
+            v: VConstraint::Top,
+        },
+        Style::Role(LineRole::Emphasis),
+        Some(Fill::Role(FillRole::Shade)),
+        ObjectKind::Ellipse(EllipseShape::default()),
+    ));
+    let mut ruled_layer = vec![dots, lines];
+    if landscape {
+        // A star by the top-right corner: upright in the wide page, which is not turned.
+        objs.push(mk(
+            9,
+            "Star",
+            Frame::new(w - margin - 28.0, margin + 24.0, 18.0, 18.0),
+            Constraints {
+                h: HConstraint::Right,
+                v: VConstraint::Top,
+            },
+            Style::Role(LineRole::Emphasis),
+            Some(Fill::Role(FillRole::Block)),
+            ObjectKind::Polygon(PolygonShape::star(5)),
+        ));
+    }
+    doc.layers = vec![
+        Layer {
+            name: "Grid".into(),
+            visible: true,
+            locked: false,
+            objects: std::mem::take(&mut ruled_layer),
+            extra: Extra::new(),
+        },
+        Layer {
+            name: "Marks".into(),
+            visible: true,
+            locked: false,
+            objects: objs,
+            extra: Extra::new(),
+        },
+    ];
+    doc
+}
+
+/// The paper page (rung 13b): ISO A4 portrait at 300 PPI, also targeting ISO A5 at 600 PPI (the page
+/// picks its export PPI per paper size). It holds a dot region with the sample's id
+/// ([`ids::DOTS`]), so the benchmarks run over it.
+pub fn paper_document() -> Document {
+    paper_page(
+        "Rung 13b paper",
+        "Paper: A4 at 300 PPI, A5 at 600 PPI",
+        PAPER_A4_ID,
+        Some((PAPER_A5_ID, 600)),
+        (210.0, 297.0),
+        false,
+    )
+}
+
+/// The same page on US Letter held sideways (rung 13b bbq, Q14): a wide PNG, 3300 × 2550 px at 300
+/// PPI, not turned. It holds a dot region with the sample's id ([`ids::DOTS`]).
+pub fn paper_landscape_document() -> Document {
+    paper_page(
+        "Rung 13b paper, landscape",
+        "Landscape paper: US Letter, wide, 300 PPI",
+        PAPER_LETTER_ID,
+        None,
+        (279.4, 215.9),
+        true,
+    )
 }

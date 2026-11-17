@@ -16,7 +16,8 @@
 //! carried-copy reader accept only these values; a profile outside them counts as damaged, so a
 //! hostile file cannot ask for a huge page. Nothing here panics, whatever the input.
 
-use crate::Profile;
+use crate::{PaperSize, Profile};
+use quadrule_model::{MM_PER_IN, PAPER_PPIS};
 
 /// The most bytes a profile file may hold; a larger one is damaged and is not read.
 pub const MAX_FILE_BYTES: usize = 256 * 1024;
@@ -30,6 +31,11 @@ pub const MIN_PPI: f64 = 50.0;
 pub const MAX_PPI: f64 = 1_200.0;
 /// Narrowest and widest a line role or dot may be, in pixels.
 pub const ROLE_PX: std::ops::RangeInclusive<u32> = 1..=32;
+/// The shortest and longest side a custom paper size may have, in mm, as the form offers: the span in
+/// which every export PPI a page can pick (150 to 600) gives [`MIN_PX`] to [`MAX_PX`] whole pixels.
+/// [`check`] holds a paper size to the pixel limits themselves; these are those limits rounded
+/// inwards.
+pub const PAPER_MM: std::ops::RangeInclusive<f64> = 2.8..=693.0;
 /// The most safe zones a profile may hold.
 pub const MAX_ZONES: usize = 64;
 /// The longest display name, in characters.
@@ -85,6 +91,34 @@ fn text(what: &str, s: &str) -> Result<(), String> {
     }
 }
 
+/// A paper profile's size: each side must come to 16 to 16,384 whole pixels at every export PPI a
+/// page can pick (150 to 600), so no page it makes breaks the screen limits above; and its pixel
+/// size and ppi are those of its size at 300 PPI ([`Profile::sync_paper`]).
+fn check_paper(p: &Profile, size: PaperSize) -> Result<(), String> {
+    for (what, mm) in [("width", size.width_mm), ("height", size.height_mm)] {
+        if !mm.is_finite() || mm <= 0.0 {
+            return Err(format!("the paper {what} must be a number above 0 mm"));
+        }
+    }
+    let (lo_w, lo_h) = size.px_at(PAPER_PPIS[0]);
+    let (hi_w, hi_h) = size.px_at(PAPER_PPIS[PAPER_PPIS.len() - 1]);
+    if lo_w.min(lo_h) < MIN_PX || hi_w.max(hi_h) > MAX_PX {
+        let (lo_mm, hi_mm) = (
+            f64::from(MIN_PX) * MM_PER_IN / f64::from(PAPER_PPIS[0]),
+            f64::from(MAX_PX) * MM_PER_IN / f64::from(PAPER_PPIS[PAPER_PPIS.len() - 1]),
+        );
+        return Err(format!(
+            "each side of a paper size must be {lo_mm:.1} to {hi_mm:.1} mm, so that every export PPI gives {MIN_PX} to {MAX_PX} px"
+        ));
+    }
+    let mut want = p.clone();
+    want.sync_paper();
+    if (want.width_px, want.height_px) != (p.width_px, p.height_px) || want.ppi != p.ppi {
+        return Err("a paper profile's pixel size and ppi are those of its size at 300 PPI".into());
+    }
+    Ok(())
+}
+
 /// Checks `p` against the limits. The error says which value is out and why.
 pub fn check(p: &Profile) -> Result<(), String> {
     check_id(&p.id)?;
@@ -99,6 +133,9 @@ pub fn check(p: &Profile) -> Result<(), String> {
     }
     if !p.ppi.is_finite() || !(MIN_PPI..=MAX_PPI).contains(&p.ppi) {
         return Err(format!("ppi {} is outside {MIN_PPI} to {MAX_PPI}", p.ppi));
+    }
+    if let Some(size) = p.paper {
+        check_paper(p, size)?;
     }
     if !p.diagonal_in.is_finite() || !(0.0..=1_000.0).contains(&p.diagonal_in) {
         return Err("the diagonal must be 0 to 1000 inches".into());

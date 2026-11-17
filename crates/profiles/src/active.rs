@@ -18,6 +18,7 @@
 //! built-ins only ([`Registry::builtin_only`]); the app puts the loaded registry in with [`set`].
 
 use crate::{Orientation, Profile, ProfileError, Registry};
+use quadrule_model::Document;
 use std::cell::RefCell;
 
 thread_local! {
@@ -49,9 +50,23 @@ pub fn lookup_for(id: &str, orientation: Orientation) -> Result<Profile, Profile
     Ok(lookup(id)?.oriented(orientation))
 }
 
-/// The ids of the devices a page can target here: the built-ins, then the user's own.
+/// The profile `id` stands for on `doc`'s page: for a paper size at the PPI the page picked for it
+/// ([`Document::ppi_of`]), and as a design held the way the page is held. Every place that draws,
+/// lays out or lints a page reads its profiles through this.
+pub fn lookup_in(doc: &Document, id: &str) -> Result<Profile, ProfileError> {
+    Ok(lookup(id)?
+        .at_ppi(doc.ppi_of(id))
+        .oriented(doc.page.orientation))
+}
+
+/// The ids of the devices (screens) a page can target here: the built-ins, then the user's own.
 pub fn device_ids() -> Vec<String> {
     with(|r| r.device_ids())
+}
+
+/// The ids of the paper sizes a page can target here: the built-ins, then the user's own.
+pub fn paper_ids() -> Vec<String> {
+    with(|r| r.paper_ids())
 }
 
 /// Whether built-in `id` shows with a local override (the **Edited** mark).
