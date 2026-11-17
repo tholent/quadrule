@@ -156,11 +156,11 @@ fn export_writes_the_golden_bytes() {
         .notice
         .as_ref()
         .is_some_and(|n| !n.error && n.message.id == "notice-exported");
+    // A folder that cannot be made (it would sit inside a file) is reported; a missing one is made.
+    let blocker = one_dir.join("a-file");
+    std::fs::write(&blocker, b"x").unwrap();
     let failed = v
-        .export(
-            std::path::Path::new("/nonexistent/dir"),
-            ExportWhich::ThisDevice,
-        )
+        .export(&blocker.join("dir"), ExportWhich::ThisDevice)
         .is_err()
         && v.notice.as_ref().is_some_and(|n| n.error);
     let ok = one.len() == 1
