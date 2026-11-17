@@ -1830,7 +1830,7 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   values only; tests use folders of their own under the system's temporary folder, never the config folder.
 - `make check-all` (fmt, clippy `-D warnings`, tests, at `e3afe74`) -> `TESTS scope=workspace checks=573 check_fail=0 passed=530 failed=0 status=ok`.
 - CI: 797cc9d run 44005144237 success; ded0b3f 44007374825 success; 0752c72 44008651284 success; 84a1bc6 44009608602 success;
-  cc0d2f4 44012499657 success; e3afe74 44013040394 (see the report). Fuzz and Coverage runs on the same commits succeeded
+  cc0d2f4 44012499657 success; e3afe74 44013040394 success. Fuzz and Coverage runs on the same commits succeeded
   (Fuzz 44005144374, 44007374733, 44008651338).
 - Fuzz, local: `cargo +nightly fuzz run from_ron` 114,994 runs in 41 s, `open_quad` (with the carried-profile seed `carried-profile.quad`) 192,253 runs in
   41 s, no crash. `fuzz.yml` now also runs `from_ron` for 30 s and watches `crates/profiles/**`.
