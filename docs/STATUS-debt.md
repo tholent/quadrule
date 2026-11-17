@@ -225,3 +225,21 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   on the pattern-angle page only (`docs/STATUS-log.md`, 2026-11-16, pattern angle); the chip's `--bench-draw` first frame is 45 to 52 ms, one frame
   over the 50 ms line in each run, with the 90th percentile at 23 ms.
 
+- Rung 13a, owed (`crates/profiles/src/registry.rs`, `crates/ui/src/profiles_win.rs`, `crates/ui/src/profiles_win_ui.rs`, `crates/ui/src/profile_use.rs`):
+  the registry is one per thread (`quadrule_profiles::active`), right while everything that draws runs on the window's thread; a worker
+  thread that looked a profile up would see only the built-ins. The Profiles window's logic is tested headless
+  (`crates/ui/tests/profiles_window.rs`) and the window is drawn in a harness, but no test drives its DragValues, the
+  safe-zone table, the gray-list fields or the collapsing sections with the pointer, and the Import… and Export… system
+  dialogs (`rfd`) are untested; chris's look is their first real check. One screenshot only, with the sections folded
+  (the Pi screen is 1440 x 720, the window was made to fit it). A damaged file is listed but the window has no button to
+  delete it (`Registry::delete_damaged` exists, unused); Reset to built-in does remove a damaged override. Two of
+  the user's profiles may share a name (Keep both makes that); a Merge by name then goes into the first by id. Merge
+  into a built-in keeps the shipped id, size, ppi and short name and drops the incoming ones without saying so. A
+  carried profile that is damaged is dropped when the page is saved again, and a secondary device that is neither here
+  nor carried is left out of the page (the primary missing refuses the file); both say so once, in a notice that the
+  next notice replaces. Short names are unique among the shipped and the user's profiles, not the file's carried
+  copies. Panel, diagonal and export hints are kept but have no field in the form. The window's size is egui's own
+  (it is remembered between runs). No `.bak` copy is kept of a replaced or deleted profile file (the record's veto
+  left open). The Edited mark shows for built-ins only; a profile of the user's own shows Unverified, not Edited. The
+  fuzz targets ran locally 41 s each (`open_quad` 192,253 runs with the carried-profile seed, `from_ron` 114,994 runs),
+  CI runs them 60 s and 30 s. Strings are English only.

@@ -1814,3 +1814,42 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   43999330846, succeeded and published https://github.com/tholent/quadrule/releases/tag/v0.12.0 (pre-release, not a
   draft) with 7 files: AppImage and `.deb` for Linux x86-64 and ARM64, the universal `.dmg`, the `.msi`, and
   `SHA256SUMS.txt` (`gh release view v0.12.0 --json assets`).
+
+## 2026-11-17 — rung 13a, the profile system (builder, Sonnet 5.5 high)
+
+- Built 13a from the record `docs/bbq/2026-11-17-rung-13-profile-system.md` (Q1 to Q9 and the Defaulted rules that are not about paper), one commit per step:
+  `797cc9d` step 1 (registry and storage: `crates/profiles/src/{limits,registry,active}.rs`, `from_ron` fuzz target
+  `crates/format/fuzz/fuzz_targets/from_ron.rs`), `ded0b3f` step 2 (one lookup: every production call site reads
+  `quadrule_profiles::active::lookup`/`lookup_for`; the app loads `<config folder>/profiles/` at start, not for timing runs;
+  `crates/profiles/tests/call_sites.rs` scans for strays), `0752c72` step 3 (format 0.14.0: `profiles/<id>.ron` entries, manifest
+  `carried_profiles`, migration 0.13 to 0.14 with no rewrite, the `v0.13/` fixture (the pattern-angle page, written by the 0.13 build),
+  the reader applies the limits, the bar and the Merge / Rename / Not now dialog), `84a1bc6` steps 4 and 5 (the Profiles window and its
+  tests), `cc0d2f4` and `e3afe74` (the Page tab lists a device the page uses from the file's copy; docs; the window fits a 720 px screen).
+- Frozen bytes: `git diff --stat 3f3ebb3..HEAD -- crates/render/tests/golden/ crates/render/tests/fixtures/` shows only the new
+  `v0.13/` (two files); the 26 golden lines and the `v0.4/` to `v0.12/` fixtures are unchanged. `builtin`/`builtin_for` still give the shipped
+  values only; tests use folders of their own under the system's temporary folder, never the config folder.
+- `make check-all` (fmt, clippy `-D warnings`, tests, at `e3afe74`) -> `TESTS scope=workspace checks=573 check_fail=0 passed=530 failed=0 status=ok`.
+- CI: 797cc9d run 44005144237 success; ded0b3f 44007374825 success; 0752c72 44008651284 success; 84a1bc6 44009608602 success;
+  cc0d2f4 44012499657 success; e3afe74 44013040394 (see the report). Fuzz and Coverage runs on the same commits succeeded
+  (Fuzz 44005144374, 44007374733, 44008651338).
+- Fuzz, local: `cargo +nightly fuzz run from_ron` 114,994 runs in 41 s, `open_quad` (with the carried-profile seed `carried-profile.quad`) 192,253 runs in
+  41 s, no crash. `fuzz.yml` now also runs `from_ron` for 30 s and watches `crates/profiles/**`.
+- Pi, release build, strip on, 150 frames, 3 runs each, `target/release/quadrule <page> <flag> 150 --canvas <c>` (90th percentile ms; limit 50):
+  text-box page `--bench-drag` export 20.0, 20.0, 20.4, chip 3.7, 3.8, 3.7; `--bench-draw` export 20.6, 21.3, 21.0, chip 23.8, 23.8, 23.7
+  (chip first frame 54.5 ms, three runs); overrides page `--bench-drag` export 20.6, 20.0, 20.5, chip 17.0, 16.9, 17.0; `--bench-draw` export
+  20.8, 20.3, 20.3, chip 22.7, 22.7, 24.0. The Profiles window, release test harness (`crates/ui/tests/profiles_window.rs`): a changed role value
+  makes the Nomad's page again in 7.2 ms; a whole frame with the window open after that change took 66.6 ms in the harness, an unchanged frame
+  with the window open 1.3 ms, and the same redraw with the window closed 89.1 ms (the harness has no graphics chip and builds the accessibility
+  tree), so the window adds no cost to the redraw; the real window's redraw frames are the 20 ms of the drag bench.
+- Choices the record did not settle: the registry is one per thread (a thread starts with the built-ins; tests are isolated); the Edited
+  mark shows as "Name · Edited" and "Name · Unverified" in lists; Save keeps the window open and Cancel (or the window's close) throws away the
+  drafts; New… and Duplicate and an import write at once, Save writes edits; Duplicate names the copy "X copy" with a short name made from it; an
+  import with the same id and values says "already have it", same id and other values asks Replace mine / Keep both, another id with the same name
+  asks Merge / Rename; Keep both keeps the incoming name; Merge keeps the target's id and short name, and into a built-in becomes its override
+  with the shipped id, size, ppi and short name; Rename keeps the incoming id when free, else a new UUID v4 (then the page is renamed to it, an
+  unsaved change, not an undo step); the dialog's default for each row is Not now; a secondary device that is neither here nor carried is left out of the
+  page with a notice, the primary missing refuses the file; limits beyond the record: diagonal 0 to 1,000 in, free text 2,000 characters, at most
+  64 gray or pen values and export hints, one or two orientations, a file at most 256 KiB, ids of letters, digits, dots, hyphens and underscores
+  that name the file, an override file may not change its built-in's size, ppi or short name (damaged), margins 0 or more and leaving room;
+  the Profiles window's toolbar button doubles as the menu entry (the toolbar has no menu); saving a built-in's values equal to the shipped ones removes
+  the override file; `--profiles` opens the window at start.
