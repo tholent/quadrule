@@ -196,3 +196,12 @@ commits, never waiting with `pgrep -f` on a pattern in its own command. Keep the
 frozen (stop and ask chris if any would change). Measure as before (Pi, release build, both canvases, strip on, 90th
 percentile, ADR-009). Pay the debt in code the rung touches. Show chris the window and stop for his look after 13a;
 then 13b, its look, and one `v0.13.0`.
+
+## Amendments
+
+- **2026-11-17, the 13a look.** chris, word for word, answering "Approve 13a, or what to change", "Ratify ADR-016, or
+  not yet" and "Your meter reading now": "1. approved 2. ratified 3. 36%". 13a is approved as built (`797cc9d` to
+  `10a249b`), with the builder's own choices listed in `docs/STATUS-log.md` (2026-11-17, rung 13a) standing, among
+  them: each row of the clash dialog starts on Not now; Keep both keeps the incoming name; Save keeps the window open;
+  saving a built-in's shipped values deletes its override. ADR-016 is accepted. Meter 36 % (logged), so 13a spent
+  4 points of the 10; 13b starts under the same share.
