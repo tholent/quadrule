@@ -77,3 +77,30 @@ From Next:
   chris; 8b finished, tested and measured by the lead; both wait for chris's look (`docs/STATUS-log.md`).
 - 2026-11-13: rung 8 approved by chris (8a and 8b); version 0.8.0, one release `v0.8.0`; board re-planned; rung 9
   prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-9-PROMPT-2026-11-13.md`).
+
+## Moved from STATUS.md Now on 2026-11-17 (rung 14 close), word for word
+
+- Rung 12, missing fonts and turning patterns, is done: 12a approved by chris 2026-11-16 ("I approve 12a"), 12b
+  2026-11-17 ("approved"), shipped together as `v0.12.0` (record `docs/bbq/2026-11-16-rung-12-missing-fonts.md`, with
+  its Amendments). **12a**: a page whose fonts are missing opens from its saved outlines with a yellow bar and a Missing
+  fonts dialog (Use saved outlines, read-only with a badge; Substitute by measured font signature, rewriting the font;
+  Locate fonts…; Remember for this document); installed fonts whose `fsType` allows it are embedded in
+  `assets/fonts/` (Embed fonts tick, on); missing characters may come from any installed font; lint L11 and L20 with a
+  sheet on Save, Save As and Export (`crates/ui/src/missing.rs`, `crates/ui/src/missing_ui.rs`,
+  `crates/text/src/registry.rs`, `crates/lint/src/lib.rs`). **12b**: pattern regions turn whole (handle, Rotation
+  field, groups), and a Pattern angle (Style tab) turns the ruling inside its frame, cut at the frame (chris's addition,
+  Q8 amended) (`crates/layout/src/pattern.rs`). Hinting moved to v1.1 (ADR-002 amendment 2026-11-16). File format
+  0.13.0 (`crates/render/tests/fixtures/v0.12/`). Four golden lines added (`patterns-turned_*`, `pattern-angle_*`);
+  the 22 older ones unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: missing-font
+  page drag 19.8 ms export, 5.2 chip; pattern-angle page drag about 21 export, 3.6 chip, draw about 21 export, 23.4 chip
+  (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --missing-fonts-page`,
+  `-- --turned-patterns-page` or `-- --pattern-angle-page`.
+
+## Moved from STATUS.md Log on 2026-11-17 (rung 14 close), word for word
+
+- 2026-11-13: rung 9 planned (bbq, 8 questions; one rung, one look), built (Sonnet 5.5, high), changed at chris's look
+  (isometric turned 90°, hex cut at the frame, bigger major dots; ADR-014 amended), approved; `v0.9.0`; board
+  re-planned; rung 10 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`).
+- 2026-11-13: rung 10 planned (bbq, 8 questions; one rung, one look), built (Sonnet 5.5, high), chip-canvas speed fix
+  at chris's word (draw 49.7 → 23.6 ms), approved; `v0.10.0`; board re-planned; rung 11 prompt written
+  (`docs/STATUS-log.md`, `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`).

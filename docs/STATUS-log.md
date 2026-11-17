@@ -2017,3 +2017,23 @@ Defaulted beyond the record (each can be vetoed): the combo's label "Findings fo
 no fix for the pitch of a repeat or for L06 on a repeat's copies; the preflight sheet lists the devices being exported and puts L20 under Document whichever device is shown, hiding it when the document says "Don't warn again"; the sheet's L20 row has Ignore but no Jump;
 small buttons on the rows; the notes fold is not remembered. Owed: see the "Rung 14b, owed" line in `docs/STATUS-debt.md` (wording of every new button and line is a taste call for chris).
 The look: `cargo run --release -p quadrule-app -- --lint-page` then the Lint tab (or `--look lint`); Export, then "Export this device…" opens the sheet (or `--look preflight`); click a pale line ("L03 line, gray 230") and the Style tab (or `--look style`); the Arrange tab's Free placement on any selected object; `--paper-page` for the Page tab's PPI row.
+
+## 2026-11-17 — rung 14 lead (Opus 5.5, high)
+
+- Session start: `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` → `BUILD head=eaa223a dirty=no rebuilt=11`.
+  Budget 15 points by chris, alone on the weekly meter, start 42 % (given by chris, logged). Asked again: the Label gray
+  stays parked; **the A5 X rhythm question was reopened and closed** by chris ("Ratify today's behaviour
+  (Recommended)": the rhythm wins for spacing, frames follow their constraints); spec §6.3 amended, debt and board
+  updated (`198707a`).
+- bbq, 9 questions, every recommendation taken: split 14a/14b, a lint block in profiles, the thresholds as listed, the
+  preflight sheet and swatches as sketched (record `docs/bbq/2026-11-17-rung-14-lint-and-preflight.md`).
+- 14a built by a Sonnet 5.5 high builder (400,873 tokens; its entry above). The lead opened `--lint-page` with scratch
+  config folders (window starts, 14 findings) and confirmed its checks; chris approved ("approved. meter read is 46%.",
+  `e215aec`). ADR-012 amended and ratified by chris ("ratify now", `178e094`; `adr-check` → `16 ADRs, 0 failure(s)`).
+- 14b built by a Sonnet 5.5 high builder (477,305 tokens; its entry above). The lead confirmed CI, Coverage and Fuzz
+  green on `418a411`, goldens `sha256sum -c` 29 OK, no fixture change since `e215aec`, format 0.15.0, and looked at its
+  screenshots of the Lint tab, preflight sheet and swatches. chris approved ("14b approved. meter 52%").
+- Close: version 0.14.0, `docs/arcs/v1/release-notes/v0.14.0.md`, tag `v0.14.0`; board row and re-plan; STATUS.md (rung
+  12 bullet and two Log lines moved word for word to `docs/STATUS-archive.md`); rung 15 prompt
+  `docs/arcs/v1/rung-15-PROMPT-2026-11-17.md`; calibration row. `spend-ledger.py measure --latest --meter 42 52` →
+  `sonnet 86% · opus 14% | $36.24 | 42 → 52 · alone here · 10 pts`.

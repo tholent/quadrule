@@ -175,21 +175,6 @@ The project's live state. Update it when work lands. Every claim cites at least 
   held in rows (`crates/app/src/chip.rs`). Speed on the Pi, 90th percentile, chip canvas: typing about 9 ms (was 82),
   dragging 4–6 ms, drawing 23–25 ms; export canvas about 20 ms throughout (`docs/STATUS-log.md`). Try it:
   `cargo run --release -p quadrule-app -- --textbox-page` or `-- --fonts-page`.
-- Rung 12, missing fonts and turning patterns, is done: 12a approved by chris 2026-11-16 ("I approve 12a"), 12b
-  2026-11-17 ("approved"), shipped together as `v0.12.0` (record `docs/bbq/2026-11-16-rung-12-missing-fonts.md`, with
-  its Amendments). **12a**: a page whose fonts are missing opens from its saved outlines with a yellow bar and a Missing
-  fonts dialog (Use saved outlines, read-only with a badge; Substitute by measured font signature, rewriting the font;
-  Locate fonts…; Remember for this document); installed fonts whose `fsType` allows it are embedded in
-  `assets/fonts/` (Embed fonts tick, on); missing characters may come from any installed font; lint L11 and L20 with a
-  sheet on Save, Save As and Export (`crates/ui/src/missing.rs`, `crates/ui/src/missing_ui.rs`,
-  `crates/text/src/registry.rs`, `crates/lint/src/lib.rs`). **12b**: pattern regions turn whole (handle, Rotation
-  field, groups), and a Pattern angle (Style tab) turns the ruling inside its frame, cut at the frame (chris's addition,
-  Q8 amended) (`crates/layout/src/pattern.rs`). Hinting moved to v1.1 (ADR-002 amendment 2026-11-16). File format
-  0.13.0 (`crates/render/tests/fixtures/v0.12/`). Four golden lines added (`patterns-turned_*`, `pattern-angle_*`);
-  the 22 older ones unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: missing-font
-  page drag 19.8 ms export, 5.2 chip; pattern-angle page drag about 21 export, 3.6 chip, draw about 21 export, 23.4 chip
-  (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --missing-fonts-page`,
-  `-- --turned-patterns-page` or `-- --pattern-angle-page`.
 - Rung 13, the profile system and paper sizes, is done: 13a and 13b approved by chris 2026-11-17 ("approved" each),
   shipped together as `v0.13.0` (record `docs/bbq/2026-11-17-rung-13-profile-system.md`, with its Amendments; ADR-016
   ratified). **13a**: a Profiles window (toolbar and Page tab) to edit every profile; an edited Manta or Nomad is a local
@@ -205,6 +190,18 @@ The project's live state. Update it when work lands. Every claim cites at least 
   4–12 ms chip; Tabloid at 600 PPI 410–440 ms export (over the 50 ms line; ruled debt for rung 17 by chris, "C"), 4 ms
   chip (`docs/STATUS-log.md`, `docs/STATUS-debt.md`). Try it: `cargo run --release -p quadrule-app -- --profiles` or
   `-- --paper-page`.
+- Rung 14, lint and preflight, is done: 14a and 14b approved by chris 2026-11-17 ("approved", "14b approved"), shipped
+  together as `v0.14.0` (record `docs/bbq/2026-11-17-rung-14-lint-and-preflight.md`, with its Amendments; ADR-012
+  amended). **14a**: L03, L05, L07, L09, L13, L14 judge the gray on the page (opacity included) against limits in each
+  profile's new `lint` block (`LintThresholds`), filled from the calibration sheets, edited in the Profiles window's
+  Lint checks section; lint lists the checks skipped on each device and why; L02's diagonal note moved to L14
+  (`crates/lint/src/lib.rs`, `crates/profiles/src/lib.rs`). **14b**: the Lint tab's Findings for picker, quick fixes
+  (`crates/lint/src/fix.rs`), Ignore this rule for this document and Ignored rules, Free placement (Arrange tab), the
+  Before you export sheet with the installed-fonts row, gray swatches with the matches badge and Use recommended
+  (`crates/ui/src/lint_ui.rs`, `crates/ui/src/preflight.rs`, `crates/ui/src/swatches.rs`). File format 0.15.0
+  (`crates/render/tests/fixtures/v0.14/`). The 29 golden lines unchanged (`crates/render/tests/golden/SHA256SUMS`).
+  Speed on the Pi, 90th percentile: 17–23 ms on the lint page, 30.6 ms worst (groups page drag, chip)
+  (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --lint-page`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -212,7 +209,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `docs/device-measurements/supernote.a6x2/calibration.md`, `crates/render/tests/golden/SHA256SUMS`).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
-- A linter with the seven rules that need no calibration (`crates/lint/src/lib.rs`); `cargo xtask lint`.
+- A linter with eighteen rules of spec §8.3 (L04 and L12 are v1.1) (`crates/lint/src/lib.rs`); `cargo xtask lint`.
 - The `.quad` reader is fuzzed with cargo-fuzz: 3.3 million runs on the Pi, 60 s on every CI push, no crash
   (`crates/format/fuzz/fuzz_targets/open_quad.rs`).
 - Licensed Apache-2.0 (`LICENSE`); the repository is public. every Rust file carries the header, enforced by a test
@@ -250,8 +247,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
-  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). Next: rung 14, lint and preflight; the
-  next lead's prompt is `docs/arcs/v1/rung-14-PROMPT-2026-11-17.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
+  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). Next: rung 15,
+  export; the next lead's prompt is `docs/arcs/v1/rung-15-PROMPT-2026-11-17.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
   buildable now; chris designs one per category (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
@@ -276,12 +273,6 @@ debt in `docs/STATUS-debt.md`, each session in `docs/STATUS-log.md` (dated, newe
 month when it grows), and finished entries, moved word for word, in `docs/STATUS-archive.md`. Every bullet under Now, Next
 and Known debt cites at least one file that exists. Keep this file under 300 lines; the project-prep
 skill's `scripts/status-check.py` checks both.
-- 2026-11-13: rung 9 planned (bbq, 8 questions; one rung, one look), built (Sonnet 5.5, high), changed at chris's look
-  (isometric turned 90°, hex cut at the frame, bigger major dots; ADR-014 amended), approved; `v0.9.0`; board
-  re-planned; rung 10 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-10-PROMPT-2026-11-13.md`).
-- 2026-11-13: rung 10 planned (bbq, 8 questions; one rung, one look), built (Sonnet 5.5, high), chip-canvas speed fix
-  at chris's word (draw 49.7 → 23.6 ms), approved; `v0.10.0`; board re-planned; rung 11 prompt written
-  (`docs/STATUS-log.md`, `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`).
 - 2026-11-14/16: rung 11 planned (bbq, 8 questions; text rotation and typing on the canvas added by chris), split
   11a/11b, built (four Sonnet 5.5 high legs), baseline gap and chip-typing fix at chris's word, approved; one release
   `v0.11.0`; ADR-002 amended; board re-planned; rung 12 prompt written (`docs/STATUS-log.md`,
@@ -294,3 +285,6 @@ skill's `scripts/status-check.py` checks both.
   13a/13b, built (two Sonnet 5.5 high builders), approved; ADR-016 ratified; large paper pages on the export canvas
   ruled debt for rung 17; one release `v0.13.0`; board re-planned; rung 14 prompt written (`docs/STATUS-log.md`,
   `docs/arcs/v1/rung-14-PROMPT-2026-11-17.md`).
+- 2026-11-17: rung 14 planned (bbq, 9 questions; the A5 X rhythm question closed by chris), split 14a/14b, built (two
+  Sonnet 5.5 high builders), approved; ADR-012 amended (lint limits in profile data); one release `v0.14.0`; board
+  re-planned; rung 15 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-15-PROMPT-2026-11-17.md`).

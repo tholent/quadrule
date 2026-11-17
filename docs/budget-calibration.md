@@ -85,3 +85,10 @@ builders: 13a (387,601 tokens reported by the harness) and 13b (388,875). `spend
 10-point share**; the share line (42 %) was one point away at 13b's approval, so no further builder was started and the
 close (release, docs, prompt) was the lead's own. No stop line fired. Alone on the meter. K not refitted this session.
 Room left before Saturday 2026-11-21's 5 pm EST reset: 34 points under the 75 % hard stop.
+
+2026-11-17, rung 14 (lint and preflight), one lead session (Opus 5.5 high) and two Sonnet 5.5 high builders: 14a
+(400,873 tokens reported by the harness) and 14b (477,305). `spend-ledger.py measure --latest --meter 42 52 --lead "Opus
+5.5, high"` → `fresh 1.0k · cached 132.3M · written 1.7M · out 380k | sonnet 86% · opus 14% | $36.24 | 42 → 52 · alone
+here · 10 pts`. Readings (chris): 42 % start, 46 % after 14a, 52 % after 14b. **10 points against a 15-point share.** No
+stop line fired. Alone on the meter. K not refitted this session. Room left before Saturday 2026-11-21's 5 pm EST
+reset: 23 points under the 75 % hard stop.
