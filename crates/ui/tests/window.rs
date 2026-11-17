@@ -19,7 +19,7 @@ use egui::{Key, Modifiers};
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use quadrule_model::sample::ids;
-use quadrule_ui::{After, ExportWhich, Recovery, Request, Tab, Viewer, ViewerUi, Zoom};
+use quadrule_ui::{After, Recovery, Request, Tab, Viewer, ViewerUi, Zoom};
 
 fn pass(ok: bool) -> &'static str {
     if ok { "pass" } else { "fail" }
@@ -82,11 +82,33 @@ fn dialogs_are_requested_not_opened() {
     h.run();
     h.get_by_label("Export").click();
     h.run();
-    h.get_by_label("Export all devices…").click();
+    h.get_by_label_contains("Export…").click();
     h.run();
-    // The sample page has warnings, so Export opens the preflight sheet first (rung 14b); Export anyway sends
-    // the request on.
-    let sheet = h.state().ui.preflight_open() && h.state().requests == [Request::OpenDialog];
+    // The Export sheet opens; Change… asks the app for the folder dialog.
+    let sheet_open = h.state().ui.export_sheet_open();
+    h.get_by_label("Change…").click();
+    h.run();
+    let asked = h.state().requests.contains(&Request::ExportFolderDialog);
+    // Export goes on to the sample page's warnings, so the preflight sheet comes first (rung 14b); Export
+    // anyway writes the files, into a scratch folder, and the completion sheet shows.
+    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("window-export");
+    std::fs::create_dir_all(&dir).unwrap();
+    h.state_mut().ui.export_set_folder(dir.clone());
+    h.run();
+    for _ in 0..6 {
+        h.step();
+    }
+    let go: Vec<_> = h
+        .get_all_by_role_and_label(egui::accesskit::Role::Button, "Export")
+        .collect();
+    go.last().unwrap().hover();
+    h.run();
+    let go: Vec<_> = h
+        .get_all_by_role_and_label(egui::accesskit::Role::Button, "Export")
+        .collect();
+    go.last().unwrap().click();
+    h.run();
+    let sheet = h.state().ui.preflight_open() && !h.state().ui.export_sheet_open();
     for _ in 0..6 {
         h.step();
     }
@@ -94,13 +116,10 @@ fn dialogs_are_requested_not_opened() {
     h.run();
     h.get_by_label("Export anyway").click();
     h.run();
-    let all = h
-        .state()
-        .requests
-        .contains(&Request::ExportDialog(ExportWhich::AllDevices));
-    let ok = open && sheet && all;
+    let all = h.state().ui.completion_open() && dir.join("rung-1-slice-manta.png").is_file();
+    let ok = open && sheet_open && asked && sheet && all;
     println!(
-        "CHECK crate=ui name=window_requests result={} open_dialog={open} sheet_first={sheet} export_all={all} requests={:?}",
+        "CHECK crate=ui name=window_requests result={} open_dialog={open} export_sheet={sheet_open} folder_dialog_asked={asked} preflight_first={sheet} files_and_completion={all} requests={:?}",
         pass(ok),
         h.state().requests
     );

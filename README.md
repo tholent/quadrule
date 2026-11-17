@@ -69,13 +69,22 @@ and error.
   with an inner radius. Curves and slanted edges are smooth; straight edges stay sharp on whole pixels.
 - Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock and reorder layers;
   unlimited undo and redo; autosave with recovery after a crash.
-- Export a PNG for the Manta or the Nomad, named like `isometric-5mm-manta.png`. The name comes from one path template
-  for the whole app (`{title}-{device}.png` to start with; a `/` in it makes folders, and the tokens are `{title}
-  {device} {profile} {model} {width} {height} {orientation} {type} {date} {version} {set}`), kept with the folder you
-  last exported each document to, the Set, and the "text note" tick in `settings.ron` in the config folder (on Linux
-  `~/.config/quadrule/`). Until the Export sheet arrives (the next step of this work), the template is edited in that
-  file, and Export… still asks for a folder. Each PNG carries a text note (Software `quadrule <version>`, Title the
-  document's title) unless the note is turned off in the same file; the pixels are the same either way.
+- Export PNGs for the devices a page targets. **Export** in the toolbar opens the **Export sheet** (Ctrl+Shift+E;
+  Cmd on a Mac): pick This device or All devices, the folder (Change…), the **Path** and a **Set**, and read the
+  list of files that will be written (a mistake shows in red and holds Export back). **Export again** (Ctrl+E) writes
+  once more with the last choices and no sheet; with nothing exported yet from the document it opens the sheet.
+  Every choice is remembered. After an export a **completion sheet** shows a picture of each file, where they went,
+  Reveal in folder, and a folded "Where do these go?" note about the Supernote's MyStyle folder.
+  The **Path** is one template for the whole app. `/` makes a folder, and these words in braces are filled in:
+  `{title}`, `{device}` (also `{profile}`), `{model}`, `{width}`, `{height}`, `{orientation}`, `{type}`, `{date}`,
+  `{version}` and `{set}`; an empty Set leaves its folder out. Names keep to letters, digits, hyphens and
+  underscores, and a path can never leave the chosen folder. It starts as `{title}-{device}.png` (for example
+  `isometric-5mm-manta.png`); the Presets menu offers Flat, Folder per device (`{device}/{title}-{device}.png`) and
+  Device, then set (`{device}/{set}/{title}-{device}.png`). A file that is already there is replaced; the completion
+  sheet says how many were. Each PNG carries a text note (Software `quadrule <version>`, Title the document's
+  title) unless "Add a text note" is unticked; the pixels are the same either way. The choices, and the folder each
+  document last exported to, are kept in `settings.ron` in the config folder (on Linux `~/.config/quadrule/`),
+  never in the `.quad` file.
 - Text boxes: double-click one (or draw a new one) to type in it, right where the letters are, with a caret, Shift to
   select, Ctrl+A, Ctrl+C, Ctrl+X and Ctrl+V as plain text, Enter for a new paragraph, Ctrl+Z back through the words you
   typed, and Escape or a click outside to finish (the whole session is one undo step). In the Text tab, Sizing is Auto

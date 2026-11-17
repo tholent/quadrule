@@ -35,7 +35,7 @@
 //! `--fonts-page` (the fonts page: a page of text; the benchmarks then run over it and the drag moves its dot grid). Rung 11b adds
 //! `--textbox-page` (the text-box page, same use), `--missing-fonts-page` (the same page set in a font this computer lacks) and `--bench-type [frames]` (type into a long text box; `name=type_bench`). Rung 12b adds
 //! `--pattern-angle-page` (the ruling turned inside its frame; the benchmarks then run over it) and
-//! `--turned-patterns-page` (pattern regions turned whole, one in a group and one in a repeat; the benchmarks then run over it, and `--bench-rotate` turns its 45 degree grid). Rung 14b adds `--look lint|style|preflight` (start with that part showing, for a screenshot). Rung 14a adds `--lint-page` (objects that make the gray, text-size, handwriting, dark-fill and thin-line rules fire, beside ones that pass; the benchmarks then run over it). Rung 13b adds
+//! `--turned-patterns-page` (pattern regions turned whole, one in a group and one in a repeat; the benchmarks then run over it, and `--bench-rotate` turns its 45 degree grid). Rung 14b adds `--look lint|style|preflight|export|…` (start with that part showing, for a screenshot). Rung 14a adds `--lint-page` (objects that make the gray, text-size, handwriting, dark-fill and thin-line rules fire, beside ones that pass; the benchmarks then run over it). Rung 13b adds
 //! `--paper-page` (ISO A4 at 300 PPI and ISO A5 at 600; the benchmarks then run over it) and `--paper-landscape-page` (US Letter held sideways, exported wide).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
@@ -53,6 +53,17 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Preference keys in eframe's storage.
+/// What `--look` takes: a part of the window to start with, for a screenshot (rungs 14b and 15).
+const LOOKS: [&str; 8] = [
+    "lint",
+    "style",
+    "preflight",
+    "export",
+    "export-preset",
+    "export-mistake",
+    "exported",
+    "exported-open",
+];
 const KEY_THEME: &str = "theme";
 const KEY_RULER: &str = "screen_px_per_mm";
 /// The snap helpers and the rhythm overlay (rung 4 bbq, Defaulted "Toggles"): app settings.
@@ -208,6 +219,10 @@ impl App {
             ui.open_profiles_window();
         }
         if let Some(look) = &args.look {
+            // A look with no page named opens the sample page, so there is something to export.
+            if ui.viewer.open.is_none() {
+                ui.viewer.open_sample();
+            }
             ui.show_look(look);
         }
         ui.note_damaged_profiles();
@@ -308,20 +323,22 @@ impl App {
                     self.ui.profiles_export_to(&path);
                 }
             }
-            Request::ExportAgain => {
-                // A failure is shown in the status bar by the viewer itself.
-                let _ = self.ui.viewer.export_again();
-            }
-            Request::ExportDialog(which) => {
+            Request::ExportFolderDialog => {
                 let mut dialog = rfd::FileDialog::new();
-                // Where this document last exported, else the last folder used, else its own folder,
-                // else home (rung 15 bbq, Q4).
-                if let Some(dir) = self.ui.viewer.export_start_folder() {
+                // Where the sheet's folder is now: where this document last exported, else the last folder
+                // used, else its own folder, else home (rung 15 bbq, Q4).
+                if let Some(dir) = self.ui.export_dialog_start() {
                     dialog = dialog.set_directory(dir);
                 }
                 if let Some(dir) = dialog.pick_folder() {
-                    // A failure is shown in the status bar by the viewer itself.
-                    let _ = self.ui.viewer.export(&dir, which);
+                    self.ui.export_set_folder(dir);
+                }
+            }
+            Request::RevealFolder(folder) => {
+                let (program, args) = quadrule_ui::export_ui::reveal_command(&folder);
+                // The file manager is not waited for (explorer.exe, for one, exits with 1 when it works).
+                if let Err(e) = std::process::Command::new(program).args(args).spawn() {
+                    self.ui.reveal_failed(format!("{program}: {e}"));
                 }
             }
         }
@@ -506,7 +523,7 @@ struct Args {
     fonts_page: bool,
     /// Open the Profiles window at start (`--profiles`), for a look at it (rung 13a).
     profiles: bool,
-    /// Start with the window showing one part, for a look at it (`--look lint|style|preflight`, rung 14b): the
+    /// Start with the window showing one part, for a look at it (`--look lint|style|preflight|export|…`, rung 14b): the
     /// Lint tab, the Style tab with a pale custom line selected, or the sheet before Export.
     look: Option<String>,
     /// Open the rung 11b text-box page instead of the empty start (`--textbox-page`); the benchmarks
@@ -588,10 +605,10 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.profiles = true;
         } else if a == "--look" {
             match args.next().and_then(|v| v.into_string().ok()) {
-                Some(v) if ["lint", "style", "preflight"].contains(&v.as_str()) => {
+                Some(v) if LOOKS.contains(&v.as_str()) => {
                     out.look = Some(v)
                 }
-                _ => return Err("--look takes lint, style or preflight".into()),
+                _ => return Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported or exported-open".into()),
             }
         } else if a == "--fonts-page" {
             out.fonts_page = true;
@@ -775,7 +792,7 @@ mod tests {
             ),
             (
                 p(&["--look", "sparkles"]),
-                Err("--look takes lint, style or preflight".into()),
+                Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported or exported-open".into()),
             ),
             (
                 p(&["--paper-page", "--bench-drag", "30"]),

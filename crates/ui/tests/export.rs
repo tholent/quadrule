@@ -539,31 +539,40 @@ fn export_again_goes_through_the_one_preflight_sheet() {
     let mut v = Viewer::default();
     v.open_sample();
     let mut ui = ViewerUi::new(v);
-    // Nothing exported yet: it asks the way the toolbar does (the sheet stands in later), behind the preflight.
-    let mut reqs = Vec::new();
-    ui.ask_export_again(&mut reqs);
-    let first_sheet = ui.preflight_open() && reqs.is_empty();
-    let sent = ui.answer_preflight(true);
-    let first_dialog =
-        sent == [Request::ExportDialog(ExportWhich::AllDevices)] && !ui.preflight_open();
-    // After an export: Export again is the request itself, held behind the same single sheet.
+    // Nothing exported yet: Export again opens the Export sheet, not a preflight sheet and not a dialog.
+    ui.ask_export_again();
+    let sheet = ui.export_sheet_open() && !ui.preflight_open();
+    // The sheet's Export goes on behind the one preflight sheet (the sample page has warnings); never both.
+    ui.export_set_folder(dir.clone());
     let req = ui.viewer.export_request(None, dir.clone());
-    ui.viewer.run_export(&req).unwrap();
-    let mut reqs = Vec::new();
-    ui.ask_export_again(&mut reqs);
-    ui.ask_export_again(&mut reqs);
-    let held = ui.preflight_open() && reqs.is_empty();
-    let sent = ui.answer_preflight(true);
-    let again = sent == [Request::ExportAgain] && !ui.preflight_open();
+    let _ = req;
+    ui.open_export_sheet();
+    ui.export_set_folder(dir.clone());
+    // After an export: Export again is held behind the same single sheet.
+    ui.viewer
+        .run_export(&ui.viewer.export_request(None, dir.clone()))
+        .unwrap();
+    ui.ask_export_again();
+    ui.ask_export_again();
+    let held = ui.preflight_open() && !ui.export_sheet_open() && !ui.completion_open();
+    ui.answer_preflight(true);
+    // Export again says it in the one-line notice and shows no completion sheet.
+    let again = !ui.preflight_open()
+        && !ui.completion_open()
+        && ui
+            .viewer
+            .notice
+            .as_ref()
+            .is_some_and(|n| n.message.id == "notice-exported");
     // Cancel drops it.
-    let mut reqs = Vec::new();
-    ui.ask_export_again(&mut reqs);
-    let cancelled = ui.answer_preflight(false).is_empty() && !ui.preflight_open();
-    let ok = first_sheet && first_dialog && held && again && cancelled;
+    ui.ask_export_again();
+    ui.answer_preflight(false);
+    let cancelled = !ui.preflight_open() && !ui.completion_open();
+    let ok = sheet && held && again && cancelled;
     println!(
-        "CHECK crate=ui name=export_again_preflight result={} first_behind_sheet={first_sheet} first_is_dialog={first_dialog} again_held={held} again_sent={again} cancel_drops={cancelled}",
+        "CHECK crate=ui name=export_again_preflight result={} sheet_when_none={sheet} again_held={held} again_one_line_notice={again} cancel_drops={cancelled}",
         pass(ok)
     );
     assert!(ok);
-    let _ = export_path::DEFAULT_TEMPLATE;
+    let _ = (export_path::DEFAULT_TEMPLATE, Request::ExportFolderDialog);
 }

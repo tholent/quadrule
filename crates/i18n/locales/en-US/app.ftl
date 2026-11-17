@@ -26,8 +26,8 @@ app-zoom-out = Zoom out
 app-zoom-real = Real size
 app-lint-count = ⚠ { $count }
 app-export = Export
-app-export-this = Export this device…
-app-export-all = Export all devices…
+app-export-sheet = Export…
+app-export-again = Export again
 app-view = View
 app-theme = Theme
 app-theme-system = Follow the system
@@ -567,6 +567,40 @@ app-pre-export = Export anyway
 app-pre-clear = Nothing is left to warn about.
 app-pre-rule = { $rule }
 app-pre-paper = { $device } is paper, which has no screen to judge against, so these checks do not run on it: { $rules }.
+
+# The Export sheet and the completion sheet (rung 15; napkin §11).
+app-exp-title = Export
+app-exp-devices = Devices
+app-exp-this = This device: { $name }
+app-exp-all = All devices: { $names }
+app-exp-name = { $name }
+app-exp-folder = Folder
+app-exp-change = Change…
+app-exp-no-folder = No folder chosen yet
+app-exp-path = Path
+app-exp-presets = Presets
+app-exp-path-tip = Folders and names for the files. { "{title}" }, { "{device}" }, { "{set}" }, { "{date}" } and the other words in braces are filled in; a slash makes a folder.
+app-exp-set = Set
+app-exp-set-tip = A name for a group of templates. It fills { "{set}" } in the path; leave it empty to leave that folder out.
+app-exp-files = Files that will be written
+app-exp-no-files = No file to write.
+app-exp-note = Add a text note (app, version, title)
+app-exp-cancel = Cancel
+app-exp-go = Export
+app-done-title = { $count ->
+        [one] Exported 1 file
+       *[other] Exported { $count } files
+    }
+app-done-in = in { $folder }
+app-done-replaced = { $count ->
+        [one] 1 file took the place of one that was there
+       *[other] { $count } files took the place of ones that were there
+    }
+app-done-where = Where do these go?
+app-done-where-body = On your Supernote, templates go in the MyStyle folder. Files in a folder inside MyStyle appear under the Customization tab in notes.
+app-done-reveal = Reveal in folder
+app-done-done = Done
+notice-reveal-failed = Could not open the folder: { $error }
 
 # Free placement (rung 14b).
 app-free-placement = Free placement

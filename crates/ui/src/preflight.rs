@@ -19,18 +19,28 @@
 //! fewer checks. Buttons: Cancel and Export anyway. With no Warn finding and no L20, Export goes straight on.
 //! Save and Save As keep rung 12's font sheet ([`crate::missing_ui`]) exactly as it was.
 
+use crate::export::ExportRequest;
 use crate::lint_ui::{Action, RowStyle};
-use crate::view::{Request, ViewerUi};
+use crate::view::ViewerUi;
 use crate::viewer::{ExportWhich, Viewer};
 use quadrule_i18n::{Arg, Message};
 use quadrule_lint::{Finding, Severity, SkipReason, skipped_checks};
 use quadrule_profiles::active::lookup_in;
 
+/// What Export anyway goes on to do.
+#[derive(Clone, Debug)]
+pub enum Then {
+    /// Write the files the Export sheet asked for, then show the completion sheet.
+    Run(ExportRequest),
+    /// Export again with the remembered choices.
+    Again,
+}
+
 /// The sheet while it shows: the export it holds back.
 #[derive(Clone, Debug)]
 pub struct Preflight {
-    /// The export request, sent on when Export anyway is pressed.
-    pub request: Request,
+    /// What happens when Export anyway is pressed.
+    pub then: Then,
     /// Which devices are being exported.
     pub which: ExportWhich,
     /// The "N notes" fold is open.
@@ -120,46 +130,9 @@ impl Viewer {
 }
 
 impl ViewerUi {
-    /// Asks to export again with the remembered choices (the next leg binds it to Ctrl+E and the menu). When
-    /// something was exported from this document before, the request goes on at once or, when the preflight
-    /// rules call for it, behind the one preflight sheet for the remembered devices. When nothing was, it asks
-    /// for the folder dialog as the toolbar's items do, standing in for the Export sheet.
-    pub fn ask_export_again(&mut self, requests: &mut Vec<Request>) {
-        let which = self.viewer.settings.devices.into();
-        if !self.viewer.can_export_again() {
-            self.ask_export(which, requests);
-            return;
-        }
-        let request = Request::ExportAgain;
-        if self.viewer.preflight_report(which).needs_sheet() {
-            self.preflight = Some(Preflight {
-                request,
-                which,
-                notes_open: false,
-            });
-        } else {
-            requests.push(request);
-        }
-    }
-
     /// Whether the preflight sheet is showing.
     pub fn preflight_open(&self) -> bool {
         self.preflight.is_some()
-    }
-
-    /// Asks to export: the folder dialog goes on at once when the sheet is not wanted, otherwise the sheet opens
-    /// and holds the request back. Rung 12's font sheet is not shown for an export; its content is the L20 row.
-    pub(crate) fn ask_export(&mut self, which: ExportWhich, requests: &mut Vec<Request>) {
-        let request = Request::ExportDialog(which);
-        if self.viewer.preflight_report(which).needs_sheet() {
-            self.preflight = Some(Preflight {
-                request,
-                which,
-                notes_open: false,
-            });
-        } else {
-            requests.push(request);
-        }
     }
 
     /// Starts with one part of the window showing, for a look at it (`quadrule --look lint|style|preflight`):
@@ -183,18 +156,22 @@ impl ViewerUi {
                 }
             }
             "preflight" => {
-                let mut ignored = Vec::new();
-                self.ask_export(ExportWhich::ThisDevice, &mut ignored);
+                let which = ExportWhich::ThisDevice;
+                let req = self.sheet_request(which);
+                self.begin_export(req, which);
             }
-            _ => {}
+            other => self.show_export_look(other),
         }
     }
 
     /// Answers the sheet: Export anyway sends the request on, Cancel drops it.
-    pub fn answer_preflight(&mut self, export: bool) -> Vec<Request> {
+    pub fn answer_preflight(&mut self, export: bool) {
         match self.preflight.take() {
-            Some(p) if export => vec![p.request],
-            _ => Vec::new(),
+            Some(p) if export => match p.then {
+                Then::Run(req) => self.run_sheet_export(req),
+                Then::Again => self.do_export_again(),
+            },
+            _ => {}
         }
     }
 
@@ -234,7 +211,7 @@ impl ViewerUi {
     }
 
     /// The sheet shown before Export when there is something to say (Q5).
-    pub(crate) fn preflight_window(&mut self, ctx: &egui::Context, requests: &mut Vec<Request>) {
+    pub(crate) fn preflight_window(&mut self, ctx: &egui::Context) {
         let Some(sheet) = self.preflight.clone() else {
             return;
         };
@@ -341,7 +318,7 @@ impl ViewerUi {
             self.do_action(a, &l16);
         }
         if let Some(go) = answer {
-            requests.extend(self.answer_preflight(go));
+            self.answer_preflight(go);
         }
     }
 }

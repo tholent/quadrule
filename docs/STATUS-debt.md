@@ -277,7 +277,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   page (opacity included), so on a faded object it may pick a gray that looks far from the one shown. A look fix (a width, a gray, a
   role, a binding) is the shared design on every device; only a place and a text size go through the device's overrides. The Lint
   tab renders every device's page the first time All devices is shown (the strip already does). The preflight sheet lists the devices
-  being exported (this device, or all), puts L20 under Document whichever device is shown, and hides the L20 row when the document
+  the Export sheet (or Export again) is exporting (this device, or all; rung 15 paid the "from the Export sheet's choice" part), puts L20 under Document whichever device is shown, and hides the L20 row when the document
   says "Don't warn again" (rung 12's tick); its list scrolls when long. The Info "N notes" fold is not remembered between sheets.
   Several buttons share one accessible name (every row's "Ignore this rule for this document"). The sheet's controls need a pointer
   that has moved onto them first in a headless test (the sheet fades in over a few frames). `--look lint|style|preflight` is a

@@ -30,8 +30,8 @@ use crate::panels::{Renaming, Tab};
 use crate::recovery::{Autosave, Recovered, Recovery};
 use crate::tools::{BAR_WIDTH, Tool};
 use crate::viewer::{
-    CARD_WIDTH_MM, ExportWhich, PIXEL_GRID_FROM, Source, TOOLBARS_SHOWN, Tile, Viewer, Zoom,
-    ruler_px_per_mm, shrink, tiles,
+    CARD_WIDTH_MM, PIXEL_GRID_FROM, Source, TOOLBARS_SHOWN, Tile, Viewer, Zoom, ruler_px_per_mm,
+    shrink, tiles,
 };
 use egui::{
     Color32, ColorImage, CornerRadius, CursorIcon, Key, KeyboardShortcut, Modifiers, PointerButton,
@@ -53,11 +53,12 @@ use std::path::{Path, PathBuf};
 pub enum Request {
     /// Show the system dialog to pick a `.quad` file.
     OpenDialog,
-    /// Show the system dialog to pick a folder, then export.
-    ExportDialog(ExportWhich),
-    /// Export once more with the remembered choices, into the remembered folder, with no dialog
-    /// ([`Viewer::export_again`]).
-    ExportAgain,
+    /// Show the system dialog to pick the Export sheet's folder (Change…), starting at
+    /// [`ViewerUi::export_dialog_start`], then call [`ViewerUi::export_set_folder`] with the pick.
+    ExportFolderDialog,
+    /// Show this folder in the system's file manager (Reveal in folder on the completion sheet; see
+    /// [`crate::export_ui::reveal_command`]); on failure call [`ViewerUi::reveal_failed`].
+    RevealFolder(PathBuf),
     /// Show the system dialog to pick where to save, then call [`ViewerUi::save_as`] with the
     /// path and this follow-up.
     SaveAsDialog(Option<After>),
@@ -215,6 +216,10 @@ pub struct ViewerUi {
     pub(crate) show_all_grays: std::collections::HashSet<&'static str>,
     /// The preflight sheet before Export, while it shows (rung 14b).
     pub(crate) preflight: Option<crate::preflight::Preflight>,
+    /// The Export sheet, while it shows (rung 15).
+    pub(crate) export_sheet: Option<crate::export_ui::ExportSheet>,
+    /// The completion sheet after an export from the Export sheet, while it shows (rung 15).
+    pub(crate) completion: Option<crate::export_ui::Completion>,
     /// The device the Lint tab lists; `None` is All devices (rung 14b; view state, not saved).
     pub(crate) lint_device: Option<String>,
     /// The missing font the font picker is choosing a substitute for (Other font… in the dialog).
@@ -312,6 +317,8 @@ impl ViewerUi {
             font_sheet: None,
             sheet_dont_warn: false,
             preflight: None,
+            export_sheet: None,
+            completion: None,
             show_all_grays: Default::default(),
             lint_device: None,
             font_picker_for: None,
@@ -420,7 +427,9 @@ impl ViewerUi {
         self.new_dialog(&ctx, &mut requests);
         self.unsaved_prompt(&ctx, &mut requests);
         self.font_sheet_window(&ctx, &mut requests);
-        self.preflight_window(&ctx, &mut requests);
+        self.preflight_window(&ctx);
+        self.export_sheet_window(&ctx, &mut requests);
+        self.completion_window(&ctx, &mut requests);
         self.recovery_prompt(&ctx);
         requests
     }
@@ -445,6 +454,7 @@ impl ViewerUi {
         if self.pending.is_some() || self.new_dialog.is_some() {
             return;
         }
+        let exporting = self.export_sheets_open();
         let cmd = Modifiers::COMMAND;
         let shift_cmd = Modifiers::COMMAND | Modifiers::SHIFT;
         let key = |m: Modifiers, k: Key| {
@@ -480,6 +490,15 @@ impl ViewerUi {
         }
         if ctx.egui_wants_keyboard_input() {
             return;
+        }
+        // Export… and Export again (rung 15 bbq, Q2): the more specific first. Neither clashes with a key the
+        // app already uses (E alone is the Ellipse tool; Ctrl is not held for it).
+        if !exporting {
+            if key(shift_cmd, Key::E) {
+                self.open_export_sheet();
+            } else if key(cmd, Key::E) {
+                self.ask_export_again();
+            }
         }
         if key(shift_cmd, Key::Z) || key(cmd, Key::Y) {
             self.viewer.redo();
@@ -1236,11 +1255,18 @@ impl ViewerUi {
             // Export (rung 2 bbq, Q8).
             ui.add_enabled_ui(open, |ui| {
                 ui.menu_button(self.t("app-export"), |ui| {
-                    if ui.button(self.t("app-export-this")).clicked() {
-                        self.ask_export(ExportWhich::ThisDevice, requests);
+                    let shortcut = |ui: &egui::Ui, m: Modifiers| {
+                        ui.ctx().format_shortcut(&KeyboardShortcut::new(m, Key::E))
+                    };
+                    let sheet = egui::Button::new(self.t("app-export-sheet"))
+                        .shortcut_text(shortcut(ui, Modifiers::COMMAND | Modifiers::SHIFT));
+                    if ui.add(sheet).clicked() {
+                        self.open_export_sheet();
                     }
-                    if ui.button(self.t("app-export-all")).clicked() {
-                        self.ask_export(ExportWhich::AllDevices, requests);
+                    let again = egui::Button::new(self.t("app-export-again"))
+                        .shortcut_text(shortcut(ui, Modifiers::COMMAND));
+                    if ui.add(again).clicked() {
+                        self.ask_export_again();
                     }
                 });
             });

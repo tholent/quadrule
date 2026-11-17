@@ -139,8 +139,8 @@ impl ExportError {
                 second,
                 path,
             }) => Message::new("export-error-same-path")
-                .text("first", first.clone())
-                .text("second", second.clone())
+                .text("first", crate::viewer::device_label(first))
+                .text("second", crate::viewer::device_label(second))
                 .text("path", path.clone()),
             ExportError::Page(e) | ExportError::Write(e) => {
                 Message::new("notice-export-failed").text("error", e.clone())

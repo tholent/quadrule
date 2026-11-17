@@ -21,7 +21,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 use quadrule_model::sample::*;
 use quadrule_model::*;
-use quadrule_ui::{ExportWhich, Request, Tab, Viewer, ViewerUi};
+use quadrule_ui::{DevicesChoice, Request, Tab, Viewer, ViewerUi};
 
 fn pass(ok: bool) -> &'static str {
     if ok { "pass" } else { "fail" }
@@ -34,6 +34,7 @@ struct Window {
 
 fn window(doc: Document) -> Harness<'static, Window> {
     let mut ui = ViewerUi::new(Viewer::default());
+    scratch_folder(&mut ui);
     ui.viewer.open_document_for_test(doc);
     let mut h = Harness::builder()
         .with_size(egui::vec2(1400.0, 1000.0))
@@ -52,8 +53,44 @@ fn window(doc: Document) -> Harness<'static, Window> {
     h
 }
 
+/// An export from these tests goes into a scratch folder, never the home folder.
+fn scratch_folder(ui: &mut ViewerUi) {
+    let dir = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("lint-pointer-export");
+    std::fs::create_dir_all(&dir).unwrap();
+    ui.viewer.settings.last_folder = Some(dir.to_string_lossy().into_owned());
+}
+
+/// Opens the Export sheet from the toolbar's Export menu.
+fn open_export_sheet(h: &mut Harness<'static, Window>) {
+    if h.state().ui.completion_open() {
+        press(h, "Done");
+    }
+    h.get_by_label("Export").click();
+    h.run();
+    h.get_by_label_contains("Export…").click();
+    h.run();
+}
+
+/// Presses the Export sheet's own Export button (the toolbar's menu button has the same name and comes first).
+fn export_from_sheet(h: &mut Harness<'static, Window>) {
+    for _ in 0..6 {
+        h.step();
+    }
+    let all: Vec<_> = h
+        .get_all_by_role_and_label(egui::accesskit::Role::Button, "Export")
+        .collect();
+    all.last().unwrap().hover();
+    h.run();
+    let all: Vec<_> = h
+        .get_all_by_role_and_label(egui::accesskit::Role::Button, "Export")
+        .collect();
+    all.last().unwrap().click();
+    h.run();
+}
+
 fn lint_page_window() -> Harness<'static, Window> {
     let mut ui = ViewerUi::new(Viewer::default());
+    scratch_folder(&mut ui);
     ui.viewer.open_lint();
     let mut h = Harness::builder()
         .with_size(egui::vec2(1400.0, 1000.0))
@@ -642,10 +679,9 @@ fn free_placement_is_a_checkbox_in_the_arrange_tab_with_a_mixed_state() {
 fn export_opens_one_sheet_for_warnings_and_goes_straight_on_without() {
     // Warnings: the lint page has L03 and L07 (Warn).
     let mut h = lint_page_window();
-    h.get_by_label("Export").click();
-    h.run();
-    h.get_by_label("Export this device…").click();
-    h.run();
+    h.state_mut().ui.viewer.settings.devices = DevicesChoice::This;
+    open_export_sheet(&mut h);
+    export_from_sheet(&mut h);
     let sheet = h.state().ui.preflight_open() && h.query_by_label("Before you export").is_some();
     let held_back = h.state().requests.is_empty();
     // Rows: Warn findings by device, with Jump, Ignore and a fix; Info folded under "N notes".
@@ -657,18 +693,12 @@ fn export_opens_one_sheet_for_warnings_and_goes_straight_on_without() {
     press(&mut h, "Cancel");
     let cancelled = !h.state().ui.preflight_open() && h.state().requests.is_empty();
     // Export anyway sends the request on.
-    h.get_by_label("Export").click();
-    h.run();
-    h.run();
-    h.get_by_label("Export all devices…").click();
-    h.run();
+    h.state_mut().ui.viewer.settings.devices = DevicesChoice::All;
+    open_export_sheet(&mut h);
+    export_from_sheet(&mut h);
     let again = h.state().ui.preflight_open();
     press(&mut h, "Export anyway");
-    let went = h
-        .state()
-        .requests
-        .contains(&Request::ExportDialog(ExportWhich::AllDevices))
-        && !h.state().ui.preflight_open();
+    let went = h.state().ui.completion_open() && !h.state().ui.preflight_open();
     // Nothing to warn about: straight on, no sheet.
     let clean = page(vec![line(
         1,
@@ -678,14 +708,10 @@ fn export_opens_one_sheet_for_warnings_and_goes_straight_on_without() {
         Style::Role(LineRole::Guide),
     )]);
     let mut c = window(clean);
-    c.get_by_label("Export").click();
-    c.run();
-    c.get_by_label("Export this device…").click();
-    c.run();
-    let straight = !c.state().ui.preflight_open()
-        && c.state()
-            .requests
-            .contains(&Request::ExportDialog(ExportWhich::ThisDevice));
+    c.state_mut().ui.viewer.settings.devices = DevicesChoice::This;
+    open_export_sheet(&mut c);
+    export_from_sheet(&mut c);
+    let straight = !c.state().ui.preflight_open() && c.state().ui.completion_open();
     let ok = sheet && held_back && jump_ignore && notes && cancelled && again && went && straight;
     println!(
         "CHECK crate=ui name=preflight_pointer_sheet result={} opens_for_warnings={sheet} request_held={held_back} rows_have_jump_and_ignore={jump_ignore} notes_folded={notes} cancel_drops={cancelled} export_anyway_sends={went} clean_goes_straight={straight}",
@@ -713,11 +739,9 @@ fn a_preflight_row_jumps_to_its_object_ignores_its_rule_and_fixes_itself() {
     let mut h = window(doc);
     h.state_mut().ui.viewer.set_profile(NOMAD_ID);
     h.run();
-    h.get_by_label("Export").click();
-    h.run();
-    h.run();
-    h.get_by_label("Export all devices…").click();
-    h.run();
+    h.state_mut().ui.viewer.settings.devices = DevicesChoice::All;
+    open_export_sheet(&mut h);
+    export_from_sheet(&mut h);
     let rows0 = h.query_all_by_label("Jump to object").count();
     // The pale line's quick fix (a role) is on the sheet; Use 6 pt too: fix L07 from the sheet.
     let fixes_on_sheet = h.query_all_by_label("Use 6 pt").count() > 0;
@@ -793,10 +817,9 @@ fn the_sheet_has_a_document_row_for_installed_fonts_and_save_keeps_its_own_sheet
         );
     h.run();
     // Export: one sheet, no font sheet; L20 is a row under Document and has no Jump.
-    h.get_by_label("Export").click();
-    h.run();
-    h.get_by_label("Export this device…").click();
-    h.run();
+    h.state_mut().ui.viewer.settings.devices = DevicesChoice::This;
+    open_export_sheet(&mut h);
+    export_from_sheet(&mut h);
     let sheet = h.state().ui.preflight_open() && !h.state().ui.font_sheet_open();
     let document =
         h.query_by_label("Document").is_some() && h.query_by_label_contains("L20").is_some();
@@ -810,20 +833,13 @@ fn the_sheet_has_a_document_row_for_installed_fonts_and_save_keeps_its_own_sheet
         && h.query_by_label("Nothing is left to warn about.").is_some()
         && h.state().ui.viewer.ignored_rules() == vec!["L20".to_string()];
     press(&mut h, "Export anyway");
-    let sent = h
-        .state()
-        .requests
-        .contains(&Request::ExportDialog(ExportWhich::ThisDevice));
+    let sent = h.state().ui.completion_open();
     // With L20 ignored the next Export goes straight on.
     h.state_mut().requests.clear();
-    h.get_by_label("Export").click();
-    h.run();
-    h.get_by_label("Export all devices…").click();
-    h.run();
-    let straight = !h.state().ui.preflight_open()
-        && h.state()
-            .requests
-            .contains(&Request::ExportDialog(ExportWhich::AllDevices));
+    h.state_mut().ui.viewer.settings.devices = DevicesChoice::All;
+    open_export_sheet(&mut h);
+    export_from_sheet(&mut h);
+    let straight = !h.state().ui.preflight_open() && h.state().ui.completion_open();
     // Save keeps rung 12's sheet exactly: it opens, Cancel stops, "Don't warn again" is remembered; the
     // preflight sheet never opens for Save. (L20 is ignored for the preflight, not for the font sheet.)
     let held = h.state_mut().ui.save().is_empty()
@@ -837,14 +853,10 @@ fn the_sheet_has_a_document_row_for_installed_fonts_and_save_keeps_its_own_sheet
     // "Don't warn again" also quiets the preflight's L20 row (a document that opts out of the font warning).
     h.state_mut().ui.viewer.restore_rule("L20").unwrap();
     h.state_mut().requests.clear();
-    h.get_by_label("Export").click();
-    h.run();
-    h.get_by_label("Export this device…").click();
-    h.run();
-    let quiet = !h.state().ui.preflight_open()
-        && h.state()
-            .requests
-            .contains(&Request::ExportDialog(ExportWhich::ThisDevice));
+    h.state_mut().ui.viewer.settings.devices = DevicesChoice::This;
+    open_export_sheet(&mut h);
+    export_from_sheet(&mut h);
+    let quiet = !h.state().ui.preflight_open() && h.state().ui.completion_open();
     let ok = sheet
         && document
         && no_jump
@@ -879,10 +891,9 @@ fn a_paper_page_says_why_it_has_fewer_checks_and_this_device_lists_only_its_own_
         }),
     ));
     let mut h = window(paper);
-    h.get_by_label("Export").click();
-    h.run();
-    h.get_by_label("Export all devices…").click();
-    h.run();
+    h.state_mut().ui.viewer.settings.devices = DevicesChoice::All;
+    open_export_sheet(&mut h);
+    export_from_sheet(&mut h);
     let sheet = h.state().ui.preflight_open();
     let lines = h
         .query_all_by_label_contains("is paper, which has no screen to judge against")
@@ -897,20 +908,17 @@ fn a_paper_page_says_why_it_has_fewer_checks_and_this_device_lists_only_its_own_
     press(&mut h, "Cancel");
     // A screen page says nothing about paper.
     let mut s = lint_page_window();
-    s.get_by_label("Export").click();
-    s.run();
-    s.get_by_label("Export this device…").click();
-    s.run();
+    s.state_mut().ui.viewer.settings.devices = DevicesChoice::This;
+    open_export_sheet(&mut s);
+    export_from_sheet(&mut s);
     let none_for_screens = s.query_all_by_label_contains("is paper").count() == 0;
     // This device only: the Nomad on screen lists the Nomad's findings alone, not the Manta's.
     press(&mut s, "Cancel");
     s.state_mut().ui.viewer.set_profile(NOMAD_ID);
     s.run();
-    s.get_by_label("Export").click();
-    s.run();
-    s.run();
-    s.get_by_label("Export this device…").click();
-    s.run();
+    s.state_mut().ui.viewer.settings.devices = DevicesChoice::This;
+    open_export_sheet(&mut s);
+    export_from_sheet(&mut s);
     let nomad_rows = s.query_all_by_label("Jump to object").count();
     let nomad_warns = s
         .state_mut()
