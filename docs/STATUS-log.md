@@ -1853,3 +1853,47 @@ Defaulted "7b, align and distribute" and "7b pays the rung 3 debt").
   that name the file, an override file may not change its built-in's size, ppi or short name (damaged), margins 0 or more and leaving room;
   the Profiles window's toolbar button doubles as the menu entry (the toolbar has no menu); saving a built-in's values equal to the shipped ones removes
   the override file; `--profiles` opens the window at start.
+
+## 2026-11-17 — rung 13b, paper-size profiles (builder, Sonnet 5.5 high)
+
+- Built 13b from the record `docs/bbq/2026-11-17-rung-13-profile-system.md` (Q10, Q12 to Q14 and the Defaulted paper items), start `debc1ea`:
+  `ef76e05` step 1 (the engine: eleven paper profiles `crates/profiles/data/paper.*.ron`, `Profile.paper` / `PaperSize` / `at_ppi` / `oriented` for paper,
+  `active::lookup_in`, `ProfileContext.ppi` (format 0.14.0, optional, left out when 300), `device::set_paper_ppi`, lint skips, the paper sample pages and goldens, tests),
+  `04e7b8c` step 2 (Page tab Paper group and PPI choice, New…, the Profiles window, `--paper-page`, `--paper-landscape-page`, `PAPER=1`, README, DEVELOPMENT, strings),
+  `37b1769` the Paper heading in the Page tab drawn like Devices. No fixture was added: a 0.14.0 file saved before the PPI field is covered by `crates/format/tests/paper_ppi.rs`.
+- Frozen bytes: `git diff --stat debc1ea..HEAD -- crates/render/tests/golden/ crates/render/tests/fixtures/` shows only `SHA256SUMS` (three appended lines) and the three new PNGs
+  (`paper_paper.a4_2480x3508.png`, `paper_paper.a5_3496x4961.png`, `paper-landscape_paper.letter_3300x2550.png`); the 26 older lines and `v0.4/` to `v0.13/` are unchanged. I looked at each new PNG
+  (downscaled) before blessing: the circle is round on A4, A5 and Letter, the margin frame, band, corner marks and (landscape) star sit where the design puts them, the text is upright in the wide page.
+  Two earlier blessings were redone after looking (the ruled lines ran under the bottom corner marks; the headline named A4 on the A5 page).
+- `make check-all` (fmt, clippy `-D warnings`, tests, at `37b1769`) -> `TESTS scope=workspace checks=598 check_fail=0 passed=552 failed=0 status=ok`.
+- CI: `04e7b8c` (pushed with `ef76e05`) CI 44076943933 success, Fuzz 44076943935 success, Coverage 44076944105 success; `37b1769` CI 44082335352 success, Coverage 44082335307 success (a Fuzz run starts only when the fuzz paths change).
+- Speed, Pi, release build, strip on, 150 frames, 3 runs each, p90 ms (limit 50), `XDG_CONFIG_HOME` and `XDG_DATA_HOME` pointed at a scratch folder:
+  paper page (`--paper-page`, A4 at 300, 8.7 M px) `--bench-drag` export 34.3, 34.1, 34.5, chip 3.9, 3.8, 3.9; `--bench-draw` export 35.1, 35.2, 35.1, chip 11.5, 11.4, 11.5.
+  Largest page, Tabloid at 600 PPI (6600 × 10200 = 67.3 M px; a saved `.quad` made for the bench): `--bench-drag` export **425.3, 413.7, 410.4**, chip 3.5, 3.6, 3.7;
+  `--bench-draw` export **421.5, 424.4, 440.2**, chip 4.1, 4.2, 4.2. **The export canvas breaks the 50 ms line by about eight times on the largest page; the chip canvas does not.**
+  What costs it: the export canvas redraws the whole page each frame, and the cost scales with pixels. Measured alone, in a release test: `vello_cpu` draws A4 at 300 in 28 ms and Tabloid at 600 in 187 ms
+  (6.7 times for 7.7 times the pixels), and the PNG encode takes 18 and 98 ms (an export cost, not a frame cost); the display list takes under 0.1 ms. The other ~200 ms of the 410 ms frame is whole-page
+  work I did not itemise (copying and handing a 67 MB image on). A3 at 600 (7016 × 9921) is the same: export drag p90 345.8 ms in one run. Memory (peak `VmHWM` of the app, `--bench-drag 60`, export canvas, 4.1 GB machine):
+  paper page 188 MB, Tabloid at 600 444 MB, A3 at 600 455 MB. No fix and no new limit invented; the lead rules.
+  Note the limits (`limits::check`) allow a custom paper side of up to 693 mm, which is 16,384 px at 600 PPI (268 M px, about four times Tabloid); a custom page of that size is not measured.
+- Choices the record did not settle (each open to chris's veto):
+  - **Executive is stored as 184.15 × 266.7 mm** (7.25 × 10.5 in). The record writes 184.2, which is 184.15 to one place; at 300 PPI 184.2 gives 2176 px, napkin §3.3.1's table says 2175, and the brief
+    asked to test every row of that table, so the exact inches win. The window shows 184.15.
+  - `builtin_ids()` now lists the screens only (so the 13a tests, the calibration and safe-zone tools and a new page's targets are unchanged); `builtin_paper_ids()` lists paper; `Registry::builtin_ids()` still lists every shipped profile.
+  - A paper profile's file holds `paper: Some((width_mm, height_mm))`; the pixel size in the file is that size at 300 PPI and is made so on reading (a hand-edited file whose pixels disagree is read with the mm as the truth);
+    its safe zones, gray levels and pen grays are emptied on reading. A profile file without the field is a screen, so every 13a file reads and writes as before.
+  - **New… and Duplicate from a paper profile stay paper**, with an editable size in mm (the recommendation). Each side may be 2.8 to 693 mm, the span in which every PPI gives 16 to 16,384 px (the existing pixel limits,
+    applied at 150 and at 600). The form hides Gray levels, pen grays and Safe zones for paper and notes that line widths are for 300 PPI.
+  - The role widths stored in a paper profile are those at 300 PPI; a page's PPI scales them (`max(1, round(w × PPI / 300))`; the Nomad's whisper, guide, structure, emphasis, dot are 1, 1, 2, 3, 3 at 300; 2, 2, 4, 6, 6 at 600; 1, 1, 1, 2, 2 at 150 and 200).
+    A test holds the paper roles equal to the Nomad's shipped ones, so a recalibrated Nomad will fail it until the paper files are updated on purpose.
+  - A page's `page_mm()` for a paper size comes from its rounded pixels, as for a screen (A4 at 300 is 209.97 × 297.01 mm), so nothing sized to the page edge is judged off the page.
+  - **A new page on a paper size targets that paper alone** at 300 PPI, with margins of the profile's 10 mm rounded up to whole rhythm steps (12 mm for the 6 mm preset); the devices can be ticked in the Page tab.
+    A new page on a screen still targets both screens, not the paper sizes.
+  - The PPI belongs to the page's entry for that paper size: unticking the paper forgets it, and ticking it again starts at 300. A number in a file that is not one of the four reads as 300 and is kept on a save.
+  - L03 is in the skip list with L04 to L06 (`quadrule_lint::SKIPPED_ON_PAPER`); L03 to L05 are not built yet, and L06 is the only rule that read device data. Findings of a listed rule are dropped on paper whatever the profile holds.
+  - The Page tab says "Paper" as its own group after the devices, each size with a PPI combo beside its tick; the landscape note says a paper size is saved wide, and the old "saved turned" note shows only when a screen is a target.
+  - The Profiles window lists Paper under Built in (a small group label); a row's tip and the form give the size in mm and px at 300; the PPI row reads "Chosen per page; each page picks 150, 200, 300 or 600" (not the record's exact "PPI: chosen per page").
+  - Extra flag `--paper-landscape-page` (US Letter held sideways); the benches use `--paper-page` (`make bench-drag PAPER=1`).
+- Seen on screen (grim, release build, scratch config and data folders, 1440 × 720): `scratchpad/paper-page.png` (the paper page, the Page tab with the Paper group: ISO A3, A4 primary at 300 PPI, A5 at 600 PPI, the device strip with both sizes) and
+  `scratchpad/paper-profiles.png` (the Profiles window on ISO A4: 210 × 297 mm, 2480 × 3508 px at 300 PPI (locked), PPI chosen per page, margins 10, Line roles / Fill roles / About only).
+  Not driven by a pointer: the PPI combo, the mm DragValues of a copy of a paper size, the New… list's Paper group (the logic under them is tested headless).

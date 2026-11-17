@@ -243,3 +243,13 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   left open). The Edited mark shows for built-ins only; a profile of the user's own shows Unverified, not Edited. The
   fuzz targets ran locally 41 s each (`open_quad` 192,253 runs with the carried-profile seed, `from_ron` 114,994 runs),
   CI runs them 60 s and 30 s. Strings are English only.
+
+- Rung 13b, owed (`crates/profiles/src/lib.rs`, `crates/layout/src/device.rs`, `crates/ui/src/panels.rs`, `crates/ui/src/profiles_win_ui.rs`): on the export canvas a page of Tabloid or A3 at 600 PPI (about 67 M px)
+  draws at 410 to 440 ms a frame (p90), against the 50 ms line; the graphics-chip canvas keeps 3.5 to 4.2 ms. The lead has to rule (a lower-resolution preview, a cap on the page's pixels for the export canvas, or
+  accept that big paper is for the chip canvas). The limits let a custom paper side reach 693 mm (16,384 px at 600 PPI, 268 M px), which is not measured and would take about four times the memory of Tabloid at 600
+  (444 MB peak measured). The paper profiles are Unverified (the Nomad's values by physical size, not measured on paper). The Executive size is stored as 184.15 mm, not the record's 184.2. The paper pixel size at
+  300 PPI is kept in the profile file next to the size in mm (made consistent on reading), so a hand-edited file whose two disagree is silently corrected. A test holds the paper role values equal to the Nomad's; a
+  recalibration of the Nomad fails it on purpose. The Page tab's PPI combo, the mm fields of a paper copy and the New… list's Paper group are not driven with a pointer in any test; one screenshot each of the
+  Page tab and the Profiles window was taken (the Page tab's Paper list continues below the fold and scrolls). A paper page's `.quad` is not fuzz-seeded with a non-default PPI. A 13a build opening a file whose page uses
+  a paper size refuses it (it has no such profile; a paper built-in is not carried), and keeps a non-default `ppi` as an unknown field. The L03 entry in `SKIPPED_ON_PAPER` names a rule that is not built.
+
