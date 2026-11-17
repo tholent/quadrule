@@ -821,7 +821,10 @@ impl ViewerUi {
     /// Sets the device the New dialog starts on (the app's remembered choice). A device this
     /// build does not know is ignored.
     pub fn set_new_device(&mut self, id: &str) {
-        if quadrule_profiles::builtin(id).is_ok() {
+        if quadrule_profiles::active::device_ids()
+            .iter()
+            .any(|d| d == id)
+        {
             self.new_device = id.to_string();
         }
     }
@@ -850,13 +853,13 @@ impl ViewerUi {
                 // Each control is named for screen readers by the label beside it.
                 let label = ui.label(self.t("app-device"));
                 egui::ComboBox::from_id_salt("new-device")
-                    .selected_text(device_name(&spec.device_id))
+                    .selected_text(self.full_name(&spec.device_id))
                     .show_ui(ui, |ui| {
-                        for id in quadrule_profiles::builtin_ids() {
+                        for id in quadrule_profiles::active::device_ids() {
                             ui.selectable_value(
                                 &mut spec.device_id,
-                                id.to_string(),
-                                device_name(id),
+                                id.clone(),
+                                self.full_name(&id),
                             );
                         }
                     })
@@ -1104,11 +1107,7 @@ impl ViewerUi {
 
             // Device.
             let ids = self.viewer.profile_ids();
-            let name = |id: &str| {
-                quadrule_profiles::builtin(id)
-                    .map(|p| p.display_name)
-                    .unwrap_or_else(|_| id.to_string())
-            };
+            let name = |id: &str| self.full_name(id);
             let current = self.viewer.profile_id.clone();
             let mut chosen = current.clone();
             // Named for screen readers (napkin §14, AccessKit) by the label beside it.
@@ -2580,13 +2579,6 @@ fn orientation_message(o: quadrule_model::Orientation) -> &'static str {
         quadrule_model::Orientation::Portrait => "app-orientation-portrait",
         quadrule_model::Orientation::Landscape => "app-orientation-landscape",
     }
-}
-
-/// A built-in device's name for the pickers; its id when it is not one.
-fn device_name(id: &str) -> String {
-    quadrule_profiles::builtin(id)
-        .map(|p| p.display_name)
-        .unwrap_or_else(|_| id.to_string())
 }
 
 /// A selected object's outline: its bounds, and its turned corners when it is a turned shape.

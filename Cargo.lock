@@ -2733,6 +2733,7 @@ dependencies = [
  "eframe",
  "pollster",
  "quadrule-layout",
+ "quadrule-profiles",
  "quadrule-text",
  "quadrule-ui",
  "rfd",

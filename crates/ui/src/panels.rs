@@ -580,6 +580,23 @@ impl ViewerUi {
     }
 
     /// A device's short name (`Nomad`) for what is said about it in the inspector and the strip.
+    /// A device's full name for the pickers, with the **Edited** mark when it has a local override
+    /// (rung 13a bbq, Q3).
+    pub(crate) fn full_name(&self, id: &str) -> String {
+        let name = quadrule_profiles::active::display_name(id).unwrap_or_else(|| id.to_string());
+        self.marked(id, name)
+    }
+
+    /// \`name\` with the **Edited** mark after it when built-in \`id\` has a local override.
+    pub(crate) fn marked(&self, id: &str, name: String) -> String {
+        if quadrule_profiles::active::is_edited(id) {
+            self.strings
+                .format(&Message::new("profiles-name-edited").text("name", name))
+        } else {
+            name
+        }
+    }
+
     pub(crate) fn device_name(&self, id: &str) -> String {
         crate::viewer::device_label(id)
     }
@@ -891,7 +908,7 @@ impl ViewerUi {
             });
         // The unit as each device resolves it (napkin §6.3: "5 mm → 59 px (Manta)").
         for id in doc.profile_ids() {
-            if let Ok(p) = quadrule_profiles::builtin_for(id, doc.page.orientation) {
+            if let Ok(p) = quadrule_profiles::active::lookup_for(id, doc.page.orientation) {
                 let rp = RhythmPx::new(&doc, &p);
                 let px = if rp.unit_x == rp.unit_y {
                     trim_number(rp.unit_x, 2)
@@ -944,9 +961,12 @@ impl ViewerUi {
         ui.strong(self.t("app-page-devices"));
         ui.label(RichText::new(self.t("app-device-primary-tip")).small());
         let have: Vec<String> = doc.profile_ids().into_iter().map(String::from).collect();
-        let all: Vec<String> = quadrule_profiles::builtin_ids().map(String::from).collect();
+        let all: Vec<String> = quadrule_profiles::active::device_ids();
         for id in &all {
-            let name = self.device_name(id);
+            let name = {
+                let n = self.device_name(id);
+                self.marked(id, n)
+            };
             let is_primary = *id == doc.primary_profile_id;
             let mut on = have.contains(id);
             ui.horizontal(|ui| {
@@ -1355,7 +1375,7 @@ impl ViewerUi {
                 .response
                 .labelled_by(label.id);
                 if want != was {
-                    let device = quadrule_profiles::builtin(&self.viewer.profile_id).ok();
+                    let device = quadrule_profiles::active::lookup(&self.viewer.profile_id).ok();
                     // Start from what the role draws on the device on screen.
                     let from_role = |r: LineRole| {
                         let (w, g) = device.as_ref().map_or((1, 0), |p| {
@@ -1822,7 +1842,7 @@ impl ViewerUi {
         self.combo(ui, "fill", label.id, &mut want, &options);
         if want != was {
             // A custom fill starts from the gray the role gave on the device on screen.
-            let device = quadrule_profiles::builtin(&self.viewer.profile_id).ok();
+            let device = quadrule_profiles::active::lookup(&self.viewer.profile_id).ok();
             let start = match (o.fill, &device) {
                 (Some(f), Some(p)) => p.fill_gray(f),
                 _ => 204,

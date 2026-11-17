@@ -28,7 +28,8 @@ use quadrule_lint::{
 use quadrule_model::edit::History;
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Uuid};
-use quadrule_profiles::{Profile, builtin, builtin_for};
+use quadrule_profiles::Profile;
+use quadrule_profiles::active::{lookup, lookup_for};
 use quadrule_render::{Gray, Math, encode_png, render, turn_clockwise};
 use quadrule_text::embed::NoEmbed;
 use quadrule_text::{BundledFont, FontRegistry};
@@ -481,7 +482,7 @@ impl Viewer {
         let mut saved = BTreeMap::new();
         if let (Some(c), Ok(primary)) = (
             caveat,
-            builtin_for(&doc.primary_profile_id, doc.page.orientation),
+            lookup_for(&doc.primary_profile_id, doc.page.orientation),
         ) {
             let mut reg = FontRegistry::bundled_only();
             reg.set_embedded(&[(
@@ -489,7 +490,7 @@ impl Viewer {
                 std::sync::Arc::new(c.data.to_vec()),
             )]);
             for id in doc.profile_ids() {
-                if let Ok(t) = builtin_for(id, doc.page.orientation)
+                if let Ok(t) = lookup_for(id, doc.page.orientation)
                     && let Ok(l) = quadrule_layout::lay_out_text(&doc, &primary, &t, &mut reg)
                 {
                     saved.insert(id.to_string(), l.outlines);
@@ -538,9 +539,9 @@ impl Viewer {
         let file = QuadFile::from_bytes(bytes).map_err(|e| e.to_string())?;
         // Every profile the document names must be one this build knows, or nothing can show.
         for id in file.doc.profile_ids() {
-            builtin(id).map_err(|e| e.to_string())?;
+            lookup(id).map_err(|e| e.to_string())?;
         }
-        builtin(&file.doc.primary_profile_id).map_err(|e| e.to_string())?;
+        lookup(&file.doc.primary_profile_id).map_err(|e| e.to_string())?;
         let read_only = file.read_only.clone();
         // The fonts the file carries serve this document only; a damaged one is skipped (rung 12a).
         let carried: Vec<(String, std::sync::Arc<Vec<u8>>)> = file
@@ -611,7 +612,7 @@ impl Viewer {
     pub fn profile_ids(&self) -> Vec<String> {
         match &self.open {
             Some(o) => o.doc.profile_ids().into_iter().map(String::from).collect(),
-            None => quadrule_profiles::builtin_ids().map(String::from).collect(),
+            None => quadrule_profiles::active::device_ids(),
         }
     }
 
@@ -823,8 +824,8 @@ fn make_page(
     known_findings: Option<Vec<Finding>>,
 ) -> Result<(Page, Option<ProfileOutlines>), String> {
     let primary =
-        builtin_for(&doc.primary_profile_id, doc.page.orientation).map_err(|e| e.to_string())?;
-    let target = builtin_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
+        lookup_for(&doc.primary_profile_id, doc.page.orientation).map_err(|e| e.to_string())?;
+    let target = lookup_for(id, doc.page.orientation).map_err(|e| e.to_string())?;
     // A box whose font is not on this computer is drawn from the shapes the file saved for it
     // (napkin §7.3; ADR-001 items 2 and 7); the others are laid out live.
     let (laid, how) =
@@ -981,7 +982,8 @@ pub(crate) fn active_zone_rects(p: &Profile) -> Vec<quadrule_layout::snap::PxRec
 /// A device's short name for the words about overrides, the strip and the Page tab's list: its
 /// short name with a capital (`Manta`, `Nomad`); its id when the build has no such profile.
 pub fn device_label(id: &str) -> String {
-    match builtin(id) {
+    match lookup(id) {
+        Ok(p) if !quadrule_profiles::active::with(|r| r.is_builtin(id)) => p.display_name,
         Ok(p) => {
             let mut c = p.short_name.chars();
             c.next()

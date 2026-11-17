@@ -31,6 +31,10 @@ use unic_langid::LanguageIdentifier;
 const ENGLISH: &[(&str, &str)] = &[
     ("lint.ftl", include_str!("../locales/en-US/lint.ftl")),
     ("app.ftl", include_str!("../locales/en-US/app.ftl")),
+    (
+        "profiles.ftl",
+        include_str!("../locales/en-US/profiles.ftl"),
+    ),
 ];
 
 /// The English Fluent files built into the program, as `(file name, source)`.

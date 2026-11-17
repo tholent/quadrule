@@ -28,7 +28,7 @@ use quadrule_model::{
     Document, Layer, Object, ObjectKind, Orientation, Override, Position, ProfileContext, Size,
     Uuid,
 };
-use quadrule_profiles::{Profile, builtin_for};
+use quadrule_profiles::{Profile, active::lookup_for};
 use std::collections::{BTreeMap, HashMap};
 
 /// Why a device change could not be made.
@@ -61,7 +61,7 @@ impl std::error::Error for DeviceError {}
 
 /// Device `id` as a design held `orientation` sees it.
 fn profile(id: &str, orientation: Orientation) -> Result<Profile, DeviceError> {
-    builtin_for(id, orientation).map_err(|_| DeviceError::Unknown(id.to_string()))
+    lookup_for(id, orientation).map_err(|_| DeviceError::Unknown(id.to_string()))
 }
 
 fn index_nodes(nodes: Vec<Node>) -> HashMap<Uuid, Node> {

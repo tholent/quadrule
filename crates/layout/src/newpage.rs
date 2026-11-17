@@ -20,7 +20,7 @@
 
 use quadrule_model::blank::{RhythmPreset, blank_document};
 use quadrule_model::{Document, Margins, Orientation, RhythmType};
-use quadrule_profiles::{Profile, ProfileError, builtin, builtin_ids};
+use quadrule_profiles::{Profile, ProfileError, active, builtin_ids};
 
 /// The thickness each side of the page must clear on `p`, in device pixels: the docked toolbars
 /// on the left, right and top, and the footers at the bottom (`Margins` order: top, right,
@@ -98,14 +98,14 @@ pub struct NewPage {
 /// built-in one, margins clearing the toolbars and footers of all of them, `now` as the created
 /// and modified time (RFC 3339).
 pub fn new_document(spec: &NewPage, now: &str) -> Result<Document, ProfileError> {
-    let primary = builtin(&spec.device_id)?;
+    let primary = active::lookup(&spec.device_id)?;
     let others: Vec<String> = builtin_ids()
         .filter(|id| *id != primary.id)
         .map(String::from)
         .collect();
     let mut profiles = vec![primary.oriented(spec.orientation)];
     for id in &others {
-        profiles.push(builtin(id)?.oriented(spec.orientation));
+        profiles.push(active::lookup(id)?.oriented(spec.orientation));
     }
     let unit = spec.rhythm.unit_mm();
     // The margins are whole steps of what snapping uses: for an isometric rhythm, a column

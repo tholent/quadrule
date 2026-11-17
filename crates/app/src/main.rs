@@ -84,6 +84,22 @@ impl App {
     fn new(cc: &eframe::CreationContext<'_>, args: Args) -> Self {
         let path = args.path;
         quadrule_ui::install_fonts(&cc.egui_ctx, desktop_ui_font());
+        // The profiles the user keeps (rung 13a): the shipped ones, the user's edits of them and the
+        // user's own, from `<config folder>/profiles/` (on Linux `~/.config/quadrule/profiles/`),
+        // read once now and never again per frame. A timing run reads none, so a number never depends
+        // on someone's edits.
+        let timing = args.bench_drag.is_some()
+            || args.bench_draw.is_some()
+            || args.bench_type.is_some()
+            || args.bench_rotate.is_some();
+        quadrule_profiles::active::set(
+            match directories::ProjectDirs::from("org", "quadrule", "quadrule") {
+                Some(d) if !timing => {
+                    quadrule_profiles::Registry::load(&d.config_dir().join("profiles"))
+                }
+                _ => quadrule_profiles::Registry::builtin_only(),
+            },
+        );
         let mut ui = ViewerUi::new(Viewer::default());
         // Text can use the fonts installed on this computer as well as the bundled ones (rung 11a).
         ui.viewer.use_system_fonts();

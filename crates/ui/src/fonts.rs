@@ -237,7 +237,7 @@ impl ViewerUi {
         let Some((_, shown)) = self.viewer.profiles() else {
             return;
         };
-        let device = quadrule_profiles::builtin(&shown.id)
+        let device = quadrule_profiles::active::lookup(&shown.id)
             .map(|p| p.display_name)
             .unwrap_or_else(|_| shown.id.clone());
         let device_px_per_mm = shown.ppi / MM_PER_IN;

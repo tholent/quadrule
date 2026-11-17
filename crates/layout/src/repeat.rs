@@ -312,7 +312,7 @@ pub fn expand(
         if dev == primary.id {
             continue;
         }
-        let Ok(target) = quadrule_profiles::builtin_for(dev, doc.page.orientation) else {
+        let Ok(target) = quadrule_profiles::active::lookup_for(dev, doc.page.orientation) else {
             continue;
         };
         if let Some(p) = plans_on(&target) {

@@ -122,7 +122,10 @@ impl ViewerUi {
         let on_screen = self.viewer.profile_id.clone();
         ui.horizontal(|ui| {
             for id in &ids {
-                let name = self.device_name(id);
+                let name = {
+                    let n = self.device_name(id);
+                    self.marked(id, n)
+                };
                 let changed = self.viewer.doc().map_or(0, |d| d.overridden_count(id));
                 let go = self
                     .strings

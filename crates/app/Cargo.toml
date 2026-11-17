@@ -15,6 +15,7 @@ path = "src/main.rs"
 directories.workspace = true
 eframe.workspace = true
 quadrule-layout.workspace = true
+quadrule-profiles.workspace = true
 quadrule-text.workspace = true
 quadrule-ui.workspace = true
 rfd.workspace = true

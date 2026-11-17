@@ -500,7 +500,7 @@ pub fn lay_out_text_saved(
         }
         if let (Some(o), Ok(p)) = (
             saved.get(id),
-            quadrule_profiles::builtin_for(id, doc.page.orientation),
+            quadrule_profiles::active::lookup_for(id, doc.page.orientation),
         ) {
             others.push((o, text_jobs(doc, primary, &p)));
         }

@@ -29,7 +29,8 @@ use quadrule_model::edit::{
     set_position_override, set_visible_override, ungroup_with,
 };
 use quadrule_model::{Document, Frame, Object, ObjectKind, Uuid};
-use quadrule_profiles::{Profile, builtin_for};
+use quadrule_profiles::Profile;
+use quadrule_profiles::active::lookup_for;
 use quadrule_text::BundledFont;
 use std::path::Path;
 
@@ -148,8 +149,8 @@ impl Viewer {
     pub fn profiles(&self) -> Option<(Profile, Profile)> {
         let doc = self.doc()?;
         Some((
-            builtin_for(&doc.primary_profile_id, doc.page.orientation).ok()?,
-            builtin_for(&self.profile_id, doc.page.orientation).ok()?,
+            lookup_for(&doc.primary_profile_id, doc.page.orientation).ok()?,
+            lookup_for(&self.profile_id, doc.page.orientation).ok()?,
         ))
     }
 
