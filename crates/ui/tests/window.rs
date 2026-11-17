@@ -84,13 +84,23 @@ fn dialogs_are_requested_not_opened() {
     h.run();
     h.get_by_label("Export all devices…").click();
     h.run();
+    // The sample page has warnings, so Export opens the preflight sheet first (rung 14b); Export anyway sends
+    // the request on.
+    let sheet = h.state().ui.preflight_open() && h.state().requests == [Request::OpenDialog];
+    for _ in 0..6 {
+        h.step();
+    }
+    h.get_by_label("Export anyway").hover();
+    h.run();
+    h.get_by_label("Export anyway").click();
+    h.run();
     let all = h
         .state()
         .requests
         .contains(&Request::ExportDialog(ExportWhich::AllDevices));
-    let ok = open && all;
+    let ok = open && sheet && all;
     println!(
-        "CHECK crate=ui name=window_requests result={} open_dialog={open} export_all={all} requests={:?}",
+        "CHECK crate=ui name=window_requests result={} open_dialog={open} sheet_first={sheet} export_all={all} requests={:?}",
         pass(ok),
         h.state().requests
     );
@@ -105,6 +115,12 @@ fn findings_zoom_and_theme() {
     // Clicking a finding selects it, for the outline on the page (Q6). Findings are on the
     // inspector's Lint tab (rung 3 bbq Q8).
     h.get_by_label("Lint (5)").click();
+    h.run();
+    // The list now stands under a device picker and each row has its buttons (rung 14b), so the row is scrolled
+    // into view first, and the pointer arrives on it as a hand's does.
+    h.get_by_label_contains("L16").scroll_to_me();
+    h.run();
+    h.get_by_label_contains("L16").hover();
     h.run();
     h.get_by_label_contains("L16").click();
     h.run();

@@ -82,8 +82,15 @@ and error.
   **Lint checks** section of the Profiles window (leave a number empty to skip its check on that device): L03 a gray too
   light to show, L05 a gray off the device's clean levels, L07 text under the smallest size that reads, L09 a rhythm or ruled
   region under the smallest comfortable handwriting step, L13 large dark fills, L14 a thin line that is slanted or curved.
-  The Lint tab says, one line per device, which checks did not run and why. A page can list rules it ignores, and an
-  object can be marked free of the rhythm (both saved in the file; their buttons come in 14b).
+  The Lint tab has a device picker (All devices, or one) and says, one line per device, which checks did not run and why.
+  Each finding has a button that fixes it in one undo step where there is a fix (snap a stroke to whole pixels, use the
+  nearest clean gray or a role that fits, move out of a safe area, use the smallest legible text size, snap to the rhythm
+  or bind to it, centre the rhythm origin), and **Ignore this rule for this document**; ignored rules are listed at the
+  end of the tab, each with a button to turn it back on. Mark an object **Free placement** in the Arrange tab to
+  exempt it from the off-rhythm check. Export opens one **Before you export** sheet when a device has a warning (or the
+  page uses fonts installed on this computer): each row can jump to its object, ignore its rule or be fixed, and
+  **Export anyway** goes on. Under Custom, the Style tab shows the device's clean grays as swatches (**Show all grays**
+  opens the 0 to 255 slider), says which role a stroke matches and offers **Use recommended**.
 - Turn a line or a shape with the round handle above its top edge (it catches at 0, 90, 180 and 270 degrees; Shift
   holds 15-degree steps) or type an angle in the Arrange tab; a turned shape resizes along its own sides. Lines point any
   way (draw one up and to the right, or drag its ends past each other). Opacity, 0 to 100 percent, is in the Style tab;

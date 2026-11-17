@@ -538,3 +538,31 @@ app-sheet-fallback = (for letters the chosen font lacks)
 app-sheet-continue = Continue
 app-sheet-cancel = Cancel
 app-sheet-dont-warn = Don't warn again for this document
+
+# The Lint tab's device picker (rung 14b).
+app-lint-device = Findings for
+app-lint-all-devices = All devices
+
+# The preflight sheet before Export (rung 14b; napkin §8.3).
+app-pre-title = Before you export
+app-pre-document = Document
+app-pre-notes = { $count ->
+        [one] 1 note
+       *[other] { $count } notes
+    }
+app-pre-jump = Jump to object
+app-pre-cancel = Cancel
+app-pre-export = Export anyway
+app-pre-clear = Nothing is left to warn about.
+app-pre-rule = { $rule }
+app-pre-paper = { $device } is paper, which has no screen to judge against, so these checks do not run on it: { $rules }.
+
+# Free placement (rung 14b).
+app-free-placement = Free placement
+app-free-placement-tip = Placed off the rhythm on purpose. The linter's off-rhythm check (L16) leaves it alone; nothing else changes.
+
+# Style tab grays (rung 14b): swatches of the device's clean levels, and which role a stroke is.
+app-style-show-grays = Show all grays
+app-style-matches = matches { $role }
+app-style-use-recommended = Use recommended
+app-style-use-recommended-tip = Sets the { $role } role, the nearest to this width.

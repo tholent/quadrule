@@ -251,9 +251,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   recalibration of the Nomad fails it on purpose. The Page tab's PPI combo, the mm fields of a paper copy and the New… list's Paper group are not driven with a pointer in any test; one screenshot each of the
   Page tab and the Profiles window was taken (the Page tab's Paper list continues below the fold and scrolls). A paper page's `.quad` is not fuzz-seeded with a non-default PPI. A 13a build opening a file whose page uses
   a paper size refuses it (it has no such profile; a paper built-in is not carried), and keeps a non-default `ppi` as an unknown field.
-- Rung 13, seen by the lead at the 13b look: in the Page tab a ticked secondary paper with **Make primary** pushes its
-  PPI choice onto a second line (`crates/ui/src/panels.rs`; screenshot in the 13b builder's log entry).
-
 - Rung 14a, owed (`crates/lint/src/judge.rs`, `crates/lint/src/lib.rs`, `crates/profiles/src/lib.rs`, `crates/ui/src/profiles_win_ui.rs`):
   the lint block's field names (`lightest_gray_line_1px` …, `smallest_text_pt`, `smallest_handwriting_step_mm`,
   `dark_fill_gray`, `dark_fill_page_share`, `thin_line_px`) are the builder's proposal and not yet looked at by chris. L09, L13 and
@@ -269,3 +266,21 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   is listed per device but the device picker, the preflight sheet and the Ignore / Free placement buttons are 14b's; the
   saved fields and the lint behaviour are in. `Registry::delete_damaged` has a pointer test only for a file at the top of the
   profiles folder. The Page tab's PPI wrap (rung 13 debt line, Q9) was not touched.
+
+- Rung 14b, owed (`crates/lint/src/fix.rs`, `crates/ui/src/lint_ui.rs`, `crates/ui/src/lint_fixes.rs`, `crates/ui/src/preflight.rs`, `crates/ui/src/swatches.rs`):
+  the wording of every new button and line is the builder's proposal and not yet looked at by chris (Use nearest clean gray, Use
+  <Role> role, Snap to pixel grid, Move inside safe area, Use <N> pt, Snap to rhythm / Snap all to rhythm, Bind to rhythm, Center rhythm
+  origin, Ignore this rule for this document (Ignore on the sheet), Turn back on, Findings for, All devices, Before you export, Jump to
+  object, Export anyway, Show all grays, matches <Role>, Use recommended, Free placement). No quick fix for the pitch of a repeat (L16's
+  other message) and none for L06 on a repeat's copies; Snap all to rhythm shows only when two or more objects are off the rhythm;
+  Bind to rhythm turns a region's `bound` on and sets a repeat's unbound axes to Auto (it does not keep the pitch it had); a fitting
+  role is one within a pixel of the stroke's width that passes L03 and L05; Use nearest clean gray judges the gray as it lands on the
+  page (opacity included), so on a faded object it may pick a gray that looks far from the one shown. A look fix (a width, a gray, a
+  role, a binding) is the shared design on every device; only a place and a text size go through the device's overrides. The Lint
+  tab renders every device's page the first time All devices is shown (the strip already does). The preflight sheet lists the devices
+  being exported (this device, or all), puts L20 under Document whichever device is shown, and hides the L20 row when the document
+  says "Don't warn again" (rung 12's tick); its list scrolls when long. The Info "N notes" fold is not remembered between sheets.
+  Several buttons share one accessible name (every row's "Ignore this rule for this document"). The sheet's controls need a pointer
+  that has moved onto them first in a headless test (the sheet fades in over a few frames). `--look lint|style|preflight` is a
+  screenshot flag the record did not ask for. No speed number above 50 ms was seen; see the 14b log entry.
+

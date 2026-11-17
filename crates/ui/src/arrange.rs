@@ -88,6 +88,8 @@ pub struct Mixed {
     pub h: bool,
     /// Rotation differs (among the objects that can turn).
     pub rotation: bool,
+    /// Some are marked Free placement and some are not (rung 14b).
+    pub free_placement: bool,
 }
 
 /// Two lengths in mm that are the same to a thousandth of a millimetre.
@@ -262,6 +264,8 @@ impl Viewer {
             m.w |= !same(f.w_mm, first.w_mm);
             m.h |= !same(f.h_mm, first.h_mm);
         }
+        let free = objects.iter().filter(|o| o.free_placement).count();
+        m.free_placement = free > 0 && free < objects.len();
         let mut turning = objects.iter().filter(|o| o.kind.can_rotate());
         if let Some(a) = turning.next() {
             m.rotation = turning.any(|b| !same_deg(a.rotation(), b.rotation()));

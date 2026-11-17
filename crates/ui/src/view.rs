@@ -208,6 +208,12 @@ pub struct ViewerUi {
     pub(crate) font_sheet: Option<crate::missing_ui::Sheet>,
     /// The sheet's "Don't warn again for this document" tick.
     pub(crate) sheet_dont_warn: bool,
+    /// The gray fields whose 0 to 255 slider the person opened with Show all grays (rung 14b; view state).
+    pub(crate) show_all_grays: std::collections::HashSet<&'static str>,
+    /// The preflight sheet before Export, while it shows (rung 14b).
+    pub(crate) preflight: Option<crate::preflight::Preflight>,
+    /// The device the Lint tab lists; `None` is All devices (rung 14b; view state, not saved).
+    pub(crate) lint_device: Option<String>,
     /// The missing font the font picker is choosing a substitute for (Other font… in the dialog).
     pub(crate) font_picker_for: Option<String>,
     /// A pick the font picker made for a row of the dialog: (missing family, chosen family).
@@ -302,6 +308,9 @@ impl ViewerUi {
             profiles_win: None,
             font_sheet: None,
             sheet_dont_warn: false,
+            preflight: None,
+            show_all_grays: Default::default(),
+            lint_device: None,
             font_picker_for: None,
             picked_for_missing: None,
             text_field_id: None,
@@ -408,6 +417,7 @@ impl ViewerUi {
         self.new_dialog(&ctx, &mut requests);
         self.unsaved_prompt(&ctx, &mut requests);
         self.font_sheet_window(&ctx, &mut requests);
+        self.preflight_window(&ctx, &mut requests);
         self.recovery_prompt(&ctx);
         requests
     }
@@ -1224,10 +1234,10 @@ impl ViewerUi {
             ui.add_enabled_ui(open, |ui| {
                 ui.menu_button(self.t("app-export"), |ui| {
                     if ui.button(self.t("app-export-this")).clicked() {
-                        self.ask(Request::ExportDialog(ExportWhich::ThisDevice), requests);
+                        self.ask_export(ExportWhich::ThisDevice, requests);
                     }
                     if ui.button(self.t("app-export-all")).clicked() {
-                        self.ask(Request::ExportDialog(ExportWhich::AllDevices), requests);
+                        self.ask_export(ExportWhich::AllDevices, requests);
                     }
                 });
             });

@@ -26,7 +26,6 @@ use quadrule_i18n::Message;
 use quadrule_layout::RhythmPx;
 use quadrule_layout::align::AlignTo;
 use quadrule_layout::units::{Axis, UnitContext, format_length, parse_length, trim_number};
-use quadrule_lint::Severity;
 use quadrule_model::edit::{Command, OverrideField, Place, reframe};
 use quadrule_model::{
     DashStyle, Document, Fill, FillRole, Frame, HConstraint, HexOrientation, IsoStyle, LineCap,
@@ -573,7 +572,7 @@ impl ViewerUi {
             });
     }
 
-    fn primary_id(&self) -> String {
+    pub(crate) fn primary_id(&self) -> String {
         self.viewer
             .doc()
             .map_or_else(String::new, |d| d.primary_profile_id.clone())
@@ -1093,7 +1092,10 @@ impl ViewerUi {
                 let described = self
                     .strings
                     .format(&Message::new("app-paper-ppi-name").text("device", name.clone()));
+                // Narrow enough that the tick, Make primary and this fit one line of the inspector (the rung 13
+                // debt: the choice wrapped onto a second line beside Make primary).
                 let combo = egui::ComboBox::from_id_salt(("paper-ppi", id.as_str()))
+                    .width(PPI_COMBO_WIDTH)
                     .selected_text(option(was))
                     .show_ui(ui, |ui| {
                         for p in quadrule_model::PAPER_PPIS {
@@ -1309,6 +1311,24 @@ impl ViewerUi {
                     ui.end_row();
                 }
             });
+        // Free placement (rung 14b, Q7): off the rhythm on purpose; the linter's L16 leaves it alone. Mixed
+        // when some of the selected objects have it and some do not.
+        let picked: Vec<bool> = self
+            .viewer
+            .selection
+            .iter()
+            .filter_map(|id| self.viewer.doc().and_then(|d| d.object(*id)))
+            .map(|x| x.free_placement)
+            .collect();
+        let mut on = !picked.is_empty() && picked.iter().all(|b| *b);
+        let checkbox = egui::Checkbox::new(&mut on, self.t("app-free-placement"))
+            .indeterminate(mixed.free_placement);
+        let r = ui
+            .add_enabled(enabled, checkbox)
+            .on_hover_text(self.t("app-free-placement-tip"));
+        if r.changed() {
+            let _ = self.viewer.set_free_placement(on);
+        }
     }
 
     /// Align and distribute (rung 7b): the Align to choice, six align buttons, four distribute
@@ -1502,29 +1522,43 @@ impl ViewerUi {
                             });
                         }
                         ui.end_row();
-                        let label = ui.label(self.t("app-stroke-gray"));
-                        let mut g = gray;
-                        let mut gray_drag = egui::DragValue::new(&mut g).range(0..=255);
-                        if gray_mixed {
-                            let word = self.t("app-mixed");
-                            gray_drag = gray_drag
-                                .custom_formatter(move |_, _| word.clone())
-                                .custom_parser(|t| {
-                                    t.trim()
-                                        .trim_start_matches(|c: char| c.is_alphabetic())
-                                        .trim()
-                                        .parse()
-                                        .ok()
-                                });
-                        }
-                        if ui.add(gray_drag).labelled_by(label.id).changed() {
-                            let _ = self.viewer.edit_selected(Some("style-gray"), |x| {
+                        // The gray: the profile's clean levels as swatches (rung 14b, Q8), then which
+                        // role it matches, or Use recommended.
+                        let shown = self.viewer.profiles().map(|(_, shown)| shown);
+                        let levels: Vec<u8> = shown
+                            .as_ref()
+                            .map(|p| p.gray_levels.clone())
+                            .unwrap_or_default();
+                        if let Some((g, drag)) = self.gray_field(
+                            ui,
+                            "stroke",
+                            "app-stroke-gray",
+                            gray,
+                            gray_mixed,
+                            &levels,
+                            enabled,
+                        ) {
+                            let merge = drag.then_some("style-gray");
+                            let _ = self.viewer.edit_selected(merge, |x| {
                                 if let Style::Custom { gray, .. } = &mut x.style {
                                     *gray = g;
                                 }
                             });
                         }
-                        ui.end_row();
+                        if let Some(shown) = shown
+                            && !width_mixed
+                            && !gray_mixed
+                        {
+                            let width_px =
+                                quadrule_layout::stroke_opt(o.style, &shown).map_or(1, |(w, _)| w);
+                            if let Some(role) =
+                                self.role_badge(ui, &o, &shown, width_px, gray, enabled)
+                            {
+                                let _ = self
+                                    .viewer
+                                    .edit_selected(None, |x| x.style = Style::Role(role));
+                            }
+                        }
                     }
                 }
 
@@ -1932,21 +1966,21 @@ impl ViewerUi {
         }
         ui.end_row();
         if let Some(Fill::Gray(gray)) = o.fill {
-            let label = ui.label(self.t("app-fill-gray"));
-            let mut g = gray;
-            // Steps of 17 (the sixteen levels 0, 17 ... 255) until the clean grays are measured.
-            if ui
-                .add(egui::Slider::new(&mut g, 0..=255).step_by(f64::from(GRAY_STEP)))
-                .labelled_by(label.id)
-                .changed()
+            let levels: Vec<u8> = self
+                .viewer
+                .profiles()
+                .map(|(_, shown)| shown.gray_levels)
+                .unwrap_or_default();
+            if let Some((g, drag)) =
+                self.gray_field(ui, "fill", "app-fill-gray", gray, false, &levels, true)
             {
-                let _ = self.viewer.edit_selected(Some("fill-gray"), |x| {
+                let merge = drag.then_some("fill-gray");
+                let _ = self.viewer.edit_selected(merge, |x| {
                     if x.kind.is_shape() {
                         x.fill = Some(Fill::Gray(g));
                     }
                 });
             }
-            ui.end_row();
         }
     }
 
@@ -2468,12 +2502,18 @@ impl ViewerUi {
     /// Wallpaper, a rule the page ignores, no clean grays, no value in the profile). A device where
     /// every check ran says so.
     pub fn lint_skipped_lines(&self) -> Vec<String> {
+        self.lint_skipped_lines_in(&self.viewer.profile_ids())
+    }
+
+    /// [`ViewerUi::lint_skipped_lines`] for the devices `ids` only (the Lint tab's device picker).
+    pub fn lint_skipped_lines_in(&self, ids: &[String]) -> Vec<String> {
         use quadrule_lint::{SkipReason, skipped_checks};
         let Some(doc) = self.viewer.doc() else {
             return Vec::new();
         };
         doc.profile_ids()
             .into_iter()
+            .filter(|id| ids.iter().any(|i| i == id))
             .filter_map(|id| {
                 let target = quadrule_profiles::active::lookup_in(doc, id).ok()?;
                 let device = self.device_name(id);
@@ -2511,42 +2551,6 @@ impl ViewerUi {
                 )
             })
             .collect()
-    }
-
-    fn lint_tab(&mut self, ui: &mut egui::Ui) {
-        let strings = &self.strings;
-        let Some(page) = self.viewer.page() else {
-            return;
-        };
-        let findings = page.findings.clone();
-        let saved = page.saved_outlines;
-        ui.label(strings.get("app-lint-toolbars"));
-        if saved {
-            ui.label(strings.get("app-saved-outlines"));
-        }
-        ui.separator();
-        if findings.is_empty() {
-            ui.label(strings.get("app-lint-none"));
-        }
-        // One plain line per device on the checks that did not run on it, and why (rung 14a bbq, Q2).
-        let skipped = self.lint_skipped_lines();
-        let strings = &self.strings;
-        for line in &skipped {
-            ui.label(RichText::new(line).small().weak());
-        }
-        for (i, f) in findings.iter().enumerate() {
-            let icon = match f.severity {
-                Severity::Warn => "⚠",
-                Severity::Info => "ℹ",
-            };
-            let text = format!("{icon} {}  {}", f.rule, strings.format(&f.message));
-            let selected = self.viewer.selected == Some(i);
-            let r = ui.add(egui::Button::selectable(selected, text).wrap());
-            if r.clicked() {
-                self.viewer.selected = if selected { None } else { Some(i) };
-                self.scroll_to_selected = self.viewer.selected.is_some();
-            }
-        }
     }
 
     // ------------------------------------------------------------------ fields
@@ -2833,6 +2837,9 @@ impl ViewerUi {
             .labelled_by(label);
     }
 }
+
+/// The width of the Page tab's PPI choice, in points: it must leave room for the tick and Make primary on one line.
+const PPI_COMBO_WIDTH: f32 = 64.0;
 
 /// What the stroke of a shape is set to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

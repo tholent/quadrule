@@ -35,7 +35,7 @@
 //! `--fonts-page` (the fonts page: a page of text; the benchmarks then run over it and the drag moves its dot grid). Rung 11b adds
 //! `--textbox-page` (the text-box page, same use), `--missing-fonts-page` (the same page set in a font this computer lacks) and `--bench-type [frames]` (type into a long text box; `name=type_bench`). Rung 12b adds
 //! `--pattern-angle-page` (the ruling turned inside its frame; the benchmarks then run over it) and
-//! `--turned-patterns-page` (pattern regions turned whole, one in a group and one in a repeat; the benchmarks then run over it, and `--bench-rotate` turns its 45 degree grid). Rung 14a adds `--lint-page` (objects that make the gray, text-size, handwriting, dark-fill and thin-line rules fire, beside ones that pass; the benchmarks then run over it). Rung 13b adds
+//! `--turned-patterns-page` (pattern regions turned whole, one in a group and one in a repeat; the benchmarks then run over it, and `--bench-rotate` turns its 45 degree grid). Rung 14b adds `--look lint|style|preflight` (start with that part showing, for a screenshot). Rung 14a adds `--lint-page` (objects that make the gray, text-size, handwriting, dark-fill and thin-line rules fire, beside ones that pass; the benchmarks then run over it). Rung 13b adds
 //! `--paper-page` (ISO A4 at 300 PPI and ISO A5 at 600; the benchmarks then run over it) and `--paper-landscape-page` (US Letter held sideways, exported wide).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
@@ -200,6 +200,9 @@ impl App {
         };
         if args.profiles {
             ui.open_profiles_window();
+        }
+        if let Some(look) = &args.look {
+            ui.show_look(look);
         }
         ui.note_damaged_profiles();
         ui.bench = bench.map(|b| {
@@ -491,6 +494,9 @@ struct Args {
     fonts_page: bool,
     /// Open the Profiles window at start (`--profiles`), for a look at it (rung 13a).
     profiles: bool,
+    /// Start with the window showing one part, for a look at it (`--look lint|style|preflight`, rung 14b): the
+    /// Lint tab, the Style tab with a pale custom line selected, or the sheet before Export.
+    look: Option<String>,
     /// Open the rung 11b text-box page instead of the empty start (`--textbox-page`); the benchmarks
     /// then run over it, and the drag moves its dot grid.
     textbox_page: bool,
@@ -568,6 +574,13 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.repeats_page = true;
         } else if a == "--profiles" {
             out.profiles = true;
+        } else if a == "--look" {
+            match args.next().and_then(|v| v.into_string().ok()) {
+                Some(v) if ["lint", "style", "preflight"].contains(&v.as_str()) => {
+                    out.look = Some(v)
+                }
+                _ => return Err("--look takes lint, style or preflight".into()),
+            }
         } else if a == "--fonts-page" {
             out.fonts_page = true;
         } else if a == "--textbox-page" {
@@ -739,6 +752,18 @@ mod tests {
                     lint_page: true,
                     ..Args::default()
                 }),
+            ),
+            (
+                p(&["--lint-page", "--look", "preflight"]),
+                Ok(Args {
+                    lint_page: true,
+                    look: Some("preflight".into()),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--look", "sparkles"]),
+                Err("--look takes lint, style or preflight".into()),
             ),
             (
                 p(&["--paper-page", "--bench-drag", "30"]),
