@@ -175,21 +175,6 @@ The project's live state. Update it when work lands. Every claim cites at least 
   held in rows (`crates/app/src/chip.rs`). Speed on the Pi, 90th percentile, chip canvas: typing about 9 ms (was 82),
   dragging 4–6 ms, drawing 23–25 ms; export canvas about 20 ms throughout (`docs/STATUS-log.md`). Try it:
   `cargo run --release -p quadrule-app -- --textbox-page` or `-- --fonts-page`.
-- Rung 13, the profile system and paper sizes, is done: 13a and 13b approved by chris 2026-11-17 ("approved" each),
-  shipped together as `v0.13.0` (record `docs/bbq/2026-11-17-rung-13-profile-system.md`, with its Amendments; ADR-016
-  ratified). **13a**: a Profiles window (toolbar and Page tab) to edit every profile; an edited Manta or Nomad is a local
-  override marked Edited, with Reset to built-in; New…, Duplicate, Delete, `.ron` Import and Export; user profiles get
-  GUID ids and live in the config folder's `profiles/`; a `.quad` carries the profiles it uses that are not plain
-  built-ins, and a same-named incoming one offers Merge (its values update yours), Rename or Not now; a damaged profile
-  file is skipped and listed (`crates/profiles/src/registry.rs`, `crates/profiles/src/active.rs`,
-  `crates/ui/src/profiles_win.rs`). **13b**: eleven built-in paper sizes (A3 to Tabloid), PPI per page (150/200/300/600),
-  the Nomad's line weights by physical size, wide landscape exports, safe-zone lint skipped on paper
-  (`crates/profiles/src/lib.rs`, `crates/layout/src/device.rs`). File format 0.14.0
-  (`crates/render/tests/fixtures/v0.13/`). Three golden lines added (`paper_*`, `paper-landscape_*`); the 26 older ones
-  unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: A4 at 300 PPI 34–35 ms export,
-  4–12 ms chip; Tabloid at 600 PPI 410–440 ms export (over the 50 ms line; ruled debt for rung 17 by chris, "C"), 4 ms
-  chip (`docs/STATUS-log.md`, `docs/STATUS-debt.md`). Try it: `cargo run --release -p quadrule-app -- --profiles` or
-  `-- --paper-page`.
 - Rung 14, lint and preflight, is done: 14a and 14b approved by chris 2026-11-17 ("approved", "14b approved"), shipped
   together as `v0.14.0` (record `docs/bbq/2026-11-17-rung-14-lint-and-preflight.md`, with its Amendments; ADR-012
   amended). **14a**: L03, L05, L07, L09, L13, L14 judge the gray on the page (opacity included) against limits in each
@@ -202,6 +187,17 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/render/tests/fixtures/v0.14/`). The 29 golden lines unchanged (`crates/render/tests/golden/SHA256SUMS`).
   Speed on the Pi, 90th percentile: 17–23 ms on the lint page, 30.6 ms worst (groups page drag, chip)
   (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --lint-page`.
+- Rung 15, export, is done: approved by chris 2026-11-17 ("look approved"), shipped as `v0.15.0` (record
+  `docs/bbq/2026-11-17-rung-15-export.md`, with its Amendments; ADR-013 amended and ratified). Export opens one Export
+  sheet (devices, a remembered folder, an app-wide path template defaulting to `{title}-{device}.png` with presets,
+  `/` for folders and a Set box, a text-note tick), and Export again (Ctrl+E) writes with the last choices; both pass
+  the one preflight sheet; a completion sheet shows thumbnails, Reveal in folder and a folded MyStyle note
+  (`crates/ui/src/export.rs`, `crates/ui/src/export_path.rs`, `crates/ui/src/export_ui.rs`, `crates/ui/src/settings.rs`).
+  PNGs carry Software and Title text chunks by default; the Nomad reads them as templates (chris). File format 0.16.0:
+  a 480 px thumbnail of the main device in `previews/` (`crates/render/tests/fixtures/v0.15/`). The 29 golden lines
+  unchanged, one noted golden added (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: 30.5 ms
+  worst (groups page drag, chip); Save gains about 23 ms (41 on A4 paper) (`docs/STATUS-log.md`). Try it: `cargo run
+  --release -p quadrule-app -- --look export`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -247,8 +243,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
-  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). Next: rung 15,
-  export; the next lead's prompt is `docs/arcs/v1/rung-15-PROMPT-2026-11-17.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
+  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). **Rung 15 is done** (`v0.15.0`). Next: rung
+  16, the welcome screen and starters; the next lead's prompt is `docs/arcs/v1/rung-16-PROMPT-2026-11-17.md`. The Paper, Notes, Creative, Planning and Bullet journal starters are
   buildable now; chris designs one per category (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
@@ -273,10 +269,6 @@ debt in `docs/STATUS-debt.md`, each session in `docs/STATUS-log.md` (dated, newe
 month when it grows), and finished entries, moved word for word, in `docs/STATUS-archive.md`. Every bullet under Now, Next
 and Known debt cites at least one file that exists. Keep this file under 300 lines; the project-prep
 skill's `scripts/status-check.py` checks both.
-- 2026-11-14/16: rung 11 planned (bbq, 8 questions; text rotation and typing on the canvas added by chris), split
-  11a/11b, built (four Sonnet 5.5 high legs), baseline gap and chip-typing fix at chris's word, approved; one release
-  `v0.11.0`; ADR-002 amended; board re-planned; rung 12 prompt written (`docs/STATUS-log.md`,
-  `docs/arcs/v1/rung-12-PROMPT-2026-11-16.md`).
 - 2026-11-16/17: rung 12 planned (bbq, 9 questions; pattern rotation unparked by chris, hinting to v1.1), split 12a/12b,
   built (Sonnet 5.5 high: 12a, stopped once by an account error and resumed; 12b with chris's pattern-angle addition),
   approved; one release `v0.12.0`; ADR-001 and ADR-002 built status; board re-planned; rung 13 prompt written
@@ -288,3 +280,6 @@ skill's `scripts/status-check.py` checks both.
 - 2026-11-17: rung 14 planned (bbq, 9 questions; the A5 X rhythm question closed by chris), split 14a/14b, built (two
   Sonnet 5.5 high builders), approved; ADR-012 amended (lint limits in profile data); one release `v0.14.0`; board
   re-planned; rung 15 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-15-PROMPT-2026-11-17.md`).
+- 2026-11-17: rung 15 planned (bbq, 10 questions; default names `{title}-{device}.png` and folders in the path by chris),
+  built in two legs by one Sonnet 5.5 high builder, approved; ADR-013 amended and ratified; one release `v0.15.0`; board
+  re-planned; rung 16 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-16-PROMPT-2026-11-17.md`).

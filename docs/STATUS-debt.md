@@ -298,3 +298,11 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   window's session export memory; a damaged preview in a `.quad` is skipped without a notice; a damaged `settings.ron` is left
   on disk until the next change overwrites it; `chrono` (local `{date}`) and `ron` are new direct dependencies of `quadrule-ui`.
   Save with the preview costs about 23 ms more on the Pi (the log's leg 2 entry); it runs on the interface thread at Save.
+
+- Rung 15, lead's close (`crates/ui/src/viewer.rs`, `crates/ui/src/export_ui.rs`): Save renders the main device's
+  export pixels for the 480 px preview on the interface thread, about 23 ms on the Pi (41 ms on A4 paper); a 600 PPI
+  Tabloid or A3 page will take far longer, so this joins rung 17's large-page item. Open question for chris (rung 15
+  look, word for word: "I don't _love_ this. Let's put an item into open questions for a file menu creation"): a File
+  menu to hold Open, Save, Save As, Export… and Export again, in place of the toolbar's Export menu. The Manta was not
+  tablet-checked with a noted PNG (chris: "the nomad check is enough").
+

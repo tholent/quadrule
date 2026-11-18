@@ -104,3 +104,30 @@ From Next:
 - 2026-11-13: rung 10 planned (bbq, 8 questions; one rung, one look), built (Sonnet 5.5, high), chip-canvas speed fix
   at chris's word (draw 49.7 → 23.6 ms), approved; `v0.10.0`; board re-planned; rung 11 prompt written
   (`docs/STATUS-log.md`, `docs/arcs/v1/rung-11-PROMPT-2026-11-13.md`).
+
+## Moved from STATUS.md on 2026-11-17 (rung 15 close), word for word
+
+From Now:
+
+- Rung 13, the profile system and paper sizes, is done: 13a and 13b approved by chris 2026-11-17 ("approved" each),
+  shipped together as `v0.13.0` (record `docs/bbq/2026-11-17-rung-13-profile-system.md`, with its Amendments; ADR-016
+  ratified). **13a**: a Profiles window (toolbar and Page tab) to edit every profile; an edited Manta or Nomad is a local
+  override marked Edited, with Reset to built-in; New…, Duplicate, Delete, `.ron` Import and Export; user profiles get
+  GUID ids and live in the config folder's `profiles/`; a `.quad` carries the profiles it uses that are not plain
+  built-ins, and a same-named incoming one offers Merge (its values update yours), Rename or Not now; a damaged profile
+  file is skipped and listed (`crates/profiles/src/registry.rs`, `crates/profiles/src/active.rs`,
+  `crates/ui/src/profiles_win.rs`). **13b**: eleven built-in paper sizes (A3 to Tabloid), PPI per page (150/200/300/600),
+  the Nomad's line weights by physical size, wide landscape exports, safe-zone lint skipped on paper
+  (`crates/profiles/src/lib.rs`, `crates/layout/src/device.rs`). File format 0.14.0
+  (`crates/render/tests/fixtures/v0.13/`). Three golden lines added (`paper_*`, `paper-landscape_*`); the 26 older ones
+  unchanged (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: A4 at 300 PPI 34–35 ms export,
+  4–12 ms chip; Tabloid at 600 PPI 410–440 ms export (over the 50 ms line; ruled debt for rung 17 by chris, "C"), 4 ms
+  chip (`docs/STATUS-log.md`, `docs/STATUS-debt.md`). Try it: `cargo run --release -p quadrule-app -- --profiles` or
+  `-- --paper-page`.
+
+From Log:
+
+- 2026-11-14/16: rung 11 planned (bbq, 8 questions; text rotation and typing on the canvas added by chris), split
+  11a/11b, built (four Sonnet 5.5 high legs), baseline gap and chip-typing fix at chris's word, approved; one release
+  `v0.11.0`; ADR-002 amended; board re-planned; rung 12 prompt written (`docs/STATUS-log.md`,
+  `docs/arcs/v1/rung-12-PROMPT-2026-11-16.md`).

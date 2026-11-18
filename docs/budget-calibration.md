@@ -92,3 +92,12 @@ Room left before Saturday 2026-11-21's 5 pm EST reset: 34 points under the 75 % 
 here · 10 pts`. Readings (chris): 42 % start, 46 % after 14a, 52 % after 14b. **10 points against a 15-point share.** No
 stop line fired. Alone on the meter. K not refitted this session. Room left before Saturday 2026-11-21's 5 pm EST
 reset: 23 points under the 75 % hard stop.
+
+2026-11-17, rung 15 (export), one lead session (Opus 5.5 high) and one Sonnet 5.5 high builder in two legs (279,935
+tokens reported at leg 1's end; 399,888 at leg 2's end, which likely includes leg 1). `spend-ledger.py measure --latest
+--meter 53 59 --lead "Opus 5.5, high"` → `fresh 578 · cached 63.7M · written 827k · out 232k | sonnet 77% · opus 23% |
+$18.51 | 53 → 59 · alone here · 6 pts`. Readings (chris): 53 % start (the 5-hour window at 63 %), 59 % at the look; the
+close is not in the end reading. **6 points against a 12-point share.** No stop line fired; the 5-hour window did not
+stop the builder. Alone on the meter. K not refitted this session. Room left before Saturday 2026-11-21's 5 pm EST
+reset: about 16 points under the 75 % hard stop (21 under 80 % from Thursday evening).
+

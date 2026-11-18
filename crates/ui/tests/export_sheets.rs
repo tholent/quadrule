@@ -320,9 +320,7 @@ fn export_writes_the_files_then_the_preflight_sheet_then_the_completion_sheet() 
     open_sheet(&mut h);
     go(&mut h);
     press(&mut h, "Export anyway");
-    let replaced = h
-        .query_by_label_contains("2 files replaced")
-        .is_some()
+    let replaced = h.query_by_label_contains("2 files replaced").is_some()
         && has_part(&h, "Customization tab");
     let ok = pre && written && done_sheet && folded && opened && revealed && gone && replaced;
     println!(

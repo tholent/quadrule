@@ -2125,3 +2125,26 @@ text chunks). Worked on `main`; token use was not measured by the builder.
   22.3, `save_to` 23.6); groups page 0.4 → 23.8; ISO A4 paper page 0.8 → 41.3. It runs on the interface thread at Save.
 - Seen on screen (grim, release build, scratch folders): `scratchpad/rung15/export.png`, `export-preset.png`,
   `export-mistake.png`, `exported.png`, `exported-open.png`.
+
+## 2026-11-17 — rung 15 lead (Opus 5.5, high)
+
+- Session start: `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` → `BUILD head=8489399 dirty=no rebuilt=0`. Budget
+  12 points by chris, alone on the weekly meter, no reserve, start 53 % (given by chris, logged; the 5-hour window read
+  63 %). Asked again: the Label gray stays parked (v1.1).
+- bbq, 10 questions (record `docs/bbq/2026-11-17-rung-15-export.md`): one rung, one look; the Export sheet and Export
+  again; an app-wide template with the default changed by chris to `{title}-{device}.png` (overruled); the folder
+  remembered by document path; folders in the path itself (chris, opening Q9; presets taken); the text note on by
+  default; the completion sheet with its note folded (overruled); a thumbnail of the main device only (overruled).
+  chris asked about EXIF/XMP for the note and kept PNG's Software and Title fields (Amendment).
+- Built by one Sonnet 5.5 high builder in two legs (leg 1 279,935 tokens; 399,888 reported at the end of leg 2, likely
+  including leg 1; their entries above). The lead checked each leg: `sha256sum -c` 30 OK (29 frozen + the noted
+  golden), fixtures `v0.4/`–`v0.14/` untouched, CI green on `5c22371`, `c2bb14f`, `4677806`; looked at the five
+  `--look` screenshots. chris's tablet check: "the provided test image works as a template" (Nomad; "the nomad check is
+  enough"). At the look chris ruled the builder's eight calls; the lead changed the replaced line to "N files replaced"
+  (`0a5bf39`); a File menu became an open question. chris: "look approved. please ratify adr-013 as well". ADR-013
+  amended and ratified (`4330a65`; `adr-check` → `16 ADRs, 0 failure(s)`).
+- Close: version 0.15.0, `docs/arcs/v1/release-notes/v0.15.0.md`, tag `v0.15.0`; board row and re-plan; STATUS.md (rung
+  13 bullet and one Log line moved word for word to `docs/STATUS-archive.md`); rung 16 prompt
+  `docs/arcs/v1/rung-16-PROMPT-2026-11-17.md`; calibration row. `spend-ledger.py measure --latest --meter 53 59` →
+  `sonnet 77% · opus 23% | $18.51 | 53 → 59 · alone here · 6 pts`.
+
