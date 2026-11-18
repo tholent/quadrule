@@ -6,7 +6,7 @@ ratified-on: "2026-11-10"
 owner: chris
 kind: design
 built: landed
-proof: "`crates/ui/tests/window.rs::empty_start_then_sample`, `crates/ui/tests/window.rs::layers_sit_under_the_inspector_on_the_right`, `crates/ui/tests/window.rs::findings_zoom_and_theme`, `crates/ui/tests/viewer.rs::file_names_are_safe`, `crates/app/src/main.rs::gtk_font_names`, `crates/ui/tests/export.rs::the_default_template_and_the_three_presets`, `crates/ui/tests/export.rs::folders_are_remembered_by_document_path_and_capped`, `crates/ui/tests/export_sheets.rs::the_export_menu_opens_one_sheet_with_the_remembered_choices`, `crates/ui/tests/export_sheets.rs::export_again_writes_with_the_last_choices_or_opens_the_sheet`"
+proof: "`crates/ui/tests/window.rs::empty_start_then_sample`, `crates/ui/tests/window.rs::layers_sit_under_the_inspector_on_the_right`, `crates/ui/tests/window.rs::findings_zoom_and_theme`, `crates/ui/tests/viewer.rs::file_names_are_safe`, `crates/app/src/main.rs::gtk_font_names`, `crates/ui/tests/export.rs::the_default_template_and_the_three_presets`, `crates/ui/tests/export.rs::folders_are_remembered_by_document_path_and_capped`, `crates/ui/tests/export_sheets.rs::the_export_menu_opens_one_sheet_with_the_remembered_choices`, `crates/ui/tests/export_sheets.rs::ctrl_e_opens_the_sheet_with_the_last_choices_and_enter_writes`, `crates/ui/tests/welcome.rs::the_welcome_screen_has_its_frame_and_every_tab_says_what_is_in_it`, `crates/ui/tests/welcome.rs::the_file_menu_holds_every_item_and_each_key_does_what_its_item_does`"
 supersedes: nothing
 amends: nothing
 ---
@@ -75,6 +75,11 @@ Drivers:
   `crates/ui/tests/window.rs::layers_sit_under_the_inspector_on_the_right`, `crates/ui/tests/window.rs::findings_zoom_and_theme`,
   `crates/ui/tests/viewer.rs::file_names_are_safe`, `crates/app/src/main.rs::gtk_font_names` ``.
 
+- 2026-11-18: amendment drafted by the rung 16 lead from chris's rung 16 bbq rulings, see "Amendment — 2026-11-18,
+  chris (proposed)" below; **awaiting chris's ratification at the 16a look**. The proof header changed because 16a
+  renamed a cited test (Export again is gone) and added the welcome screen's and File menu's tests. Prior header value:
+  proof `` `crates/ui/tests/window.rs::empty_start_then_sample`, `crates/ui/tests/window.rs::layers_sit_under_the_inspector_on_the_right`, `crates/ui/tests/window.rs::findings_zoom_and_theme`, `crates/ui/tests/viewer.rs::file_names_are_safe`, `crates/app/src/main.rs::gtk_font_names`, `crates/ui/tests/export.rs::the_default_template_and_the_three_presets`, `crates/ui/tests/export.rs::folders_are_remembered_by_document_path_and_capped`, `crates/ui/tests/export_sheets.rs::the_export_menu_opens_one_sheet_with_the_remembered_choices`, `crates/ui/tests/export_sheets.rs::export_again_writes_with_the_last_choices_or_opens_the_sheet` ``.
+
 ## Amendment — 2026-11-17, chris
 
 **Touches Decision item 5 (Export) and Consequences.** Ratified by chris 2026-11-17, word for word: "look approved.
@@ -98,3 +103,26 @@ question:
 
 Why: spec §11.2 asks for a configurable naming scheme, per-profile subfolders, a set folder and a remembered folder,
 and §11.1 for the text note; chris chose the shorter default name at the bbq.
+
+## Amendment — 2026-11-18, chris (proposed)
+
+**Status: proposed, awaiting chris's ratification at the rung 16a look.** Touches Decision item 4 (Start), item 5 and
+the 2026-11-17 amendment's first bullet (Export). The rulings are chris's, from the rung 16 bbq
+(`docs/bbq/2026-11-17-rung-16-welcome-and-gallery.md`), cited by question:
+
+- **The window starts on a welcome screen** (Q2, chris: "One screen: actions left, gallery right (Recommended)"),
+  replacing item 4's empty backdrop. Down the left: Blank page, Open… and the Recent list; on the right, the starter
+  gallery (category tabs, a device filter, search, thumbnails, My templates). It shows at start-up when no file is named,
+  after Close, and for New… over an open document. Opening by the file dialog, by dropping a file, or as `quadrule
+  file.quad` stays as item 4 had it.
+- **A File menu holds the file actions** (Q6, chris: "the move into the file"): New…, Open…, Open Recent, Save, Save
+  As…, Save as template…, Export… and Close, leftmost in the top bar. The toolbar's New, Open, Save and Save As buttons
+  and its Export menu go.
+- **One Export…** (Q9, chris: "One Export…, Enter writes (Recommended)"), replacing the 2026-11-17 amendment's two
+  items: File ▸ Export… (Ctrl+E) opens the Export sheet with the last choices filled in and its Export button focused,
+  so Enter writes them. Export again and Ctrl+Shift+E are gone. The rest of that amendment (the path template, the
+  remembered folder, the text note) stands.
+
+Why: spec §13 asks for a starter gallery and My templates, and chris placed the File menu (his open question from rung
+15's look, "Let's put an item into open questions for a file menu creation") in rung 16; asked whether Export again could
+be combined with Export, he chose one item that always shows where the files go.
