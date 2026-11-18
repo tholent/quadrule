@@ -6,7 +6,7 @@ ratified-on: "2026-11-10"
 owner: chris
 kind: design
 built: landed
-proof: "`crates/ui/tests/window.rs::empty_start_then_sample`, `crates/ui/tests/window.rs::layers_sit_under_the_inspector_on_the_right`, `crates/ui/tests/window.rs::findings_zoom_and_theme`, `crates/ui/tests/viewer.rs::file_names_are_safe`, `crates/app/src/main.rs::gtk_font_names`"
+proof: "`crates/ui/tests/window.rs::empty_start_then_sample`, `crates/ui/tests/window.rs::layers_sit_under_the_inspector_on_the_right`, `crates/ui/tests/window.rs::findings_zoom_and_theme`, `crates/ui/tests/viewer.rs::file_names_are_safe`, `crates/app/src/main.rs::gtk_font_names`, `crates/ui/tests/export.rs::the_default_template_and_the_three_presets`, `crates/ui/tests/export.rs::folders_are_remembered_by_document_path_and_capped`, `crates/ui/tests/export_sheets.rs::the_export_menu_opens_one_sheet_with_the_remembered_choices`, `crates/ui/tests/export_sheets.rs::export_again_writes_with_the_last_choices_or_opens_the_sheet`"
 supersedes: nothing
 amends: nothing
 ---
@@ -69,3 +69,32 @@ Drivers:
 - 2026-11-10: ratified by chris (answer "Ratify" to "ADR-013 … Ratify?", in his review of the pending ADRs). Prior header
   values: status `proposed`, status-note `drafted 2026-11-10 from the project's records (backlog sweep, no
   rounds, chris's choice); awaiting ratification`.
+- 2026-11-17: amended by chris (rung 15, export), see "Amendment — 2026-11-17, chris" below; ratified by chris the same
+  day ("look approved. please ratify adr-013 as well"). Item 5 changes; the consequence "the export writes no PNG text
+  note yet" is closed. Prior header value: proof `` `crates/ui/tests/window.rs::empty_start_then_sample`,
+  `crates/ui/tests/window.rs::layers_sit_under_the_inspector_on_the_right`, `crates/ui/tests/window.rs::findings_zoom_and_theme`,
+  `crates/ui/tests/viewer.rs::file_names_are_safe`, `crates/app/src/main.rs::gtk_font_names` ``.
+
+## Amendment — 2026-11-17, chris
+
+**Touches Decision item 5 (Export) and Consequences.** Ratified by chris 2026-11-17, word for word: "look approved.
+please ratify adr-013 as well". The rulings are the rung 15 bbq's (`docs/bbq/2026-11-17-rung-15-export.md`), cited by
+question:
+
+- **Export opens one Export sheet** (Q2): the toolbar's Export holds **Export…** (Ctrl+Shift+E), which opens the sheet
+  (devices: this one or all; folder; path; set; the text-note tick), and **Export again** (Ctrl+E), which writes with
+  the last choices and no sheet. The two items "Export this device" and "Export all devices" are gone. Both pass
+  through the one preflight sheet (rung 14b). Whether these move to a File menu is an open question (chris at rung 15's
+  look: "Let's put an item into open questions for a file menu creation").
+- **Files are named by one app-wide path template** (Q3, Q9), kept in the app's settings, not in the document. Its
+  **default is `{title}-{device}.png`** (chris: "app-wide, change the default {title}-{device}.png"), replacing
+  `{title}_{manta|nomad}_{w}x{h}.png`. `/` in the template makes folders; a Set box fills `{set}`; three presets
+  (Flat, Folder per device, Device then set). Tokens and safe-name rules are in the record's Defaulted list; `{device}`
+  is still each profile's short name.
+- **The export folder is remembered** per document path in the app's settings, with the last folder used as the
+  global default (Q4).
+- **PNGs carry a text note by default** (Q6): Software and Title, PNG's own text keywords; a tick turns it off. The
+  frozen goldens stay the no-note pixel tests.
+
+Why: spec §11.2 asks for a configurable naming scheme, per-profile subfolders, a set folder and a remembered folder,
+and §11.1 for the text note; chris chose the shorter default name at the bbq.
