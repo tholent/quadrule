@@ -200,6 +200,50 @@ pub(crate) fn object_hits(
         }
     }
 
+    // The border of a pattern region is a line of its own, judged as any line is (pattern borders bbq,
+    // Defaulted "Snapping and lint").
+    if let ObjectKind::Pattern(pr) = &o.kind
+        && let Some(b) = &pr.border
+        && b.sides.any()
+        && let Some((w, gray)) = stroke_opt(b.style, target)
+    {
+        let g = on_page(gray);
+        if let Some(lightest) = t.lightest_gray_line(w)
+            && g > lightest
+        {
+            out.push(hit(
+                "L03",
+                Severity::Warn,
+                num(
+                    num(at("lint-l03-border"), "gray", f64::from(g)),
+                    "lightest",
+                    f64::from(lightest),
+                ),
+            ));
+        }
+        if off_levels(g) {
+            out.push(hit(
+                "L05",
+                Severity::Info,
+                num(at("lint-l05"), "gray", f64::from(g)).arg("what", what("lint-l05-border")),
+            ));
+        }
+        // Curved at a rounded corner, or slanted when the frame is turned off a quarter turn.
+        let curved = b.radius_mm() > 0.0
+            && (b.sides.top || b.sides.bottom)
+            && (b.sides.left || b.sides.right);
+        if let Some(thin) = t.thin_line_px
+            && w <= thin
+            && (curved || !quadrule_layout::rotate::is_quarter_turn(rotation))
+        {
+            out.push(hit(
+                "L14",
+                Severity::Info,
+                num(at("lint-l14-border"), "px", f64::from(w)),
+            ));
+        }
+    }
+
     // The fill of a shape.
     if let Some(f) = o.fill
         && o.kind.is_shape()

@@ -1595,6 +1595,9 @@ impl ViewerUi {
                 ui.add_space(6.0);
                 ui.strong(self.t("app-pattern-settings"));
                 self.pattern_rows(ui, &o, pr, &cx, enabled);
+                ui.add_space(6.0);
+                ui.strong(self.t("app-border-section"));
+                self.border_rows(ui, pr, &cx, enabled);
             }
             if shape {
                 ui.add_space(6.0);
@@ -1876,6 +1879,168 @@ impl ViewerUi {
                 });
                 if role != pr.major_role {
                     set!(None, |p| p.major_role = role);
+                }
+                ui.end_row();
+            });
+    }
+
+    /// The Border section of a pattern region's Style tab (pattern borders bbq, Defaulted "The inspector"): a tick,
+    /// and, with it on, a tick for each side, the line (a role, or a width and gray of its own) and the corner
+    /// radius. Each edit is one undo step (typing in a field merges), applied to every region picked.
+    fn border_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        pr: &PatternRegion,
+        cx: &UnitContext,
+        enabled: bool,
+    ) {
+        // Edits the border of every picked region that has one.
+        macro_rules! set {
+            ($key:expr, |$b:ident| $body:expr) => {{
+                let _ = self.viewer.edit_selected($key, |x| {
+                    if let ObjectKind::Pattern(p) = &mut x.kind
+                        && let Some($b) = &mut p.border
+                    {
+                        $body;
+                    }
+                });
+            }};
+        }
+        egui::Grid::new("border-grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                let label = ui.label(self.t("app-border"));
+                let mut on = pr.border.is_some();
+                if ui
+                    .add_enabled(enabled, egui::Checkbox::new(&mut on, ""))
+                    .labelled_by(label.id)
+                    .changed()
+                {
+                    let _ = self.viewer.edit_selected(None, |x| {
+                        if let ObjectKind::Pattern(p) = &mut x.kind {
+                            p.border = on.then(quadrule_model::Border::new);
+                        }
+                    });
+                }
+                ui.end_row();
+                let Some(b) = &pr.border else {
+                    return;
+                };
+                // Which sides: four ticks on one row.
+                let label = ui.label(self.t("app-border-sides"));
+                let sides = b.sides;
+                let mut want = sides;
+                ui.horizontal(|ui| {
+                    for (id, flag) in [
+                        ("app-border-top", &mut want.top),
+                        ("app-border-right", &mut want.right),
+                        ("app-border-bottom", &mut want.bottom),
+                        ("app-border-left", &mut want.left),
+                    ] {
+                        ui.add_enabled(enabled, egui::Checkbox::new(flag, self.t(id)));
+                    }
+                })
+                .response
+                .labelled_by(label.id);
+                if want != sides {
+                    set!(None, |b| b.sides = want);
+                }
+                ui.end_row();
+
+                // The line: a role or values of its own.
+                let label = ui.label(self.t("app-border-line"));
+                let was = StrokeChoice::of(b.style);
+                let mut choice = was;
+                ui.horizontal(|ui| {
+                    ui.radio_value(&mut choice, StrokeChoice::Role, self.t("app-style-role"));
+                    ui.radio_value(
+                        &mut choice,
+                        StrokeChoice::Custom,
+                        self.t("app-style-custom"),
+                    );
+                })
+                .response
+                .labelled_by(label.id);
+                if choice != was {
+                    let device = self.viewer.profiles().map(|(_, shown)| shown);
+                    let style = match (choice, b.style) {
+                        (StrokeChoice::Custom, Style::Role(r)) => {
+                            let (w, g) = device.as_ref().map_or((1, 0), |p| {
+                                let s = p.role(r);
+                                (s.width_px.max(1), s.gray)
+                            });
+                            Style::Custom {
+                                width_mm: w as f64 / cx.px_per_mm,
+                                gray: g,
+                            }
+                        }
+                        _ => Style::Role(LineRole::Structure),
+                    };
+                    set!(None, |b| b.style = style);
+                }
+                ui.end_row();
+                match b.style {
+                    Style::Role(role) => {
+                        let label = ui.label(self.t("app-style-role"));
+                        let mut r = role;
+                        self.combo(ui, "border-role", label.id, &mut r, &ROLES);
+                        if r != role {
+                            set!(None, |b| b.style = Style::Role(r));
+                        }
+                        ui.end_row();
+                    }
+                    Style::Custom { width_mm, gray } => {
+                        if let Some(mm) = self.length_row(
+                            ui,
+                            "border-width",
+                            "app-stroke-width",
+                            width_mm,
+                            cx,
+                            enabled,
+                        ) {
+                            set!(Some("border-width"), |b| if let Style::Custom {
+                                width_mm, ..
+                            } = &mut b.style
+                            {
+                                *width_mm = mm.max(0.0);
+                            });
+                        }
+                        ui.end_row();
+                        let levels: Vec<u8> = self
+                            .viewer
+                            .profiles()
+                            .map(|(_, shown)| shown.gray_levels)
+                            .unwrap_or_default();
+                        if let Some((g, drag)) = self.gray_field(
+                            ui,
+                            "border",
+                            "app-stroke-gray",
+                            gray,
+                            false,
+                            &levels,
+                            enabled,
+                        ) {
+                            let merge = drag.then_some("border-gray");
+                            set!(
+                                merge,
+                                |b| if let Style::Custom { gray, .. } = &mut b.style {
+                                    *gray = g;
+                                }
+                            );
+                        }
+                    }
+                    Style::None => {}
+                }
+
+                if let Some(mm) = self.length_row(
+                    ui,
+                    "border-radius",
+                    "app-corner-radius",
+                    b.corner_radius_mm,
+                    cx,
+                    enabled,
+                ) {
+                    set!(Some("border-radius"), |b| b.corner_radius_mm = mm.max(0.0));
                 }
                 ui.end_row();
             });

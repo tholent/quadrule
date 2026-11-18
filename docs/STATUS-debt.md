@@ -335,3 +335,23 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   never took effect, so every `make bench-*` before this leg ran the lint page unless `LINT=` was given; fixed here (`LINT :=`),
   so earlier numbers made through `make` were on the lint page. (9) The 16b starters need real `.quad` files in
   `crates/ui/starters/<category>/` (`paper`, `notes`, `planning`, `bullet-journal`, `creative`) and their goldens on both devices.
+
+- Pattern borders, owed (`crates/layout/src/border.rs`, `crates/layout/src/pattern.rs`, `crates/ui/src/panels.rs`, `crates/lint/src/judge.rs`;
+  builder 2026-11-18): (1) the words (Border section: "Show border", "Sides", "Top", "Right", "Bottom", "Left", "Line", plus the existing Role,
+  Custom, Width, Gray and Corner radius; lint: "The border of ..." for L01, L02, L03, L14 and "border" for L05) and the look of the
+  section are the builder's proposals for chris's look. (2) The border is not part of per-device overrides: `Override` holds only
+  place, size, font size and the eye (`crates/model/src/lib.rs`), so nothing for a pattern's style or border exists to extend; a border is
+  the same on every device, its role resolving to each device's width and gray. Building overrides for it would first mean overrides
+  for style, which the record said not to build. (3) ADR-014 needs its dated amendment (bordered sides drop the lines and dots on the
+  edge; rounded corners cut the ruling at the curve), drafted by the lead before the look. NOT the builder's: ADRs untouched.
+  (4) "On the edge" is wider than the record's half pixel: a line or dot is left out when its centre is within half the sum of its
+  width and the border's width of the edge (at least half a pixel), so its ink never touches the border's. Half a pixel alone left a
+  dot or line a pixel off the border showing beside it whenever the rhythm and the frame's edge, set in millimetres, rounded
+  differently; for chris's veto at the look (the record's veto "a wider band" is this). (5) A dot is also left out when its centre
+  is within the same band of a rounded corner's curve, not only when outside it. (6) A repeat's alternation re-roles the
+  source's own line (`restyle`), not its border, which keeps its own line. (7) A pattern with "no stroke" (Style::None) draws no
+  ruling but still draws its border. (8) Turning a region's own ruling off a quarter turn (Pattern angle) cuts the ruling at the
+  border's rounded outline, a polygon whose arcs are nominal (the frame's whole pixels), up to half a pixel from the border's own
+  arc, which sits on the stroke's pixel grid. (9) No role badge beside a custom border's gray (the object stroke has one). (10) The
+  test starters (`test_starters.rs`) do not include the bordered page. (11) The first 4 sides tick reads from the first picked
+  region when several are picked; an edit applies to all (no "mixed" display for the border).

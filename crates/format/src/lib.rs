@@ -40,6 +40,8 @@
 //! made by the app at Save and Save As (never at autosave). The library only carries the bytes: it does not draw
 //! them. A file without a preview is as valid as one with it, a reader may ignore previews, and a damaged one is
 //! skipped like a damaged font; an old file gets its preview at its next save.
+//! Format 0.17 adds an optional `border` on a pattern region (pattern borders bbq, docs/bbq/2026-11-18-pattern-borders.md):
+//! its sides, its line and its corner radius, left out of a file when the region has none.
 
 #![forbid(unsafe_code)]
 
@@ -58,7 +60,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, DateTime, System, ZipArchive, ZipWriter};
 
 /// The format version this build writes. Pre-1.0 while the format settles.
-pub const FORMAT_VERSION: &str = "0.16.0";
+pub const FORMAT_VERSION: &str = "0.17.0";
 
 /// Required features this build understands. A file that requires any other opens read-only.
 pub const KNOWN_FEATURES: &[&str] = &["text-outlines"];

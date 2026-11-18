@@ -5,13 +5,17 @@
 
 lint-l01-thin = "{ $name }" has a { $px } px stroke on this device, thinner than one pixel: it is drawn 1 px wide and may look heavier than meant. Use a role, or at least { $min_mm } mm.
 lint-l02-fraction = "{ $name }" has a { $px } px stroke on this device; it is drawn { $drawn } px wide. A role, or a width of whole pixels, keeps it exact.
+lint-l01-border-thin = The border of "{ $name }" has a { $px } px stroke on this device, thinner than one pixel: it is drawn 1 px wide and may look heavier than meant. Use a role, or at least { $min_mm } mm.
+lint-l02-border-fraction = The border of "{ $name }" has a { $px } px stroke on this device; it is drawn { $drawn } px wide. A role, or a width of whole pixels, keeps it exact.
 lint-l02-turned-pattern = "{ $name }" is a pattern region with its frame or its ruling turned off a quarter turn, so its lines and dots cannot sit on whole pixels and come out softer.
 lint-l03-stroke = "{ $name }" is gray { $gray } on the page. Lines lighter than { $lightest } may not show on this device. Use a darker gray, or a line role.
+lint-l03-border = The border of "{ $name }" is gray { $gray } on the page. Lines lighter than { $lightest } may not show on this device. Use a darker gray, or a line role.
 lint-l03-dots = "{ $name }" has dots { $px } px wide at gray { $gray } on the page. Dots that size lighter than { $lightest } may not show on this device. Use a darker gray, or make the dots larger.
 lint-l03-fill = "{ $name }" has a fill of gray { $gray } on the page. Fills lighter than { $lightest } may not show on this device. Use a darker gray, or a fill role.
 lint-l03-text = "{ $name }" has text of gray { $gray } on the page. Text lighter than { $lightest } may be hard to read on this device. Use a darker gray, or a text role.
 lint-l05 = "{ $name }" has a { $what } of gray { $gray } on the page, which is not one of the clean grays this device draws flat. It may band or dither. Use one of the device's clean grays.
 lint-l05-line = line
+lint-l05-border = border
 lint-l05-dots = dot
 lint-l05-fill = fill
 lint-l05-text = text
@@ -22,6 +26,7 @@ lint-l13 = { $count ->
         [one] One dark fill covers
        *[other] { $count } dark fills cover
     } about { $percent } % of the page, more than the { $limit } % this device handles well (gray { $gray } or darker). Large dark areas can ghost or refresh slowly. Lighten them, or make them smaller.
+lint-l14-border = The border of "{ $name }" is curved or slanted and only { $px } px wide, so most of its pixels come out as in-between grays and it looks soft. Make it thicker, or accept the softer look.
 lint-l14 = "{ $name }" is a slanted or curved line only { $px } px wide, so most of its pixels come out as in-between grays and it looks soft. Make it thicker, or accept the softer look.
 lint-l06-fixed = "{ $name }" is under the { $zones } on this device. Move it inside the safe area, or widen the margins.
 lint-l06-movable = "{ $name }" can be covered by the { $zones } where it first appears; it can be moved.

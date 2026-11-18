@@ -40,6 +40,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.13.0", "0.14.0", v0_13_to_v0_14),
     ("0.14.0", "0.15.0", v0_14_to_v0_15),
     ("0.15.0", "0.16.0", v0_15_to_v0_16),
+    ("0.16.0", "0.17.0", v0_16_to_v0_17),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -179,6 +180,15 @@ fn v0_14_to_v0_15(_scene: &mut Value) -> Result<(), FormatError> {
 /// stays valid, and it gets one at its next save. A 0.15 build ignores the new entry (it is not the scene or an
 /// outline, so it reads past it) and drops it on a save.
 fn v0_15_to_v0_16(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.17 adds an optional `border` on a pattern region (pattern borders bbq, docs/bbq/2026-11-18-pattern-borders.md,
+/// Defaulted "Where it lives"): which sides, the line (a role or a width and gray) and a corner radius. A region
+/// with none has no border and the field is left out of its file, so a 0.16 scene needs no rewriting and draws
+/// and exports as it did. A 0.16 build keeps the new field as an unknown one on a save, but would draw the
+/// region with no border.
+fn v0_16_to_v0_17(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

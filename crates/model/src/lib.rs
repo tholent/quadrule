@@ -1289,9 +1289,112 @@ pub struct PatternRegion {
     /// [`PatternRegion::pattern_angle`].
     #[serde(default, skip_serializing_if = "is_zero")]
     pub angle_deg: f64,
+    /// A border drawn round the frame, on the sides that have one (pattern borders bbq, docs/bbq/
+    /// 2026-11-18-pattern-borders.md; format 0.17). `None` is no border, and is left out of a file, so
+    /// a page without one saves and exports as it always did. It turns with the frame's `rotation_deg`,
+    /// not with `angle_deg`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub border: Option<Border>,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+/// Which sides of a pattern region's border are drawn (format 0.17).
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BorderSides {
+    /// The top edge.
+    pub top: bool,
+    /// The right edge.
+    pub right: bool,
+    /// The bottom edge.
+    pub bottom: bool,
+    /// The left edge.
+    pub left: bool,
+}
+
+impl BorderSides {
+    /// All four sides (what a new border starts with).
+    pub const ALL: BorderSides = BorderSides {
+        top: true,
+        right: true,
+        bottom: true,
+        left: true,
+    };
+
+    /// Whether at least one side is on.
+    pub fn any(&self) -> bool {
+        self.top || self.right || self.bottom || self.left
+    }
+}
+
+impl Default for BorderSides {
+    fn default() -> Self {
+        BorderSides::ALL
+    }
+}
+
+/// The border of a pattern region (pattern borders bbq, Q1 to Q3; format 0.17): a line centred on the
+/// frame's edge on each side that is on, like the stroke of a rectangle. On a bordered side, pattern
+/// lines and dots that sit on the edge are left out so nothing doubles up. A corner is rounded only
+/// where both its sides are on.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct Border {
+    /// The sides that are drawn (all four unless a file says otherwise).
+    #[serde(default, skip_serializing_if = "is_all_sides")]
+    pub sides: BorderSides,
+    /// The line: a role (Structure unless changed) or a width and gray of its own. `Style::None`
+    /// draws nothing, and nothing is left out of the pattern.
+    #[serde(
+        default = "structure_style",
+        skip_serializing_if = "is_structure_style"
+    )]
+    pub style: Style,
+    /// Corner radius in mm; 0 is square. Drawn at most half the shorter side.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub corner_radius_mm: f64,
+    /// Fields from newer versions.
+    #[serde(flatten)]
+    pub extra: Extra,
+}
+
+fn is_all_sides(s: &BorderSides) -> bool {
+    *s == BorderSides::ALL
+}
+
+fn structure_style() -> Style {
+    Style::Role(LineRole::Structure)
+}
+
+fn is_structure_style(s: &Style) -> bool {
+    *s == Style::Role(LineRole::Structure)
+}
+
+impl Border {
+    /// A border on all four sides in the Structure role, with square corners.
+    pub fn new() -> Self {
+        Border {
+            sides: BorderSides::ALL,
+            style: Style::Role(LineRole::Structure),
+            corner_radius_mm: 0.0,
+            extra: Extra::new(),
+        }
+    }
+
+    /// The corner radius that counts, in mm: never negative, not-a-number is 0.
+    pub fn radius_mm(&self) -> f64 {
+        if self.corner_radius_mm.is_finite() {
+            self.corner_radius_mm.max(0.0)
+        } else {
+            0.0
+        }
+    }
+}
+
+impl Default for Border {
+    fn default() -> Self {
+        Border::new()
+    }
 }
 
 fn yes() -> bool {
@@ -1321,6 +1424,7 @@ impl PatternRegion {
             major: MajorLines::Follow,
             major_role: LineRole::Structure,
             angle_deg: 0.0,
+            border: None,
             extra: Extra::new(),
         }
     }

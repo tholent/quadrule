@@ -71,6 +71,9 @@ pub struct DragBench {
     /// Opens the rung 12b turned-patterns page when nothing is open yet (`--turned-patterns-page`); the
     /// drag then moves its turned dot region, and the rotate run turns its 45 degree grid.
     pub turned_patterns: bool,
+    /// Opens the pattern-borders page when nothing is open yet (`--bordered-page`); the drag then moves its
+    /// bordered dot region.
+    pub bordered: bool,
     /// Opens the rung 12b pattern-angle page when nothing is open yet (`--pattern-angle-page`); the
     /// drag then moves its dot region.
     pub pattern_angle: bool,
@@ -121,6 +124,7 @@ impl DragBench {
             patterns: false,
             turned_patterns: false,
             pattern_angle: false,
+            bordered: false,
             lint: false,
             paper: false,
             repeats: false,
@@ -168,6 +172,14 @@ impl DragBench {
     /// The same benchmark over the rung 14a lint page.
     pub fn with_lint(self) -> Self {
         DragBench { lint: true, ..self }
+    }
+
+    /// The same benchmark over the pattern-borders page.
+    pub fn with_bordered(self) -> Self {
+        DragBench {
+            bordered: true,
+            ..self
+        }
     }
 
     /// The same benchmark over the rung 12b pattern-angle page.

@@ -1453,6 +1453,8 @@ impl ViewerUi {
                         self.viewer.open_lint();
                     } else if b.paper {
                         self.viewer.open_paper();
+                    } else if b.bordered {
+                        self.viewer.open_bordered();
                     } else if b.pattern_angle {
                         self.viewer.open_pattern_angle();
                     } else if b.turned_patterns {
@@ -1635,6 +1637,8 @@ impl ViewerUi {
                         "lint"
                     } else if b.paper {
                         "paper"
+                    } else if b.bordered {
+                        "bordered"
                     } else if b.pattern_angle {
                         "pattern_angle"
                     } else if b.turned_patterns {

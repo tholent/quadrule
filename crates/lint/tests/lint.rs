@@ -904,3 +904,73 @@ fn a_ruling_angle_off_a_quarter_turn_gets_l02_too() {
     );
     assert!(ok);
 }
+
+#[test]
+fn the_border_of_a_pattern_region_is_judged_like_any_line() {
+    // Pattern borders bbq, Defaulted "Snapping and lint": L03 (too light), L05 (not a clean gray), L01 (thinner than a
+    // pixel) and L14 (curved and thin) read the border's own line, and name the border. A role is fine.
+    let manta = builtin(MANTA_ID).unwrap();
+    let mut doc = pattern_borders_document();
+    let id = border_ids::nth(3);
+    let set = |doc: &mut Document, style: Style, radius: f64| {
+        if let ObjectKind::Pattern(p) = &mut doc.object_mut(id).unwrap().kind {
+            let b = p.border.as_mut().unwrap();
+            b.style = style;
+            b.corner_radius_mm = radius;
+        }
+    };
+    let find = |doc: &Document, rule: &str| {
+        run(doc, &manta)
+            .into_iter()
+            .find(|x| x.object == Some(id) && x.rule == rule)
+    };
+    set(&mut doc, Style::Role(LineRole::Structure), 3.0);
+    let clean = ["L01", "L03", "L05"]
+        .iter()
+        .all(|r| find(&doc, r).is_none());
+    set(
+        &mut doc,
+        Style::Custom {
+            width_mm: 0.4,
+            gray: 240,
+        },
+        3.0,
+    );
+    let light = find(&doc, "L03").map(|f| text(&f)).unwrap_or_default();
+    let off = find(&doc, "L05").map(|f| text(&f)).unwrap_or_default();
+    set(
+        &mut doc,
+        Style::Custom {
+            width_mm: 0.02,
+            gray: 0,
+        },
+        3.0,
+    );
+    let thin = find(&doc, "L01").map(|f| text(&f)).unwrap_or_default();
+    let soft = find(&doc, "L14").map(|f| text(&f)).unwrap_or_default();
+    // Square corners: no L14 for the border.
+    set(
+        &mut doc,
+        Style::Custom {
+            width_mm: 0.05,
+            gray: 0,
+        },
+        0.0,
+    );
+    let square_quiet = find(&doc, "L14").is_none();
+    let ok = clean
+        && light.contains("The border of")
+        && off.contains("border")
+        && thin.contains("The border of")
+        && soft.contains("The border of")
+        && square_quiet;
+    println!(
+        "CHECK crate=lint name=border_judged result={} role_clean={clean} l03_names_border={} l05_names_border={} l01_names_border={} l14_names_border={} square_corners_no_l14={square_quiet}",
+        pass(ok),
+        light.contains("The border of"),
+        off.contains("border"),
+        thin.contains("The border of"),
+        soft.contains("The border of")
+    );
+    assert!(ok);
+}

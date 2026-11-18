@@ -35,6 +35,7 @@
 //! `--fonts-page` (the fonts page: a page of text; the benchmarks then run over it and the drag moves its dot grid). Rung 11b adds
 //! `--textbox-page` (the text-box page, same use), `--missing-fonts-page` (the same page set in a font this computer lacks) and `--bench-type [frames]` (type into a long text box; `name=type_bench`). Rung 12b adds
 //! `--pattern-angle-page` (the ruling turned inside its frame; the benchmarks then run over it) and
+//! `--bordered-page` (the pattern-borders page: a border round pattern regions; the benchmarks then run over it) and
 //! `--turned-patterns-page` (pattern regions turned whole, one in a group and one in a repeat; the benchmarks then run over it, and `--bench-rotate` turns its 45 degree grid). Rung 14b adds `--look lint|style|preflight|export|…` (start with that part showing, for a screenshot). Rung 14a adds `--lint-page` (objects that make the gray, text-size, handwriting, dark-fill and thin-line rules fire, beside ones that pass; the benchmarks then run over it). Rung 13b adds
 //! `--paper-page` (ISO A4 at 300 PPI and ISO A5 at 600; the benchmarks then run over it) and `--paper-landscape-page` (US Letter held sideways, exported wide).
 //!
@@ -196,6 +197,8 @@ impl App {
             ui.viewer.open_paper();
         } else if args.paper_landscape_page {
             ui.viewer.open_paper_landscape();
+        } else if args.bordered_page {
+            ui.viewer.open_bordered();
         } else if args.pattern_angle_page {
             ui.viewer.open_pattern_angle();
         } else if args.turned_patterns_page {
@@ -281,6 +284,8 @@ impl App {
                 b.with_lint()
             } else if args.paper_page {
                 b.with_paper()
+            } else if args.bordered_page {
+                b.with_bordered()
             } else if args.pattern_angle_page {
                 b.with_pattern_angle()
             } else if args.turned_patterns_page {
@@ -553,6 +558,9 @@ struct Args {
     /// Open the rung 13b landscape paper page instead of the empty start (`--paper-landscape-page`: US
     /// Letter held sideways, exported wide).
     paper_landscape_page: bool,
+    /// Open the pattern-borders page instead of the empty start (`--bordered-page`: a border round pattern regions,
+    /// square and rounded, turned and not); the benchmarks then run over it and the drag moves its dot region.
+    bordered_page: bool,
     /// Open the rung 12b pattern-angle page instead of the empty start (`--pattern-angle-page`); the
     /// benchmarks then run over it.
     pattern_angle_page: bool,
@@ -651,6 +659,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.paper_page = true;
         } else if a == "--paper-landscape-page" {
             out.paper_landscape_page = true;
+        } else if a == "--bordered-page" {
+            out.bordered_page = true;
         } else if a == "--pattern-angle-page" {
             out.pattern_angle_page = true;
         } else if a == "--turned-patterns-page" {
@@ -855,6 +865,14 @@ mod tests {
                 Ok(Args {
                     bench_drag: Some(30),
                     paper_page: true,
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--bordered-page", "--bench-draw", "30"]),
+                Ok(Args {
+                    bench_draw: Some(30),
+                    bordered_page: true,
                     ..Args::default()
                 }),
             ),

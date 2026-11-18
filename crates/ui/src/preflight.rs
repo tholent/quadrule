@@ -146,6 +146,13 @@ impl ViewerUi {
                 let pick = self.viewer.doc().and_then(|d| {
                     d.objects()
                         .find(|o| matches!(o.style, quadrule_model::Style::Custom { .. }))
+                        // The pattern-borders page has none of those: its Border section is the look.
+                        .or_else(|| {
+                            d.objects().find(|o| {
+                                matches!(&o.kind, quadrule_model::ObjectKind::Pattern(p)
+                                    if p.border.as_ref().is_some_and(|b| b.corner_radius_mm > 0.0))
+                            })
+                        })
                         .map(|o| o.id)
                 });
                 if let Some(id) = pick {

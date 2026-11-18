@@ -446,7 +446,13 @@ pub fn sharp_rect_path((x0, y0, x1, y1): (f64, f64, f64, f64)) -> BezPath {
 }
 
 /// Kurbo's arc as path elements without its first MoveTo.
-fn push_arc(path: &mut BezPath, centre: Point, radii: (f64, f64), start: f64, sweep: f64) {
+pub(crate) fn push_arc(
+    path: &mut BezPath,
+    centre: Point,
+    radii: (f64, f64),
+    start: f64,
+    sweep: f64,
+) {
     let arc = Arc::new(centre, (radii.0, radii.1), start, sweep, 0.0);
     for el in arc.path_elements(0.05).skip(1) {
         path.push(el);

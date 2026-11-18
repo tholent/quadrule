@@ -30,6 +30,7 @@
 //! Lines, dots and the square grid are the rung 1 patterns and draw exactly as they did (the
 //! goldens depend on it); the rest arrived with rung 9.
 
+use crate::border::{Rim, clip_convex};
 use crate::{Item, RhythmPx, snap_center, stroke};
 use kurbo::{Affine, BezPath};
 use quadrule_model::{
@@ -196,6 +197,9 @@ struct Ctx<'a> {
     major: Option<u8>,
     /// The index in `items` of each dot drawn (a turned ruling keeps a dot whole or drops it).
     dots: &'a mut Vec<usize>,
+    /// The region's border, in these axes: what sits on a bordered edge is left out, and what would reach
+    /// into a rounded corner is cut at its curve (pattern borders bbq).
+    rim: Option<Rim>,
 }
 
 impl Ctx<'_> {
@@ -211,6 +215,16 @@ impl Ctx<'_> {
     fn hline(&mut self, xa: f64, xb: f64, y: f64, pen: Pen) {
         let c = snap_center(y, pen.w);
         let half = f64::from(pen.w) / 2.0;
+        let (mut xa, mut xb) = (xa, xb);
+        if let Some(rim) = &self.rim {
+            if rim.drops_hline(y, f64::from(pen.w)) {
+                return;
+            }
+            match rim.hline_span(xa, xb, c - half, c + half) {
+                Some((a, b)) => (xa, xb) = (a, b),
+                None => return,
+            }
+        }
         self.items.push(Item::Rect {
             x0: xa,
             y0: c - half,
@@ -224,6 +238,16 @@ impl Ctx<'_> {
     fn vline(&mut self, x: f64, ya: f64, yb: f64, pen: Pen) {
         let c = snap_center(x, pen.w);
         let half = f64::from(pen.w) / 2.0;
+        let (mut ya, mut yb) = (ya, yb);
+        if let Some(rim) = &self.rim {
+            if rim.drops_vline(x, f64::from(pen.w)) {
+                return;
+            }
+            match rim.vline_span(ya, yb, c - half, c + half) {
+                Some((a, b)) => (ya, yb) = (a, b),
+                None => return,
+            }
+        }
         self.items.push(Item::Rect {
             x0: c - half,
             y0: ya,
@@ -235,6 +259,12 @@ impl Ctx<'_> {
 
     /// A dot centred on the rhythm crossing (`x`, `y`).
     fn dot(&mut self, x: f64, y: f64, pen: Pen) {
+        if self
+            .rim
+            .is_some_and(|rim| rim.drops_dot(x, y, f64::from(pen.w)))
+        {
+            return;
+        }
         let (cx, cy) = (snap_center(x, pen.w), snap_center(y, pen.w));
         let half = f64::from(pen.w) / 2.0;
         self.dots.push(self.items.len());
@@ -250,6 +280,10 @@ impl Ctx<'_> {
     /// Strokes `normal` and `major` (paths of slanted segments) with their pens.
     fn slanted(&mut self, normal: BezPath, major: BezPath, cap: LineCap) {
         for (path, pen) in [(normal, self.pen), (major, self.major_pen)] {
+            let path = match &self.rim {
+                Some(rim) => rim.cut_path(&path),
+                None => path,
+            };
             if !path.elements().is_empty() {
                 self.items.push(Item::StrokePath {
                     path,
@@ -262,14 +296,38 @@ impl Ctx<'_> {
     }
 }
 
+/// The border of `pr` on `region` (left, top, right, bottom, whole pixels) as `env.target` draws it, if it
+/// has one that draws anything.
+pub fn region_rim(pr: &PatternRegion, region: (f64, f64, f64, f64), env: &Env) -> Option<Rim> {
+    pr.border
+        .as_ref()
+        .and_then(|b| Rim::new(region, b, env.target))
+}
+
 /// Appends the items of `pr` drawn in `region` (left, top, right, bottom, whole pixels) to
-/// `items`. `pen` is the object's own line: the ruling, the dots. The region's own ruling angle
-/// (`PatternRegion::angle_deg`) is not read here: see [`pattern_items_turned`].
+/// `items`, its border (if it has one) on top. `pen` is the object's own line: the ruling, the dots. The
+/// region's own ruling angle (`PatternRegion::angle_deg`) is not read here: see [`pattern_items_turned`].
 pub fn pattern_items(
     pr: &PatternRegion,
     pen: Pen,
     region: (f64, f64, f64, f64),
     env: &Env,
+    items: &mut Vec<Item>,
+) {
+    let rim = region_rim(pr, region, env);
+    upright_items(pr, pen, region, env, rim, items);
+    if let Some(rim) = rim {
+        items.extend(rim.items());
+    }
+}
+
+/// [`pattern_items`] without the border drawn: the border only shapes the ruling here.
+fn upright_items(
+    pr: &PatternRegion,
+    pen: Pen,
+    region: (f64, f64, f64, f64),
+    env: &Env,
+    rim: Option<Rim>,
     items: &mut Vec<Item>,
 ) {
     layout_in(
@@ -278,20 +336,49 @@ pub fn pattern_items(
         region,
         (region.0, region.1),
         env,
+        rim,
         items,
         &mut Vec::new(),
     );
 }
 
+/// Only the border of `pr` on `region`, turned by `deg` degrees about the region's middle with the frame:
+/// what a pattern region with no stroke of its own still draws.
+pub fn border_items_turned(
+    pr: &PatternRegion,
+    region: (f64, f64, f64, f64),
+    deg: f64,
+    env: &Env,
+    items: &mut Vec<Item>,
+) {
+    let Some(rim) = region_rim(pr, region, env) else {
+        return;
+    };
+    let deg = quadrule_model::normalize_deg(deg);
+    if deg == 0.0 {
+        items.extend(rim.items());
+        return;
+    }
+    turn_items(
+        rim.items(),
+        crate::shapes::rotation_about(turn_pivot(region, deg), deg),
+        crate::rotate::is_quarter_turn(deg),
+        items,
+    );
+}
+
 /// [`pattern_items`] with the grid of an unbound region counted from `anchor`, not from the region's
 /// top-left corner (a ruling turned inside its frame lays out in a bigger box but is anchored at the
-/// frame's corner, so turning it is rigid), and the index of each dot appended to `dots`.
+/// frame's corner, so turning it is rigid), and the index of each dot appended to `dots`. `rim` is the
+/// region's border in the axes it is laid out in.
+#[allow(clippy::too_many_arguments)]
 fn layout_in(
     pr: &PatternRegion,
     pen: Pen,
     region: (f64, f64, f64, f64),
     anchor: (f64, f64),
     env: &Env,
+    rim: Option<Rim>,
     items: &mut Vec<Item>,
     dot_ids: &mut Vec<usize>,
 ) {
@@ -318,6 +405,7 @@ fn layout_in(
         },
         major: pr.major_every(env.rhythm),
         dots: dot_ids,
+        rim,
     };
     match pr.pattern {
         Pattern::Lines => lines(&mut c, &g),
@@ -389,11 +477,16 @@ pub fn pattern_items_turned(
         pattern_items(pr, pen, region, env, items);
         return;
     }
+    // The border turns with the frame, not with the ruling: it is put on the upright frame last.
+    let rim = region_rim(pr, region, env);
     let mut upright = Vec::new();
     if own == 0.0 {
-        pattern_items(pr, pen, region, env, &mut upright);
+        upright_items(pr, pen, region, env, rim, &mut upright);
     } else {
-        ruling_items(pr, pen, region, own, env, &mut upright);
+        ruled_items(pr, pen, region, own, env, rim, &mut upright);
+    }
+    if let Some(rim) = rim {
+        upright.extend(rim.items());
     }
     if deg == 0.0 {
         items.extend(upright);
@@ -423,6 +516,23 @@ pub fn ruling_items(
     env: &Env,
     items: &mut Vec<Item>,
 ) {
+    let rim = region_rim(pr, region, env);
+    ruled_items(pr, pen, region, own, env, rim, items);
+    if let Some(rim) = rim {
+        items.extend(rim.items());
+    }
+}
+
+/// [`ruling_items`] without the border drawn: the border only shapes the ruling here.
+fn ruled_items(
+    pr: &PatternRegion,
+    pen: Pen,
+    region: (f64, f64, f64, f64),
+    own: f64,
+    env: &Env,
+    rim: Option<Rim>,
+    items: &mut Vec<Item>,
+) {
     let quarter = crate::rotate::is_quarter_turn(own);
     let pivot = turn_pivot(region, own);
     let turn = crate::shapes::rotation_about(pivot, own);
@@ -450,11 +560,27 @@ pub fn ruling_items(
     };
     let mut up = Vec::new();
     let mut dots = Vec::new();
-    layout_in(pr, pen, laid, (region.0, region.1), env, &mut up, &mut dots);
+    // A quarter turn lays the ruling out on the rhythm in its own axes, so the border's edges are looked
+    // for there; any other angle is cut at the turned frame, which the border cuts too.
+    let laid_rim = if quarter {
+        rim.map(|r| r.through_quarter_turn(crate::shapes::rotation_about(pivot, -own)))
+    } else {
+        None
+    };
+    layout_in(
+        pr,
+        pen,
+        laid,
+        (region.0, region.1),
+        env,
+        laid_rim,
+        &mut up,
+        &mut dots,
+    );
     if quarter {
         turn_items(up, turn, true, items);
     } else {
-        turn_cut_items(up, &dots, turn, region, items);
+        turn_cut_items(up, &dots, turn, region, rim.as_ref(), items);
     }
 }
 
@@ -543,8 +669,12 @@ fn turn_cut_items(
     dots: &[usize],
     turn: Affine,
     frame: (f64, f64, f64, f64),
+    rim: Option<&Rim>,
     out: &mut Vec<Item>,
 ) {
+    // A border with rounded corners cuts at its curve; one with square corners leaves the frame as the cut.
+    let round = rim.filter(|r| r.has_round_corner());
+    let outline = round.map(|r| r.outline());
     let mut run: Option<(u8, BezPath)> = None;
     // `dots` is in item order, so one pass along it finds each dot.
     let mut dots = dots.iter().peekable();
@@ -563,12 +693,21 @@ fn turn_cut_items(
                 if is_dot {
                     let (cx, cy) = ((x0 + x1) / 2.0, (y0 + y1) / 2.0);
                     let c = turn * kurbo::Point::new(cx, cy);
-                    if c.x >= frame.0 && c.x <= frame.2 && c.y >= frame.1 && c.y <= frame.3 {
+                    if c.x >= frame.0
+                        && c.x <= frame.2
+                        && c.y >= frame.1
+                        && c.y <= frame.3
+                        && rim.is_none_or(|r| r.keeps_dot(c, x1 - x0))
+                    {
                         add_polygon(&mut run, out, gray, &corners);
                     }
                 } else {
                     // A cut that leaves a speck (under two pixels of a two pixel line) is left out.
                     let cut = clip_polygon(&corners, frame);
+                    let cut = match &outline {
+                        Some(o) => clip_convex(&cut, o),
+                        None => cut,
+                    };
                     if polygon_area(&cut) >= MIN_CUT_AREA_PX {
                         add_polygon(&mut run, out, gray, &cut);
                     }
@@ -591,8 +730,19 @@ fn turn_cut_items(
                             if let Some(a) = from
                                 && let Some((p0, p1)) = clip_segment((a.x, a.y), (b.x, b.y), frame)
                             {
-                                cut.move_to(p0);
-                                cut.line_to(p1);
+                                let (p0, p1) = (kurbo::Point::from(p0), kurbo::Point::from(p1));
+                                match round {
+                                    Some(r) => {
+                                        for (s, e) in r.cut_segment(p0, p1) {
+                                            cut.move_to(s);
+                                            cut.line_to(e);
+                                        }
+                                    }
+                                    None => {
+                                        cut.move_to(p0);
+                                        cut.line_to(p1);
+                                    }
+                                }
                             }
                             from = Some(b);
                         }

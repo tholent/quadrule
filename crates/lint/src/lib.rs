@@ -460,6 +460,38 @@ pub fn lint_against(
                 );
             }
         }
+        // L01 and L02 for the border of a pattern region, which has a stroke of its own.
+        if let ObjectKind::Pattern(pr) = &o.kind
+            && let Some(b) = &pr.border
+            && b.sides.any()
+            && let Style::Custom { width_mm, .. } = b.style
+        {
+            let exact = px(width_mm);
+            if exact < 1.0 {
+                push(
+                    "L01",
+                    Severity::Warn,
+                    at("lint-l01-border-thin").num("px", exact, 2).num(
+                        "min_mm",
+                        target.mm_to_px(1.0).recip(),
+                        3,
+                    ),
+                );
+            } else if b.radius_mm() == 0.0
+                && quadrule_layout::rotate::is_quarter_turn(rotation)
+                && (exact - exact.round()).abs() > 1e-6
+            {
+                push(
+                    "L02",
+                    Severity::Info,
+                    at("lint-l02-border-fraction").num("px", exact, 2).num(
+                        "drawn",
+                        exact.round(),
+                        0,
+                    ),
+                );
+            }
+        }
         // A line is diagonal when its two ends, turned as the line is, differ in both x and y. That is a
         // soft thin line (L14, below), no longer an L02 note: L02 keeps only straight edges (rung 14 bbq, Q4).
         let mut diagonal = false;

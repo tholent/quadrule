@@ -70,7 +70,7 @@ fn export(file: &QuadFile, id: &str) -> Vec<u8> {
 #[test]
 fn v012_files_open_migrate_and_export_the_same_bytes() {
     let sums = saved_sums();
-    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.16.0";
+    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.17.0";
     let mut parts = Vec::new();
     let mut matched = 0;
     for name in ["textbox"] {

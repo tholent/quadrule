@@ -2261,6 +2261,239 @@ pub fn pattern_angle_document() -> Document {
     doc
 }
 
+/// Fixed ids for the pattern-borders page's objects.
+pub mod border_ids {
+    use crate::Uuid;
+    /// The `n`th object of the pattern-borders page.
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0015_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+}
+
+/// The pattern-borders page (docs/bbq/2026-11-18-pattern-borders.md): a border round a pattern region, in twelve
+/// labelled cells. Ruled lines with all four sides; a dot grid with its right side off (it holds the sample's id,
+/// [`ids::DOTS`], so the benchmarks run over it); a grid, lines and dots with rounded corners; a grid bordered on
+/// two sides only (one rounded corner); an isometric pattern and hexagons with rounded corners; a border of a
+/// custom width and gray; a Cornell page; a turned frame; a ruling turned 30 degrees and one turned a quarter.
+/// Each frame sits on the 5 mm rhythm, so the lines and dots on its edges are the ones the border replaces. Every
+/// object keeps its millimetres on the Nomad (Left and Top), so a page of 25 by 15 mm frames fits both screens.
+/// Designed on the Manta, also targeting the Nomad.
+pub fn pattern_borders_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Pattern borders".into();
+    doc.metadata.description =
+        "A border round a pattern region: sides, line, rounded corners, turned frames and rulings."
+            .into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    // Frames are set in millimetres here, so the rhythm is too: a pixel-locked step (59 px for 5 mm, where 5 mm is
+    // 59.06) drifts a pixel or two from a frame's edge a hundred millimetres along, and the app's own snapping
+    // would have placed such a frame on the pixel rhythm.
+    doc.rhythm.resolution = RhythmResolution::PhysicalLocked;
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    doc.rhythm.major_every = Some(5);
+    let title = doc.layers[1].objects[0].clone();
+    let keep = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+    let (cols, pitch_x, pitch_y) = (3, 35.0, 30.0);
+    let bordered = |sides: BorderSides, style: Style, radius: f64| {
+        let mut b = Border::new();
+        b.sides = sides;
+        b.style = style;
+        b.corner_radius_mm = radius;
+        b
+    };
+    let structure = Style::Role(LineRole::Structure);
+    let region = |p: Pattern, border: Border, ruling: f64| {
+        let mut pr = PatternRegion::new(p);
+        pr.angle_deg = ruling;
+        pr.border = Some(border);
+        pr
+    };
+    let hex = Pattern::Hex {
+        orientation: HexOrientation::Flat,
+        height_units: 1,
+    };
+    let iso = Pattern::Isometric {
+        style: IsoStyle::Lines,
+    };
+    let no_right = BorderSides {
+        right: false,
+        ..BorderSides::ALL
+    };
+    let top_left = BorderSides {
+        top: true,
+        left: true,
+        right: false,
+        bottom: false,
+    };
+    let custom = Style::Custom {
+        width_mm: 0.4,
+        gray: 64,
+    };
+    // (label, region, role, frame degrees)
+    let cells: Vec<(&str, PatternRegion, LineRole, f64)> = vec![
+        (
+            "Lines, all four sides",
+            region(Pattern::Lines, Border::new(), 0.0),
+            LineRole::Guide,
+            0.0,
+        ),
+        (
+            "Dots, right side off",
+            region(Pattern::Dots, bordered(no_right, structure, 0.0), 0.0),
+            LineRole::DotGrid,
+            0.0,
+        ),
+        (
+            "Grid, rounded corners 3 mm",
+            region(
+                Pattern::Grid,
+                bordered(BorderSides::ALL, structure, 3.0),
+                0.0,
+            ),
+            LineRole::Guide,
+            0.0,
+        ),
+        (
+            "Lines, Emphasis, rounded 4 mm",
+            region(
+                Pattern::Lines,
+                bordered(BorderSides::ALL, Style::Role(LineRole::Emphasis), 4.0),
+                0.0,
+            ),
+            LineRole::Guide,
+            0.0,
+        ),
+        (
+            "Dots, rounded 4 mm",
+            region(
+                Pattern::Dots,
+                bordered(BorderSides::ALL, structure, 4.0),
+                0.0,
+            ),
+            LineRole::DotGrid,
+            0.0,
+        ),
+        (
+            "Grid, top and left, 3 mm",
+            region(Pattern::Grid, bordered(top_left, structure, 3.0), 0.0),
+            LineRole::Guide,
+            0.0,
+        ),
+        (
+            "Isometric, 0.4 mm gray 64, rounded 3 mm",
+            region(iso, bordered(BorderSides::ALL, custom, 3.0), 0.0),
+            LineRole::Guide,
+            0.0,
+        ),
+        (
+            "Hex, rounded 3 mm",
+            region(hex, bordered(BorderSides::ALL, structure, 3.0), 0.0),
+            LineRole::Guide,
+            0.0,
+        ),
+        (
+            "Cornell, all four sides",
+            region(
+                Pattern::Cornell {
+                    cue_units: None,
+                    summary_units: None,
+                },
+                Border::new(),
+                0.0,
+            ),
+            LineRole::Guide,
+            0.0,
+        ),
+        (
+            "Frame 20°, grid, rounded 3 mm",
+            region(
+                Pattern::Grid,
+                bordered(BorderSides::ALL, structure, 3.0),
+                0.0,
+            ),
+            LineRole::Guide,
+            20.0,
+        ),
+        (
+            "Ruling 30°, lines, rounded 4 mm",
+            region(
+                Pattern::Lines,
+                bordered(BorderSides::ALL, structure, 4.0),
+                30.0,
+            ),
+            LineRole::Guide,
+            0.0,
+        ),
+        (
+            "Ruling 90°, own 5 mm, all four sides",
+            {
+                // Its own spacing counts from the frame's corner, so the turned lines meet the frame's edges.
+                let mut pr = region(Pattern::Lines, Border::new(), 90.0);
+                pr.set_bound(false, (5.0, 5.0));
+                pr
+            },
+            LineRole::Guide,
+            0.0,
+        ),
+    ];
+    let mut head = title.clone();
+    head.id = border_ids::TITLE;
+    head.name = "Title".into();
+    head.frame = Frame::new(margin, margin, MANTA_W_MM - 2.0 * margin, 8.0);
+    if let ObjectKind::Text(t) = &mut head.kind {
+        t.content = "Pattern borders".into();
+        t.size_pt = 12.0;
+    }
+    head.constraints = Constraints::default();
+    let mut objs: Vec<Object> = vec![head];
+    for (i, (label, pr, role, frame_deg)) in cells.into_iter().enumerate() {
+        let (col, row) = ((i % cols) as f64, (i / cols) as f64);
+        let x = margin + col * pitch_x;
+        let y = margin + 10.0 + row * pitch_y;
+        let mut text = title.clone();
+        text.id = border_ids::nth(100 + i as u128);
+        text.name = format!("Label {}", i + 1);
+        text.frame = Frame::new(x, y, 33.0, 6.0);
+        if let ObjectKind::Text(t) = &mut text.kind {
+            t.content = label.into();
+            t.size_pt = 7.0;
+            t.weight = 400;
+        }
+        text.constraints = keep;
+        objs.push(text);
+        let id = if i == 1 {
+            ids::DOTS
+        } else {
+            border_ids::nth(1 + i as u128)
+        };
+        let mut o = object(
+            id,
+            label,
+            Frame::new(x, y + 10.0, 25.0, 15.0),
+            keep,
+            Style::Role(role),
+            ObjectKind::Pattern(pr),
+        );
+        o.rotation_deg = frame_deg;
+        objs.push(o);
+    }
+    doc.layers = vec![Layer {
+        name: "Pattern borders".into(),
+        visible: true,
+        locked: false,
+        objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}
+
 /// Fixed ids for the fonts page's objects.
 pub mod fonts_ids {
     use crate::Uuid;

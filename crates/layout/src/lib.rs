@@ -23,6 +23,7 @@
 #![forbid(unsafe_code)]
 
 pub mod align;
+pub mod border;
 pub mod device;
 pub mod newpage;
 pub mod pattern;
@@ -685,15 +686,23 @@ fn draw_objects(
                 ));
             }
             ObjectKind::Pattern(pr) => {
-                let Some((w, gray)) = stroke_opt(o.style, target) else {
-                    continue;
-                };
                 let region = (
                     px(f.x_mm).round(),
                     px(f.y_mm).round(),
                     px(f.x_mm + f.w_mm).round(),
                     px(f.y_mm + f.h_mm).round(),
                 );
+                let pattern_env = pattern::Env {
+                    target,
+                    rhythm: env.doc_rhythm,
+                    rhythm_px: rhythm,
+                };
+                let Some((w, gray)) = stroke_opt(o.style, target) else {
+                    // No stroke of its own draws no ruling, but the border still draws.
+                    pattern::border_items_turned(pr, region, angle, &pattern_env, items);
+                    wrap_opacity(items, first_item, o.opacity());
+                    continue;
+                };
                 // A pattern draws every line and dot whose centre lies in its region, whole: a dot
                 // on the region's edge (where the rhythm meets the margin) straddles it by half a
                 // stroke rather than being cut in two (ADR-014).
@@ -704,11 +713,7 @@ fn draw_objects(
                     pattern::Pen { w, gray },
                     region,
                     angle,
-                    &pattern::Env {
-                        target,
-                        rhythm: env.doc_rhythm,
-                        rhythm_px: rhythm,
-                    },
+                    &pattern_env,
                     items,
                 );
             }

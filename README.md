@@ -124,6 +124,11 @@ and error.
   together, the ruling staying parallel to the frame's edges, and lines are cut at the turned frame; a group holding a
   pattern region can turn too. A region also has a Pattern angle (in the Style tab, beside the spacing) that turns the ruling inside the frame, cut at
   the frame, and adds to the frame's own turn. A turned ruling is softer than an upright one (lint rule L02 says so).
+  A pattern region can also have a **Border** (Style tab): a line centred on the frame's edge, on the sides you tick, in a
+  line role (Structure to start) or a width and gray of its own, with an optional corner radius. On a bordered side the
+  pattern's own lines and dots that sit on the edge are left out, so nothing doubles up; a corner rounds only where both its
+  sides are on, and the ruling stops at the curve. The border turns with the frame, not with the Pattern angle. A border is
+  the same on every device (per-device overrides do not cover it yet); lint judges its line like any other.
 - Group objects (Ctrl+G, or the Group button; Ctrl+Shift+G or Ungroup breaks it up). A group moves, turns, resizes and
   fades as one. Grouping never changes how a page looks on either device: as in Figma, a group is see-through to
   constraints, so each child keeps its own constraints against the page (a group has none, and no Constraints tab), and
@@ -152,9 +157,9 @@ and error.
   it); click a picture to put that device on screen, or fold the strip shut. The Page tab lists the devices: tick them
   in and out (taking one out asks first if it has changes), and **Make primary** makes a device's layout the design
   without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
-  top of another object or squeezed thin on a secondary device. Files are saved as format 0.16.0, which adds a small picture of the main device's page
-  inside the file (written at Save and Save As, so a gallery can show the file); older files open unchanged and get the
-  picture at their next save.
+  top of another object or squeezed thin on a secondary device. Files are saved as format 0.17.0 (0.16 added a small picture of the main device's page
+  inside the file, written at Save and Save As so a gallery can show the file; 0.17 adds the pattern region's border); older files
+  open unchanged and get the picture at their next save.
 - Landscape pages. Pick **Portrait** or **Landscape** in New… or in the Page tab (one undo step: objects follow their
   own constraints onto the turned page). A landscape page is designed upright on screen and exported turned a quarter
   turn clockwise into the tablet's ordinary portrait PNG, the design's top along the tablet's right edge: read it in
@@ -210,7 +215,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts on the welcome screen (Blank page or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --bordered-page` for borders round pattern regions, or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote
