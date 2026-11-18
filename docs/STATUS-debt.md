@@ -314,10 +314,22 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   `export_sheets.rs::the_export_menu_opens_one_sheet_with_the_remembered_choices` still exists (now checks the File menu) but
   `export_again_writes_with_the_last_choices_or_opens_the_sheet` is now
   `export_sheets.rs::ctrl_e_opens_the_sheet_with_the_last_choices_and_enter_writes`; `window.rs::empty_start_then_sample` now
-  checks the welcome screen. (3) `Viewer::export_again` (the engine for Export again) and its test in `tests/export.rs` stay
-  though nothing in the window calls them; remove them or keep them, the lead's call. (4) Leg 2 still owes: live thumbnails
-  on a background thread, the Device filter's effect on the tiles, the built-in starters loader (`crates/ui/starters/<category>/`)
-  with test starters, `--look gallery-mine`, and the speed measurements. (5) The welcome screen's tiles show only the stored
-  `previews/` picture of the file's own main device (or a plain box); the picture is decoded on the interface thread. (6)
-  Search is on names, descriptions and tags of templates only until the starters exist. (7) Save as template… skips the installed-fonts
+  checks the welcome screen. (3) DONE in leg 2: `Viewer::export_again` and its test were removed (ruled). (4) DONE in leg 2: the live thumbnails, the Device filter's effect,
+  the starters loader and test starters, `--look gallery-mine` and the speed measurements (see "Rung 16a leg 2, owed" for what is
+  left). (5) DONE in leg 2: tiles are drawn live (the stored picture only stands in). (6) Search covers templates and starters.
+  (7) Save as template… skips the installed-fonts
   sheet that Save shows; a template made from a page that uses installed fonts carries them only if Embed fonts is on.
+
+- Rung 16a leg 2, owed (`crates/ui/src/thumbs.rs`, `welcome.rs`, `starters.rs`, `build.rs`, `test_starters.rs`, `Makefile`): (1) the look of the
+  tiles ("drawn on <device>" under a tile, the plain outline for a page that failed, the size of a tile) is the builder's
+  proposal for chris's look. (2) Thumbnails use the bundled fonts only and a copy of the profile registry taken when a job is
+  queued; a page set in an installed font that its file does not carry shows the saved outlines (or the fallback), and a
+  profile edited while a picture is drawing shows after the next filter change. (3) A failed thumbnail is not retried this
+  session; a template saved again has a new file time and so a new picture. (4) The cache is never emptied during a session (a
+  few KB to a few hundred KB of texture per picture); it matters only if a person scrolls through hundreds of tiles. (5) Only
+  the tiles on screen are asked for; scrolling a long gallery draws new tiles as they come in, and the speed run asks for all.
+  (6) The speed run times the program's own work in a frame, not egui's painting or the screen. (7) The chip canvas's draw run
+  has one frame at 51 ms after the first (the 90th percentile is 22.8), the same before this leg. (8) The makefile's `LINT ?=`
+  never took effect, so every `make bench-*` before this leg ran the lint page unless `LINT=` was given; fixed here (`LINT :=`),
+  so earlier numbers made through `make` were on the lint page. (9) The 16b starters need real `.quad` files in
+  `crates/ui/starters/<category>/` (`paper`, `notes`, `planning`, `bullet-journal`, `creative`) and their goldens on both devices.

@@ -2227,3 +2227,71 @@ loader and test starters, `--look gallery-mine`, the speed measurements) was not
   in this leg touches the canvas or the drag path.
 - Blocked: nothing. One build note: linking the app's test binary beside the ui tests was killed (signal 9, out of memory)
   once when both were built in one `cargo test` on the Pi; built apart, they pass.
+
+## 2026-11-17 — rung 16a leg 2, builder (Sonnet 5.5, high): live thumbnails, starters, the device filter and the speed numbers
+
+Brief: leg 2 of `docs/bbq/2026-11-17-rung-16-welcome-and-gallery.md` (Q3, Q5 and the Defaulted "Thumbnails, in detail", "The
+device filter", "Where starters live" and "Speed"). Worked on `main`; token use was not measured by the builder.
+
+- Built, in plain words: each tile on the welcome screen is now drawn live for the device in the Device filter, by the export
+  renderer, on one background thread, and kept for the session. The window never draws a page itself: it hands the thread the
+  tiles that are on screen, in screen order, and turns a finished picture into a texture when one arrives. A screen that is
+  sitting still asks the thread for nothing and asks for no frame. The stored `previews/` picture stands in while a tile draws;
+  a page that cannot be drawn is a plain outline with its name. A page that does not target the filter's device is drawn on its
+  own main device and its tile says "drawn on <device>". The built-in starters (`crates/ui/starters/<category>/<slug>.quad`,
+  put in the program by a `build.rs`, none shipped) fill the tabs; every category with none still says its starters are
+  coming; a starter opens as an untitled copy exactly as a template does.
+- Commit: `bbc5369` (the above, the test starters and the flags below, and the removal of `Viewer::export_again`); this entry
+  and the docs follow in a second commit.
+- Where things are: `crates/ui/src/thumbs.rs` (the thread, its queue and the cache), `welcome.rs` (the tiles, the tab filter,
+  `WelcomeBench`), `starters.rs` and `build.rs` (the loader), `test_starters.rs` (24 pages made from the sample documents),
+  `templates.rs` (`TemplateEntry` now serves both templates and starters; `Origin`), `crates/app/src/main.rs` (flags).
+  `--look gallery-mine` starts on My templates. Hidden flags for looks and runs: `--gallery-test-starters` (24 test starters in the
+  gallery), `--gallery-device manta|nomad|<profile id>`, `--bench-welcome [frames]` (times the welcome screen; implies the test
+  starters).
+- Tests added (each prints one `CHECK` line; run with `-- --nocapture`, scratch `XDG_CONFIG_HOME` and `XDG_DATA_HOME` set):
+  `cargo test -p quadrule-ui --test gallery` (4: thumbnails are drawn by one thread that is not the interface thread, the first
+  frame comes back with nothing drawn, an idle window settles and hands the thread no job, the other device is drawn once and
+  going back costs nothing, another tab asks for nothing new; the filter's device decides where a tile is drawn and a page that
+  cannot be drawn is a plain tile that still opens; the "drawn on" note and the filter listing devices and paper sizes; the
+  loader sorts by category and leaves out a stray folder, the tabs show their own starters and keep "coming soon", search by
+  title, tag and category, a pick opens an untitled copy). `--test export` now has `export_folder_memory` in place of the Export
+  again test; `cargo test -p quadrule-app` has three more command-line cases.
+- Checks (commands): `make check-all` → `TESTS scope=workspace checks=689 check_fail=0 passed=643 failed=0 status=ok`; `cd crates/render/tests/golden && sha256sum -c SHA256SUMS | grep -c ": OK"`
+  → 30; fixtures `v0.4/`–`v0.15/` untouched.
+- Speed (Pi, release build, scratch `XDG_CONFIG_HOME` and `XDG_DATA_HOME`; ms of interface-thread work per frame, 90th percentile
+  against 50, the first frame reported but not judged, as for a drag; every run `result=pass`):
+  `./target/release/quadrule --bench-welcome 150 [--gallery-device manta|nomad]` (24 test tiles, each frame forced, all 24
+  drawn, then 150 idle frames), three runs each. Manta: 24 drawn in 0.9, 1.0, 0.9 s; frames while drawing p90 1.6, 1.8, 1.6
+  (worst 2.8, 2.4, 2.3; first 13.3, 19.9, 13.1); idle p90 0.6, 0.6, 0.6 (worst 0.9, 0.7, 0.6). Nomad: 0.6 s each; drawing p90
+  1.8, 1.5, 1.6 (worst 2.1, 2.3, 2.1); idle p90 0.6, 0.7, 0.6. This times what the program does in a frame, not egui's
+  painting or the screen; the frames came about every 16 ms.
+  The heaviest page is the groups page. `make bench-drag LINT= GROUPS=1` p90 19.8 and `make bench-draw LINT= GROUPS=1` p90
+  19.7 (export canvas, strip on; the makefile fix is judgement call 4). Both canvases, three runs each, against the
+  same page at the commit before this leg (`df6bd0c`, built in a worktree), `./target/release/quadrule --groups-page
+  --bench-drag|--bench-draw 150 --canvas export|chip`: drag export before 20.0, 20.0, 20.0, now 19.9, 19.9, 20.1; draw export
+  before 20.2, 19.9, 20.8, now 19.9, 20.1, 20.1; drag chip before 30.4, 30.5, 30.6, now 30.4, 30.5, 30.5; draw chip before 22.9,
+  22.7, 22.8, now 22.9, 22.8, 22.7. Nothing near 50 ms at the 90th percentile. One thing to know: the chip draw run has one
+  frame after the first at 51.2 ms (`over_budget=1`, worst 51.2, 51.2, 51.3); the commit before this leg gives the same
+  (51.2, 51.1, 51.2), so it is not from this leg; the verdict is the 90th percentile, which is 22.8.
+- Seen on screen (grim, release build, scratch folders): `scratchpad/look/welcome-manta.png`, `welcome-nomad.png` (24 test
+  starters, thumbnails drawn, the A4 test page marked "drawn on ISO A4"), `gallery-mine.png`, and leg 1's `welcome.png` and
+  `file-menu.png`.
+- Judgement calls:
+  1. Only the tiles on screen are asked for (so a long gallery draws what is looked at first); the speed run asks for all 24.
+  2. Pictures are drawn with the bundled fonts only, with the outlines a file saved for any other font, as on a computer that
+     lacks it; the thread has its own copy of the profile registry (the registry is per thread), taken when a job is queued.
+  3. A tile whose picture fails shows a plain outline, even when the file has a stored picture; a failed page is not tried
+     again this session.
+  4. The makefile's `LINT ?=` never took effect (`make` defines `LINT` itself as `lint`), so every `make bench-*` ran the lint
+     page unless `LINT=` was given; I made it `LINT :=`, so the benches run the page their flag names, and the default is the
+     sample page as the help says. Numbers in earlier log entries made through `make` (rather than the binary) were on the lint page.
+  5. `Viewer::export_again`, `Again`, `can_export_again` and the engine test are removed as ruled; `export_again_folder` is now
+     `last_export_folder` (the sheet's start folder), and its test `export_folder_memory` keeps the folder-memory checks.
+  6. The plain tile is a drawn outline, not a glyph: egui's fonts panic on a glyph they lack (the first try used one and a test
+     caught it).
+  7. The test starters live in `crates/ui/src/test_starters.rs`, not `crates/ui/tests/`, because the app's hidden flags need them too.
+  8. New word: "drawn on { $device }" (`app-welcome-tile-on`), for chris's look.
+- Blocked: nothing. Build notes: the app and ui tests were built apart, as asked; building an older commit in a worktree against the
+  same `target` left a stale words file in the release build until `i18n` was touched (a "(app-welcome-tile-on)" showed instead of
+  the words), so after such a build touch a crate or run `make build-proof`.

@@ -121,6 +121,8 @@ pub struct Welcome {
     /// The built-in starters; `None` makes the next frame load them (the app's, or a test's own, see
     /// [`ViewerUi::set_starters`]).
     starters: Option<Vec<Arc<TemplateEntry>>>,
+    /// Ask for every tile's picture, not just the ones on screen (the speed run, which times all of them).
+    pub(crate) draw_all: bool,
     /// The live thumbnails and the thread that draws them (rung 16 bbq, Q3).
     pub(crate) thumbs: Thumbs,
     /// A template whose Remove waits on its confirm.
@@ -363,6 +365,7 @@ impl ViewerUi {
         let Some(mut b) = self.welcome_bench.take() else {
             return;
         };
+        self.welcome.draw_all = true;
         ctx.request_repaint();
         let ms = took.as_secs_f64() * 1000.0;
         let jobs = self.welcome.thumbs.jobs_sent();
@@ -656,7 +659,10 @@ impl ViewerUi {
         let drawn_on = t.drawn_on(device);
         // The picture: asked for only when the tile is on screen.
         let mut state = None;
-        if !t.unreadable && !drawn_on.is_empty() && ui.is_rect_visible(rect) {
+        if !t.unreadable
+            && !drawn_on.is_empty()
+            && (ui.is_rect_visible(rect) || self.welcome.draw_all)
+        {
             let key = thumbs::Key {
                 id: t.path.display().to_string(),
                 device: drawn_on.clone(),
@@ -757,11 +763,13 @@ impl ViewerUi {
                 pos2(rect.min.x, paper.bottom() + 6.0 + name_h),
                 vec2(TILE_W, 14.0),
             );
-            ui.scope_builder(egui::UiBuilder::new().max_rect(at), |ui| {
-                ui.centered_and_justified(|ui| {
-                    ui.add(egui::Label::new(RichText::new(note).size(11.0).weak()).truncate());
-                });
-            });
+            // A child of this tile, not a widget of the row: it must take no room in the wrapping layout.
+            let mut child = ui.new_child(
+                egui::UiBuilder::new()
+                    .max_rect(at)
+                    .layout(Layout::centered_and_justified(egui::Direction::TopDown)),
+            );
+            child.add(egui::Label::new(RichText::new(note).size(11.0).weak()).truncate());
         }
         if resp.clicked() {
             acts.push(Act::Pick(t.clone()));

@@ -238,17 +238,6 @@ impl App {
                 .collect();
             ui.set_starters(quadrule_ui::starters::load(&list));
         }
-        if let Some(name) = &args.gallery_device {
-            // A short name (`manta`, `nomad`) or a profile id.
-            let id = quadrule_profiles::active::device_ids()
-                .into_iter()
-                .find(|id| {
-                    quadrule_profiles::active::lookup(id)
-                        .is_ok_and(|p| p.short_name.eq_ignore_ascii_case(name))
-                })
-                .unwrap_or_else(|| name.clone());
-            ui.set_welcome_device(&id);
-        }
         if let Some(frames) = args.bench_welcome {
             ui.welcome_bench = Some(quadrule_ui::welcome::WelcomeBench::new(frames));
         }
@@ -262,6 +251,17 @@ impl App {
                 ui.viewer.open_sample();
             }
             ui.show_look(look);
+        }
+        if let Some(name) = &args.gallery_device {
+            // A short name (`manta`, `nomad`) or a profile id.
+            let id = quadrule_profiles::active::device_ids()
+                .into_iter()
+                .find(|id| {
+                    quadrule_profiles::active::lookup(id)
+                        .is_ok_and(|p| p.short_name.eq_ignore_ascii_case(name))
+                })
+                .unwrap_or_else(|| name.clone());
+            ui.set_welcome_device(&id);
         }
         ui.note_damaged_profiles();
         ui.bench = bench.map(|b| {

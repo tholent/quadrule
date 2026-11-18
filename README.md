@@ -63,7 +63,8 @@ and error.
   side) and a title; the margins clear the tablet's docked toolbars and footers), **Open…**, the **Recent** files
   (the last ten opened or saved; one that has gone from the disk is greyed "Not found") and a small "Open sample page"
   link. On its right: tabs (All, Paper, Notes, Planning, Bullet journal, Creative, My templates), a Device filter and a
-  Search box. The starter pages are coming; until then the tabs say so. Dropping a `.quad` on it opens it.
+  Search box, over tiles drawn live for the chosen device (a page that does not target that device is drawn on its own
+  main device, and its tile says so). The starter pages are coming; until then the tabs say so. Dropping a `.quad` on it opens it.
 - **My templates**: File ▸ Save as template… keeps a copy of the page under My templates (a `templates` folder beside
   the autosave recovery folder in the app's data folder). Picking one opens an untitled copy on the Device filter's
   device; right-click a template to Remove it (it asks first, and removing cannot be undone) or Show in folder.
