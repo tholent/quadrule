@@ -2414,3 +2414,69 @@ measured by the builder. Not touched: `STATUS.md`, the ADRs, the board, the vers
   builder's calls stand as built, including the wider "on the edge" band.
 - Closed: version 0.16.1, release notes `docs/arcs/v1/release-notes/v0.16.1.md`, `STATUS.md`, debt, the board, the
   calibration row, the 16b prompt's version line (`0.16.2`). The meter was not read at the look.
+
+## 2026-11-18 — layers, builder (Sonnet 5.5, high): New layer and Delete layer
+
+Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and every Defaulted line). Worked on `main`. Not touched:
+`STATUS.md`, the ADRs, `docs/arcs/v1/README.md`, the version, the release notes. Drawing is not touched, so no speed run.
+
+- Built, in plain words: the layers panel has **New layer** and **Delete layer** buttons (in the button row, which now wraps) and the
+  same two items on a layer row's right-click menu. New layer puts an empty layer just above the picked layer (the layer of the first
+  picked object, or the picked row; on top when none), named "Layer N" with the lowest N no layer has, picks it, and opens its name
+  field with the text selected to type over (Enter or a click away keeps it; Esc keeps "Layer N"). Delete layer deletes the picked
+  layer: an empty one at once, one with objects after a sheet asks `Delete the layer "Header" and its 2 objects?` (Delete, Cancel;
+  Esc cancels). One undo step each way; Undo of a delete brings the layer back whole, in its place, with its objects. Greyed, with a
+  hover note, when nothing is picked, when it is the last layer, and when the layer is locked ("Unlock it to delete it.") or holds a
+  locked object. No change to the file format or to export bytes.
+- Files: `crates/model/src/edit.rs` (`Command::InsertLayer { index, layer }` and `Command::RemoveLayer(index)`, each the other's undo;
+  `EditError::LastLayer`; `Document::layer_object_count`, `Document::layer_delete_block` and `LayerDeleteBlock`),
+  `crates/ui/src/layers.rs` (new: the buttons, the row menu, the sheet, naming, `--look` states), `crates/ui/src/editor.rs`
+  (`Viewer::new_layer`, `Viewer::delete_layer`), `crates/ui/src/panels.rs` (button row, menu hook, the name field), `crates/ui/src/view.rs`
+  (fields, the sheet, two keyboard guards), `crates/ui/src/preflight.rs` (`show_look` arms), `crates/ui/src/lib.rs`,
+  `crates/app/src/main.rs` (`--look layers|layers-new|layers-ask|layers-menu`), `crates/i18n/locales/en-US/app.ftl`, `README.md`,
+  `DEVELOPMENT.md`, `docs/STATUS-debt.md` ("Layers, owed").
+- Commits: `8be261c` (the model commands and their tests), `16629c5` (the panel, menu, sheet, name field, tests), `d3a152d` (debt,
+  README, DEVELOPMENT, the app's `--look` parse case), and this entry's commit.
+- Tests added (each prints one `CHECK` line; run with `-- --nocapture`): `cargo test -p quadrule-model --test layers` (4: insert and remove
+  are each other's undo; a removed layer comes back whole in its place; the last layer stays and locks refuse; the object count and
+  repeated ids), the two new kinds in `every_command_undoes_and_redoes` (`kinds=14`); `cargo test -p quadrule-ui --test layers` (7:
+  name, place and open field; placement above a picked row, a picked object and from the menu; Enter, Esc and a click away on the
+  name field; an empty layer at once and a layer with objects asks, Cancel, Esc, Delete, Undo; the singular "1 object"; the greyed
+  cases with their notes and the menu item; the row menu and a picked object); `cargo test -p quadrule-app` has one more
+  command-line case.
+- Checks (commands): `make check-all` → `TESTS scope=workspace checks=726 check_fail=0 passed=676 failed=0 status=ok` (was 715/665 before
+  the job); `make build-proof` → `BUILD head=d3a152d dirty=no rebuilt=0` (a first run, after check-all, gave `rebuilt=7` and
+  then 0); `(cd crates/render/tests/golden && sha256sum -c SHA256SUMS | grep -c ": OK")` → 32, and `SHA256SUMS` still has 32 lines,
+  fixtures untouched (`git diff --stat bfe9282 -- crates/render/tests` is empty).
+- Seen on screen (grim, release build, scratch `XDG_CONFIG_HOME` and `XDG_DATA_HOME`, the data folder wiped before each run so the recovery
+  prompt does not cover the window): `scratchpad/look/layers-panel.png` (the sample page with a third layer "Labels" on top and Header
+  picked), `layers-new.png` (New layer pressed above Header: "Layer 1" selected in its open name field), `layers-ask.png` (the sheet
+  `Delete the layer "Header" and its 2 objects?` with "Undo brings the layer back."), `layers-menu.png` (Header's row menu).
+- Judgement calls (the ones needing chris's veto first):
+  1. A layer holding a locked object cannot be deleted either (greyed, "Unlock the objects in it to delete it."), not only a locked
+     layer: the record named only the locked layer, but deleting the layer would delete an object that Delete refuses today. Veto:
+     "delete it anyway" (drop `HoldsLocked` from `layer_delete_block` and the model refusal).
+  2. The sheet's count is every row the layer has in the panel (a group counts, and each object in it), so a group of three is
+     "4 objects". Veto: count top-level objects only, or leaves only.
+  3. After Delete layer nothing is picked (not the layer below), so a second press cannot eat the next layer by accident.
+  4. A right-click on a layer row picks that row (and clears the object pick), so the menu and the buttons work on the same layer.
+  5. The sheet has a second line, "Undo brings the layer back." (as the device take-out sheet does); the record asked only for the question.
+     Veto: drop `app-layer-delete-undo`.
+  6. The New layer button has a hover note, "Adds an empty layer above the picked one, or on top." (like Repeat's). Veto: drop it.
+  7. The hover notes: nothing picked "Pick a layer first.", last layer "A page needs at least one layer.", locked "Unlock it to delete it."
+     (the record's wording; it reads oddly alone in a tooltip, "Unlock the layer to delete it." is the alternative).
+  8. I fixed the existing name field: it asked for focus before it checked for focus lost, so Enter and a click away could never close it
+     (found because the new layer's tests could not close it), and Escape was taken by the page's shortcut (which cleared the pick) before
+     the field saw it. Both now behave as the comments in `name_cell` and `shortcuts` always said. This changes the double-click rename of
+     layers and objects, which has no headless test (`egui_kittest` cannot make a double-click): chris's look is the first real check.
+  9. The panel's button row is `horizontal_wrapped` (seven buttons, two lines on a 1440 by 720 screen). Order: Move up, Move down, New
+     layer, Delete layer, Group, Ungroup, Repeat.
+  10. "Layer N" is made through Fluent (`app-layer-new-name = Layer { $number }`) and compared with the layers' names, so another language
+      would number its own names; the blank page's first layer, `FIRST_LAYER_NAME`, stays the English "Layer 1" the file format holds.
+  11. While the Delete layer sheet shows, no keyboard shortcut works (Ctrl+Z, Delete, and so on) and Esc cancels it.
+  12. `--look layers-menu` holds the menu open every frame (egui throws a frame away while sizing a new popup, so a one-time open never
+      showed); it is for a screenshot only.
+- Words chosen (proposals for chris's look): "New layer", "Delete layer", "Layer N", "Adds an empty layer above the picked one, or on top.",
+  "Pick a layer first.", "A page needs at least one layer.", "Unlock it to delete it.", "Unlock the objects in it to delete it.",
+  `Delete the layer "{name}" and its {N} objects?` (one: "its 1 object"), "Undo brings the layer back.", "Delete" (and the existing "Cancel").
+- Blocked: nothing. Owed is in `docs/STATUS-debt.md` under "Layers, owed".
