@@ -60,18 +60,18 @@ fn scratch_folder(ui: &mut ViewerUi) {
     ui.viewer.settings.last_folder = Some(dir.to_string_lossy().into_owned());
 }
 
-/// Opens the Export sheet from the toolbar's Export menu.
+/// Opens the Export sheet from the File menu.
 fn open_export_sheet(h: &mut Harness<'static, Window>) {
     if h.state().ui.completion_open() {
         press(h, "Done");
     }
-    h.get_by_label("Export").click();
+    h.get_by_label("File").click();
     h.run();
     h.get_by_label_contains("Export…").click();
     h.run();
 }
 
-/// Presses the Export sheet's own Export button (the toolbar's menu button has the same name and comes first).
+/// Presses the Export sheet's own Export button .
 fn export_from_sheet(h: &mut Harness<'static, Window>) {
     for _ in 0..6 {
         h.step();

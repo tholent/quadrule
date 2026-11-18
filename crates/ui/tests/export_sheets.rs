@@ -90,7 +90,7 @@ fn press(h: &mut Harness<'static, Window>, label: &str) {
     h.run();
 }
 
-/// The Export sheet's Export button: the toolbar's menu button has the same name and comes first.
+/// The Export sheet's Export button (File > Export… is a menu item, not a button, so this is the only one).
 fn go(h: &mut Harness<'static, Window>) {
     settle(h);
     let n = h.get_all_by_role_and_label(Role::Button, "Export").count();
@@ -107,7 +107,7 @@ fn go(h: &mut Harness<'static, Window>) {
 }
 
 fn open_sheet(h: &mut Harness<'static, Window>) {
-    h.get_by_label("Export").click();
+    h.get_by_label("File").click();
     h.run();
     h.run();
     h.get_by_label_contains("Export…").click();
@@ -159,13 +159,15 @@ fn the_export_menu_opens_one_sheet_with_the_remembered_choices() {
     press(&mut h, "Cancel");
     let closed = !h.state().ui.export_sheet_open();
     let nothing = files_under(&dir.join("out")).is_empty();
-    // The menu also holds Export again, with the keys written beside the items.
-    h.get_by_label("Export").click();
+    // The File menu holds the one Export…, with Ctrl+E written beside it, and no Export again (Q9).
+    h.get_by_label("File").click();
     h.run();
-    let again_item = has_part(&h, "Export again");
-    let ok = open && labels && default && closed && nothing && again_item;
+    h.run();
+    let item = has_part(&h, "Export…");
+    let no_again = !has_part(&h, "Export again");
+    let ok = open && labels && default && closed && nothing && item && no_again;
     println!(
-        "CHECK crate=ui name=export_sheet_opens result={} open={open} labels={labels} default_preview={default} cancel_closes={closed} writes_nothing={nothing} again_in_menu={again_item}",
+        "CHECK crate=ui name=export_sheet_opens result={} open={open} labels={labels} default_preview={default} cancel_closes={closed} writes_nothing={nothing} one_export_item={item} no_export_again={no_again}",
         pass(ok)
     );
     assert!(ok);
@@ -331,62 +333,63 @@ fn export_writes_the_files_then_the_preflight_sheet_then_the_completion_sheet() 
 }
 
 #[test]
-fn export_again_writes_with_the_last_choices_or_opens_the_sheet() {
+fn ctrl_e_opens_the_sheet_with_the_last_choices_and_enter_writes() {
     let dir = tmp("sheets-again");
     let out = dir.join("out");
     let mut h = window(&dir);
     h.state_mut().ui.viewer.settings.devices = DevicesChoice::This;
-    // Nothing exported yet: Ctrl+E opens the sheet and writes nothing.
+    // Ctrl+E opens the sheet and writes nothing; Export is the button in focus.
     h.key_combination_modifiers(Modifiers::COMMAND, &[Key::E]);
     h.run();
     settle(&mut h);
     let sheet = h.state().ui.export_sheet_open() && files_under(&out).is_empty();
-    // With the sheet open the keys do not stack another sheet.
+    let focused = h.get_by_role_and_label(Role::Button, "Export").is_focused();
+    // With the sheet open the key does not stack another sheet, and Ctrl+Shift+E does nothing now.
     h.key_combination_modifiers(Modifiers::COMMAND, &[Key::E]);
     h.run();
     h.key_combination_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, &[Key::E]);
     h.run();
     let not_stacked = h.state().ui.export_sheet_open() && !h.state().ui.preflight_open();
-    go(&mut h);
+    // Enter writes: through the one preflight sheet (the sample page has warnings), then the completion sheet.
+    h.key_press(Key::Enter);
+    h.run();
+    settle(&mut h);
+    let held = h.state().ui.preflight_open()
+        && !h.state().ui.export_sheet_open()
+        && files_under(&out).is_empty();
     press(&mut h, "Export anyway");
+    let first = files_under(&out) == ["rung-1-slice-manta.png"] && h.state().ui.completion_open();
     press(&mut h, "Done");
-    let first = files_under(&out) == ["rung-1-slice-manta.png"];
     std::fs::remove_file(out.join("rung-1-slice-manta.png")).unwrap();
-    // Now Ctrl+E goes through the one preflight sheet, then writes the same file with no completion sheet.
+    // The next Ctrl+E has the last choices filled in (this device only, the same folder): Enter repeats the export.
     h.key_combination_modifiers(Modifiers::COMMAND, &[Key::E]);
     h.run();
     settle(&mut h);
-    let held = h.state().ui.preflight_open() && !h.state().ui.export_sheet_open();
-    press(&mut h, "Export anyway");
-    let again = files_under(&out) == ["rung-1-slice-manta.png"]
-        && !h.state().ui.completion_open()
-        && !h.state().ui.export_sheet_open();
-    let notice = h
-        .state()
-        .ui
-        .viewer
-        .notice
-        .as_ref()
-        .is_some_and(|n| !n.error && n.message.id == "notice-exported");
-    // Ctrl+Shift+E opens the sheet; so does the menu's Export again for a document with nothing remembered.
-    h.key_combination_modifiers(Modifiers::COMMAND | Modifiers::SHIFT, &[Key::E]);
-    h.run();
-    let shift = h.state().ui.export_sheet_open();
-    press(&mut h, "Cancel");
-    // The menu item does what Ctrl+E does.
-    std::fs::remove_file(out.join("rung-1-slice-manta.png")).unwrap();
-    h.get_by_label("Export").click();
-    h.run();
-    h.get_by_label_contains("Export again").click();
+    let filled = h.state().ui.export_sheet_open()
+        && has(&h, "rung-1-slice-manta.png")
+        && h.query_by_label("rung-1-slice-nomad.png").is_none()
+        && h.get_by_role_and_label(Role::Button, "Export").is_focused();
+    h.key_press(Key::Enter);
     h.run();
     settle(&mut h);
-    let menu = h.state().ui.preflight_open();
     press(&mut h, "Export anyway");
-    let menu_wrote = files_under(&out) == ["rung-1-slice-manta.png"];
-    let ok =
-        sheet && not_stacked && first && held && again && notice && shift && menu && menu_wrote;
+    let repeated = files_under(&out) == ["rung-1-slice-manta.png"];
+    press(&mut h, "Done");
+    // The File menu item does what the key does.
+    h.get_by_label("File").click();
+    h.run();
+    h.get_all_by_label_contains("Export…")
+        .next()
+        .unwrap()
+        .click();
+    h.run();
+    settle(&mut h);
+    let menu = h.state().ui.export_sheet_open()
+        && h.get_by_role_and_label(Role::Button, "Export").is_focused();
+    press(&mut h, "Cancel");
+    let ok = sheet && focused && not_stacked && held && first && filled && repeated && menu;
     println!(
-        "CHECK crate=ui name=export_again_keys_and_menu result={} none_yet_opens_sheet={sheet} not_stacked={not_stacked} first={first} again_behind_preflight={held} again_wrote_no_completion={again} one_line_notice={notice} ctrl_shift_e_opens_sheet={shift} menu_item={menu} menu_wrote={menu_wrote}",
+        "CHECK crate=ui name=export_ctrl_e_enter result={} ctrl_e_opens_sheet={sheet} export_button_focused={focused} not_stacked_and_shift_e_gone={not_stacked} enter_goes_to_preflight={held} first_written={first} last_choices_filled={filled} enter_repeats={repeated} menu_item_same={menu}",
         pass(ok)
     );
     assert!(ok);

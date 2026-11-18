@@ -83,6 +83,15 @@ pub enum After {
     OpenPath(PathBuf),
     /// Make a new blank document from the New dialog's choices (rung 5).
     NewPage(NewPage),
+    /// Close the document and show the welcome screen (File > Close, rung 16).
+    CloseDocument,
+    /// Open a template as an untitled copy on this device (rung 16).
+    OpenTemplate {
+        /// The template's file.
+        path: PathBuf,
+        /// The device that becomes the copy's main one.
+        device_id: String,
+    },
     /// Close the window.
     Close,
 }
@@ -237,6 +246,10 @@ pub struct ViewerUi {
     pub(crate) field_text: HashMap<String, String>,
     pub(crate) link_margins: bool,
     pub(crate) link_rhythm: bool,
+    /// The welcome screen's state (rung 16): which tab, the Device filter, the Search box.
+    pub(crate) welcome: crate::welcome::Welcome,
+    /// Open the File menu on the next frame (`--look file-menu`).
+    pub(crate) open_file_menu: bool,
     /// Waiting on the unsaved-changes prompt.
     pending: Option<After>,
     /// The New dialog, while it shows (rung 5).
@@ -303,6 +316,8 @@ impl ViewerUi {
             field_text: HashMap::new(),
             link_margins: true,
             link_rhythm: true,
+            welcome: Default::default(),
+            open_file_menu: false,
             pending: None,
             new_dialog: None,
             new_device: quadrule_model::sample::MANTA_ID.to_string(),
@@ -357,15 +372,17 @@ impl ViewerUi {
         }
         egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut requests));
         egui::Panel::bottom("status").show(ui, |ui| self.status_bar(ui));
+        // The welcome screen takes the window's middle; the document's panels wait behind it (rung 16, Q2).
+        let in_document = self.viewer.open.is_some() && !self.welcome.over_document;
         // The tools bar on the left (chris, 2026-11-10: the left side was kept for it; rung 5).
-        if self.viewer.open.is_some() {
+        if in_document {
             egui::Panel::left("tools")
                 .resizable(false)
                 .exact_size(BAR_WIDTH)
                 .show(ui, |ui| self.tools_bar(ui));
         }
         // One panel on the right: the inspector, with the layers below it.
-        if self.show_lint && self.viewer.open.is_some() {
+        if self.show_lint && in_document {
             egui::Panel::right("inspector")
                 .default_size(320.0)
                 .show(ui, |ui| {
@@ -379,7 +396,7 @@ impl ViewerUi {
                 });
         }
         // The device previews strip, along the bottom of the canvas (rung 8a, Q5).
-        if self.viewer.open.is_some() {
+        if in_document {
             self.refresh_strip(&ctx);
             egui::Panel::bottom("strip")
                 .resizable(false)
@@ -388,7 +405,7 @@ impl ViewerUi {
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(backdrop(ui.visuals())))
             .show(ui, |ui| {
-                if self.viewer.open.is_some() {
+                if in_document {
                     // The bar for missing fonts stands above the canvas (rung 12a, Q5).
                     if !self.viewer.bar_fonts().is_empty() {
                         egui::Panel::top("fonts-bar")
@@ -405,7 +422,7 @@ impl ViewerUi {
                     }
                     self.canvas(ui);
                 } else {
-                    self.empty(ui, &mut requests);
+                    self.welcome_screen(ui, &mut requests);
                 }
             });
         // Something else taking the keyboard (a field in the inspector) ends the typing.
@@ -425,6 +442,7 @@ impl ViewerUi {
         // (no text box selected) must not wait for a later selection.
         self.focus_text_content = false;
         self.new_dialog(&ctx, &mut requests);
+        self.welcome_dialogs(&ctx);
         self.unsaved_prompt(&ctx, &mut requests);
         self.font_sheet_window(&ctx, &mut requests);
         self.preflight_window(&ctx);
@@ -451,7 +469,7 @@ impl ViewerUi {
     /// is Cmd on macOS. While a text field has focus, only Save and Save As are taken; the field
     /// keeps its own undo, arrows and Delete.
     fn shortcuts(&mut self, ctx: &egui::Context, requests: &mut Vec<Request>) {
-        if self.pending.is_some() || self.new_dialog.is_some() {
+        if self.pending.is_some() || self.new_dialog.is_some() || self.welcome_question_open() {
             return;
         }
         let exporting = self.export_sheets_open();
@@ -460,13 +478,30 @@ impl ViewerUi {
         let key = |m: Modifiers, k: Key| {
             ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(m, k)))
         };
-        // New works on the empty start screen too (rung 5 bbq, Defaulted "New: where and what it
-        // replaces"), but not in the middle of a drag.
-        if !self.viewer.dragging() && key(cmd, Key::N) {
-            self.open_new_dialog();
+        // New, Open and Close (rung 16, Q6). New shows the welcome screen, which has its own Blank page; with it
+        // showing already, Ctrl+N goes on to the Blank page dialog. None of them in the middle of a drag.
+        if !self.viewer.dragging() {
+            if key(cmd, Key::N) {
+                self.ask_new();
+                return;
+            }
+            if key(cmd, Key::O) {
+                requests.extend(self.guard(After::OpenDialog));
+                return;
+            }
+        }
+        if self.welcome_showing() {
+            // Esc goes back to the document the welcome screen is over.
+            if self.welcome_over_document() && key(Modifiers::NONE, Key::Escape) {
+                self.close_welcome();
+            }
             return;
         }
         if self.viewer.open.is_none() {
+            return;
+        }
+        if !self.viewer.dragging() && !self.viewer.is_typing() && key(cmd, Key::W) {
+            requests.extend(self.ask_close_document());
             return;
         }
         // Typing on the canvas takes the keyboard (rung 11b).
@@ -491,14 +526,10 @@ impl ViewerUi {
         if ctx.egui_wants_keyboard_input() {
             return;
         }
-        // Export… and Export again (rung 15 bbq, Q2): the more specific first. Neither clashes with a key the
-        // app already uses (E alone is the Ellipse tool; Ctrl is not held for it).
-        if !exporting {
-            if key(shift_cmd, Key::E) {
-                self.open_export_sheet();
-            } else if key(cmd, Key::E) {
-                self.ask_export_again();
-            }
+        // Export… (rung 16 bbq, Q9): one item; the sheet opens with the last choices and Export in focus.
+        // Ctrl+Shift+E is free again: egui matches a Ctrl shortcut with Shift held too, so Shift must be up.
+        if !exporting && !ctx.input(|i| i.modifiers.shift) && key(cmd, Key::E) {
+            self.open_export_sheet();
         }
         if key(shift_cmd, Key::Z) || key(cmd, Key::Y) {
             self.viewer.redo();
@@ -786,6 +817,18 @@ impl ViewerUi {
                 }
                 Vec::new()
             }
+            After::OpenTemplate { path, device_id } => {
+                if self.viewer.open_template(&path, &device_id).is_ok() {
+                    self.after_open();
+                }
+                Vec::new()
+            }
+            After::CloseDocument => {
+                self.viewer.close_document();
+                self.after_open();
+                self.show_welcome();
+                Vec::new()
+            }
             After::Close => {
                 self.closing = true;
                 vec![Request::Close]
@@ -801,6 +844,7 @@ impl ViewerUi {
     }
 
     fn after_open(&mut self) {
+        self.welcome.over_document = false;
         self.selected_layer = None;
         self.renaming = None;
         self.field_text.clear();
@@ -906,32 +950,7 @@ impl ViewerUi {
             egui::Grid::new("new-fields").num_columns(2).show(ui, |ui| {
                 // Each control is named for screen readers by the label beside it.
                 let label = ui.label(self.t("app-device"));
-                egui::ComboBox::from_id_salt("new-device")
-                    .selected_text(self.full_name(&spec.device_id))
-                    .show_ui(ui, |ui| {
-                        for id in quadrule_profiles::active::device_ids() {
-                            ui.selectable_value(
-                                &mut spec.device_id,
-                                id.clone(),
-                                self.full_name(&id),
-                            );
-                        }
-                        // The paper sizes are their own group after the devices (rung 13b).
-                        ui.separator();
-                        ui.label(
-                            egui::RichText::new(self.t("new-group-paper"))
-                                .small()
-                                .strong(),
-                        );
-                        for id in quadrule_profiles::active::paper_ids() {
-                            ui.selectable_value(
-                                &mut spec.device_id,
-                                id.clone(),
-                                self.full_name(&id),
-                            );
-                        }
-                    })
-                    .response
+                self.device_picker(ui, "new-device", &mut spec.device_id)
                     .labelled_by(label.id);
                 ui.end_row();
                 let label = ui.label(self.t("new-rhythm"));
@@ -1127,36 +1146,22 @@ impl ViewerUi {
 
     fn toolbar(&mut self, ui: &mut egui::Ui, requests: &mut Vec<Request>) {
         ui.horizontal_wrapped(|ui| {
-            if ui
-                .button(self.t("app-new"))
-                .on_hover_text(self.t("app-new-tip"))
-                .clicked()
-            {
-                self.open_new_dialog();
-            }
-            if ui.button(self.t("app-open")).clicked() {
-                requests.extend(self.guard(After::OpenDialog));
-            }
-            let open = self.viewer.open.is_some();
-            ui.add_enabled_ui(open, |ui| {
-                if ui.button(self.t("app-save")).clicked() {
-                    requests.extend(self.save());
-                }
-                if ui.button(self.t("app-save-as")).clicked() {
-                    self.ask(Request::SaveAsDialog(None), requests);
-                }
-            });
+            self.file_menu(ui, requests);
+            // What the document in view lets the rest of the bar do; the welcome screen over a document hides it.
+            let open = self.in_document();
             ui.separator();
-            let can_undo = self
-                .viewer
-                .open
-                .as_ref()
-                .is_some_and(|o| o.history.can_undo());
-            let can_redo = self
-                .viewer
-                .open
-                .as_ref()
-                .is_some_and(|o| o.history.can_redo());
+            let can_undo = open
+                && self
+                    .viewer
+                    .open
+                    .as_ref()
+                    .is_some_and(|o| o.history.can_undo());
+            let can_redo = open
+                && self
+                    .viewer
+                    .open
+                    .as_ref()
+                    .is_some_and(|o| o.history.can_redo());
             if ui
                 .add_enabled(can_undo, egui::Button::new(self.t("app-undo")))
                 .clicked()
@@ -1173,24 +1178,26 @@ impl ViewerUi {
             self.emoji_button(ui);
             ui.separator();
 
-            // Device.
-            let ids = self.viewer.profile_ids();
-            let name = |id: &str| self.full_name(id);
-            let current = self.viewer.profile_id.clone();
-            let mut chosen = current.clone();
-            // Named for screen readers (napkin §14, AccessKit) by the label beside it.
-            let label = ui.label(self.t("app-device"));
-            egui::ComboBox::from_id_salt("profile")
-                .selected_text(name(&current))
-                .show_ui(ui, |ui| {
-                    for id in &ids {
-                        ui.selectable_value(&mut chosen, id.clone(), name(id));
-                    }
-                })
-                .response
-                .labelled_by(label.id);
-            if chosen != current {
-                self.viewer.set_profile(&chosen);
+            // Device (the welcome screen has its own filter).
+            if !self.welcome_showing() {
+                let ids = self.viewer.profile_ids();
+                let name = |id: &str| self.full_name(id);
+                let current = self.viewer.profile_id.clone();
+                let mut chosen = current.clone();
+                // Named for screen readers (napkin §14, AccessKit) by the label beside it.
+                let label = ui.label(self.t("app-device"));
+                egui::ComboBox::from_id_salt("profile")
+                    .selected_text(name(&current))
+                    .show_ui(ui, |ui| {
+                        for id in &ids {
+                            ui.selectable_value(&mut chosen, id.clone(), name(id));
+                        }
+                    })
+                    .response
+                    .labelled_by(label.id);
+                if chosen != current {
+                    self.viewer.set_profile(&chosen);
+                }
             }
             // The menu entry for the Profiles window (rung 13a, Q5).
             if ui
@@ -1203,7 +1210,6 @@ impl ViewerUi {
             ui.separator();
 
             // Zoom (rung 2 bbq, Q10).
-            let open = self.viewer.open.is_some();
             ui.add_enabled_ui(open, |ui| {
                 if ui.button(self.t("app-zoom-fit")).clicked() {
                     self.viewer.zoom = Zoom::Fit;
@@ -1251,25 +1257,6 @@ impl ViewerUi {
                 self.tab = Tab::Lint;
             }
             ui.separator();
-
-            // Export (rung 2 bbq, Q8).
-            ui.add_enabled_ui(open, |ui| {
-                ui.menu_button(self.t("app-export"), |ui| {
-                    let shortcut = |ui: &egui::Ui, m: Modifiers| {
-                        ui.ctx().format_shortcut(&KeyboardShortcut::new(m, Key::E))
-                    };
-                    let sheet = egui::Button::new(self.t("app-export-sheet"))
-                        .shortcut_text(shortcut(ui, Modifiers::COMMAND | Modifiers::SHIFT));
-                    if ui.add(sheet).clicked() {
-                        self.open_export_sheet();
-                    }
-                    let again = egui::Button::new(self.t("app-export-again"))
-                        .shortcut_text(shortcut(ui, Modifiers::COMMAND));
-                    if ui.add(again).clicked() {
-                        self.ask_export_again();
-                    }
-                });
-            });
 
             // View.
             ui.menu_button(self.t("app-view"), |ui| {
@@ -1333,7 +1320,8 @@ impl ViewerUi {
 
     fn status_bar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
-            if let Some((x, y)) = self.cursor_px
+            if self.in_document()
+                && let Some((x, y)) = self.cursor_px
                 && let Some(page) = self.viewer.page()
             {
                 let mm = |px: f32| px as f64 * quadrule_model::MM_PER_IN / page.profile.ppi;
@@ -1345,7 +1333,7 @@ impl ViewerUi {
                 ui.label(self.strings.format(&msg));
                 ui.separator();
             }
-            if self.viewer.open.is_some() {
+            if self.in_document() {
                 let pct = self.shown_scale(ui) * 100.0;
                 let msg = Message::new("app-status-zoom").num("percent", pct as f64, 0);
                 ui.label(self.strings.format(&msg));
@@ -1354,7 +1342,7 @@ impl ViewerUi {
                 let msg = Message::new("app-lint-count").num("count", count as f64, 0);
                 ui.label(self.strings.format(&msg));
             }
-            if self.viewer.open.is_some() {
+            if self.in_document() {
                 // The snap helpers and the rhythm overlay, each on or off (napkin §6.2).
                 ui.separator();
                 self.snap_toggles(ui);
@@ -1363,7 +1351,7 @@ impl ViewerUi {
                 ui.separator();
                 ui.label(line);
             }
-            if self.viewer.page().is_some_and(|p| p.repeats_capped > 0) {
+            if self.in_document() && self.viewer.page().is_some_and(|p| p.repeats_capped > 0) {
                 ui.separator();
                 let msg = Message::new("app-status-repeat-capped").num(
                     "max",
@@ -1423,25 +1411,6 @@ impl ViewerUi {
 
     pub(crate) fn lint_count(&mut self) -> usize {
         self.viewer.page().map_or(0, |p| p.findings.len())
-    }
-
-    fn empty(&mut self, ui: &mut egui::Ui, requests: &mut Vec<Request>) {
-        ui.vertical_centered(|ui| {
-            ui.add_space(ui.available_height() * 0.3);
-            ui.heading(self.t("app-empty-title"));
-            ui.add_space(12.0);
-            if ui.button(self.t("app-new")).clicked() {
-                self.open_new_dialog();
-            }
-            if ui.button(self.t("app-open")).clicked() {
-                requests.extend(self.guard(After::OpenDialog));
-            }
-            if ui.button(self.t("app-open-sample")).clicked() {
-                requests.extend(self.guard(After::OpenSample));
-            }
-            ui.add_space(8.0);
-            ui.weak(self.t("app-empty-drop"));
-        });
     }
 
     /// Replays a drag of the sample page's dot grid through the real frame loop and prints its

@@ -57,9 +57,19 @@ and error.
 
 ## What works today
 
-- Start a blank page (New…, Ctrl+N): pick the device (Manta or Nomad), a rhythm (handwriting 6 mm, narrow, college
-  or wide ruled, a 5 mm or 1/4 in grid, or an isometric rhythm with a 5 mm side) and a title. The margins clear the tablet's docked toolbars and footers.
-- Open a `.quad` file (Quadrule's own format) or the built-in sample page, and save changes.
+- Start from the **welcome screen**, which shows when nothing is open, after File ▸ Close (Ctrl+W), and for File ▸ New…
+  (Ctrl+N) over an open page (Esc or Cancel goes back to the page). Down its left side: **Blank page** (pick the device,
+  a rhythm (handwriting 6 mm, narrow, college or wide ruled, a 5 mm or 1/4 in grid, or an isometric rhythm with a 5 mm
+  side) and a title; the margins clear the tablet's docked toolbars and footers), **Open…**, the **Recent** files
+  (the last ten opened or saved; one that has gone from the disk is greyed "Not found") and a small "Open sample page"
+  link. On its right: tabs (All, Paper, Notes, Planning, Bullet journal, Creative, My templates), a Device filter and a
+  Search box. The starter pages are coming; until then the tabs say so. Dropping a `.quad` on it opens it.
+- **My templates**: File ▸ Save as template… keeps a copy of the page under My templates (a `templates` folder beside
+  the autosave recovery folder in the app's data folder). Picking one opens an untitled copy on the Device filter's
+  device; right-click a template to Remove it (it asks first, and removing cannot be undone) or Show in folder.
+- Open a `.quad` file (Quadrule's own format) or the built-in sample page, and save changes. Everything for files is in
+  the **File** menu, leftmost in the top bar: New…, Open…, Open Recent, Save, Save As…, Save as template…, Export… and
+  Close.
 - Draw with the tools bar on the left: a line (L), a text box (T), a pattern region (P), a rectangle (R), an ellipse
   (E) or a polygon (Y); V goes back to Select. Drag to draw (sizes snap to whole rhythm units), or click for a default
   size; Shift draws a square, a circle or a regular polygon; double-click a tool to keep it on.
@@ -69,11 +79,10 @@ and error.
   with an inner radius. Curves and slanted edges are smooth; straight edges stay sharp on whole pixels.
 - Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock and reorder layers;
   unlimited undo and redo; autosave with recovery after a crash.
-- Export PNGs for the devices a page targets. **Export** in the toolbar opens the **Export sheet** (Ctrl+Shift+E;
-  Cmd on a Mac): pick This device or All devices, the folder (Change…), the **Path** and a **Set**, and read the
-  list of files that will be written (a mistake shows in red and holds Export back). **Export again** (Ctrl+E) writes
-  once more with the last choices and no sheet; with nothing exported yet from the document it opens the sheet.
-  Every choice is remembered. After an export a **completion sheet** shows a picture of each file, where they went,
+- Export PNGs for the devices a page targets. **File ▸ Export…** (Ctrl+E; Cmd on a Mac) opens the
+  **Export sheet** with the last choices filled in and the Export button in focus, so Ctrl+E then Enter repeats the
+  last export: pick This device or All devices, the folder (Change…), the **Path** and a **Set**, and read the list of
+  files that will be written (a mistake shows in red and holds Export back). Every choice is remembered. After an export a **completion sheet** shows a picture of each file, where they went,
   Reveal in folder, and a folded "Where do these go?" note about the Supernote's MyStyle folder.
   The **Path** is one template for the whole app. `/` makes a folder, and these words in braces are filled in:
   `{title}`, `{device}` (also `{profile}`), `{model}`, `{width}`, `{height}`, `{orientation}`, `{type}`, `{date}`,
@@ -199,7 +208,7 @@ installs it for you). Then, from a clone of this repository:
 cargo run --release -p quadrule-app
 ```
 
-That starts empty (New… or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
+That starts on the welcome screen (Blank page or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
 `-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 

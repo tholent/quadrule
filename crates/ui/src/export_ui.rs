@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The Export sheet and the completion sheet (rung 15 bbq, Q2, Q7 and Q9). The engine is [`crate::export`]; this is
-//! only what is drawn and what a press does. One sheet at a time, never stacked: the Export sheet closes when
-//! Export is pressed, then the one preflight sheet shows if the rules call for it, then the files are written
-//! and the completion sheet shows (not after Export again, which only says it in a one-line notice).
+//! The Export sheet and the completion sheet (rung 15 bbq, Q2, Q7 and Q9; rung 16 bbq, Q9). The engine is
+//! [`crate::export`]; this is only what is drawn and what a press does. One sheet at a time, never stacked: the Export
+//! sheet closes when Export is pressed, then the one preflight sheet shows if the rules call for it, then the files
+//! are written and the completion sheet shows.
+//!
+//! There is one Export… (File > Export…, Ctrl+E). It opens the sheet with the last choices filled in and the Export
+//! button in focus, so Ctrl+E then Enter repeats the last export. (Rung 15's separate "Export again" is gone.)
 //!
 //! Every choice on the Export sheet (devices, path, Set, note) is kept in the settings the moment it changes;
 //! the folder is kept when an export writes into it.
 
-use crate::export::{Again, ExportRequest, ExportResult, THUMB_SIDE};
+use crate::export::{ExportRequest, ExportResult, THUMB_SIDE};
 use crate::export_path::PRESETS;
 use crate::preflight::{Preflight, Then};
 use crate::settings::DevicesChoice;
@@ -35,6 +38,8 @@ use std::path::{Path, PathBuf};
 pub struct ExportSheet {
     /// The folder the files go into, if one is known yet.
     pub folder: Option<PathBuf>,
+    /// The Export button takes the keyboard focus on the first frame the sheet shows, so Enter writes (Q9).
+    pub focus_go: bool,
 }
 
 /// The completion sheet while it shows.
@@ -73,8 +78,8 @@ impl ViewerUi {
         self.export_sheet.is_some() || self.completion.is_some() || self.preflight.is_some()
     }
 
-    /// Opens the Export sheet (the toolbar's Export…, Ctrl+Shift+E). Folder: where this document last exported to,
-    /// else the last folder used, else its own folder, else home.
+    /// Opens the Export sheet (File > Export…, Ctrl+E), with the last choices filled in and the Export button in
+    /// focus. Folder: where this document last exported to, else the last folder used, else its own folder, else home.
     pub fn open_export_sheet(&mut self) {
         if self.viewer.open.is_none() {
             return;
@@ -85,7 +90,10 @@ impl ViewerUi {
             .viewer
             .export_again_folder()
             .or_else(|| self.viewer.export_start_folder());
-        self.export_sheet = Some(ExportSheet { folder });
+        self.export_sheet = Some(ExportSheet {
+            folder,
+            focus_go: true,
+        });
     }
 
     /// The folder the system dialog picked for the Export sheet (Change…).
@@ -131,37 +139,6 @@ impl ViewerUi {
                 result,
                 textures: Vec::new(),
             });
-        }
-    }
-
-    /// Export again (the menu, Ctrl+E): the remembered choices, no sheet and no completion sheet, the one-line
-    /// notice instead. With nothing exported from this document yet, the Export sheet opens. The one preflight
-    /// sheet still comes first when the rules call for it.
-    pub fn ask_export_again(&mut self) {
-        if self.viewer.open.is_none() {
-            return;
-        }
-        if !self.viewer.can_export_again() {
-            self.open_export_sheet();
-            return;
-        }
-        self.export_sheet = None;
-        self.completion = None;
-        let which: ExportWhich = self.viewer.settings.devices.into();
-        if self.viewer.preflight_report(which).needs_sheet() {
-            self.preflight = Some(Preflight {
-                then: Then::Again,
-                which,
-                notes_open: false,
-            });
-        } else {
-            self.do_export_again();
-        }
-    }
-
-    pub(crate) fn do_export_again(&mut self) {
-        if let Again::NeedsSheet = self.viewer.export_again() {
-            self.open_export_sheet();
         }
     }
 
@@ -337,16 +314,21 @@ impl ViewerUi {
                 if ui.button(self.t("app-exp-cancel")).clicked() {
                     cancel = true;
                 }
-                if ui
-                    .add_enabled(ok, egui::Button::new(self.t("app-exp-go")))
-                    .clicked()
-                {
+                let button = ui.add_enabled(ok, egui::Button::new(self.t("app-exp-go")));
+                // Ctrl+E then Enter repeats the last export (rung 16 bbq, Q9).
+                if sheet.focus_go && ok {
+                    button.request_focus();
+                }
+                if button.clicked() {
                     go = true;
                 }
             });
             req
         });
         let close_asked = modal.should_close();
+        if let Some(open) = self.export_sheet.as_mut() {
+            open.focus_go = false;
+        }
         let req = modal.inner;
         let which: ExportWhich = s.devices.into();
         let changed = s != self.viewer.settings;

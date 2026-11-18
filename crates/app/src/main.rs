@@ -53,8 +53,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Preference keys in eframe's storage.
-/// What `--look` takes: a part of the window to start with, for a screenshot (rungs 14b and 15).
-const LOOKS: [&str; 8] = [
+/// What `--look` takes: a part of the window to start with, for a screenshot (rungs 14b, 15 and 16).
+const LOOKS: [&str; 10] = [
     "lint",
     "style",
     "preflight",
@@ -63,6 +63,8 @@ const LOOKS: [&str; 8] = [
     "export-mistake",
     "exported",
     "exported-open",
+    "welcome",
+    "file-menu",
 ];
 const KEY_THEME: &str = "theme";
 const KEY_RULER: &str = "screen_px_per_mm";
@@ -157,8 +159,17 @@ impl App {
         cc.egui_ctx.set_theme(ui.theme);
         // Recovery files live in the user's data folder (rung 3 bbq, Defaulted "Autosave"),
         // e.g. ~/.local/share/quadrule/recovery on Linux.
-        ui.recovery = directories::ProjectDirs::from("org", "quadrule", "quadrule")
+        let dirs = directories::ProjectDirs::from("org", "quadrule", "quadrule");
+        ui.recovery = dirs
+            .as_ref()
             .map(|d| Recovery::new(d.data_dir().join("recovery")));
+        // My templates (rung 16 bbq, Q4) are kept beside it: `templates/` in the same data folder. A timing run
+        // has none.
+        if !timing {
+            ui.viewer.templates_dir = dirs
+                .as_ref()
+                .map(|d| d.data_dir().join(quadrule_ui::templates::DIR_NAME));
+        }
         ui.offer_recovery();
         // The graphics-chip canvas (rung 3 bbq Q4), on egui's own device; when it cannot start,
         // the canvas falls back to vello_cpu and says why.
@@ -219,8 +230,9 @@ impl App {
             ui.open_profiles_window();
         }
         if let Some(look) = &args.look {
-            // A look with no page named opens the sample page, so there is something to export.
-            if ui.viewer.open.is_none() {
+            // A look with no page named opens the sample page, so there is something to export; the welcome
+            // screen's look is the screen with nothing open.
+            if ui.viewer.open.is_none() && look != "welcome" {
                 ui.viewer.open_sample();
             }
             ui.show_look(look);
@@ -608,7 +620,7 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
                 Some(v) if LOOKS.contains(&v.as_str()) => {
                     out.look = Some(v)
                 }
-                _ => return Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported or exported-open".into()),
+                _ => return Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome or file-menu".into()),
             }
         } else if a == "--fonts-page" {
             out.fonts_page = true;
@@ -792,7 +804,7 @@ mod tests {
             ),
             (
                 p(&["--look", "sparkles"]),
-                Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported or exported-open".into()),
+                Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome or file-menu".into()),
             ),
             (
                 p(&["--paper-page", "--bench-drag", "30"]),

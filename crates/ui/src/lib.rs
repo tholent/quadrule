@@ -33,6 +33,7 @@ pub mod emoji;
 pub mod export;
 pub mod export_path;
 pub mod export_ui;
+pub mod file_menu;
 pub mod fonts;
 pub mod lint_fixes;
 pub mod lint_ui;
@@ -55,6 +56,7 @@ pub mod tools;
 pub mod typing;
 pub mod view;
 pub mod viewer;
+pub mod welcome;
 
 pub use arrange::{ArrangeOp, Mixed};
 pub use bench::DragBench;

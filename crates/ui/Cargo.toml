@@ -12,6 +12,7 @@ chrono.workspace = true
 egui.workspace = true
 emojis.workspace = true
 kurbo.workspace = true
+png.workspace = true
 quadrule-format.workspace = true
 quadrule-i18n.workspace = true
 quadrule-layout.workspace = true
@@ -26,7 +27,6 @@ serde_json.workspace = true
 
 [dev-dependencies]
 egui_kittest.workspace = true
-png.workspace = true
 zip.workspace = true
 
 [lints]

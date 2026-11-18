@@ -50,11 +50,33 @@ fn harness() -> Harness<'static, Window> {
     h
 }
 
+/// Chooses an item of the File menu (the bar has no New, Open, Save or Export buttons of its own, rung 16 bbq, Q6).
+fn file_item(h: &mut Harness<'static, Window>, item: &str) {
+    h.get_by_label("File").click();
+    h.run();
+    h.get_all_by_label_contains(item).next().unwrap().click();
+    h.run();
+}
+
 #[test]
 fn empty_start_then_sample() {
-    // Rung 2 bbq, Q7: start empty; "Open sample page" opens the slice; the lint count shows.
+    // Rung 2 bbq, Q7, as rung 16 bbq, Q2 changed it: start on the welcome screen with nothing open; "Open sample
+    // page" opens the slice; the lint count shows.
     let mut h = harness();
-    let empty = h.query_by_label("Nothing open").is_some() && h.state().ui.viewer.open.is_none();
+    let empty = h.state().ui.welcome_showing()
+        && h.state().ui.viewer.open.is_none()
+        && [
+            "+ Blank page",
+            "Open…",
+            "Recent",
+            "Open sample page",
+            "All",
+            "My templates",
+            "Device",
+            "Search",
+        ]
+        .iter()
+        .all(|l| h.query_by_label(l).is_some());
     h.get_by_label("Open sample page").click();
     h.run();
     let opened = h.state().ui.viewer.open.is_some();
@@ -63,9 +85,10 @@ fn empty_start_then_sample() {
     // toolbar's two notes too.
     let count = h.query_all_by_label("⚠ 5").count() == 2;
     let panel = h.query_by_label("Lint (5)").is_some();
-    let ok = empty && opened && count && panel;
+    let gone = !h.state().ui.welcome_showing() && h.query_by_label("+ Blank page").is_none();
+    let ok = empty && opened && count && panel && gone;
     println!(
-        "CHECK crate=ui name=window_empty_then_sample result={} empty_start={empty} opened={opened} lint_count_shown={count} lint_panel={panel}",
+        "CHECK crate=ui name=window_empty_then_sample result={} empty_start={empty} opened={opened} lint_count_shown={count} lint_panel={panel} welcome_gone={gone}",
         pass(ok)
     );
     assert!(ok);
@@ -80,10 +103,7 @@ fn dialogs_are_requested_not_opened() {
     let open = h.state().requests.contains(&Request::OpenDialog);
     h.get_by_label("Open sample page").click();
     h.run();
-    h.get_by_label("Export").click();
-    h.run();
-    h.get_by_label_contains("Export…").click();
-    h.run();
+    file_item(&mut h, "Export…");
     // The Export sheet opens; Change… asks the app for the folder dialog.
     let sheet_open = h.state().ui.export_sheet_open();
     h.get_by_label("Change…").click();
@@ -184,6 +204,11 @@ fn every_message_id_exists() {
         include_str!("../src/panels.rs"),
         include_str!("../src/editor.rs"),
         include_str!("../src/recovery.rs"),
+        include_str!("../src/welcome.rs"),
+        include_str!("../src/file_menu.rs"),
+        include_str!("../src/templates.rs"),
+        include_str!("../src/recent.rs"),
+        include_str!("../src/export_ui.rs"),
         include_str!("../../app/src/main.rs"),
     ];
     let strings = quadrule_i18n::Strings::english();
@@ -295,16 +320,14 @@ fn unsaved_changes_prompt() {
     h.state_mut().ui.viewer.selection = vec![ids::RULE];
     h.state_mut().ui.viewer.nudge(1.0, 0.0, false).unwrap();
     h.run();
-    h.get_all_by_label("Open…").next().unwrap().click();
-    h.run();
+    file_item(&mut h, "Open…");
     let asked = h.state().ui.prompt_open() && h.query_by_label("Save changes?").is_some();
     let nothing_yet = h.state().requests.is_empty();
     h.get_by_label("Cancel").click();
     h.run();
     let cancelled = !h.state().ui.prompt_open() && h.state().requests.is_empty();
     // Save on the sample page asks where (it has no file), then carries on to Open.
-    h.get_all_by_label("Open…").next().unwrap().click();
-    h.run();
+    file_item(&mut h, "Open…");
     // The dialog's Save, not the toolbar's: dialogs are drawn last.
     h.get_all_by_label("Save").last().unwrap().click();
     h.run();
@@ -314,8 +337,7 @@ fn unsaved_changes_prompt() {
         .contains(&Request::SaveAsDialog(Some(After::OpenDialog)));
     // Don't save goes straight on.
     h.state_mut().requests.clear();
-    h.get_all_by_label("Open…").next().unwrap().click();
-    h.run();
+    file_item(&mut h, "Open…");
     h.get_by_label("Don’t save").click();
     h.run();
     let discarded = h.state().requests == vec![Request::OpenDialog];
@@ -765,19 +787,21 @@ fn copy_cut_and_paste_keys() {
 
 #[test]
 fn new_dialog_makes_a_blank_page_and_asks_before_replacing_changes() {
-    // Rung 5 bbq, Defaulted "New: where and what it replaces": New… (or Ctrl+N) shows a dialog;
-    // Create opens a blank page; with unsaved changes the unsaved prompt comes first.
+    // Rung 5 bbq, Defaulted "New: where and what it replaces", as rung 16 bbq, Q2 changed it: Blank page on the
+    // welcome screen shows the New dialog; Create opens a blank page; File > New… (Ctrl+N) over a document shows
+    // the welcome screen, and with unsaved changes the unsaved prompt comes first.
     let mut h = harness();
-    h.get_all_by_label("New…").next().unwrap().click();
+    h.get_by_label("+ Blank page").click();
     h.run();
     let dialog = h.query_by_label("New page").is_some() && h.state().ui.new_dialog_open();
     h.get_by_label("Create").click();
     h.run();
     let opened = h.state().ui.viewer.open.as_ref().is_some_and(|o| {
         o.source == quadrule_ui::Source::Untitled && o.doc.layers[0].objects.is_empty()
-    }) && !h.state().ui.new_dialog_open();
+    }) && !h.state().ui.new_dialog_open()
+        && !h.state().ui.welcome_showing();
     let title = h.state().ui.window_title() == "Untitled — quadrule";
-    // Make a change, then Ctrl+N and Create: the unsaved prompt shows and nothing is replaced yet.
+    // Make a change, then Ctrl+N: the welcome screen shows over the page and nothing is replaced yet.
     h.state_mut()
         .ui
         .viewer
@@ -789,16 +813,21 @@ fn new_dialog_makes_a_blank_page_and_asks_before_replacing_changes() {
     h.run();
     h.key_combination_modifiers(Modifiers::COMMAND, &[Key::N]);
     h.run();
+    let over = h.state().ui.welcome_over_document() && h.query_by_label("+ Blank page").is_some();
+    // Blank page, then Create: the unsaved prompt shows and nothing is replaced yet.
+    h.get_by_label("+ Blank page").click();
+    h.run();
     let again = h.state().ui.new_dialog_open();
     h.get_by_label("Create").click();
     h.run();
     let prompt = h.state().ui.prompt_open() && h.query_by_label("Save changes?").is_some();
     h.get_by_label("Don’t save").click();
     h.run();
-    let replaced = h.state().ui.viewer.doc().unwrap().units == quadrule_model::Unit::Mm;
-    let ok = dialog && opened && title && again && prompt && replaced;
+    let replaced = h.state().ui.viewer.doc().unwrap().units == quadrule_model::Unit::Mm
+        && !h.state().ui.welcome_showing();
+    let ok = dialog && opened && title && over && again && prompt && replaced;
     println!(
-        "CHECK crate=ui name=window_new_dialog result={} dialog_shows={dialog} create_opens_untitled={opened} title_bar={title} ctrl_n_shows_dialog={again} unsaved_prompt_first={prompt} replaced_after_discard={replaced}",
+        "CHECK crate=ui name=window_new_dialog result={} dialog_shows={dialog} create_opens_untitled={opened} title_bar={title} ctrl_n_shows_welcome={over} blank_page_shows_dialog={again} unsaved_prompt_first={prompt} replaced_after_discard={replaced}",
         pass(ok)
     );
     assert!(ok);
@@ -806,7 +835,7 @@ fn new_dialog_makes_a_blank_page_and_asks_before_replacing_changes() {
 
 fn harness_on_a_new_page() -> Harness<'static, Window> {
     let mut h = harness();
-    h.get_all_by_label("New…").next().unwrap().click();
+    h.get_by_label("+ Blank page").click();
     h.run();
     h.get_by_label("Create").click();
     h.run();

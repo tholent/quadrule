@@ -32,8 +32,6 @@ use quadrule_profiles::active::lookup_in;
 pub enum Then {
     /// Write the files the Export sheet asked for, then show the completion sheet.
     Run(ExportRequest),
-    /// Export again with the remembered choices.
-    Again,
 }
 
 /// The sheet while it shows: the export it holds back.
@@ -135,7 +133,7 @@ impl ViewerUi {
         self.preflight.is_some()
     }
 
-    /// Starts with one part of the window showing, for a look at it (`quadrule --look lint|style|preflight`):
+    /// Starts with one part of the window showing, for a look at it (`quadrule --look lint|style|preflight|welcome|file-menu`):
     /// the Lint tab; the Style tab with the first object that has a Custom stroke selected; or the sheet
     /// before exporting this device.
     pub fn show_look(&mut self, look: &str) {
@@ -160,6 +158,9 @@ impl ViewerUi {
                 let req = self.sheet_request(which);
                 self.begin_export(req, which);
             }
+            // The welcome screen with nothing open; the File menu open over the page.
+            "welcome" => self.show_welcome(),
+            "file-menu" => self.look_file_menu(),
             other => self.show_export_look(other),
         }
     }
@@ -169,7 +170,6 @@ impl ViewerUi {
         match self.preflight.take() {
             Some(p) if export => match p.then {
                 Then::Run(req) => self.run_sheet_export(req),
-                Then::Again => self.do_export_again(),
             },
             _ => {}
         }

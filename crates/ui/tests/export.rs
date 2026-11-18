@@ -534,43 +534,34 @@ fn export_again_repeats_the_last_choices_and_asks_for_the_sheet_when_it_has_none
 }
 
 #[test]
-fn export_again_goes_through_the_one_preflight_sheet() {
-    let dir = tmp("export-again-pre");
+fn the_export_sheet_goes_on_behind_the_one_preflight_sheet() {
+    // Rung 16 bbq, Q9: there is one Export… (the sheet, with the last choices filled in); Export again is gone. The
+    // sheet's Export goes on behind the one preflight sheet when the rules call for it, never both at once.
+    let dir = tmp("export-sheet-pre");
     let mut v = Viewer::default();
     v.open_sample();
+    v.settings.last_folder = Some(dir.to_string_lossy().into_owned());
     let mut ui = ViewerUi::new(v);
-    // Nothing exported yet: Export again opens the Export sheet, not a preflight sheet and not a dialog.
-    ui.ask_export_again();
-    let sheet = ui.export_sheet_open() && !ui.preflight_open();
-    // The sheet's Export goes on behind the one preflight sheet (the sample page has warnings); never both.
-    ui.export_set_folder(dir.clone());
-    let req = ui.viewer.export_request(None, dir.clone());
-    let _ = req;
     ui.open_export_sheet();
-    ui.export_set_folder(dir.clone());
-    // After an export: Export again is held behind the same single sheet.
-    ui.viewer
-        .run_export(&ui.viewer.export_request(None, dir.clone()))
-        .unwrap();
-    ui.ask_export_again();
-    ui.ask_export_again();
+    let sheet = ui.export_sheet_open() && !ui.preflight_open() && !ui.completion_open();
+    // Opening it again does not stack a second sheet.
+    ui.open_export_sheet();
+    let one = ui.export_sheet_open() && !ui.preflight_open();
+    // Export on the sample page, which has warnings: the sheet closes and the preflight sheet holds the export.
+    ui.show_look("preflight");
     let held = ui.preflight_open() && !ui.export_sheet_open() && !ui.completion_open();
     ui.answer_preflight(true);
-    // Export again says it in the one-line notice and shows no completion sheet.
-    let again = !ui.preflight_open()
-        && !ui.completion_open()
-        && ui
-            .viewer
-            .notice
-            .as_ref()
-            .is_some_and(|n| n.message.id == "notice-exported");
-    // Cancel drops it.
-    ui.ask_export_again();
+    let wrote = !ui.preflight_open()
+        && ui.completion_open()
+        && dir.join("rung-1-slice-manta.png").is_file();
+    // Cancel drops it and writes nothing more.
+    std::fs::remove_file(dir.join("rung-1-slice-manta.png")).unwrap();
+    ui.show_look("preflight");
     ui.answer_preflight(false);
-    let cancelled = !ui.preflight_open() && !ui.completion_open();
-    let ok = sheet && held && again && cancelled;
+    let cancelled = !ui.preflight_open() && !dir.join("rung-1-slice-manta.png").exists();
+    let ok = sheet && one && held && wrote && cancelled;
     println!(
-        "CHECK crate=ui name=export_again_preflight result={} sheet_when_none={sheet} again_held={held} again_one_line_notice={again} cancel_drops={cancelled}",
+        "CHECK crate=ui name=export_sheet_preflight result={} sheet_opens={sheet} not_stacked={one} held_behind_preflight={held} export_anyway_writes_and_completes={wrote} cancel_drops={cancelled}",
         pass(ok)
     );
     assert!(ok);

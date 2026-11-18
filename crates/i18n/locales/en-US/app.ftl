@@ -10,11 +10,16 @@ app-sample-name = Sample page
 app-untitled-name = Untitled
 
 # Toolbar.
+app-file = File
 app-new = New…
-app-new-tip = New page (Ctrl+N)
 app-open = Open…
 app-save = Save
 app-save-as = Save As…
+app-file-open-recent = Open Recent
+app-file-recent-none = No recent files
+app-file-recent-gone = { $name } (Not found)
+app-file-save-template = Save as template…
+app-file-close = Close
 app-undo = Undo
 app-redo = Redo
 app-device = Device
@@ -25,9 +30,7 @@ app-zoom-in = Zoom in
 app-zoom-out = Zoom out
 app-zoom-real = Real size
 app-lint-count = ⚠ { $count }
-app-export = Export
 app-export-sheet = Export…
-app-export-again = Export again
 app-view = View
 app-theme = Theme
 app-theme-system = Follow the system
@@ -42,10 +45,36 @@ app-chip-ms = Graphics chip: { $ms } ms a frame
 app-chip-slow = Graphics chip too slow ({ $ms } ms a frame): drawing with vello_cpu ({ $cpu } ms)
 app-chip-none = Graphics chip canvas could not start ({ $error }): drawing with vello_cpu ({ $cpu } ms)
 
-# Empty start screen (rung 2 bbq, Q7).
-app-empty-title = Nothing open
+# The welcome screen (rung 16 bbq, Q2, Q4 and Q5), which replaces the empty start of rung 2.
 app-open-sample = Open sample page
 app-empty-drop = or drag a .quad file onto this window
+app-welcome-blank = + Blank page
+app-welcome-recent = Recent
+app-welcome-recent-none = Files you open or save are listed here.
+app-welcome-not-found-in = Not found · { $folder }
+app-welcome-search = Search
+app-welcome-search-hint = Search pages
+app-welcome-remove = Remove
+app-welcome-remove-list = Remove from list
+app-welcome-show-folder = Show in folder
+app-welcome-gone-title = File not found
+app-welcome-gone-body = { $name } is no longer where it was. Take it off the recent list?
+app-welcome-remove-title = Remove this template?
+app-welcome-remove-body = This deletes the template “{ $name }” from your computer. It cannot be undone.
+app-welcome-nomatch = Nothing matches “{ $text }”.
+app-welcome-soon = Starter pages for this group are coming soon.
+app-welcome-soon-all = Starter pages are coming soon. Until then, start from a blank page, or keep your own pages under My templates.
+app-welcome-mine-none = No templates yet. Choose File, then Save as template…, to keep a page here.
+app-cat-all = All
+app-cat-paper = Paper
+app-cat-notes = Notes
+app-cat-planning = Planning
+app-cat-bujo = Bullet journal
+app-cat-creative = Creative
+app-cat-mine = My templates
+app-template-replace-title = Replace this template?
+app-template-replace-body = A template called “{ $name }” is already kept. Replace it with this page?
+app-template-replace = Replace
 
 # Lint panel.
 app-lint-heading = Lint ({ $count })
@@ -83,6 +112,10 @@ export-preset-folder-per-device = Folder per device
 export-preset-device-then-set = Device, then set
 notice-settings-damaged = Quadrule could not read its settings file, so it is using the defaults: { $error }
 notice-settings-save-failed = Could not save the settings: { $error }
+notice-template-saved = Kept “{ $name }” under My templates.
+notice-template-save-failed = Could not keep the template: { $error }
+notice-template-remove-failed = Could not remove { $path }: { $error }
+notice-copy-device = This page could not be set up for { $device } ({ $error }), so it opened on the device it was made for.
 notice-saved = Saved { $path }.
 notice-save-failed = Could not save: { $error }
 notice-locked = The selection is locked.
