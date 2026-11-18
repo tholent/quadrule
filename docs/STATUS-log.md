@@ -2400,3 +2400,17 @@ measured by the builder. Not touched: `STATUS.md`, the ADRs, the board, the vers
   10. `--look style` on the bordered page selects the first region with rounded corners and scrolls the Style tab to the Border section
      (the inspector is too short on a 720 px screen to show it otherwise).
 - Blocked: nothing. Owed items are in `docs/STATUS-debt.md` under "Pattern borders, owed". ADR-014's amendment is the lead's.
+
+## 2026-11-18 — pattern region borders lead (Opus 5.5, high)
+
+- chris asked: "I need you to add pattern region borders as a selectable option". Planned as an untyped bbq of 4
+  questions (`docs/bbq/2026-11-18-pattern-borders.md`, `794ce33`): border on the frame's edge with edge lines left out
+  (Q1), four side ticks (Q2), a line role and rounded corners (Q3), ship now as `v0.16.1` with 16b moved to `v0.16.2`
+  (Q4). Built by one Sonnet 5.5 high builder (`1531005`, `5afb57e`; its entry above; 398,462 tokens reported).
+- Verified by the lead: `make build-proof` → `BUILD head=5afb57e dirty=no rebuilt=0`; `sha256sum -c SHA256SUMS | grep
+  -c ": OK"` → 32; `head -30 SHA256SUMS | sha256sum` → `1d1892b6…` (the 30 old lines unchanged); `git diff --stat
+  6a56f9a -- crates/render/tests/fixtures` → only `v0.16/` added. Both new golden pictures looked at.
+- ADR-014 amendment drafted (`1ce4524`), then ratified at the look. chris, word for word: "approved and ratified". The
+  builder's calls stand as built, including the wider "on the edge" band.
+- Closed: version 0.16.1, release notes `docs/arcs/v1/release-notes/v0.16.1.md`, `STATUS.md`, debt, the board, the
+  calibration row, the 16b prompt's version line (`0.16.2`). The meter was not read at the look.

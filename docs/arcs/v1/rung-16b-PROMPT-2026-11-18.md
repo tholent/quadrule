@@ -18,7 +18,9 @@ over. **Start 16b only when chris says his starters are ready** (Q1, arc Q13).
   are, copy them into `crates/ui/starters/<category>/`, and read each (layers, roles, constraints, rhythm) before
   agents follow it for the rest of that category (arc Q13).
 - **Frozen export bytes are still 30 golden lines** in `crates/render/tests/golden/SHA256SUMS`, and fixtures `v0.4/` to
-  `v0.15/`; 16a moved none. Each starter adds its own goldens on **both devices** (arc Q11, Q13); look at every new
+  `v0.15/`; 16a moved none. *(2026-11-18, after this prompt: pattern region borders shipped as `v0.16.1`, adding two
+  golden lines (32 now, all frozen), file format 0.17.0 and fixture `v0.16/`; ADR-014 amended. So 16b ships as
+  `v0.16.2`; record `docs/bbq/2026-11-18-pattern-borders.md`.)* Each starter adds its own goldens on **both devices** (arc Q11, Q13); look at every new
   golden picture before blessing it (rung 8 lesson).
 - **Test starters** (24 pages made from the sample documents, `crates/ui/src/test_starters.rs`) stay for the speed run
   and the tests; `--gallery-test-starters` shows them.
@@ -62,6 +64,6 @@ Run on **Opus 5.5 at high effort** as the lead; on any other model or effort, st
 questions above. Run a short bbq (about 8 questions) for 16b: the starters' list and names, who builds which, the basic
 section, each starter's rhythm and margins, goldens, and anything chris's examples leave open. Have Sonnet 5.5 at high
 effort build on `main`, committing as each step lands; keep the 30 golden lines and the fixtures frozen. Show chris
-the gallery with the starters (`--look welcome`) and stop for his look. After approval: `0.16.1`, release notes in
+the gallery with the starters (`--look welcome`) and stop for his look. After approval: `0.16.2`, release notes in
 `docs/arcs/v1/release-notes/`, the tag, the board's re-plan, the next lead's prompt (rung 17), `STATUS.md`, the log,
 the debt and the calibration row.

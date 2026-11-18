@@ -197,6 +197,13 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: welcome screen 1.5–1.8 ms while 24
   tiles draw; 30.5 ms worst (groups page drag, chip) (`docs/STATUS-log.md`). Try it: `make run-release`, or `cargo run
   --release -p quadrule-app -- --gallery-test-starters`.
+- Pattern region borders are done: asked for and approved by chris 2026-11-18 ("approved and ratified"), shipped as
+  `v0.16.1` (record `docs/bbq/2026-11-18-pattern-borders.md`; ADR-014 amended and ratified). A Border section in a
+  pattern region's Style tab (sides, line role or custom, corner radius); a bordered side leaves out the pattern's
+  lines and dots on its edge, and rounded corners cut the pattern (`crates/layout/src/border.rs`,
+  `crates/layout/src/pattern.rs`). File format 0.17.0 (`crates/render/tests/fixtures/v0.16/`); the 30 old golden lines
+  unchanged, two added (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: 21–24 ms
+  (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --bordered-page`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -242,9 +249,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
-  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). **Rung 15 is done** (`v0.15.0`). **Rung 16a is done** (`v0.16.0`).
+  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). **Rung 15 is done** (`v0.15.0`). **Rung 16a is done** (`v0.16.0`). Pattern borders are done (`v0.16.1`).
   Next: rung 16b, the starters, when chris's five are ready (he makes one per category in the app and keeps it with
-  File ▸ Save as template…); the next lead's prompt is `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`
+  File ▸ Save as template…), shipping as `v0.16.2`; the next lead's prompt is `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`
   (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
@@ -283,3 +290,6 @@ skill's `scripts/status-check.py` checks both.
   shown "coming soon", overruled), split 16a/16b; 16a built in two legs by one Sonnet 5.5 high builder, approved; ADR-013
   amended and ratified; release `v0.16.0`; chris lifted the week's hard limits; rung 16b prompt written
   (`docs/STATUS-log.md`, `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`).
+- 2026-11-18: pattern region borders asked for by chris, planned (bbq, 4 questions), built by one Sonnet 5.5 high
+  builder, approved; ADR-014 amended and ratified; release `v0.16.1`; 16b moved to `v0.16.2` (`docs/STATUS-log.md`,
+  `docs/bbq/2026-11-18-pattern-borders.md`).

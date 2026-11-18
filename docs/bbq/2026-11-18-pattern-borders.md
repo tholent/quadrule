@@ -71,6 +71,12 @@ Empty.
 
 (Rulings made after the bbq, at the look or later, go here word for word, dated.)
 
+- **2026-11-18, the borders look** (meter not read at the look): chris, word for word: "approved and ratified". The
+  borders are approved with no changes, so the builder's judgement calls stand as built (`docs/STATUS-log.md`, the
+  borders builder entry): the wider "on the edge" band (the Defaulted list's "a wider band" veto, taken), the proposed
+  words, and unticking Show border forgetting its settings. ADR-014's pattern-borders amendment is ratified. Shipped
+  as `v0.16.1`; the starters (16b) move to `v0.16.2` (Q4).
+
 ## Kickoff
 
 Builder: **Sonnet 5.5 at high effort**, on `main`, committing as each step lands. Build the border from this record's

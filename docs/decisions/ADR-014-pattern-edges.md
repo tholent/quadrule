@@ -73,6 +73,10 @@ Drivers:
 - 2026-11-18: amendment drafted by the lead from chris's pattern-borders bbq rulings, see "Amendment — 2026-11-18,
   chris (proposed)" below; **awaiting chris's ratification at the borders look**. The proof header gained the border
   tests. Prior header value: proof `` `crates/layout/tests/layout.rs::pattern_shapes_are_centred_in_their_region_and_drawn_whole` ``.
+- 2026-11-18: the pattern-borders amendment ratified by chris at the borders look, word for word: "approved and
+  ratified". Its heading lost "(proposed)"; its status line was "**Status: proposed, awaiting chris's ratification at
+  the pattern-borders look.**", and its first bullet ended "**This band is for chris to confirm or veto at the
+  look.**" (the wider band stands as built).
 
 ## Amendment — 2026-11-13, chris
 
@@ -90,9 +94,9 @@ so stubs stick out up to half an edge (long on pointy top). Which do you want?",
 **Touches.** Decision. Record: `docs/bbq/2026-11-13-rung-9-pattern-library.md` (Amendments); built in rung 9
 (`crates/layout/src/pattern.rs`).
 
-## Amendment — 2026-11-18, chris (proposed)
+## Amendment — 2026-11-18, chris
 
-**Status: proposed, awaiting chris's ratification at the pattern-borders look.** Touches the Decision and the
+**Ratified by chris 2026-11-18, word for word: "approved and ratified"** (at the pattern-borders look). Touches the Decision and the
 2026-11-13 amendment, for pattern regions that have a border only. A region with no border is unchanged, and so is
 every side without a border. The rulings are chris's, from `docs/bbq/2026-11-18-pattern-borders.md`:
 
@@ -102,7 +106,7 @@ every side without a border. The rulings are chris's, from `docs/bbq/2026-11-18-
   line's width and the border's width of that edge, and never less than half a device pixel, so the two inks never
   touch. The record's Defaulted list said half a pixel; the builder widened it after the first golden showed a line a
   pixel beside the border where the rhythm and the frame rounded differently (the record's "a wider band" veto).
-  **This band is for chris to confirm or veto at the look.**
+  chris approved the look with the wider band as built.
 - **Rounded corners cut the pattern** (Q3, chris: "Rounded corners"; the curve rules are the record's Defaulted list).
   A corner rounds only when both of its sides have a border, and the radius is capped at half the shorter side.
   Inside a rounded corner, ruling lines are cut at the curve, as slanted lines are cut at the frame (2026-11-13), and a

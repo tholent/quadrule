@@ -109,3 +109,9 @@ measure --latest --meter 59 65 --lead "Opus 5.5, high"` → `fresh 548 · cached
 look; the close is not in the end reading. **6 points against a 12-point share.** No stop line fired; after leg 1 chris
 lifted this week's hard limits ("for this week only, unset any hard limits"), until the reset Saturday 2026-11-21, 5 pm
 EST. Alone on the meter. K not refitted this session.
+
+2026-11-18, pattern region borders, the same lead session (Opus 5.5 high) and one Sonnet 5.5 high builder (398,462
+tokens reported). `spend-ledger.py measure --latest --since 2026-11-18T05:00:00Z --lead "Opus 5.5, high"` → `fresh 386 ·
+cached 48.3M · written 733k · out 163k | sonnet 82% · opus 18% | $14.13 | not read`. Start reading 65 % (chris, at 16a's
+approval); no end reading (asked at the look, not given). Sized at 2–4 points. Hard limits lifted for the week
+(rung 16 record, Amendments). No stop line fired. Alone on the meter. K not refitted.
