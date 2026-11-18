@@ -362,17 +362,19 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Layers, owed (`crates/ui/src/layers.rs`, `crates/model/src/edit.rs`, `crates/ui/src/panels.rs`; builder 2026-11-18): (1) the words
   ("New layer", "Delete layer", "Layer N", the hover notes "Pick a layer first.", "A page needs at least one layer.", "Unlock it to delete
   it.", "Unlock the objects in it to delete it.", the sheet's question, its line "Undo brings the layer back." and "Delete") and the look
-  of the buttons, the menu and the sheet are the builder's proposals for chris's look. (2) A layer holding a locked object is refused
+  of the buttons, the menu and the sheet are the builder's proposals for chris's look (DONE 2026-11-18: chris approved, "approved",
+  so they stand as built). (2) A layer holding a locked object is refused
   by Delete layer (greyed, with a note), not only a locked layer: the record named only the locked layer, but deleting the layer would
-  delete a locked object that Delete refuses today; for chris's veto ("delete it anyway"). (3) The layers panel's button row now wraps
+  delete a locked object that Delete refuses today; for chris's veto ("delete it anyway"). DONE 2026-11-18: approved as built. (3) The layers panel's button row now wraps
   (`horizontal_wrapped`): with seven buttons it takes two lines on the 1440 by 720 screen; chris may want the buttons ordered or
   grouped differently. (4) No keyboard shortcut for New layer or Delete layer (the record asked for none). (5) The count in the
   sheet is every row the layer has in the panel (a group and each object in it count), not only the top-level objects; for chris's
-  veto. (6) After Delete layer nothing is picked (not the neighbour), so a second press cannot eat the next layer. (7) The name
+  veto. DONE 2026-11-18: approved as built. (6) After Delete layer nothing is picked (not the neighbour), so a second press cannot eat the next layer. (7) The name
   field's Enter and click-away: the existing rename asked for focus before it looked for the focus being lost, so Enter and a click
   away could never close it; reordered in `name_cell`, and Escape is now left to an open name field (`shortcuts` used to take it and
   clear the pick). This changes the double-click rename of layers and objects too; it has no headless test of its own (`egui_kittest`
   cannot make a double-click), the new layer's field is the tested path and chris's look is the first real check of the other.
+  2026-11-18: chris approved the look; whether he tried double-click rename is not recorded, so it still has no check of its own.
   (8) A right-click on a layer row also picks that row (and clears the object pick), so the menu and the buttons work on the same layer.
   (9) The look screenshots are taken at the window's size on the Pi's 1440 by 720 screen, where the Page tab leaves the layers panel
   only a few rows; the greyed states (last layer, locked) were not photographed, only tested.

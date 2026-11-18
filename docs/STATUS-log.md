@@ -2480,3 +2480,22 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
   "Pick a layer first.", "A page needs at least one layer.", "Unlock it to delete it.", "Unlock the objects in it to delete it.",
   `Delete the layer "{name}" and its {N} objects?` (one: "its 1 object"), "Undo brings the layer back.", "Delete" (and the existing "Cancel").
 - Blocked: nothing. Owed is in `docs/STATUS-debt.md` under "Layers, owed".
+
+## 2026-11-18 — layers lead (Opus 5.5, high)
+
+- Found while listing chris's starters: spec §13 asks for named layers, and nothing in the app added a second layer
+  (`crates/model/src/edit.rs` had no insert or remove command). chris chose to fix it first ("let's tackle the layer gap
+  with route #1 and get that squared away"). Planned in 4 questions (`docs/bbq/2026-11-18-new-and-delete-layers.md`,
+  `bfe9282`); built by one Sonnet 5.5 high builder (`8be261c`, `16629c5`, `d3a152d`, `e05d940`; its entry above;
+  231,268 tokens reported).
+- chris's answer to the basic-section question is in the 16b prompt word for word ("…we can choose to expose certain
+  elements of a template that can be easily changed on a single pane, while all features are available in "style,
+  etc...""), for the 16b bbq.
+- Meter 79 % at 19:13 UTC (chris), 14 points above 16a's approval; chris: "I have a free reset this week, so I am
+  grinding this out".
+- Verified by the lead: `make build-proof` → `BUILD head=e05d940 dirty=no rebuilt=0`; 32 golden lines OK, no change to
+  `SHA256SUMS` or the fixtures since `6f49e5f`; all four screenshots looked at.
+- chris, word for word: "approved. after you are done, let's talk about a few bugs/features I'd like to see before 16b
+  starts". Closed: version 0.16.2, release notes `docs/arcs/v1/release-notes/v0.16.2.md`, `STATUS.md` (rung 15's bullet
+  and rung 13's Log line moved word for word to `docs/STATUS-archive.md`), debt, the board, the calibration row, the 16b
+  prompt (`0.16.3`).

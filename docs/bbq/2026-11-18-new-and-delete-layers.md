@@ -66,6 +66,11 @@ Empty.
 - **2026-11-18, budget** (meter 79 %, chris's reading at 19:13 UTC, 14 points above 16a's approval): told the usual
   75 % stop had passed, chris, word for word: "I have a free reset this week, so I am grinding this out". Work goes on
   past the usual stops this week; the lead still reports readings.
+- **2026-11-18, the layers look:** chris, word for word: "approved. after you are done, let's talk about a few
+  bugs/features I'd like to see before 16b starts". Approved with no changes, so the builder's judgement calls stand
+  as built (`docs/STATUS-log.md`, the layers builder entry): a layer holding locked objects is not deleted; the count
+  includes the objects inside groups; the rename field's Enter, click-away and Esc fix; the proposed words. Shipped as
+  `v0.16.2`; the starters (16b) move to `v0.16.3`. chris has bugs and features to raise before 16b starts.
 
 ## Kickoff
 

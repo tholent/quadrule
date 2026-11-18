@@ -175,17 +175,6 @@ The project's live state. Update it when work lands. Every claim cites at least 
   held in rows (`crates/app/src/chip.rs`). Speed on the Pi, 90th percentile, chip canvas: typing about 9 ms (was 82),
   dragging 4–6 ms, drawing 23–25 ms; export canvas about 20 ms throughout (`docs/STATUS-log.md`). Try it:
   `cargo run --release -p quadrule-app -- --textbox-page` or `-- --fonts-page`.
-- Rung 15, export, is done: approved by chris 2026-11-17 ("look approved"), shipped as `v0.15.0` (record
-  `docs/bbq/2026-11-17-rung-15-export.md`, with its Amendments; ADR-013 amended and ratified). Export opens one Export
-  sheet (devices, a remembered folder, an app-wide path template defaulting to `{title}-{device}.png` with presets,
-  `/` for folders and a Set box, a text-note tick), and Export again (Ctrl+E) writes with the last choices; both pass
-  the one preflight sheet; a completion sheet shows thumbnails, Reveal in folder and a folded MyStyle note
-  (`crates/ui/src/export.rs`, `crates/ui/src/export_path.rs`, `crates/ui/src/export_ui.rs`, `crates/ui/src/settings.rs`).
-  PNGs carry Software and Title text chunks by default; the Nomad reads them as templates (chris). File format 0.16.0:
-  a 480 px thumbnail of the main device in `previews/` (`crates/render/tests/fixtures/v0.15/`). The 29 golden lines
-  unchanged, one noted golden added (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: 30.5 ms
-  worst (groups page drag, chip); Save gains about 23 ms (41 on A4 paper) (`docs/STATUS-log.md`). Try it: `cargo run
-  --release -p quadrule-app -- --look export`.
 - Rung 16a, the welcome screen, is done: approved by chris 2026-11-18 ("Approved. Ratify adr-013."), shipped as
   `v0.16.0` (record `docs/bbq/2026-11-17-rung-16-welcome-and-gallery.md`, with its Amendments; ADR-013 amended and
   ratified). The window starts on a welcome screen (Blank page, Open…, Recent; a gallery with category tabs, a Device
@@ -204,6 +193,11 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `crates/layout/src/pattern.rs`). File format 0.17.0 (`crates/render/tests/fixtures/v0.16/`); the 30 old golden lines
   unchanged, two added (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: 21–24 ms
   (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --bordered-page`.
+- Layers can be made and deleted: asked for and approved by chris 2026-11-18 ("approved"), shipped as `v0.16.2`
+  (record `docs/bbq/2026-11-18-new-and-delete-layers.md`). New layer and Delete layer in the layers panel and a layer
+  row's right-click menu; a layer with objects asks first; the last layer, a locked layer and a layer holding locked
+  objects are not deleted; Enter, click-away and Esc now close the rename field (`crates/model/src/edit.rs`,
+  `crates/ui/src/panels.rs`). No format or export change. Try it: `cargo run --release -p quadrule-app -- --look layers`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -249,9 +243,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   done** (6a `v0.6.0`, 6b `v0.6.1`); both are published on GitHub, without packages. Rung 7, groups; align and distribute, is
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
-  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). **Rung 15 is done** (`v0.15.0`). **Rung 16a is done** (`v0.16.0`). Pattern borders are done (`v0.16.1`).
+  done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). **Rung 15 is done** (`v0.15.0`). **Rung 16a is done** (`v0.16.0`). Pattern borders are done (`v0.16.1`). Layers can be made and deleted (`v0.16.2`).
   Next: rung 16b, the starters, when chris's five are ready (he makes one per category in the app and keeps it with
-  File ▸ Save as template…), shipping as `v0.16.2`; the next lead's prompt is `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`
+  File ▸ Save as template…), shipping as `v0.16.3`; the next lead's prompt is `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`
   (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
@@ -276,10 +270,6 @@ debt in `docs/STATUS-debt.md`, each session in `docs/STATUS-log.md` (dated, newe
 month when it grows), and finished entries, moved word for word, in `docs/STATUS-archive.md`. Every bullet under Now, Next
 and Known debt cites at least one file that exists. Keep this file under 300 lines; the project-prep
 skill's `scripts/status-check.py` checks both.
-- 2026-11-17: rung 13 planned (bbq, 14 questions; GUID ids by chris; paper sizes pulled in from v1.1 by chris), split
-  13a/13b, built (two Sonnet 5.5 high builders), approved; ADR-016 ratified; large paper pages on the export canvas
-  ruled debt for rung 17; one release `v0.13.0`; board re-planned; rung 14 prompt written (`docs/STATUS-log.md`,
-  `docs/arcs/v1/rung-14-PROMPT-2026-11-17.md`).
 - 2026-11-17: rung 14 planned (bbq, 9 questions; the A5 X rhythm question closed by chris), split 14a/14b, built (two
   Sonnet 5.5 high builders), approved; ADR-012 amended (lint limits in profile data); one release `v0.14.0`; board
   re-planned; rung 15 prompt written (`docs/STATUS-log.md`, `docs/arcs/v1/rung-15-PROMPT-2026-11-17.md`).
@@ -293,3 +283,6 @@ skill's `scripts/status-check.py` checks both.
 - 2026-11-18: pattern region borders asked for by chris, planned (bbq, 4 questions), built by one Sonnet 5.5 high
   builder, approved; ADR-014 amended and ratified; release `v0.16.1`; 16b moved to `v0.16.2` (`docs/STATUS-log.md`,
   `docs/bbq/2026-11-18-pattern-borders.md`).
+- 2026-11-18: making and deleting layers (a gap found listing chris's starters) planned (bbq, 4 questions), built by one
+  Sonnet 5.5 high builder, approved; release `v0.16.2`; 16b moved to `v0.16.3` (`docs/STATUS-log.md`,
+  `docs/bbq/2026-11-18-new-and-delete-layers.md`).

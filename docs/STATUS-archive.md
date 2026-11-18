@@ -150,3 +150,21 @@ From Log:
   built (Sonnet 5.5 high: 12a, stopped once by an account error and resumed; 12b with chris's pattern-angle addition),
   approved; one release `v0.12.0`; ADR-001 and ADR-002 built status; board re-planned; rung 13 prompt written
   (`docs/STATUS-log.md`, `docs/arcs/v1/rung-13-PROMPT-2026-11-17.md`).
+
+## Moved from STATUS.md on 2026-11-18 (layers close), word for word
+
+- Rung 15, export, is done: approved by chris 2026-11-17 ("look approved"), shipped as `v0.15.0` (record
+  `docs/bbq/2026-11-17-rung-15-export.md`, with its Amendments; ADR-013 amended and ratified). Export opens one Export
+  sheet (devices, a remembered folder, an app-wide path template defaulting to `{title}-{device}.png` with presets,
+  `/` for folders and a Set box, a text-note tick), and Export again (Ctrl+E) writes with the last choices; both pass
+  the one preflight sheet; a completion sheet shows thumbnails, Reveal in folder and a folded MyStyle note
+  (`crates/ui/src/export.rs`, `crates/ui/src/export_path.rs`, `crates/ui/src/export_ui.rs`, `crates/ui/src/settings.rs`).
+  PNGs carry Software and Title text chunks by default; the Nomad reads them as templates (chris). File format 0.16.0:
+  a 480 px thumbnail of the main device in `previews/` (`crates/render/tests/fixtures/v0.15/`). The 29 golden lines
+  unchanged, one noted golden added (`crates/render/tests/golden/SHA256SUMS`). Speed on the Pi, 90th percentile: 30.5 ms
+  worst (groups page drag, chip); Save gains about 23 ms (41 on A4 paper) (`docs/STATUS-log.md`). Try it: `cargo run
+  --release -p quadrule-app -- --look export`.
+- 2026-11-17: rung 13 planned (bbq, 14 questions; GUID ids by chris; paper sizes pulled in from v1.1 by chris), split
+  13a/13b, built (two Sonnet 5.5 high builders), approved; ADR-016 ratified; large paper pages on the export canvas
+  ruled debt for rung 17; one release `v0.13.0`; board re-planned; rung 14 prompt written (`docs/STATUS-log.md`,
+  `docs/arcs/v1/rung-14-PROMPT-2026-11-17.md`).

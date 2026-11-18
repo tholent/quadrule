@@ -115,3 +115,11 @@ tokens reported). `spend-ledger.py measure --latest --since 2026-11-18T05:00:00Z
 cached 48.3M · written 733k · out 163k | sonnet 82% · opus 18% | $14.13 | not read`. Start reading 65 % (chris, at 16a's
 approval); no end reading (asked at the look, not given). Sized at 2–4 points. Hard limits lifted for the week
 (rung 16 record, Amendments). No stop line fired. Alone on the meter. K not refitted.
+
+2026-11-18, layers (New layer and Delete layer), the same lead session (Opus 5.5 high) and one Sonnet 5.5 high builder
+(231,268 tokens reported). `spend-ledger.py measure --latest --since 2026-11-18T17:40:00Z --lead "Opus 5.5, high"` →
+`fresh 314 · cached 22.3M · written 380k · out 103k | sonnet 65% · opus 35% | $7.05 | not read`. Readings: 65 % at 16a's
+approval, 79 % at 19:13 UTC (chris), during this job's build; the 14 points cover the borders job, its release and
+most of this one, about $21 of measured tokens between them, against 16a's 6 points for $19.92, so other use on the
+meter is likely. Hard limits lifted for the week; chris: "I have a free reset this week, so I am grinding this out".
+No stop line fired. K not refitted.
