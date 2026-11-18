@@ -84,6 +84,20 @@ fn every_kind(doc: &Document) -> Vec<(&'static str, Command)> {
         ),
         ("MoveLayer", Command::MoveLayer { from: 0, to: 1 }),
         (
+            "InsertLayer",
+            Command::InsertLayer {
+                index: 1,
+                layer: Layer {
+                    name: "Layer 3".into(),
+                    visible: true,
+                    locked: false,
+                    objects: Vec::new(),
+                    extra: Extra::new(),
+                },
+            },
+        ),
+        ("RemoveLayer", Command::RemoveLayer(0)),
+        (
             "Batch",
             Command::Batch(vec![
                 Command::SetObject(moved(doc, ids::RULE, -1.0)),

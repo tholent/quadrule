@@ -24,7 +24,7 @@ use crate::geom::{Holder, cos_sin_deg, map_frame, rotate_point};
 use crate::{
     Constraints, Document, Frame, GroupShape, Layer, LineDir, Metadata, Object, ObjectKind,
     Override, PageSettings, Position, ProfileContext, Rhythm, Size, Style, Unit, Uuid,
-    normalize_deg,
+    collect_objects, normalize_deg,
 };
 
 /// Where objects are kept: a layer's list, or a group's children.
@@ -128,6 +128,19 @@ pub enum Command {
         /// Its index afterwards.
         to: usize,
     },
+    /// Puts a whole layer, with its objects, into the stack at `index` (0 is the bottom; `index`
+    /// may be the layer count, which is the top). The undo of [`Command::RemoveLayer`] (the layers
+    /// panel's New layer, and Undo of Delete layer).
+    InsertLayer {
+        /// Where in the stack.
+        index: usize,
+        /// The layer; the ids of its objects must be new to the document.
+        layer: Layer,
+    },
+    /// Takes the layer at `index` out of the stack, with its objects, which come back in their
+    /// place when it is undone. The last layer stays, and a locked layer (or one holding a locked
+    /// object) refuses, as its objects' edits are refused.
+    RemoveLayer(usize),
     /// Several commands as one step, done in order and undone in reverse. If one fails, the
     /// ones before it are undone and the document is left as it was.
     Batch(Vec<Command>),
@@ -164,6 +177,45 @@ impl Command {
                 index,
             },
         }
+    }
+}
+
+/// Why a layer cannot be deleted now (the layers panel greys Delete layer, and says why).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LayerDeleteBlock {
+    /// It is the only layer.
+    Last,
+    /// The layer is locked.
+    Locked,
+    /// An object inside it is locked.
+    HoldsLocked,
+}
+
+impl Document {
+    /// How many objects a layer holds: every row it has in the layers panel, so a group counts,
+    /// and so does each object inside it. Zero for a layer that is not there.
+    pub fn layer_object_count(&self, index: usize) -> usize {
+        let mut all = Vec::new();
+        if let Some(l) = self.layers.get(index) {
+            collect_objects(&l.objects, &mut all);
+        }
+        all.len()
+    }
+
+    /// Why [`Command::RemoveLayer`] would refuse layer `index`, or `None` when it can go.
+    pub fn layer_delete_block(&self, index: usize) -> Option<LayerDeleteBlock> {
+        let layer = self.layers.get(index)?;
+        if self.layers.len() == 1 {
+            return Some(LayerDeleteBlock::Last);
+        }
+        if layer.locked {
+            return Some(LayerDeleteBlock::Locked);
+        }
+        let mut all = Vec::new();
+        collect_objects(&layer.objects, &mut all);
+        all.iter()
+            .any(|o| o.locked)
+            .then_some(LayerDeleteBlock::HoldsLocked)
     }
 }
 
@@ -204,6 +256,8 @@ pub enum EditError {
     Locked(Uuid),
     /// The layer is locked.
     LayerLocked(usize),
+    /// The last layer cannot be taken out: a page always has one.
+    LastLayer,
     /// The object with this id is not a group.
     NotAGroup(Uuid),
     /// A group cannot go into itself or into something inside it.
@@ -237,6 +291,7 @@ impl std::fmt::Display for EditError {
             EditError::DuplicateId(id) => write!(f, "object {id} is already in the document"),
             EditError::Locked(id) => write!(f, "object {id} is locked"),
             EditError::LayerLocked(i) => write!(f, "layer {i} is locked"),
+            EditError::LastLayer => write!(f, "the last layer cannot be taken out"),
             EditError::NotAGroup(id) => write!(f, "object {id} is not a group"),
             EditError::IntoItself(id) => write!(f, "group {id} cannot go into itself"),
             EditError::TurnedGroup(id) => {
@@ -690,6 +745,41 @@ impl Document {
                 let l = self.layers.remove(from);
                 self.layers.insert(to, l);
                 Ok(Command::MoveLayer { from: to, to: from })
+            }
+            Command::InsertLayer { index, layer } => {
+                if index > self.layers.len() {
+                    return Err(EditError::BadIndex(index));
+                }
+                let mut have: std::collections::HashSet<Uuid> =
+                    self.objects().map(|o| o.id).collect();
+                let mut mine = Vec::new();
+                collect_objects(&layer.objects, &mut mine);
+                if let Some(dup) = mine.iter().find(|o| !have.insert(o.id)) {
+                    return Err(EditError::DuplicateId(dup.id));
+                }
+                self.layers.insert(index, layer);
+                Ok(Command::RemoveLayer(index))
+            }
+            Command::RemoveLayer(index) => {
+                let layer = self
+                    .layers
+                    .get(index)
+                    .ok_or(EditError::NoSuchLayer(index))?;
+                if self.layers.len() == 1 {
+                    return Err(EditError::LastLayer);
+                }
+                if check_locks {
+                    if layer.locked {
+                        return Err(EditError::LayerLocked(index));
+                    }
+                    let mut inside = Vec::new();
+                    collect_objects(&layer.objects, &mut inside);
+                    if let Some(o) = inside.iter().find(|o| o.locked) {
+                        return Err(EditError::Locked(o.id));
+                    }
+                }
+                let layer = self.layers.remove(index);
+                Ok(Command::InsertLayer { index, layer })
             }
             Command::Batch(cmds) => {
                 let mut undo = Vec::with_capacity(cmds.len());
