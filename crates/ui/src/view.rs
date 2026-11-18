@@ -201,6 +201,10 @@ pub struct ViewerUi {
     /// Ctrl + scroll just zoomed: the screen point of the pointer and the device pixel under it, so
     /// the next frame can scroll that pixel back under the pointer (rung 2 debt, paid in 8a).
     zoom_anchor: Option<(egui::Pos2, f32, f32)>,
+    /// The anchor is to be applied on the next frame: the zoom just changed (fixes batch 1, Q1).
+    zoom_anchor_due: bool,
+    /// A zoom the speed bench feeds the canvas in place of the input's: the factor and the pointer.
+    pub(crate) bench_zoom_step: Option<(f32, egui::Pos2)>,
     /// The previews strip's pictures, by device (rung 8a).
     pub(crate) strip_pics: HashMap<String, crate::strip::StripPic>,
     /// Where each strip picture's device leaves lines of a Fixed text box out: the box corners and
@@ -323,6 +327,8 @@ impl ViewerUi {
             selected_layer: None,
             take_out: None,
             zoom_anchor: None,
+            zoom_anchor_due: false,
+            bench_zoom_step: None,
             strip_pics: HashMap::new(),
             strip_overflows: HashMap::new(),
             focus_text_content: false,
@@ -375,6 +381,14 @@ impl ViewerUi {
         let frame_start = std::time::Instant::now();
         let mut requests = Vec::new();
         let ctx = ui.ctx().clone();
+        // One notch of Ctrl + wheel zooms by a fixed fraction (fixes batch 1, Q1).
+        ctx.options_mut(|o| {
+            let io = &mut o.input_options;
+            let speed = crate::viewer::ZOOM_WHEEL_NOTCH.ln() / io.line_scroll_speed;
+            if io.scroll_zoom_speed != speed {
+                io.scroll_zoom_speed = speed;
+            }
+        });
         // A step stays open to merging only while its field has focus or is being dragged.
         let idle = ctx.memory(|m| m.focused().is_none()) && !ctx.input(|i| i.pointer.any_down());
         if idle {
@@ -1511,6 +1525,23 @@ impl ViewerUi {
                     Phase::Warm(n + 1)
                 };
             }
+            Phase::Begin if b.zoom => {
+                // The zoom run starts a quarter of the way down, with no gesture going.
+                self.viewer.zoom = Zoom::Scale(crate::bench::zoom_target(0, b.frames));
+                self.viewer.zoom_gesture = None;
+                b.phase = Phase::Run(0);
+            }
+            Phase::Run(i) if b.zoom && i < b.frames => {
+                // A pinch a frame, by the factor that takes the scale to where the schedule has it
+                // next, at a pointer that wanders a little round the middle of the window.
+                let now = crate::bench::zoom_target(i, b.frames);
+                let next = crate::bench::zoom_target(i + 1, b.frames);
+                let c = ctx.content_rect().center();
+                let t = f64::from(i);
+                let pointer = c + vec2(120.0 * (0.21 * t).sin() as f32, 80.0 * (0.13 * t).cos() as f32);
+                self.bench_zoom_step = Some((next / now, pointer));
+                b.phase = Phase::Run(i + 1);
+            }
             Phase::Begin => {
                 // The dot grid, or for the rotate run the big turned rectangle.
                 let target = if b.rotate && b.turned_patterns {
@@ -1607,7 +1638,10 @@ impl ViewerUi {
                 b.phase = Phase::Run(i + 1);
             }
             Phase::Run(_) => {
-                if b.typing {
+                if b.zoom {
+                    self.viewer.zoom = Zoom::Fit;
+                    self.viewer.zoom_gesture = None;
+                } else if b.typing {
                     // The text typed is one step; the box and its text are taken away again.
                     self.viewer.end_typing();
                     self.viewer.undo();
@@ -1633,7 +1667,9 @@ impl ViewerUi {
                 };
                 println!(
                     "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} device={} strip={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
-                    if b.typing {
+                    if b.zoom {
+                        "zoom_bench"
+                    } else if b.typing {
                         "type_bench"
                     } else if b.rotate {
                         "rotate_bench"
@@ -1686,7 +1722,9 @@ impl ViewerUi {
                         "primary"
                     },
                     if self.viewer.show_strip { "on" } else { "off" },
-                    if b.typing {
+                    if b.zoom {
+                        "zoom"
+                    } else if b.typing {
                         "type"
                     } else if b.rotate {
                         "rotate"
@@ -1737,7 +1775,10 @@ impl ViewerUi {
         let start = std::time::Instant::now();
         self.rebuilt = false;
         self.canvas_frame(ui);
-        if self.viewer.dragging() || self.viewer.is_typing() {
+        let zooming = self.bench.as_ref().is_some_and(|b| {
+            b.zoom && matches!(b.phase, crate::bench::Phase::Run(_))
+        });
+        if self.viewer.dragging() || self.viewer.is_typing() || zooming {
             if !self.clock_live {
                 self.clock_live = true;
                 self.drag_clock = DragClock::default();
@@ -1934,7 +1975,9 @@ impl ViewerUi {
                 |x: f64, y: f64| pos2(min.x + x as f32 * scale, min.y + y as f32 * scale);
             // A Ctrl + scroll zoom a frame ago: scroll the page so the pixel that was under the
             // pointer is under it again.
-            if let Some((p, x, y)) = self.zoom_anchor.take() {
+            if std::mem::take(&mut self.zoom_anchor_due)
+                && let Some((p, x, y)) = self.zoom_anchor
+            {
                 let d = p - to_screen(f64::from(x), f64::from(y));
                 if d.length() >= 0.5 {
                     ui.scroll_with_delta_animation(d, egui::style::ScrollAnimation::none());
@@ -2481,18 +2524,37 @@ impl ViewerUi {
                 (x >= 0.0 && y >= 0.0 && x < w as f32 && y < h as f32).then_some((x, y))
             });
 
-            // Ctrl + scroll (or a pinch) zooms by one step.
-            if response.hovered() {
-                let z = ui.input(|i| i.zoom_delta());
-                if z != 1.0
-                    && let Some(p) = ui.input(|i| i.pointer.hover_pos())
-                {
-                    self.zoom_anchor = Some((p, (p.x - min.x) / scale, (p.y - min.y) / scale));
-                }
-                if z > 1.0 {
-                    self.viewer.zoom_step(scale * ppp, 1);
-                } else if z < 1.0 {
-                    self.viewer.zoom_step(scale * ppp, -1);
+            // Ctrl + scroll (or a pinch) zooms by the gesture's own factor, anchored at the pointer
+            // (fixes batch 1, Q1); a bench run feeds its own factor in place of the input's.
+            let bench_zoom = self.bench_zoom_step.take();
+            if response.hovered() || bench_zoom.is_some() {
+                let (z, pointer) = match bench_zoom {
+                    Some((z, p)) => (z, Some(p)),
+                    None => (
+                        ui.input(|i| i.zoom_delta()),
+                        ui.input(|i| i.pointer.hover_pos()),
+                    ),
+                };
+                if z != 1.0 {
+                    let fit = self
+                        .viewer
+                        .scale_for(Zoom::Fit, (avail.x, avail.y), ppp)
+                        .map_or(f32::NAN, |s| s * ppp);
+                    let time = ui.input(|i| i.time);
+                    let carried = self.viewer.zoom_by(z, scale * ppp, fit, time);
+                    if let Some(p) = pointer {
+                        // The device pixel under the pointer stays under it all through the gesture.
+                        let keep = carried
+                            && self
+                                .zoom_anchor
+                                .is_some_and(|(a, _, _)| (a - p).length() < 1.0);
+                        if !keep {
+                            self.zoom_anchor =
+                                Some((p, (p.x - min.x) / scale, (p.y - min.y) / scale));
+                        }
+                    }
+                    self.zoom_anchor_due = true;
+                    ctx.request_repaint();
                 }
             }
         });

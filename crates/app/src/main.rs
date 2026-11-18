@@ -18,7 +18,7 @@
 //! (docs/bbq/2026-11-10-rung-4-drag-and-snap.md). Usage: `quadrule [--canvas chip|export]
 //! [--bench-drag [frames]] [file.quad]`, or `cargo run -p quadrule-app -- [file.quad]`.
 //! `--canvas chip` starts on the graphics-chip canvas (View → Canvas), for measuring it.
-//! `--bench-drag` opens the sample page, replays a drag of its dot grid through the real window
+//! `--bench-zoom [frames]` zooms the page in and out like a pinch (`name=zoom_bench`; fixes batch 1). `--bench-drag` opens the sample page, replays a drag of its dot grid through the real window
 //! (150 steps unless told otherwise), prints one `CHECK crate=ui name=drag_bench` line with the
 //! frame times and closes. `--bench-draw` does the same for dragging a pattern region out with
 //! the Pattern tool (rung 5; `name=draw_bench`). Rung 6a adds `--shapes-page` (open the page that holds
@@ -112,6 +112,7 @@ impl App {
             || args.bench_draw.is_some()
             || args.bench_type.is_some()
             || args.bench_rotate.is_some()
+            || args.bench_zoom.is_some()
             || args.bench_welcome.is_some();
         quadrule_profiles::active::set(
             match directories::ProjectDirs::from("org", "quadrule", "quadrule") {
@@ -222,7 +223,9 @@ impl App {
         } else if args.shapes_page {
             ui.viewer.open_shapes();
         }
-        let bench = if let Some(frames) = args.bench_rotate {
+        let bench = if let Some(frames) = args.bench_zoom {
+            Some(quadrule_ui::DragBench::zoom(frames))
+        } else if let Some(frames) = args.bench_rotate {
             Some(quadrule_ui::DragBench::rotate(frames))
         } else if let Some(frames) = args.bench_type {
             Some(quadrule_ui::DragBench::typing(frames))
@@ -598,6 +601,8 @@ struct Args {
     /// Turn the transforms page's big rectangle with its rotate handle this many steps and close
     /// (`--bench-rotate [frames]`).
     bench_rotate: Option<u32>,
+    /// Zoom the page in and out this many steps and close (`--bench-zoom [frames]`; fixes batch 1).
+    bench_zoom: Option<u32>,
     /// The tool `--bench-draw` drags out (`--bench-tool pattern|rect|ellipse|polygon|line|text`).
     bench_tool: Option<quadrule_ui::Tool>,
 }
@@ -640,6 +645,11 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
                 Some(v) => out.gallery_device = Some(v),
                 None => return Err("--gallery-device takes manta, nomad or a profile id".into()),
             }
+        } else if a == "--bench-zoom" {
+            let steps = args
+                .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
+                .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
+            out.bench_zoom = Some(steps.unwrap_or(150));
         } else if a == "--bench-rotate" {
             let steps = args
                 .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
@@ -818,6 +828,14 @@ mod tests {
                     bench_draw: Some(30),
                     transforms_page: true,
                     bench_tool: Some(quadrule_ui::Tool::Line),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--bench-zoom", "90", "--groups-page"]),
+                Ok(Args {
+                    bench_zoom: Some(90),
+                    groups_page: true,
                     ..Args::default()
                 }),
             ),

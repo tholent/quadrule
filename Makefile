@@ -44,7 +44,7 @@ SECS ?= 60
 CHECK ?= check-all
 
 .PHONY: help build build-all fmt fmt-check clippy clippy-all test test-all test-v check check-all \
-        run run-release bench-drag bench-draw bench-type bench-rotate calibration-sheet safe-zones lint fuzz build-proof review
+        run run-release bench-drag bench-draw bench-type bench-rotate bench-zoom calibration-sheet safe-zones lint fuzz build-proof review
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  make %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -123,6 +123,9 @@ bench-draw: ## Drawing-speed bench: drags a pattern region out over the sample p
 
 bench-type: ## Typing-speed bench: types into a long text box, release build (FRAMES=150, FONTS=1, TEXTBOX=1, NOSTRIP=1)
 	cargo run --release -p quadrule-app -- --bench-type $(FRAMES) $(if $(FONTS),--fonts-page) $(if $(TEXTBOX),--textbox-page) $(if $(NOSTRIP),--no-strip)
+
+bench-zoom: ## Zoom-speed bench: zooms the page in and out like a pinch, release build (FRAMES=150, GROUPS=1 for the groups page, BORDERED=1, NOSTRIP=1)
+	cargo run --release -p quadrule-app -- --bench-zoom $(FRAMES) $(if $(GROUPS),--groups-page) $(if $(BORDERED),--bordered-page) $(if $(NOSTRIP),--no-strip)
 
 bench-rotate: ## Rotate-speed bench: turns the transforms page's big rectangle with its handle, release build (FRAMES=150, TURNED=1 turns the turned-patterns page's grid)
 	cargo run --release -p quadrule-app -- --bench-rotate $(FRAMES) $(if $(TURNED),--turned-patterns-page) $(if $(ANGLE),--pattern-angle-page) $(if $(NOSTRIP),--no-strip)

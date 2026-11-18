@@ -157,6 +157,21 @@ pub enum ExportWhich {
     AllDevices,
 }
 
+/// A pinch or Ctrl + scroll in progress (fixes batch 1, Q1): the scale the gesture itself has
+/// reached, which the zoom shown is settled from, and when it last moved.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ZoomGesture {
+    /// The gesture's scale, in screen pixels per device pixel, before settling.
+    pub raw: f32,
+    /// The zoom this gesture last set; if the zoom is anything else the gesture was interrupted.
+    pub shown: Zoom,
+    /// The time of the gesture's last step, in seconds.
+    pub last: f64,
+}
+
+/// A gesture that has not moved for this long is over, and the next one starts from the zoom shown.
+pub const ZOOM_GESTURE_IDLE: f64 = 0.3;
+
 /// How big the page shows.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Zoom {
@@ -168,8 +183,46 @@ pub enum Zoom {
     RealSize,
 }
 
-/// The zoom steps, in screen pixels per device pixel: down to 1/8, up to 16× (rung 2 bbq, Q10).
+/// The zoom steps, in screen pixels per device pixel: down to 1/8, up to 16× (rung 2 bbq, Q10). The
+/// + and − buttons move by these; a pinch or Ctrl + scroll moves smoothly between them
+/// (fixes batch 1, Q1).
 pub const ZOOM_STEPS: [f32; 8] = [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0];
+
+/// The smallest and the largest zoom, in screen pixels per device pixel (the ends of [`ZOOM_STEPS`]).
+pub const ZOOM_MIN: f32 = 0.125;
+/// See [`ZOOM_MIN`].
+pub const ZOOM_MAX: f32 = 16.0;
+
+/// What one notch of a mouse wheel with Ctrl held multiplies the scale by (fixes batch 1, Q1: a fixed
+/// fraction, not a whole step). egui's own is 1.22.
+pub const ZOOM_WHEEL_NOTCH: f32 = 1.15;
+
+/// How close to 1:1 or to Fit a smooth zoom must come to settle on it, as a share of the scale
+/// (fixes batch 1, Q1: "about 6 %").
+pub const ZOOM_SETTLE: f32 = 0.06;
+
+/// What a smooth zoom shows once the gesture's own scale `raw` (screen pixels per device pixel) is
+/// clamped to [`ZOOM_MIN`] to [`ZOOM_MAX`] and settled: within [`ZOOM_SETTLE`] of 1:1 it is exactly 1:1,
+/// within it of the Fit scale `fit` it is [`Zoom::Fit`] (the nearer wins when both are close);
+/// anywhere else it is `Scale(raw)`. The caller keeps `raw` between frames, so the settling holds the
+/// view still while the gesture crosses the zone and lets go of it on the far side.
+pub fn settle_zoom(raw: f32, fit: f32) -> Zoom {
+    let raw = raw.clamp(ZOOM_MIN, ZOOM_MAX);
+    let off = |target: f32| (raw / target - 1.0).abs();
+    let one = off(1.0);
+    let fit_off = if fit.is_finite() && fit > 0.0 {
+        off(fit)
+    } else {
+        f32::INFINITY
+    };
+    if fit_off <= ZOOM_SETTLE && fit_off < one {
+        Zoom::Fit
+    } else if one <= ZOOM_SETTLE {
+        Zoom::Scale(1.0)
+    } else {
+        Zoom::Scale(raw)
+    }
+}
 
 /// From this zoom up, the canvas draws a grid between device pixels (rung 2 bbq, Q10; moved from 8× to
 /// 16× by chris, 2026-11-10, because at 8× its squares read as the rhythm overlay shrinking).
@@ -198,6 +251,9 @@ pub struct Viewer {
     pub profile_id: String,
     /// How big the page shows.
     pub zoom: Zoom,
+    /// A pinch or Ctrl + scroll in progress: the gesture's own scale, kept between frames so the
+    /// settling on 1:1 and Fit does not trap it (fixes batch 1, Q1).
+    pub zoom_gesture: Option<ZoomGesture>,
     /// The finding outlined on the page, as an index into the current page's findings.
     pub selected: Option<usize>,
     /// Whether the safe zones are laid over the page (rung 2 bbq, Q6).
@@ -292,6 +348,7 @@ impl Default for Viewer {
             entered: Vec::new(),
             profile_id: quadrule_model::sample::MANTA_ID.to_string(),
             zoom: Zoom::Fit,
+            zoom_gesture: None,
             selected: None,
             show_safe_zones: false,
             screen_px_per_mm: None,
@@ -804,7 +861,12 @@ impl Viewer {
     /// Screen points per device pixel for the current zoom. `canvas` is the canvas size in points,
     /// `ppp` egui's physical pixels per point. `None` when nothing is open.
     pub fn scale(&mut self, canvas: (f32, f32), ppp: f32) -> Option<f32> {
-        let zoom = self.zoom;
+        self.scale_for(self.zoom, canvas, ppp)
+    }
+
+    /// Screen points per device pixel were the zoom `zoom` (for the scale Fit would give while
+    /// something else shows).
+    pub fn scale_for(&mut self, zoom: Zoom, canvas: (f32, f32), ppp: f32) -> Option<f32> {
         let rs = self.screen_px_per_mm;
         let page = self.page()?;
         Some(points_per_device_px(
@@ -817,6 +879,27 @@ impl Viewer {
         ))
     }
 
+    /// Zooms by `factor` (above 1 in, below 1 out), the amount a pinch or Ctrl + scroll gave this
+    /// frame (fixes batch 1, Q1). `now` is the scale showing and `fit` the scale Fit would give, both in
+    /// screen pixels per device pixel; `time` is the clock in seconds. The scale is clamped to 1/8 to 16 and
+    /// settles on 1:1 and on Fit ([`settle_zoom`]); the gesture keeps its own unsettled scale between
+    /// frames, so crossing a settling zone holds the view still and then leaves it. Returns whether this
+    /// step carries on a gesture already going (so its anchor holds) and not a new one.
+    pub fn zoom_by(&mut self, factor: f32, now: f32, fit: f32, time: f64) -> bool {
+        let carried = self
+            .zoom_gesture
+            .filter(|g| g.shown == self.zoom && time - g.last <= ZOOM_GESTURE_IDLE);
+        let base = carried.map_or(now, |g| g.raw);
+        let raw = (base * factor).clamp(ZOOM_MIN, ZOOM_MAX);
+        self.zoom = settle_zoom(raw, fit);
+        self.zoom_gesture = Some(ZoomGesture {
+            raw,
+            shown: self.zoom,
+            last: time,
+        });
+        carried.is_some()
+    }
+
     /// Zooms one step in (`+1`) or out (`-1`) from the scale now showing (`now`, in screen pixels
     /// per device pixel).
     pub fn zoom_step(&mut self, now: f32, dir: i32) {
@@ -827,6 +910,7 @@ impl Viewer {
         };
         if let Some(s) = next {
             self.zoom = Zoom::Scale(s);
+            self.zoom_gesture = None;
         }
     }
 }

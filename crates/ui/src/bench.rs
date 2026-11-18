@@ -94,6 +94,10 @@ pub struct DragBench {
     /// Opens the rung 12a missing-fonts page when nothing is open yet (`--missing-fonts-page`): the
     /// text-box page with every text box in a font this computer lacks, drawn from saved outlines.
     pub missing_fonts: bool,
+    /// Zooms the page in and out like a pinch instead of dragging (fixes batch 1: `--bench-zoom`): each
+    /// step feeds the canvas a zoom factor and a pointer, through the path a pinch takes, and the run is
+    /// timed like a drag.
+    pub zoom: bool,
     /// Types into a long text box instead of dragging (rung 11b: `--bench-type`): a box of a page's
     /// worth of text is made, a letter is typed into it at each step (a new paragraph now and then),
     /// and the run is timed like a drag. The box is taken away again after.
@@ -119,6 +123,7 @@ impl DragBench {
             transforms: false,
             groups: false,
             rotate: false,
+            zoom: false,
             devices: false,
             landscape: false,
             patterns: false,
@@ -271,6 +276,15 @@ impl DragBench {
         }
     }
 
+    /// A benchmark of `frames` steps that zooms the page between a quarter and twelve times, twice over
+    /// (fixes batch 1). [`DragBench::with_groups`] and the other `with_` changes pick the page.
+    pub fn zoom(frames: u32) -> Self {
+        DragBench {
+            zoom: true,
+            ..DragBench::new(frames)
+        }
+    }
+
     /// A benchmark of `frames` steps that types into a long text box (rung 11b).
     pub fn typing(frames: u32) -> Self {
         DragBench {
@@ -303,4 +317,14 @@ impl DragBench {
             ..DragBench::new(frames)
         }
     }
+}
+
+/// The scale the zoom bench has reached after `step` of `frames` steps (fixes batch 1): it swings
+/// between a quarter and twelve screen pixels per device pixel, twice over, on a cosine so the factor
+/// a step gives changes smoothly (the biggest is about 6 % a step at 150 steps).
+pub fn zoom_target(step: u32, frames: u32) -> f32 {
+    let (lo, hi) = (0.25_f64.ln(), 12.0_f64.ln());
+    let phase = f64::from(step) / f64::from(frames.max(1));
+    let mix = 0.5 - 0.5 * (4.0 * std::f64::consts::PI * phase).cos();
+    (lo + (hi - lo) * mix).exp() as f32
 }
