@@ -336,3 +336,35 @@ fn the_zoom_benchmark_runs_both_pages_and_leaves_the_page_as_it_was() {
     );
     assert!(ok);
 }
+
+#[test]
+fn the_half_size_copies_average_two_by_two_and_a_zoomed_out_pinch_draws() {
+    use quadrule_render::Gray;
+    let img = Gray {
+        width: 3,
+        height: 3,
+        data: vec![0, 100, 200, 100, 200, 40, 255, 255, 255],
+    };
+    let half = quadrule_ui::viewer::halve(&img);
+    // (0,100,100,200)/4 = 100; the last column repeats: (200,200,40,40)/4 = 120; the last row repeats.
+    let ok_halve = half.width == 2 && half.height == 2 && half.data == vec![100, 120, 255, 255];
+    // A pinch from 0.9 down to 0.6 (zoomed out, so the page comes from the copies) sets the zoom and draws.
+    let mut h = sample();
+    h.state_mut().ui.viewer.zoom = Zoom::Scale(0.9);
+    h.run();
+    let p = h.state().ui.screen_point(500.0, 400.0).unwrap();
+    h.hover_at(p);
+    h.run();
+    h.event(Event::Zoom(2.0 / 3.0));
+    h.run();
+    let q = h.state().ui.screen_point(500.0, 400.0).unwrap();
+    let zoomed = matches!(zoom(&h), Zoom::Scale(s) if (s - 0.6).abs() < 1e-3);
+    // (The page's top left cannot scroll further, so zooming out near it cannot hold the anchor; only the zoom is checked.)
+    let drawn = h.state().ui.screen_point(0.0, 0.0).is_some() && q.x.is_finite();
+    let ok = ok_halve && zoomed && drawn;
+    println!(
+        "\nCHECK crate=ui name=zoom_copies result={} halve_ok={ok_halve} out_to_0_6={zoomed} drawn={drawn}",
+        pass(ok)
+    );
+    assert!(ok);
+}

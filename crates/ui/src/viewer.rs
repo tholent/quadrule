@@ -1172,6 +1172,30 @@ pub fn shrink(img: &Gray, out_w: u32, out_h: u32) -> Gray {
     }
 }
 
+/// A copy of `img` at half the size (rounded up), each pixel the mean of the 2 × 2 it covers; at an odd
+/// edge the last row or column counts twice. Fast, for the ladder of copies a zoom gesture draws from.
+pub fn halve(img: &Gray) -> Gray {
+    let (w, h) = (img.width as usize, img.height as usize);
+    let (ow, oh) = (w.div_ceil(2).max(1), h.div_ceil(2).max(1));
+    let mut data = Vec::with_capacity(ow * oh);
+    for y in 0..oh {
+        let (r0, r1) = (2 * y, (2 * y + 1).min(h - 1));
+        for x in 0..ow {
+            let (c0, c1) = (2 * x, (2 * x + 1).min(w - 1));
+            let sum = u32::from(img.data[r0 * w + c0])
+                + u32::from(img.data[r0 * w + c1])
+                + u32::from(img.data[r1 * w + c0])
+                + u32::from(img.data[r1 * w + c1]);
+            data.push(((sum + 2) / 4) as u8);
+        }
+    }
+    Gray {
+        width: ow as u32,
+        height: oh as u32,
+        data,
+    }
+}
+
 /// One box-filter pass over a `w` × `h` image, shrinking along x (`across`) or y to `n`.
 fn box_pass<T: Copy + Into<f64>>(src: &[T], w: u32, h: u32, n: u32, across: bool) -> Vec<f64> {
     let (len, lines) = if across { (w, h) } else { (h, w) };

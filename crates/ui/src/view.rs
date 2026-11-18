@@ -30,8 +30,8 @@ use crate::panels::{Renaming, Tab};
 use crate::recovery::{Autosave, Recovered, Recovery};
 use crate::tools::{BAR_WIDTH, Tool};
 use crate::viewer::{
-    CARD_WIDTH_MM, PIXEL_GRID_FROM, Source, TOOLBARS_SHOWN, Tile, Viewer, Zoom, ruler_px_per_mm,
-    shrink, tiles,
+    CARD_WIDTH_MM, PIXEL_GRID_FROM, Source, TOOLBARS_SHOWN, Tile, Viewer, ZOOM_GESTURE_IDLE, Zoom,
+    halve, ruler_px_per_mm, shrink, tiles,
 };
 use egui::{
     Color32, ColorImage, CornerRadius, CursorIcon, Key, KeyboardShortcut, Modifiers, PointerButton,
@@ -119,6 +119,36 @@ struct TextureKey {
     size: (u32, u32),
 }
 
+/// Which page the half-size copies are of: the document, its revision and the device.
+type MipKey = (u64, u64, String);
+
+/// How many copies the ladder has: full size, a half, a quarter and an eighth (the zoom's floor).
+const MIP_LEVELS: usize = 4;
+
+/// Uploads `image` as textures in tiles, because a Manta page (1920 × 2560) is larger than some graphics
+/// chips take in one texture.
+fn upload_tiles(
+    ctx: &egui::Context,
+    image: &quadrule_render::Gray,
+    name: &str,
+    options: TextureOptions,
+) -> Vec<(Tile, TextureHandle)> {
+    let (tw, th) = (image.width, image.height);
+    tiles(tw, th, TILE)
+        .into_iter()
+        .map(|t| {
+            let (x, y, tw_, th_) = t;
+            let mut data = Vec::with_capacity((tw_ * th_) as usize);
+            for row in y..y + th_ {
+                let start = (row * tw + x) as usize;
+                data.extend_from_slice(&image.data[start..start + tw_ as usize]);
+            }
+            let img = ColorImage::from_gray([tw_ as usize, th_ as usize], &data);
+            (t, ctx.load_texture(format!("{name}-{x}-{y}"), img, options))
+        })
+        .collect()
+}
+
 /// The graphics-chip canvas's last image.
 enum VectorTexture {
     /// Drawn on the chip into a texture the app owns.
@@ -190,6 +220,8 @@ pub struct ViewerUi {
     pub bench: Option<crate::bench::DragBench>,
     vector: Option<(String, VectorTexture)>,
     texture: Option<(TextureKey, Vec<(Tile, TextureHandle)>)>,
+    /// The page and its half-size copies, drawn smoothed while a zoom gesture is going (fixes batch 1).
+    mips: Option<(MipKey, Vec<((u32, u32), Vec<(Tile, TextureHandle)>)>)>,
     ruler: Option<Ruler>,
     pub(crate) scroll_to_selected: bool,
     cursor_px: Option<(f32, f32)>,
@@ -320,6 +352,7 @@ impl ViewerUi {
             bench: None,
             vector: None,
             texture: None,
+            mips: None,
             ruler: None,
             scroll_to_selected: false,
             cursor_px: None,
@@ -1538,7 +1571,10 @@ impl ViewerUi {
                 let next = crate::bench::zoom_target(i + 1, b.frames);
                 let c = ctx.content_rect().center();
                 let t = f64::from(i);
-                let pointer = c + vec2(120.0 * (0.21 * t).sin() as f32, 80.0 * (0.13 * t).cos() as f32);
+                let pointer = c + vec2(
+                    120.0 * (0.21 * t).sin() as f32,
+                    80.0 * (0.13 * t).cos() as f32,
+                );
                 self.bench_zoom_step = Some((next / now, pointer));
                 b.phase = Phase::Run(i + 1);
             }
@@ -1775,15 +1811,17 @@ impl ViewerUi {
         let start = std::time::Instant::now();
         self.rebuilt = false;
         self.canvas_frame(ui);
-        let zooming = self.bench.as_ref().is_some_and(|b| {
-            b.zoom && matches!(b.phase, crate::bench::Phase::Run(_))
-        });
+        let zooming = self
+            .bench
+            .as_ref()
+            .is_some_and(|b| b.zoom && matches!(b.phase, crate::bench::Phase::Run(_)));
         if self.viewer.dragging() || self.viewer.is_typing() || zooming {
             if !self.clock_live {
                 self.clock_live = true;
                 self.drag_clock = DragClock::default();
             }
-            if self.rebuilt {
+            // A zoom run times every frame: a pinch is a new picture each frame, drawn or not.
+            if self.rebuilt || zooming {
                 self.drag_clock
                     .record(start.elapsed().as_secs_f64() * 1000.0);
             }
@@ -1807,6 +1845,14 @@ impl ViewerUi {
         let selected = self.viewer.selected;
         let selection = self.viewer.selection.clone();
         let entered = self.viewer.entered.clone();
+        let time = ctx.input(|i| i.time);
+        let gesture_live = self
+            .viewer
+            .zoom_gesture
+            .is_some_and(|g| time - g.last <= ZOOM_GESTURE_IDLE);
+        if gesture_live {
+            ctx.request_repaint_after(std::time::Duration::from_secs_f64(ZOOM_GESTURE_IDLE + 0.05));
+        }
         let Some(page) = self.viewer.page() else {
             return;
         };
@@ -1814,7 +1860,14 @@ impl ViewerUi {
         // Zoomed in or at 1:1, the export pixels unchanged, drawn as squares (Q3, Q10). Zoomed
         // out, the page shrunk by averaging to exactly the screen pixels it covers (`shrink`).
         let phys = scale * ppp;
-        let (tw, th) = if phys < 1.0 {
+        // While a pinch or Ctrl + scroll is going, zoomed out, the page is drawn from a ladder of
+        // half-size copies (made once, drawn smoothed), not shrunk to the exact pixels every frame, which
+        // takes 40 to 80 ms on the Pi (fixes batch 1, Q1 and ADR-009). A moment after the gesture rests the
+        // exact shrink takes over.
+        let mip_level =
+            (gesture_live && phys < 1.0 && self.canvas_mode == CanvasMode::ExportPixels)
+                .then(|| ((1.0 / phys).log2().floor() as usize).min(MIP_LEVELS - 1));
+        let (tw, th) = if phys < 1.0 && mip_level.is_none() {
             (
                 ((w as f32 * phys).round() as u32).max(1),
                 ((h as f32 * phys).round() as u32).max(1),
@@ -1829,7 +1882,28 @@ impl ViewerUi {
             size: (tw, th),
         };
         let export_canvas = self.canvas_mode == CanvasMode::ExportPixels;
-        if export_canvas && self.texture.as_ref().is_none_or(|(k, _)| *k != key) {
+        if mip_level.is_some() {
+            let mkey = (generation, revision, page.profile.id.clone());
+            if self.mips.as_ref().is_none_or(|(k, _)| *k != mkey) {
+                let mut levels = Vec::with_capacity(MIP_LEVELS);
+                let mut img = page.image.clone();
+                for l in 0..MIP_LEVELS {
+                    if l > 0 {
+                        img = halve(&img);
+                    }
+                    levels.push((
+                        (img.width, img.height),
+                        upload_tiles(&ctx, &img, "mip", TextureOptions::LINEAR),
+                    ));
+                }
+                self.mips = Some((mkey, levels));
+                self.rebuilt = true;
+            }
+        }
+        if export_canvas
+            && mip_level.is_none()
+            && self.texture.as_ref().is_none_or(|(k, _)| *k != key)
+        {
             let image = if (tw, th) == (w, h) {
                 page.image.clone()
             } else {
@@ -1837,29 +1911,20 @@ impl ViewerUi {
             };
             // In tiles, because a Manta page (1920 × 2560) is larger than some graphics chips
             // take in one texture (egui's test harness: 2048).
-            let tiles = tiles(tw, th, TILE)
-                .into_iter()
-                .map(|t| {
-                    let (x, y, tw_, th_) = t;
-                    let mut data = Vec::with_capacity((tw_ * th_) as usize);
-                    for row in y..y + th_ {
-                        let start = (row * tw + x) as usize;
-                        data.extend_from_slice(&image.data[start..start + tw_ as usize]);
-                    }
-                    let img = ColorImage::from_gray([tw_ as usize, th_ as usize], &data);
-                    let tex =
-                        ctx.load_texture(format!("page-{x}-{y}"), img, TextureOptions::NEAREST);
-                    (t, tex)
-                })
-                .collect();
+            let tiles = upload_tiles(&ctx, &image, "page", TextureOptions::NEAREST);
             self.texture = Some((key, tiles));
             self.rebuilt = true;
         }
-        let tiles: Vec<_> = match &self.texture {
-            Some((_, tiles)) if export_canvas => {
-                tiles.iter().map(|(t, tex)| (*t, tex.id())).collect()
+        let (tex_dims, tiles): ((u32, u32), Vec<_>) = match (&self.texture, &self.mips, mip_level) {
+            (_, Some((_, levels)), Some(l)) if export_canvas => {
+                let (dims, tiles) = &levels[l];
+                (*dims, tiles.iter().map(|(t, tex)| (*t, tex.id())).collect())
             }
-            _ => Vec::new(),
+            (Some((_, tiles)), _, None) if export_canvas => (
+                (tw, th),
+                tiles.iter().map(|(t, tex)| (*t, tex.id())).collect(),
+            ),
+            _ => ((tw, th), Vec::new()),
         };
         let zones: Vec<_> = page.profile.safe_zones.clone();
         let overflows: Vec<(f64, f64)> = page.overflows.iter().map(|o| o.corner).collect();
@@ -1927,7 +1992,7 @@ impl ViewerUi {
             .then(|| self.viewer.rhythm_overlay())
             .flatten();
 
-        let size = if phys < 1.0 {
+        let size = if phys < 1.0 && mip_level.is_none() {
             vec2(tw as f32 / ppp, th as f32 / ppp)
         } else {
             vec2(w as f32 * scale, h as f32 * scale)
@@ -1997,8 +2062,8 @@ impl ViewerUi {
             for ((x, y, tw_, th_), id) in &tiles {
                 let at = |px: u32, py: u32| {
                     min + vec2(
-                        px as f32 / tw as f32 * size.x,
-                        py as f32 / th as f32 * size.y,
+                        px as f32 / tex_dims.0 as f32 * size.x,
+                        py as f32 / tex_dims.1 as f32 * size.y,
                     )
                 };
                 painter.image(
