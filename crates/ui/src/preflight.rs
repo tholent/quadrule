@@ -173,6 +173,8 @@ impl ViewerUi {
             // The welcome screen with nothing open; the File menu open over the page.
             "welcome" => self.show_welcome(),
             "file-menu" => self.look_file_menu(),
+            // The layers panel: New layer's name field, the ask before Delete layer, a row's right-click menu.
+            "layers" | "layers-new" | "layers-ask" | "layers-menu" => self.look_layers(look),
             // My templates, the tab the person's own pages are on.
             "gallery-mine" => {
                 self.show_welcome();

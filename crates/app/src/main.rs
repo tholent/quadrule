@@ -55,7 +55,7 @@ use std::sync::Arc;
 
 /// Preference keys in eframe's storage.
 /// What `--look` takes: a part of the window to start with, for a screenshot (rungs 14b, 15 and 16).
-const LOOKS: [&str; 11] = [
+const LOOKS: [&str; 15] = [
     "lint",
     "style",
     "preflight",
@@ -67,6 +67,10 @@ const LOOKS: [&str; 11] = [
     "welcome",
     "file-menu",
     "gallery-mine",
+    "layers",
+    "layers-new",
+    "layers-ask",
+    "layers-menu",
 ];
 const KEY_THEME: &str = "theme";
 const KEY_RULER: &str = "screen_px_per_mm";
@@ -674,7 +678,7 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
                 Some(v) if LOOKS.contains(&v.as_str()) => {
                     out.look = Some(v)
                 }
-                _ => return Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome, file-menu or gallery-mine".into()),
+                _ => return Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome, file-menu, gallery-mine, layers, layers-new, layers-ask or layers-menu".into()),
             }
         } else if a == "--fonts-page" {
             out.fonts_page = true;
@@ -858,7 +862,7 @@ mod tests {
             ),
             (
                 p(&["--look", "sparkles"]),
-                Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome, file-menu or gallery-mine".into()),
+                Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome, file-menu, gallery-mine, layers, layers-new, layers-ask or layers-menu".into()),
             ),
             (
                 p(&["--paper-page", "--bench-drag", "30"]),

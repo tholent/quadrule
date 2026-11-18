@@ -28,7 +28,7 @@ use quadrule_model::edit::{
     paste, remove, reorder_into, reset_override, set_font_size_override, set_frame_override,
     set_position_override, set_visible_override, ungroup_with,
 };
-use quadrule_model::{Document, Frame, Object, ObjectKind, Uuid};
+use quadrule_model::{Document, Extra, Frame, Layer, Object, ObjectKind, Uuid};
 use quadrule_profiles::Profile;
 use quadrule_profiles::active::lookup_in;
 use quadrule_text::BundledFont;
@@ -1134,6 +1134,35 @@ impl Viewer {
             return Ok(());
         }
         self.edit(Command::MoveLayer { from, to }, None)
+    }
+
+    /// Makes a layer called `name`, empty, just above layer `above` (on top when `None`): the layers
+    /// panel's New layer. One undo step. Returns the new layer's index.
+    pub fn new_layer(
+        &mut self,
+        above: Option<usize>,
+        name: &str,
+    ) -> Result<Option<usize>, EditError> {
+        let Some(n) = self.doc().map(|d| d.layers.len()) else {
+            return Ok(None);
+        };
+        let index = above.map_or(n, |a| (a + 1).min(n));
+        let layer = Layer {
+            name: name.to_string(),
+            visible: true,
+            locked: false,
+            objects: Vec::new(),
+            extra: Extra::new(),
+        };
+        self.edit(Command::InsertLayer { index, layer }, None)?;
+        Ok(Some(index))
+    }
+
+    /// Takes layer `index` out, with its objects: the layers panel's Delete layer, after it has asked
+    /// when the layer holds any. One undo step brings it back. A locked layer, the last layer, and a
+    /// layer holding a locked object refuse.
+    pub fn delete_layer(&mut self, index: usize) -> Result<(), EditError> {
+        self.edit(Command::RemoveLayer(index), None)
     }
 
     /// Sets a layer's name, eye or lock (the layers panel).

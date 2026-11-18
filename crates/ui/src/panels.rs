@@ -106,7 +106,7 @@ impl ViewerUi {
         ui.horizontal(|ui| {
             ui.heading(self.t("app-layers"));
         });
-        ui.horizontal(|ui| {
+        ui.horizontal_wrapped(|ui| {
             let can = !self.viewer.selection.is_empty() || self.selected_layer.is_some();
             ui.add_enabled_ui(can, |ui| {
                 if ui.button(self.t("app-move-up")).clicked() {
@@ -116,6 +116,8 @@ impl ViewerUi {
                     self.move_selected(Toward::Back);
                 }
             });
+            // New layer and Delete layer (docs/bbq/2026-11-18-new-and-delete-layers.md).
+            self.layer_buttons(ui);
             self.group_buttons(ui);
         });
         ui.separator();
@@ -123,6 +125,7 @@ impl ViewerUi {
             return;
         };
         let add = ui.input(|i| i.modifiers.shift);
+        let mut row_act = None;
         ScrollArea::vertical()
             .id_salt("layers-scroll")
             .auto_shrink([false; 2])
@@ -160,9 +163,13 @@ impl ViewerUi {
                         }
                     });
                     self.row_drop(ui, &row.response, &doc, Drop::Layer(li));
+                    row_act = self.layer_row_menu(&row.response, li).or(row_act);
                     self.object_rows(ui, &doc, &layer.objects, li, 0, add);
                 }
             });
+        if let Some(act) = row_act {
+            self.do_row_act(act);
+        }
     }
 
     /// The Group and Ungroup buttons (Ctrl+G, Ctrl+Shift+G), here and in the Arrange tab (rung 7a
@@ -449,17 +456,36 @@ impl ViewerUi {
                 Renaming::Layer(_, b) | Renaming::Object(_, b) => b,
             };
             let label = self.strings.get("app-rename");
-            let resp = ui.add(egui::TextEdit::singleline(buf).desired_width(150.0));
+            let select_all = std::mem::take(&mut self.rename_select_all);
+            let out = egui::TextEdit::singleline(buf)
+                .desired_width(150.0)
+                .show(ui);
+            let resp = out.response;
+            if select_all {
+                // A new layer's name opens selected, to type over it.
+                let mut state = out.state;
+                let end = egui::text::CCursor::new(buf.chars().count());
+                state
+                    .cursor
+                    .set_char_range(Some(egui::text::CCursorRange::two(
+                        egui::text::CCursor::new(0),
+                        end,
+                    )));
+                state.store(ui.ctx(), resp.id);
+            }
             resp.widget_info(|| WidgetInfo::labeled(Role::TextInput, true, &label));
-            resp.request_focus();
             let text = buf.clone();
             if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
                 self.renaming = None;
             } else if resp.lost_focus() {
+                // Enter, or a click elsewhere, ends it. Focus is asked for only while the field still has none:
+                // asking first, every frame, took it back before this could see it go.
                 self.renaming = None;
                 if !text.trim().is_empty() && text != name {
                     return Some(NameEvent::Renamed(text));
                 }
+            } else {
+                resp.request_focus();
             }
             return None;
         }

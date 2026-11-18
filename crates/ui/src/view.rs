@@ -249,6 +249,12 @@ pub struct ViewerUi {
     /// The middle of what the canvas shows, in device pixels of the page on screen.
     pub(crate) view_centre_px: Option<(f64, f64)>,
     pub(crate) renaming: Option<Renaming>,
+    /// The layer name field that just opened (New layer) starts with its text selected, to type over.
+    pub(crate) rename_select_all: bool,
+    /// The layer (index, name) a Delete layer sheet is asking about.
+    pub(crate) delete_layer_ask: Option<(usize, String)>,
+    /// Open the picked layer row's right-click menu on the next frame (`--look layers-menu`).
+    pub(crate) look_layer_menu: bool,
     /// Groups folded shut in the layers tree (rung 7a).
     pub(crate) folded: std::collections::HashSet<quadrule_model::Uuid>,
     /// What is typed in a length field while it has focus, by field key.
@@ -324,6 +330,9 @@ impl ViewerUi {
             type_selecting: false,
             canvas_id: None,
             renaming: None,
+            rename_select_all: false,
+            delete_layer_ask: None,
+            look_layer_menu: false,
             folded: std::collections::HashSet::new(),
             field_text: HashMap::new(),
             link_margins: true,
@@ -458,6 +467,7 @@ impl ViewerUi {
         self.new_dialog(&ctx, &mut requests);
         self.welcome_dialogs(&ctx);
         self.unsaved_prompt(&ctx, &mut requests);
+        self.delete_layer_sheet(&ctx);
         self.font_sheet_window(&ctx, &mut requests);
         self.preflight_window(&ctx);
         self.export_sheet_window(&ctx, &mut requests);
@@ -513,6 +523,10 @@ impl ViewerUi {
             return;
         }
         if self.viewer.open.is_none() {
+            return;
+        }
+        // The Delete layer sheet has the keyboard: Esc cancels it (and goes no further), and no shortcut works round it.
+        if self.delete_layer_ask.is_some() {
             return;
         }
         if !self.viewer.dragging() && !self.viewer.is_typing() && key(cmd, Key::W) {
@@ -600,7 +614,10 @@ impl ViewerUi {
         }
         // Escape ends a tool that is on first; with Select on, it clears the selection.
         // Inside a group, Escape first steps out of it (rung 7a bbq, Q4).
-        if key(Modifiers::NONE, Key::Escape)
+        // A name field open in the layers panel keeps its Escape: egui lets go of the field's focus on that key before
+        // this runs, so taking it here would leave the field to read it as a click away and keep what was typed.
+        if self.renaming.is_none()
+            && key(Modifiers::NONE, Key::Escape)
             && !self.viewer.end_tool()
             && !self.viewer.leave_group()
         {

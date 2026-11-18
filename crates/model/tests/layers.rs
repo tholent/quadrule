@@ -48,7 +48,8 @@ fn insert_and_remove_are_each_others_undo() {
     let undo_is_remove = undo == Command::RemoveLayer(1);
     let redo = doc.apply(undo).unwrap();
     let back = doc == base;
-    let redo_is_insert = matches!(&redo, Command::InsertLayer { index: 1, layer } if layer.name == "Layer 3");
+    let redo_is_insert =
+        matches!(&redo, Command::InsertLayer { index: 1, layer } if layer.name == "Layer 3");
     doc.apply(redo).unwrap();
     let again = doc.layers.len() == 3 && doc.layers[1].name == "Layer 3";
     // On top: an index of the layer count.
@@ -81,7 +82,11 @@ fn a_removed_layer_comes_back_whole_in_its_place() {
         && doc.object(ids::LINES).is_none();
     let one_step = h.undo(&mut doc);
     let whole = doc == base
-        && doc.layers[0].objects.iter().map(|o| o.id).collect::<Vec<_>>()
+        && doc.layers[0]
+            .objects
+            .iter()
+            .map(|o| o.id)
+            .collect::<Vec<_>>()
             == vec![ids::DOTS, ids::LINES];
     let redone = h.redo(&mut doc) && doc.layers.len() == 1 && doc.object(ids::DOTS).is_none();
     let undone_again = h.undo(&mut doc) && doc == base;
@@ -102,7 +107,8 @@ fn a_removed_layer_comes_back_whole_in_its_place() {
     let in_place = three == before;
     // Nothing left to undo after the one step.
     let no_second = !h.undo(&mut doc) || doc == base;
-    let ok = gone && one_step && whole && redone && undone_again && neighbours && in_place && no_second;
+    let ok =
+        gone && one_step && whole && redone && undone_again && neighbours && in_place && no_second;
     println!(
         "CHECK crate=model name=removed_layer_returns_whole result={} gone={gone} one_undo_step={one_step} whole={whole} redone={redone} undone_again={undone_again} neighbours={neighbours} in_place={in_place}",
         pass(ok)

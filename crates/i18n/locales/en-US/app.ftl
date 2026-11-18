@@ -133,6 +133,22 @@ app-show-item = Show { $name }
 app-lock-item = Lock { $name }
 app-rename = Name
 
+# New layer and Delete layer (docs/bbq/2026-11-18-new-and-delete-layers.md; words proposed for chris's look).
+app-layer-new = New layer
+app-layer-delete = Delete layer
+app-layer-new-name = Layer { $number }
+app-layer-new-hint = Adds an empty layer above the picked one, or on top.
+app-layer-delete-none = Pick a layer first.
+app-layer-delete-last = A page needs at least one layer.
+app-layer-delete-locked = Unlock it to delete it.
+app-layer-delete-holds-locked = Unlock the objects in it to delete it.
+app-layer-delete-ask = { $count ->
+    [one] Delete the layer "{ $name }" and its { $count } object?
+   *[other] Delete the layer "{ $name }" and its { $count } objects?
+}
+app-layer-delete-undo = Undo brings the layer back.
+app-layer-delete-yes = Delete
+
 # Inspector (rung 3 bbq Q8).
 app-tab-page = Page
 app-tab-arrange = Arrange
