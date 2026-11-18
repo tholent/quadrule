@@ -861,6 +861,13 @@ mod tests {
                 }),
             ),
             (
+                p(&["--look", "layers-ask"]),
+                Ok(Args {
+                    look: Some("layers-ask".into()),
+                    ..Args::default()
+                }),
+            ),
+            (
                 p(&["--look", "sparkles"]),
                 Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome, file-menu, gallery-mine, layers, layers-new, layers-ask or layers-menu".into()),
             ),

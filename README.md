@@ -78,7 +78,7 @@ and error.
   short dash, dash, long dash or your own lengths) and a cap (butt, round or square), set in the inspector's Style tab.
   A rectangle has a corner radius (in any unit, rhythm units included); a polygon has 3 to 32 sides and can be a star
   with an inner radius. Curves and slanted edges are smooth; straight edges stay sharp on whole pixels.
-- Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock and reorder layers;
+- Select, move, resize, duplicate, copy and paste the objects on a page; rename, hide, lock, reorder, add and delete layers (New layer goes above the picked one; deleting a layer with objects asks first, and Undo brings it back);
   unlimited undo and redo; autosave with recovery after a crash.
 - Export PNGs for the devices a page targets. **File ▸ Export…** (Ctrl+E; Cmd on a Mac) opens the
   **Export sheet** with the last choices filled in and the Export button in focus, so Ctrl+E then Enter repeats the

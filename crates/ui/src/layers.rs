@@ -155,7 +155,8 @@ impl ViewerUi {
         // `--look layers-menu` opens it once on the picked row, where the pointer is not.
         let look = self.look_layer_menu && self.selected_layer == Some(li);
         let open = if look {
-            self.look_layer_menu = false;
+            // Held open every frame: egui throws a frame away while it sizes a new popup, and a one-time open
+            // would be thrown with it. (A look is for a screenshot; the menu does not close.)
             Some(SetOpenCommand::Bool(true))
         } else if row.container_secondary_clicked() {
             Some(SetOpenCommand::Bool(true))
