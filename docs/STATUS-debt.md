@@ -353,5 +353,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   ruling but still draws its border. (8) Turning a region's own ruling off a quarter turn (Pattern angle) cuts the ruling at the
   border's rounded outline, a polygon whose arcs are nominal (the frame's whole pixels), up to half a pixel from the border's own
   arc, which sits on the stroke's pixel grid. (9) No role badge beside a custom border's gray (the object stroke has one). (10) The
-  test starters (`test_starters.rs`) do not include the bordered page. (11) The first 4 sides tick reads from the first picked
-  region when several are picked; an edit applies to all (no "mixed" display for the border).
+  test starters (`test_starters.rs`) do not include the bordered page. (11) The Border section reads the first picked region when several are
+  picked; an edit applies to all of them (no "mixed" display for the border). (12) `--look style` on the bordered page scrolls the
+  Style tab to the Border section once (a hidden screenshot aid, `ViewerUi::look_border`).

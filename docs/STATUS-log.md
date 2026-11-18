@@ -2319,3 +2319,84 @@ device filter", "Where starters live" and "Speed"). Worked on `main`; token use 
   STATUS.md (rung 14 bullet and the rung 12 Log line moved word for word to `docs/STATUS-archive.md`); rung 16b prompt
   `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`; calibration row. `spend-ledger.py measure --latest --meter 59 65` →
   `sonnet 85% · opus 15% | $19.92 | 59 → 65 · alone here · 6 pts`.
+
+## 2026-11-18 — pattern region borders, builder (Sonnet 5.5, high): model, format 0.17.0, layout, drawing, Style tab, lint, goldens, speed
+
+Brief: build `docs/bbq/2026-11-18-pattern-borders.md` (Rules Q1 to Q4 and every Defaulted line). Worked on `main`; token use was not
+measured by the builder. Not touched: `STATUS.md`, the ADRs, the board, the version.
+
+- Built, in plain words: a pattern region can have a border, a line centred on its frame like a rectangle's stroke, on the sides
+  ticked (all four to start), in a line role (Structure to start) or a width and gray of its own, with a corner radius in mm. On a
+  bordered side the pattern's own lines and dots that sit on the edge are left out. A corner rounds only where both its sides are on
+  (radius capped at half the shorter side); inside it ruling lines (straight and slanted) stop at the curve and a dot whose centre is
+  beyond the curve is dropped. The border turns with the frame (`rotation_deg`), not with the Pattern angle; it draws in groups,
+  repeats and on every device (same border, its role resolved per device). Unbordered sides keep ADR-014 exactly. No border is the
+  default, no `border` key is written, and every earlier golden and fixture is byte for byte what it was.
+- Commit: `1531005` (everything above in one: model, format, layout, both canvases and export by the display list, Style tab, lint,
+  goldens, bordered page, tests, README and DEVELOPMENT); a second commit adds the look aid, the debt and this entry.
+- Where things are: `crates/model/src/lib.rs` (`Border`, `BorderSides`, `PatternRegion::border`), `crates/layout/src/border.rs` (`Rim`:
+  the border as the pattern sees it; which lines and dots go, the cut at a rounded corner, the border's own items; `clip_convex`),
+  `crates/layout/src/pattern.rs` (`region_rim`, `border_items_turned`, the `Ctx` filters in `hline`/`vline`/`dot`/`slanted`, the
+  quarter-turn mapping and `turn_cut_items`), `crates/layout/src/lib.rs` (the pattern branch of `draw_objects`),
+  `crates/format` (`FORMAT_VERSION` 0.17.0, migration 0.16 to 0.17 rewrites nothing), `crates/lint/src/judge.rs` and `lib.rs` (L01, L02,
+  L03, L05, L14 read the border's line), `crates/ui/src/panels.rs` (`border_rows`), `crates/i18n/locales/en-US/{app,lint}.ftl`,
+  `crates/model/src/sample.rs` (`pattern_borders_document`, `border_ids`), `crates/app/src/main.rs` (`--bordered-page`),
+  `crates/ui/src/{bench,view,viewer,preflight}.rs`, `Makefile` (`BORDERED=1` for `bench-drag` and `bench-draw`).
+  The chip canvas and the export renderer draw the display list, so neither needed code of its own.
+- Tests added (each prints one `CHECK` line; run with `-- --nocapture`): `cargo test -p quadrule-model --test borders` (3: no key when
+  absent, fields and defaults, radius and sides); `cargo test -p quadrule-layout --test borders` (9: lines and dots on a bordered edge
+  go and a side off keeps them, rounded corners cut ruling and dots and only where both sides are on, slanted ruling stops at the
+  curve, the radius cap and a missing stroke, the border turns with the frame not the ruling, a quarter-turned ruling, group and
+  repeat on both devices, no border is inert); `cargo test -p quadrule-render --test pattern_borders` (4: goldens on both devices
+  with the old thirty lines checked by their hash, draws the same twice and differs from no border, the pattern-angle page still
+  matches its golden, a save round trip writes no `border` key without one) and `--test migrate_v016` (2); `cargo test -p quadrule-lint
+  --test lint border` (1); `cargo test -p quadrule-ui --test borders` (3: the section's fields, a tick is one undo step and typing
+  merges, the benchmarks run over the bordered page); `cargo test -p quadrule-app` has one more command-line case.
+- Checks (commands): `make check-all` → `TESTS scope=workspace checks=715 check_fail=0 passed=665 failed=0 status=ok` (the run before this entry; one before it, on `1531005`, gave the same line); `(cd crates/render/tests/golden && sha256sum -c
+  SHA256SUMS | grep -c ": OK")` → 32; `head -30 crates/render/tests/golden/SHA256SUMS | sha256sum` →
+  `1d1892b6b6cb4aae6c602c11c577e4273226c2099616ea0325e75888280fd8c3` (the same as before the job); fixtures `v0.4/`–`v0.15/`
+  untouched (`git diff 794ce33 --stat -- crates/render/tests/fixtures` shows only the new `v0.16/`). New goldens:
+  `pattern-borders_supernote.a5x2_1920x2560.png` (Manta) and `pattern-borders_supernote.a6x2_1404x1872.png` (Nomad), each page twelve
+  cells: ruled lines all four sides, a dot grid with its right side off, a grid with 3 mm corners, Emphasis lines with 4 mm corners,
+  dots with 4 mm corners, a grid bordered on top and left only, isometric with a 0.4 mm gray 64 border and 3 mm corners, hexagons,
+  Cornell, a frame turned 20 degrees, a ruling turned 30 degrees, a ruling turned 90 degrees. I read both PNGs before blessing,
+  after changing the rule and the page twice (see judgement calls 1 and 2). Fixture `crates/render/tests/fixtures/v0.16/` is the
+  `v0.15` page resaved by the 0.16.0 build before the format changed (same export hashes).
+- Speed (Pi, release build, scratch `XDG_CONFIG_HOME` and `XDG_DATA_HOME`, strip on, 150 frames, 90th percentile against 50 ms;
+  the first frame reported, not judged), command `./target/release/quadrule --bordered-page --bench-drag|--bench-draw 150 --canvas
+  export|chip`, three runs each (the page is the bordered page; `make bench-drag BORDERED=1` runs the same page):
+  drag export p90 21.5, 21.4, 21.2 (worst 30.3, 26.2, 22.5); draw export p90 21.9, 21.9, 22.4 (worst 36.2, 30.4, 30.6);
+  drag chip p90 4.8, 4.9, 4.9 (worst 5.7, 5.7, 5.7); draw chip p90 23.6, 23.6, 23.5 (worst 53.1, 53.1, 53.1, `over_budget=1` each,
+  the first frame, 49 ms, and one after it). Nothing near 50 ms at the 90th percentile. The chip draw run's lone slow frame is the
+  same shape the groups page showed last leg (51.2 ms there). One extra run (`--canvas export` drag, 58.7 ms worst, p90 20.6) was
+  a stray first run before the three; I did not chase it.
+- Seen on screen (grim, release build): `scratchpad/look/borders-manta.png` and `borders-nomad.png` (the exported pages, copied
+  from the goldens), `borders-window-nomad.png` (the window on the Nomad, the page in a drag), `borders-style-section.png` (the Style
+  tab scrolled to its Border section: Show border, Sides, Line, Role, Corner radius) and `borders-style-full.png`.
+- Judgement calls:
+  1. "On the edge" is wider than the record's half pixel: a line or dot goes when its centre is within half the sum of its width and the
+     border's width of the edge, at least half a pixel, so its ink never touches the border's. With half a pixel alone, a dot or line a
+     pixel off the border (the rhythm and a frame set in millimetres round differently, by 1 to 2 px a hundred millimetres along)
+     showed beside the border as a tick or a doubled line on the first golden; the record's veto "a wider band" is this. A dot is
+     dropped the same distance inside a rounded corner's curve.
+  2. The borders page sets its rhythm to physical-locked and every object to keep its millimetres (Left and Top): pixel-locked 5 mm
+     steps are 59 px against a true 59.06, so a frame set in millimetres drifts off the rhythm. The app's own snapping puts a frame on
+     the pixel rhythm, so real pages do not drift; the page is built for the eye.
+  3. The border is `Option<Border>`: unticking drops its settings (sides, line, radius) and ticking again starts fresh (Structure, all four sides,
+     radius 0). The record lists "on/off" with the other fields; a flag inside the border would have kept them. Easy to change.
+  4. Per-device overrides do not cover pattern style: `Override` holds place, size, font size and the eye only, so I did not build one
+     for the border (the record said to say so); a border is the same on every device, its role resolved per device.
+  5. A corner rounds only where both sides are on and the radius is above 0; a side with no neighbour ends square at the frame's
+     corner with a butt cap. An unrounded border is hard-edged rectangles (a ring where all four are on), a rounded one one anti-aliased
+     stroke through the stroke's pixel centre line, as a rectangle shape's is.
+  6. A turned ruling (Pattern angle off a quarter turn) is cut at the border's rounded outline (a polygon), and a quarter turn lays the
+     ruling out in its own axes with the border carried through the turn, so the edge rule works there too; dots and lines on an
+     edge are looked for in those axes.
+  7. A pattern with no stroke of its own (`Style::None`) draws no ruling but still draws its border; a border with `Style::None` draws
+     nothing and removes nothing; a border with no side ticked is no border.
+  8. A repeat's alternation (`restyle`) changes the source's own line, not the border's.
+  9. The words proposed in Fluent: Border (heading), Show border, Sides, Top, Right, Bottom, Left, Line (then the existing Role, Custom,
+     Width, Gray, Corner radius); lint: "The border of ... " for L01, L02, L03, L14 and "border" for L05.
+  10. `--look style` on the bordered page selects the first region with rounded corners and scrolls the Style tab to the Border section
+     (the inspector is too short on a 720 px screen to show it otherwise).
+- Blocked: nothing. Owed items are in `docs/STATUS-debt.md` under "Pattern borders, owed". ADR-014's amendment is the lead's.

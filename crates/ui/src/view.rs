@@ -161,6 +161,8 @@ pub struct ViewerUi {
     pub theme: ThemePreference,
     /// Whether the right panel (inspector and lint) shows.
     pub show_lint: bool,
+    /// Scroll the Style tab to its Border section once (`--look style` on the pattern-borders page, for a screenshot).
+    pub look_border: bool,
     /// The inspector's tab.
     pub tab: Tab,
     /// Where unsaved changes are written while the window is open (the app sets it; `None` in
@@ -294,6 +296,7 @@ impl ViewerUi {
             strings,
             theme: ThemePreference::System,
             show_lint: true,
+            look_border: false,
             tab: Tab::Page,
             recovery: None,
             canvas_mode: CanvasMode::ExportPixels,

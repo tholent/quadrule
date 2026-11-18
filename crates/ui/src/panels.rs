@@ -1596,7 +1596,10 @@ impl ViewerUi {
                 ui.strong(self.t("app-pattern-settings"));
                 self.pattern_rows(ui, &o, pr, &cx, enabled);
                 ui.add_space(6.0);
-                ui.strong(self.t("app-border-section"));
+                let heading = ui.strong(self.t("app-border-section"));
+                if std::mem::take(&mut self.look_border) {
+                    heading.scroll_to_me(Some(egui::Align::TOP));
+                }
                 self.border_rows(ui, pr, &cx, enabled);
             }
             if shape {

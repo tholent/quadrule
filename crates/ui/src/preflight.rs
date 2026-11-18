@@ -158,6 +158,11 @@ impl ViewerUi {
                 if let Some(id) = pick {
                     self.viewer.select_row(id, false);
                     self.tab = crate::panels::Tab::Style;
+                    self.look_border = self
+                        .viewer
+                        .doc()
+                        .and_then(|d| d.object(id))
+                        .is_some_and(|o| matches!(&o.kind, quadrule_model::ObjectKind::Pattern(p) if p.border.is_some()));
                 }
             }
             "preflight" => {
