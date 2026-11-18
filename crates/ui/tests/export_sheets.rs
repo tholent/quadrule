@@ -298,7 +298,7 @@ fn export_writes_the_files_then_the_preflight_sheet_then_the_completion_sheet() 
             .is_some()
         && has(&h, "Reveal in folder")
         && has(&h, "Done")
-        && !has_part(&h, "took the place");
+        && !has_part(&h, "replaced");
     let folded = has(&h, "Where do these go?") && !has_part(&h, "Customization tab");
     // Open the note: it is plain words about MyStyle, and it is remembered.
     h.get_by_label("Where do these go?").click();
@@ -321,7 +321,7 @@ fn export_writes_the_files_then_the_preflight_sheet_then_the_completion_sheet() 
     go(&mut h);
     press(&mut h, "Export anyway");
     let replaced = h
-        .query_by_label_contains("2 files took the place of ones that were there")
+        .query_by_label_contains("2 files replaced")
         .is_some()
         && has_part(&h, "Customization tab");
     let ok = pre && written && done_sheet && folded && opened && revealed && gone && replaced;

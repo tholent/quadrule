@@ -593,8 +593,8 @@ app-done-title = { $count ->
     }
 app-done-in = in { $folder }
 app-done-replaced = { $count ->
-        [one] 1 file took the place of one that was there
-       *[other] { $count } files took the place of ones that were there
+        [one] 1 file replaced
+       *[other] { $count } files replaced
     }
 app-done-where = Where do these go?
 app-done-where-body = On your Supernote, templates go in the MyStyle folder. Files in a folder inside MyStyle appear under the Customization tab in notes.
