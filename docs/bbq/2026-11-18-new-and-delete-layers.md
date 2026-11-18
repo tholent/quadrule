@@ -63,6 +63,10 @@ Empty.
 
 (Rulings made after the bbq, at the look or later, go here word for word, dated.)
 
+- **2026-11-18, budget** (meter 79 %, chris's reading at 19:13 UTC, 14 points above 16a's approval): told the usual
+  75 % stop had passed, chris, word for word: "I have a free reset this week, so I am grinding this out". Work goes on
+  past the usual stops this week; the lead still reports readings.
+
 ## Kickoff
 
 Builder: **Sonnet 5.5 at high effort**, on `main`, committing as each step lands. Build from this record's Rules and
