@@ -306,3 +306,18 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   menu to hold Open, Save, Save As, Export… and Export again, in place of the toolbar's Export menu. The Manta was not
   tablet-checked with a noted PNG (chris: "the nomad check is enough").
 
+
+- Rung 16a, owed (`crates/ui/src/welcome.rs`, `file_menu.rs`, `templates.rs`, `recent.rs`, `export_ui.rs`): (1) the wording of every
+  new word and the look of the welcome screen (tile size, the grey "Not found" lines, the dark box a stored picture sits on)
+  are the builder's proposals for chris's look; the judgement calls are in the log's leg 1 entry. (2) ADR-013 needs its
+  amendment (Q2 start, Q6 File menu, Q9 one Export…) and its `proof` line names two tests that moved:
+  `export_sheets.rs::the_export_menu_opens_one_sheet_with_the_remembered_choices` still exists (now checks the File menu) but
+  `export_again_writes_with_the_last_choices_or_opens_the_sheet` is now
+  `export_sheets.rs::ctrl_e_opens_the_sheet_with_the_last_choices_and_enter_writes`; `window.rs::empty_start_then_sample` now
+  checks the welcome screen. (3) `Viewer::export_again` (the engine for Export again) and its test in `tests/export.rs` stay
+  though nothing in the window calls them; remove them or keep them, the lead's call. (4) Leg 2 still owes: live thumbnails
+  on a background thread, the Device filter's effect on the tiles, the built-in starters loader (`crates/ui/starters/<category>/`)
+  with test starters, `--look gallery-mine`, and the speed measurements. (5) The welcome screen's tiles show only the stored
+  `previews/` picture of the file's own main device (or a plain box); the picture is decoded on the interface thread. (6)
+  Search is on names, descriptions and tags of templates only until the starters exist. (7) Save as template… skips the installed-fonts
+  sheet that Save shows; a template made from a page that uses installed fonts carries them only if Embed fonts is on.

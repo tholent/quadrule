@@ -2148,3 +2148,82 @@ text chunks). Worked on `main`; token use was not measured by the builder.
   `docs/arcs/v1/rung-16-PROMPT-2026-11-17.md`; calibration row. `spend-ledger.py measure --latest --meter 53 59` →
   `sonnet 77% · opus 23% | $18.51 | 53 → 59 · alone here · 6 pts`.
 
+
+## 2026-11-17 — rung 16a leg 1, builder (Sonnet 5.5, high): the File menu, one Export…, recent files, the welcome screen and My templates
+
+Brief: leg 1 of `docs/bbq/2026-11-17-rung-16-welcome-and-gallery.md` (Q2, Q4, Q5, Q6, Q9 and the Defaulted lists). Worked on
+`main`; token use was not measured by the builder. Leg 2 (live thumbnails, the device filter's effect, the starters
+loader and test starters, `--look gallery-mine`, the speed measurements) was not started.
+
+- Built, in plain words: every file action now lives in a **File** menu at the left of the top bar (New…, Open…, Open
+  Recent, Save, Save As…, Save as template…, Export…, Close, with their keys beside them); the toolbar's New, Open, Save,
+  Save As and Export buttons are gone. There is **one Export…**: Ctrl+E opens the Export sheet with the last choices filled
+  in and the Export button in focus, so Ctrl+E then Enter repeats the last export. Export again and Ctrl+Shift+E are gone.
+  The **welcome screen** replaces the empty start: down the left Blank page, Open…, the Recent list and, small at the foot,
+  Open sample page; on the right the Device filter, the Search box, the seven tabs and the tiles. It shows at start-up with
+  no file, after Close, and for File ▸ New… over a page (Esc or Cancel goes back). **My templates** are ordinary `.quad`
+  files in `templates/` in the data folder; Save as template… writes one (asking before it replaces one) and a pick opens an
+  untitled copy.
+- Commits: `a41d256` (recent files in `settings.ron`, the templates folder, Save as template, the untitled copy; headless,
+  no screen) and `d02f891` (the File menu, the one Export…, the welcome screen, the My templates tab, `--look welcome` and
+  `--look file-menu`, README and DEVELOPMENT). The second holds steps 1, 2, 4 and the screen half of 5 together: the bar, the
+  welcome screen and the menu all change `view.rs` and the rung 15 tests at once, so they could not each be left passing
+  on their own.
+- Where things are: `crates/ui/src/file_menu.rs` (the menu), `welcome.rs` (the screen, its questions and the tiles),
+  `templates.rs` (the folder, Save as template, `open_copy`), `recent.rs` (the list), `settings.rs` (`recent`, max 10,
+  `#[serde(default)]` so a rung 15 `settings.ron` loads), `export_ui.rs` (Ctrl+E with the Export button focused),
+  `view.rs` (After::CloseDocument and After::OpenTemplate, the keys N, O, W, E), `viewer.rs` (`close_document`,
+  `templates_dir`), `crates/app/src/main.rs` (the templates folder beside `recovery/`, the two looks).
+- Tests added or rewritten (each prints one `CHECK` line; run with `-- --nocapture`, scratch `XDG_CONFIG_HOME` and
+  `XDG_DATA_HOME` set):
+  `cargo test -p quadrule-ui --test recent` (3: add at Open, Save and Save As newest first; ten at most, missing stays,
+  forget; an older settings file loads), `--test templates` (3: save, replace asks and leaves the document alone; the list
+  and removal only inside the folder; the untitled copy on a chosen device, a missing device falling back with a notice, a
+  paper size, an unreadable file), `--test welcome` (10: the frame and every tab's line; Blank page on the filter's device;
+  the Recent list; New over a page, Esc, Cancel, Close and Ctrl+W; a dropped `.quad`; the File menu and its keys; Open
+  Recent; Save as template and a pick; Remove, Show in folder and Search; the two looks), `--test export_sheets` (6;
+  `ctrl_e_opens_the_sheet_with_the_last_choices_and_enter_writes` replaces `export_again_writes_with_the_last_choices_or_opens_the_sheet`,
+  and the first test now checks the File menu holds one Export… and no Export again), `--test export` (10; the preflight
+  test is now `the_export_sheet_goes_on_behind_the_one_preflight_sheet`), `--test window` (21) and `--test lint_pointer` (9),
+  whose steps now go through the File menu. The message-id test also reads the new files.
+- Checks (commands): `make check-all` → `TESTS scope=workspace checks=685 check_fail=0 passed=639 failed=0 status=ok`;
+  `cd crates/render/tests/golden && sha256sum -c SHA256SUMS | grep -c ": OK"` → 30; fixtures `v0.4/`–`v0.15/` untouched
+  (`git status` shows no change under them); `cargo test -p quadrule-app` → 4 passed.
+- Seen on screen (grim, debug build, scratch folders): `--look welcome` with two templates and three recent files (one
+  gone) and `--look file-menu` over the sample page, both read as intended.
+- Judgement calls (the record was silent or ambiguous; each can be changed):
+  1. Ctrl+N (and File ▸ New…) with the welcome screen already showing goes on to the Blank page dialog.
+  2. The **All** tab lists My templates too (starters will join them in leg 2); with neither it says starters are coming.
+  3. **Search** already works on the templates (name, description, tags, or the words "My templates"), across every tab,
+     because it cost a few lines; leg 2 adds the starters side.
+  4. The bar's own Device picker is hidden while the welcome screen shows (it has its own filter); while the screen is
+     over a page, Save, Save As, Save as template, Export, Undo, Redo and zoom are greyed so nothing acts on the page behind.
+  5. egui matches Ctrl+E when Shift is held too, so Ctrl+Shift+E would still have opened the sheet; the key now needs Shift
+     up, which frees Ctrl+Shift+E as the record says.
+  6. `Viewer::export_again` and its engine test stay (the window no longer calls it); `ask_export_again`,
+     `do_export_again` and `Then::Again` are gone. The test that ADR-013's proof line names,
+     `export_again_writes_with_the_last_choices_or_opens_the_sheet`, is renamed (see 2 under "Rung 16a, owed" in the debt file), so the ADR's proof line no
+     longer resolves until the lead's amendment updates it.
+  7. Save as template… does not show Save's installed-fonts sheet; it writes with the document's own Embed-fonts setting.
+  8. A tile shows the document's title (the file's name when the title is empty or the file is damaged); a damaged file
+     shows a plain tile and a pick says why in the notice.
+  9. Recent paths are kept absolute (`std::path::absolute`); a failed open, a recovery restore, and a template or starter
+     opened as an untitled copy never add a line. A click on a missing recent file asks; the right-click removes at once.
+  10. Show in folder opens the templates folder (not the single file).
+  11. When a copy cannot be made on the chosen device (an unknown id, say) the notice is not marked as an error; the copy
+      still opens, on its own main device.
+  12. My templates is read from the folder when the welcome screen opens and after a save or a removal, then kept; a
+      stored picture is decoded once, on the interface thread (a 480 px PNG, about a millisecond); no per-frame disk work.
+  13. `png` moved from a dev-dependency to a dependency of `quadrule-ui` (to decode the stored picture).
+  14. `--look welcome` shows the screen with nothing open; `--look file-menu` opens the sample page and the menu.
+  15. New words (Fluent, for chris's look): the File menu items, "+ Blank page", "Recent", "Not found · <folder>",
+      "Search", "Search pages", the seven tab names, "Starter pages for this group are coming soon.", "Starter pages are
+      coming soon. Until then, start from a blank page, or keep your own pages under My templates.", "No templates yet.
+      Choose File, then Save as template…, to keep a page here.", "Remove this template? This deletes the template “…” from
+      your computer. It cannot be undone.", "File not found … Take it off the recent list?", "Replace this template?" and the
+      notices `notice-template-saved`, `-save-failed`, `-remove-failed`, `notice-copy-device`. Removed: `app-export`,
+      `app-export-again`, `app-new-tip`, `app-empty-title`.
+- Not measured (leg 2): the welcome screen's frame times with tiles drawing, and drag and draw on the heaviest page. Nothing
+  in this leg touches the canvas or the drag path.
+- Blocked: nothing. One build note: linking the app's test binary beside the ui tests was killed (signal 9, out of memory)
+  once when both were built in one `cargo test` on the Pi; built apart, they pass.
