@@ -156,6 +156,11 @@ Empty. Q9 (owed by the Q6 answer) was asked.
 
 (Rulings made after the bbq, at the look or later, go here word for word, dated.)
 
+- **2026-11-18, budget, after 16a leg 1** (meter 63 %, chris's reading): chris, word for word: "for this week only,
+  unset any hard limits". Until the weekly reset (Saturday 2026-11-21, 5 pm EST), the 12-point share line, the 71 %
+  backstop and the 75 / 80 / 85 / 93 % hard stops do not stop work; the lead still reads the meter at each leg's end and
+  reports it. The reserve of 4 is read as lifted with them (the lead's reading; chris may correct it).
+
 ## Kickoff
 
 Lead: **Opus 5.5 at high effort** (this session). Builder: **Sonnet 5.5 at high effort**, on `main`, committing as each
