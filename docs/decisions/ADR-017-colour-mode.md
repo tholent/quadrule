@@ -120,3 +120,5 @@ colour tablet.
 
 - 2026-11-18: drafted as `proposed` by an outside contributor from the ADR bbq record
   `docs/bbq/2026-11-18-colour-mode.md` (Q1–Q15), on the contributor's branch `colour-mode`; not yet sent to chris.
+- 2026-11-18: chris agreed to a pull request before the build (relayed by the proposer), so this proposal goes to
+  him from the proposer's fork now rather than once rung C1 works (changes Q5's timing only).
