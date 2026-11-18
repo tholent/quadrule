@@ -52,7 +52,12 @@ over. **Start 16b only when chris says his starters are ready** (Q1, arc Q13).
 ## Open questions to ask again at the start (AGENTS.md)
 
 - Which starters has chris made, and where are they?
-- The basic section: how does a starter mark which of its settings show?
+- The basic section: how does a starter mark which of its settings show? *Partly answered 2026-11-18 by chris, word for word: "To
+  answer questions about the open question, I think that we could created parameterized aspects. Or rather, we can
+  choose to expose certain elements of a template that can be easily changed on a single pane, while all features are
+  available in "style, etc..."" So the template's designer chooses which elements it exposes; those show together on
+  one pane, and every setting stays in the Style tab and the other tabs. The 16b bbq settles how a designer marks an
+  element as exposed and what the pane looks like.*
 - Still parked: the Label gray (v1.1).
 
 ## Kickoff
