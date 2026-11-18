@@ -1182,6 +1182,7 @@ impl Viewer {
                     o.source = Source::File(path.to_path_buf());
                     o.history.mark_saved();
                 }
+                self.note_recent(path);
                 self.notice = Some(crate::viewer::Notice {
                     message: Message::new("notice-saved").text("path", path.display().to_string()),
                     error: false,

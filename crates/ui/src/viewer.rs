@@ -213,6 +213,8 @@ pub struct Viewer {
     pub settings: crate::settings::Settings,
     /// The settings file, when the app gave one; changes are written there.
     pub settings_path: Option<PathBuf>,
+    /// The folder My templates lives in (`templates/` in the app's data folder); `None` in a test that has none.
+    pub templates_dir: Option<PathBuf>,
     /// A fixed day for the `{date}` token (a test sets it); `None` is today.
     pub export_date: Option<String>,
     /// Which snap helpers are on (rung 4 bbq, Defaulted "Toggles"): app settings, not saved in
@@ -297,6 +299,7 @@ impl Default for Viewer {
             export_dir: None,
             settings: crate::settings::Settings::default(),
             settings_path: None,
+            templates_dir: None,
             export_date: None,
             snap: SnapToggles::default(),
             paste_run: None,
@@ -560,6 +563,9 @@ impl Viewer {
         let result = std::fs::read(path)
             .map_err(|e| e.to_string())
             .and_then(|b| self.open_bytes(Source::File(path.to_path_buf()), &b));
+        if result.is_ok() {
+            self.note_recent(path);
+        }
         if let Err(e) = &result {
             self.notice = Some(Notice {
                 message: Message::new("notice-open-failed")
@@ -662,6 +668,37 @@ impl Viewer {
         self.selected = None;
         self.notice = None;
         self.zoom = Zoom::Fit;
+    }
+
+    /// Closes the open document, which leaves nothing open (File > Close, rung 16): the welcome screen shows. The
+    /// caller has asked about unsaved changes already. Its carried fonts and profiles go with it.
+    pub fn close_document(&mut self) {
+        if self.open.is_none() {
+            return;
+        }
+        self.end_typing();
+        self.typing = None;
+        self.open = None;
+        self.pending_carried = None;
+        self.fonts.set_embedded(&[]);
+        active::with_mut(|r| r.set_carried(Vec::new(), Default::default()));
+        self.refresh_font_state();
+        self.drag = None;
+        self.draw = None;
+        self.tool = crate::tools::Tool::Select;
+        self.tool_kept = false;
+        self.focus_new_text = false;
+        self.generation += 1;
+        self.revision += 1;
+        self.selection.clear();
+        self.entered.clear();
+        self.selected = None;
+        self.notice = None;
+        self.zoom = Zoom::Fit;
+        // The device on screen is one the empty window offers.
+        if !self.profile_ids().contains(&self.profile_id) {
+            self.profile_id = quadrule_model::sample::MANTA_ID.to_string();
+        }
     }
 
     /// The device ids the open document has, primary first; both built-in devices on the empty

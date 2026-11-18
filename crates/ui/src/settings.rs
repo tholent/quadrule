@@ -31,6 +31,9 @@ pub const FILE_NAME: &str = "settings.ron";
 /// How many documents' folders are kept; the oldest go first.
 pub const MAX_FOLDERS: usize = 200;
 
+/// How many recent files are kept (rung 16 bbq, Defaulted "Recent files"); the oldest go first.
+pub const MAX_RECENT: usize = 10;
+
 /// Which devices Export writes (Q2).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum DevicesChoice {
@@ -69,6 +72,9 @@ pub struct Settings {
     pub last_folder: Option<String>,
     /// Whether the completion sheet's "Where do these go?" note is open (Q7); folded by default.
     pub completion_note_open: bool,
+    /// The files opened or saved last, newest first, at most [`MAX_RECENT`] (rung 16 bbq, Defaulted "Recent
+    /// files"). A file written by an older build has none, and loads all the same.
+    pub recent: Vec<String>,
 }
 
 impl Default for Settings {
@@ -81,6 +87,7 @@ impl Default for Settings {
             folders: Vec::new(),
             last_folder: None,
             completion_note_open: false,
+            recent: Vec::new(),
         }
     }
 }
@@ -132,6 +139,7 @@ impl Settings {
             let extra = s.folders.len() - MAX_FOLDERS;
             s.folders.drain(..extra);
         }
+        s.recent.truncate(MAX_RECENT);
         Ok(s)
     }
 
@@ -167,6 +175,20 @@ impl Settings {
             }
         }
         self.last_folder = Some(folder);
+    }
+
+    /// Notes that `path` was opened or saved: it goes first in the recent list, a copy lower down is dropped, and
+    /// only the newest [`MAX_RECENT`] are kept.
+    pub fn note_recent(&mut self, path: &Path) {
+        let path = path.to_string_lossy().into_owned();
+        self.recent.retain(|p| *p != path);
+        self.recent.insert(0, path);
+        self.recent.truncate(MAX_RECENT);
+    }
+
+    /// Takes `path` off the recent list.
+    pub fn forget_recent(&mut self, path: &str) {
+        self.recent.retain(|p| p != path);
     }
 
     /// The folder this document last exported to, if it has a path and one is kept.
