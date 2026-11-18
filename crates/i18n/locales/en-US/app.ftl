@@ -61,6 +61,7 @@ app-welcome-gone-title = File not found
 app-welcome-gone-body = { $name } is no longer where it was. Take it off the recent list?
 app-welcome-remove-title = Remove this template?
 app-welcome-remove-body = This deletes the template “{ $name }” from your computer. It cannot be undone.
+app-welcome-tile-on = drawn on { $device }
 app-welcome-nomatch = Nothing matches “{ $text }”.
 app-welcome-soon = Starter pages for this group are coming soon.
 app-welcome-soon-all = Starter pages are coming soon. Until then, start from a blank page, or keep your own pages under My templates.

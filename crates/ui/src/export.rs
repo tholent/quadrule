@@ -15,8 +15,8 @@
 //! The export engine (rung 15 bbq, Q2 to Q9). Headless: an [`ExportRequest`] (which devices, which folder, the
 //! path template, the Set, the text note) goes in; files are written, folders made, and an [`ExportResult`] comes
 //! back with every file written, how many replaced an old one, and a shrunk picture of each for the completion
-//! sheet. [`Viewer::export_again`] repeats the last choices with no sheet. The sheets themselves are the next
-//! leg's; the toolbar's two items ride on this through [`Viewer::export`] until then.
+//! sheet. The sheet (File > Export…, `export_ui`) opens with the last choices filled in, and the folder this document
+//! last went to comes from [`Viewer::last_export_folder`].
 //!
 //! The bytes of each PNG are the export renderer's (ADR-003), as ever; with the note on, the file only gains
 //! text chunks (Software `quadrule <version>`, Title the document's title).
@@ -147,17 +147,6 @@ impl ExportError {
             }
         }
     }
-}
-
-/// What Export again did.
-#[derive(Clone, Debug)]
-pub enum Again {
-    /// It wrote the files.
-    Done(ExportResult),
-    /// Nothing was exported from this document yet, so the Export sheet is needed.
-    NeedsSheet,
-    /// It could not.
-    Failed(ExportError),
 }
 
 /// The deepest folder that holds every path in `paths` (their parents' common start).
@@ -396,32 +385,13 @@ impl Viewer {
             })
     }
 
-    /// The folder Export again would write to: where this document exported this session, else the folder
+    /// The folder the Export sheet starts in for this document: where it exported this session, else the folder
     /// remembered for its file. `None` when nothing was exported from it yet.
-    pub fn export_again_folder(&self) -> Option<PathBuf> {
+    pub fn last_export_folder(&self) -> Option<PathBuf> {
         let o = self.open.as_ref()?;
         o.exported_to.clone().or_else(|| {
             self.document_path()
                 .and_then(|p| self.settings.folder_of(&p))
         })
-    }
-
-    /// Whether Export again can write at once (something was exported from this document before).
-    pub fn can_export_again(&self) -> bool {
-        self.export_again_folder().is_some()
-    }
-
-    /// Export again: writes once more with the remembered choices (devices, template, Set, note) into the
-    /// remembered folder, with no sheet. When nothing was exported from this document yet, it writes nothing and
-    /// says the Export sheet is needed.
-    pub fn export_again(&mut self) -> Again {
-        let Some(folder) = self.export_again_folder() else {
-            return Again::NeedsSheet;
-        };
-        let req = self.export_request(None, folder);
-        match self.run_export(&req) {
-            Ok(r) => Again::Done(r),
-            Err(e) => Again::Failed(e),
-        }
     }
 }

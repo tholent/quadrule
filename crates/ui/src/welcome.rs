@@ -24,11 +24,12 @@
 //! The words here never change a document themselves: every pick becomes an [`After`] and goes through
 //! [`ViewerUi::guard`], so unsaved changes are asked about first.
 
-use crate::templates::TemplateEntry;
+use crate::templates::{Origin, TemplateEntry};
+use crate::thumbs::{self, Job, Thumb, Thumbs};
 use crate::view::{After, Request, ViewerUi};
 use egui::{
-    Align, Align2, Color32, ColorImage, FontId, Layout, Rect, RichText, Role, ScrollArea, Sense,
-    Stroke, StrokeKind, TextureHandle, TextureOptions, WidgetInfo, pos2, vec2,
+    Align, Color32, ColorImage, FontId, Layout, Rect, RichText, Role, ScrollArea, Sense, Stroke,
+    StrokeKind, TextureHandle, TextureOptions, WidgetInfo, pos2, vec2,
 };
 use quadrule_i18n::Message;
 use std::collections::HashMap;
@@ -81,6 +82,13 @@ impl Category {
         }
     }
 
+    /// The category whose starters are kept in `folder`.
+    pub fn from_folder(folder: &str) -> Option<Category> {
+        Category::ALL
+            .into_iter()
+            .find(|c| c.folder() == Some(folder))
+    }
+
     /// The folder the category's starters are kept in, under `crates/ui/starters/` (Defaulted "Where starters
     /// live"); `None` for the two tabs that are not one category of starters.
     pub fn folder(self) -> Option<&'static str> {
@@ -110,6 +118,11 @@ pub struct Welcome {
     templates: Option<Vec<Arc<TemplateEntry>>>,
     /// The stored pictures, made into textures once each: by file and its time of last change.
     pictures: HashMap<(PathBuf, Option<SystemTime>), Option<TextureHandle>>,
+    /// The built-in starters; `None` makes the next frame load them (the app's, or a test's own, see
+    /// [`ViewerUi::set_starters`]).
+    starters: Option<Vec<Arc<TemplateEntry>>>,
+    /// The live thumbnails and the thread that draws them (rung 16 bbq, Q3).
+    pub(crate) thumbs: Thumbs,
     /// A template whose Remove waits on its confirm.
     pub(crate) confirm_remove: Option<PathBuf>,
     /// A recent file that was not found and was clicked: offered for removal from the list.
@@ -127,15 +140,43 @@ enum Act {
     Recent(PathBuf),
     Gone(PathBuf),
     ForgetRecent(PathBuf),
-    Template(PathBuf),
+    Pick(Arc<TemplateEntry>),
     AskRemove(PathBuf),
     Reveal,
+}
+
+/// The welcome screen's speed run (`quadrule --bench-welcome`, rung 16 bbq, Defaulted "Speed"): the frames of the
+/// screen are timed while its tiles are drawn on the thread, then while it sits with every tile drawn. Each frame is
+/// forced (a repaint is asked for every time), which is harder than a real gallery, where an idle screen draws no
+/// frames at all. One `CHECK` line, the same budget as a drag: the 90th percentile under 50 ms (ADR-009).
+#[derive(Default)]
+pub struct WelcomeBench {
+    started: Option<std::time::Instant>,
+    /// Frames timed with tiles still being drawn.
+    pub drawing: crate::canvas::DragClock,
+    /// Frames timed with every tile drawn.
+    pub idle: crate::canvas::DragClock,
+    /// How many idle frames to time.
+    pub idle_frames: u32,
+    /// Seconds from the first tile asked for to the last one drawn.
+    pub all_drawn_s: Option<f64>,
+    done: bool,
+}
+
+impl WelcomeBench {
+    /// A run that times `idle_frames` idle frames after the tiles are drawn.
+    pub fn new(idle_frames: u32) -> Self {
+        WelcomeBench {
+            idle_frames,
+            ..Default::default()
+        }
+    }
 }
 
 /// A tile's picture box, in screen points, and the room for the name under it.
 const TILE_W: f32 = 156.0;
 const TILE_PICTURE_H: f32 = 208.0;
-const TILE_NAME_H: f32 = 40.0;
+const TILE_NAME_H: f32 = 56.0;
 /// The left column's width.
 const LEFT_W: f32 = 270.0;
 
@@ -236,32 +277,161 @@ impl ViewerUi {
         self.welcome.replace_template
     }
 
-    /// The tiles of My templates that the Search box and the tab leave in, in the order they show.
-    pub fn welcome_templates(&mut self) -> Vec<Arc<TemplateEntry>> {
-        let all = self
+    /// Puts these starters in the gallery in place of the built-in ones (a test's own, or the hidden
+    /// `--gallery-test-starters` of the app).
+    pub fn set_starters(&mut self, list: Vec<crate::templates::TemplateEntry>) {
+        self.welcome.starters = Some(list.into_iter().map(Arc::new).collect());
+    }
+
+    /// The tiles the tab and the Search box leave in, in the order they show: starters (by category, then name), then
+    /// the person's templates. With text in the Search box every tab is looked through, and a tile matches on any part
+    /// of its title, description, tags or category name, ignoring case (Defaulted "Search"); without, the tab's own.
+    pub fn welcome_items(&mut self) -> Vec<Arc<TemplateEntry>> {
+        let starters = self
+            .welcome
+            .starters
+            .get_or_insert_with(|| {
+                crate::starters::built_in()
+                    .into_iter()
+                    .map(Arc::new)
+                    .collect()
+            })
+            .clone();
+        let templates = self
             .welcome
             .templates
             .get_or_insert_with(|| self.viewer.templates().into_iter().map(Arc::new).collect())
             .clone();
         let words = self.welcome.search.trim().to_lowercase();
         let category = self.welcome.category;
-        let mine = self.t(Category::MyTemplates.message_id()).to_lowercase();
+        let label_of = |this: &Self, e: &TemplateEntry| -> String {
+            match &e.origin {
+                Origin::Template => this.t(Category::MyTemplates.message_id()),
+                Origin::Starter { folder } => Category::from_folder(folder)
+                    .map(|c| this.t(c.message_id()))
+                    .unwrap_or_default(),
+            }
+            .to_lowercase()
+        };
+        let all = starters.into_iter().chain(templates);
         if !words.is_empty() {
-            // Search looks through every tab (Defaulted "Search").
             return all
-                .into_iter()
                 .filter(|t| {
                     t.name.to_lowercase().contains(&words)
                         || t.description.to_lowercase().contains(&words)
                         || t.tags.iter().any(|g| g.to_lowercase().contains(&words))
-                        || mine.contains(&words)
+                        || label_of(self, t).contains(&words)
                 })
                 .collect();
         }
-        match category {
-            Category::All | Category::MyTemplates => all,
-            _ => Vec::new(),
+        all.filter(|t| match (&t.origin, category) {
+            (_, Category::All) => true,
+            (Origin::Template, Category::MyTemplates) => true,
+            (Origin::Starter { folder }, c) => c.folder() == Some(folder.as_str()),
+            _ => false,
+        })
+        .collect()
+    }
+
+    /// How many thumbnails are asked for and not finished.
+    pub fn thumbs_pending(&self) -> usize {
+        self.welcome.thumbs.pending()
+    }
+
+    /// How many thumbnails are drawn and ready.
+    pub fn thumbs_ready(&self) -> usize {
+        self.welcome.thumbs.ready()
+    }
+
+    /// How many thumbnails failed to draw.
+    pub fn thumbs_failed(&self) -> usize {
+        self.welcome.thumbs.failed()
+    }
+
+    /// How many thumbnail jobs were ever handed to the drawing thread.
+    pub fn thumbs_jobs_sent(&self) -> u64 {
+        self.welcome.thumbs.jobs_sent()
+    }
+
+    /// The threads that drew finished thumbnails.
+    pub fn thumbs_drawn_by(&self) -> Vec<std::thread::ThreadId> {
+        self.welcome.thumbs.drawn_by().to_vec()
+    }
+
+    /// Times a frame of the welcome screen for the speed run, and prints its line when the run is over.
+    pub(crate) fn welcome_bench_frame(&mut self, ctx: &egui::Context, took: std::time::Duration) {
+        let Some(mut b) = self.welcome_bench.take() else {
+            return;
+        };
+        ctx.request_repaint();
+        let ms = took.as_secs_f64() * 1000.0;
+        let jobs = self.welcome.thumbs.jobs_sent();
+        if !b.done && self.welcome_showing() {
+            if jobs > 0 && b.started.is_none() {
+                b.started = Some(std::time::Instant::now());
+            }
+            if b.all_drawn_s.is_none() {
+                if b.started.is_some() {
+                    b.drawing.record(ms);
+                }
+                if b.started.is_some() && self.welcome.thumbs.pending() == 0 {
+                    b.all_drawn_s = b.started.map(|t| t.elapsed().as_secs_f64());
+                }
+            } else {
+                b.idle.record(ms);
+                if b.idle.frames >= b.idle_frames {
+                    b.done = true;
+                    let verdict = |c: &crate::canvas::DragClock| {
+                        if cfg!(debug_assertions) {
+                            "n/a"
+                        } else if c.within_budget() {
+                            "pass"
+                        } else {
+                            "fail"
+                        }
+                    };
+                    let (d, i) = (&b.drawing, &b.idle);
+                    let result = if verdict(d) == "fail" || verdict(i) == "fail" {
+                        "fail"
+                    } else {
+                        verdict(d)
+                    };
+                    println!(
+                        "\nCHECK crate=ui name=welcome_bench result={result} build={} device={} tiles={} ready={} failed={} drawn_in_s={:.1} drawing_frames={} drawing_mean_ms={:.1} drawing_p90_ms={:.1} drawing_worst_ms={:.1} drawing_first_ms={:.1} idle_frames={} idle_mean_ms={:.1} idle_p90_ms={:.1} idle_worst_ms={:.1} budget_ms=50",
+                        if cfg!(debug_assertions) {
+                            "debug"
+                        } else {
+                            "release"
+                        },
+                        self.welcome_device(),
+                        self.welcome.thumbs.ready() + self.welcome.thumbs.failed(),
+                        self.welcome.thumbs.ready(),
+                        self.welcome.thumbs.failed(),
+                        b.all_drawn_s.unwrap_or(0.0),
+                        d.frames,
+                        d.mean_ms(),
+                        d.percentile_ms(),
+                        d.worst_ms,
+                        d.first_ms,
+                        i.frames,
+                        i.mean_ms(),
+                        i.percentile_ms(),
+                        i.worst_ms,
+                    );
+                }
+            }
         }
+        self.welcome_bench = Some(b);
+    }
+
+    /// Whether the welcome speed run has printed its line.
+    pub fn welcome_bench_finished(&self) -> bool {
+        self.welcome_bench.as_ref().is_some_and(|b| b.done)
+    }
+
+    /// Chooses a tab (`--look gallery-mine` starts on My templates).
+    pub fn set_welcome_category(&mut self, category: Category) {
+        self.welcome.category = category;
     }
 
     /// The welcome screen, into the central panel.
@@ -403,7 +573,12 @@ impl ViewerUi {
             }
         });
         ui.separator();
-        let tiles = self.welcome_templates();
+        let tiles = self.welcome_items();
+        let device = self.welcome_device();
+        let ctx = ui.ctx().clone();
+        let ppp = ctx.pixels_per_point();
+        self.welcome.thumbs.poll(&ctx);
+        let mut wanted: Vec<Job> = Vec::new();
         let searching = !self.welcome.search.trim().is_empty();
         ScrollArea::vertical()
             .id_salt("welcome-gallery")
@@ -429,10 +604,13 @@ impl ViewerUi {
                 ui.horizontal_wrapped(|ui| {
                     ui.spacing_mut().item_spacing = vec2(14.0, 14.0);
                     for t in &tiles {
-                        self.template_tile(ui, t, acts);
+                        self.tile(ui, t, &device, ppp, acts, &mut wanted);
                     }
                 });
             });
+        // What the tiles on screen want, in screen order; nothing else is drawn, and nothing at all is asked of the
+        // thread while the same tiles are showing.
+        self.welcome.thumbs.want(&ctx, wanted);
     }
 
     /// The Device filter's drop-down: the devices, then the user's own, then the paper sizes (Defaulted "The
@@ -459,13 +637,61 @@ impl ViewerUi {
             .response
     }
 
-    /// One tile of My templates: its stored picture (or a plain box) and its name; a click opens an untitled copy,
-    /// a right-click offers Remove and Show in folder.
-    fn template_tile(&mut self, ui: &mut egui::Ui, t: &TemplateEntry, acts: &mut Vec<Act>) {
-        let tex = self.template_picture(ui.ctx(), t);
+    /// One tile: the live thumbnail for the filter's device once it is drawn (the stored picture stands in until
+    /// then; a page that fails to draw is a plain box), and the name under it. A page that does not target the
+    /// filter's device is drawn on its own main device, and the tile says so. A click opens an untitled copy; a
+    /// template has a right-click menu with Remove and Show in folder.
+    fn tile(
+        &mut self,
+        ui: &mut egui::Ui,
+        t: &Arc<TemplateEntry>,
+        device: &str,
+        ppp: f32,
+        acts: &mut Vec<Act>,
+        wanted: &mut Vec<Job>,
+    ) {
         let (rect, resp) =
             ui.allocate_exact_size(vec2(TILE_W, TILE_PICTURE_H + TILE_NAME_H), Sense::click());
         resp.widget_info(|| WidgetInfo::labeled(Role::Button, true, t.name.clone()));
+        let drawn_on = t.drawn_on(device);
+        // The picture: asked for only when the tile is on screen.
+        let mut state = None;
+        if !t.unreadable && !drawn_on.is_empty() && ui.is_rect_visible(rect) {
+            let key = thumbs::Key {
+                id: t.path.display().to_string(),
+                device: drawn_on.clone(),
+                stamp: t
+                    .modified
+                    .and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map_or(0, |d| d.as_nanos()),
+                box_px: (
+                    ((TILE_W - 12.0) * ppp).round() as u32,
+                    ((TILE_PICTURE_H - 12.0) * ppp).round() as u32,
+                ),
+            };
+            wanted.push(Job {
+                source: match &t.bytes {
+                    Some(b) => thumbs::Source::Bytes(b.clone()),
+                    None => thumbs::Source::File(t.path.clone()),
+                },
+                key: key.clone(),
+            });
+            state = Some(key);
+        }
+        let live = state
+            .as_ref()
+            .and_then(|k| self.welcome.thumbs.get(k))
+            .map(|th| match th {
+                Thumb::Ready(tex) => Some(Some(tex.clone())),
+                Thumb::Failed => Some(None),
+                Thumb::Pending => None,
+            })
+            .unwrap_or(None);
+        // Drawn: that picture. Failed: a plain box. Otherwise the stored picture, if there is one.
+        let tex = match live {
+            Some(live) => live,
+            None => self.template_picture(ui.ctx(), t),
+        };
         let paper = Rect::from_min_size(rect.min, vec2(TILE_W, TILE_PICTURE_H));
         let painter = ui.painter_at(rect);
         let visuals = ui.visuals();
@@ -490,12 +716,13 @@ impl ViewerUi {
                 );
             }
             None => {
-                painter.text(
-                    paper.center(),
-                    Align2::CENTER_CENTER,
-                    "▭",
-                    FontId::proportional(40.0),
-                    visuals.weak_text_color(),
+                // A plain page outline (drawn, not a glyph: egui's fonts panic on one they lack).
+                let outline = Rect::from_center_size(paper.center(), vec2(54.0, 72.0));
+                painter.rect_stroke(
+                    outline,
+                    3.0,
+                    Stroke::new(1.5, visuals.weak_text_color()),
+                    StrokeKind::Inside,
                 );
             }
         }
@@ -513,27 +740,44 @@ impl ViewerUi {
         job.wrap.max_rows = 2;
         job.halign = Align::Center;
         let galley = painter.layout_job(job);
+        let name_h = galley.size().y;
         painter.galley(
-            pos2(
-                rect.center().x - galley.size().x / 2.0,
-                paper.bottom() + 4.0,
-            ),
+            // The galley is centred on this point (its lines are centred), so no offset for its width.
+            pos2(rect.center().x, paper.bottom() + 4.0),
             galley,
             visuals.text_color(),
         );
-        if resp.clicked() {
-            acts.push(Act::Template(t.path.clone()));
+        if !t.unreadable && !drawn_on.is_empty() && drawn_on != device {
+            let note = self.strings.format(
+                &Message::new("app-welcome-tile-on")
+                    .text("device", crate::viewer::device_label(&drawn_on)),
+            );
+            // A label of its own, so it is read out and found by name; it takes no clicks (they go to the tile).
+            let at = Rect::from_min_size(
+                pos2(rect.min.x, paper.bottom() + 6.0 + name_h),
+                vec2(TILE_W, 14.0),
+            );
+            ui.scope_builder(egui::UiBuilder::new().max_rect(at), |ui| {
+                ui.centered_and_justified(|ui| {
+                    ui.add(egui::Label::new(RichText::new(note).size(11.0).weak()).truncate());
+                });
+            });
         }
-        resp.context_menu(|ui| {
-            if ui.button(self.t("app-welcome-remove")).clicked() {
-                acts.push(Act::AskRemove(t.path.clone()));
-                ui.close();
-            }
-            if ui.button(self.t("app-welcome-show-folder")).clicked() {
-                acts.push(Act::Reveal);
-                ui.close();
-            }
-        });
+        if resp.clicked() {
+            acts.push(Act::Pick(t.clone()));
+        }
+        if t.origin == Origin::Template {
+            resp.context_menu(|ui| {
+                if ui.button(self.t("app-welcome-remove")).clicked() {
+                    acts.push(Act::AskRemove(t.path.clone()));
+                    ui.close();
+                }
+                if ui.button(self.t("app-welcome-show-folder")).clicked() {
+                    acts.push(Act::Reveal);
+                    ui.close();
+                }
+            });
+        }
     }
 
     /// A template's stored picture as a texture, made once for each state of the file.
@@ -569,9 +813,19 @@ impl ViewerUi {
                 // A click on a file that is not there offers to take it off the list.
                 Act::Gone(p) => self.welcome.gone = Some(p),
                 Act::ForgetRecent(p) => self.viewer.forget_recent(&p),
-                Act::Template(path) => {
+                Act::Pick(entry) => {
                     let device_id = self.welcome_device();
-                    requests.extend(self.guard(After::OpenTemplate { path, device_id }));
+                    let after = match (&entry.origin, &entry.bytes) {
+                        (Origin::Starter { .. }, Some(bytes)) => After::OpenStarter {
+                            bytes: bytes.clone(),
+                            device_id,
+                        },
+                        _ => After::OpenTemplate {
+                            path: entry.path.clone(),
+                            device_id,
+                        },
+                    };
+                    requests.extend(self.guard(after));
                 }
                 Act::AskRemove(p) => self.welcome.confirm_remove = Some(p),
                 Act::Reveal => {

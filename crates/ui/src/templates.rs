@@ -25,6 +25,7 @@ use crate::viewer::{Notice, Source, Viewer};
 use quadrule_format::{QuadFile, preview_path};
 use quadrule_i18n::Message;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// The folder's name in the app's data folder.
 pub const DIR_NAME: &str = "templates";
@@ -42,11 +43,27 @@ pub enum TemplateError {
     Write(String),
 }
 
-/// One template in the folder, as the welcome screen lists it.
+/// Where a gallery entry comes from.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Origin {
+    /// One of the person's own templates: a `.quad` file in the templates folder.
+    Template,
+    /// A starter built into the app, in this category's folder (`paper`, `notes`, …).
+    Starter {
+        /// The category folder under `crates/ui/starters/`.
+        folder: String,
+    },
+}
+
+/// One tile of the gallery: a template in the folder or a built-in starter, as the welcome screen lists it.
 #[derive(Clone, Debug, PartialEq)]
 pub struct TemplateEntry {
-    /// The file.
+    /// A template's file. A starter has no file; this is `starter/<folder>/<slug>.quad`, only to tell it apart.
     pub path: PathBuf,
+    /// Where it comes from.
+    pub origin: Origin,
+    /// A starter's bytes (a template is read from its file when it is used).
+    pub bytes: Option<Arc<Vec<u8>>>,
     /// What the tile says: the document's title, or the file's name when the title is empty or the file
     /// cannot be read.
     pub name: String,
@@ -67,28 +84,37 @@ pub struct TemplateEntry {
 }
 
 impl TemplateEntry {
-    /// The entry for the file at `path`.
+    /// The entry for the template file at `path`.
     pub fn read(path: &Path) -> TemplateEntry {
+        let modified = std::fs::metadata(path).and_then(|m| m.modified()).ok();
+        let bytes = std::fs::read(path).ok();
+        let mut e =
+            TemplateEntry::from_bytes(path.to_path_buf(), Origin::Template, bytes.as_deref());
+        e.modified = modified;
+        e
+    }
+
+    /// The entry for `bytes` read as a `.quad` (none, or a damaged file, gives a plain `unreadable` entry named
+    /// after the file's stem).
+    pub fn from_bytes(path: PathBuf, origin: Origin, bytes: Option<&[u8]>) -> TemplateEntry {
         let stem = path
             .file_stem()
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_default();
-        let modified = std::fs::metadata(path).and_then(|m| m.modified()).ok();
         let plain = |unreadable| TemplateEntry {
-            path: path.to_path_buf(),
+            path: path.clone(),
+            origin: origin.clone(),
+            bytes: None,
             name: stem.clone(),
             description: String::new(),
             tags: Vec::new(),
             primary: String::new(),
             devices: Vec::new(),
             preview: None,
-            modified,
+            modified: None,
             unreadable,
         };
-        let Some(file) = std::fs::read(path)
-            .ok()
-            .and_then(|b| QuadFile::from_bytes(&b).ok())
-        else {
+        let Some(file) = bytes.and_then(|b| QuadFile::from_bytes(b).ok()) else {
             return plain(true);
         };
         let doc = &file.doc;
@@ -100,6 +126,8 @@ impl TemplateEntry {
         };
         TemplateEntry {
             name,
+            bytes: matches!(origin, Origin::Starter { .. })
+                .then(|| Arc::new(bytes.unwrap_or_default().to_vec())),
             description: doc.metadata.description.clone(),
             tags: doc.metadata.tags.clone(),
             primary: doc.primary_profile_id.clone(),
@@ -109,6 +137,16 @@ impl TemplateEntry {
                 .get(&preview_path(&doc.primary_profile_id))
                 .cloned(),
             ..plain(false)
+        }
+    }
+
+    /// The device the tile is drawn on when the filter is on `device`: that device if the page targets it, else
+    /// the page's own main device (Defaulted "The device filter"). Empty for an unreadable file.
+    pub fn drawn_on(&self, device: &str) -> String {
+        if self.devices.iter().any(|d| d == device) {
+            device.to_string()
+        } else {
+            self.primary.clone()
         }
     }
 }

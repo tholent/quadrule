@@ -83,6 +83,13 @@ pub enum After {
     OpenPath(PathBuf),
     /// Make a new blank document from the New dialog's choices (rung 5).
     NewPage(NewPage),
+    /// Open a built-in starter (its `.quad` bytes) as an untitled copy on this device (rung 16).
+    OpenStarter {
+        /// The starter's file.
+        bytes: std::sync::Arc<Vec<u8>>,
+        /// The device that becomes the copy's main one.
+        device_id: String,
+    },
     /// Close the document and show the welcome screen (File > Close, rung 16).
     CloseDocument,
     /// Open a template as an untitled copy on this device (rung 16).
@@ -248,6 +255,8 @@ pub struct ViewerUi {
     pub(crate) link_rhythm: bool,
     /// The welcome screen's state (rung 16): which tab, the Device filter, the Search box.
     pub(crate) welcome: crate::welcome::Welcome,
+    /// The welcome screen's speed run, when `--bench-welcome` asked for one.
+    pub welcome_bench: Option<crate::welcome::WelcomeBench>,
     /// Open the File menu on the next frame (`--look file-menu`).
     pub(crate) open_file_menu: bool,
     /// Waiting on the unsaved-changes prompt.
@@ -317,6 +326,7 @@ impl ViewerUi {
             link_margins: true,
             link_rhythm: true,
             welcome: Default::default(),
+            welcome_bench: None,
             open_file_menu: false,
             pending: None,
             new_dialog: None,
@@ -350,6 +360,7 @@ impl ViewerUi {
 
     /// Draws the whole window into `ui` and returns what the app must do.
     pub fn show(&mut self, ui: &mut egui::Ui) -> Vec<Request> {
+        let frame_start = std::time::Instant::now();
         let mut requests = Vec::new();
         let ctx = ui.ctx().clone();
         // A step stays open to merging only while its field has focus or is being dragged.
@@ -449,6 +460,7 @@ impl ViewerUi {
         self.export_sheet_window(&ctx, &mut requests);
         self.completion_window(&ctx, &mut requests);
         self.recovery_prompt(&ctx);
+        self.welcome_bench_frame(&ctx, frame_start.elapsed());
         requests
     }
 
@@ -819,6 +831,12 @@ impl ViewerUi {
             }
             After::OpenTemplate { path, device_id } => {
                 if self.viewer.open_template(&path, &device_id).is_ok() {
+                    self.after_open();
+                }
+                Vec::new()
+            }
+            After::OpenStarter { bytes, device_id } => {
+                if self.viewer.open_copy(&bytes, &device_id).is_ok() {
                     self.after_open();
                 }
                 Vec::new()
@@ -1682,9 +1700,11 @@ impl ViewerUi {
 
     /// Whether the benchmark has run to the end.
     pub fn bench_finished(&self) -> bool {
-        self.bench
-            .as_ref()
-            .is_some_and(|b| b.phase == crate::bench::Phase::Done)
+        self.welcome_bench_finished()
+            || self
+                .bench
+                .as_ref()
+                .is_some_and(|b| b.phase == crate::bench::Phase::Done)
     }
 
     /// The canvas, timed: while an object is dragged, each frame that made the page again is

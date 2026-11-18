@@ -19,9 +19,7 @@ use quadrule_model::edit::Command;
 use quadrule_model::sample::*;
 use quadrule_ui::export_path::{self, *};
 use quadrule_ui::settings::{MAX_FOLDERS, Settings};
-use quadrule_ui::{
-    Again, DevicesChoice, ExportError, ExportWhich, Request, Source, Viewer, ViewerUi,
-};
+use quadrule_ui::{DevicesChoice, ExportError, ExportWhich, Request, Source, Viewer, ViewerUi};
 use std::path::{Path, PathBuf};
 
 fn pass(ok: bool) -> &'static str {
@@ -464,7 +462,9 @@ fn a_mistake_in_the_template_writes_nothing() {
 }
 
 #[test]
-fn export_again_repeats_the_last_choices_and_asks_for_the_sheet_when_it_has_none() {
+fn the_folder_an_export_went_to_is_remembered_by_document_and_starts_the_sheet() {
+    // Rung 16 bbq, Q9: there is no Export again; the sheet opens with the last choices filled in, and the folder this
+    // document last went to is what it starts in (rung 15, Q4).
     let dir = tmp("export-again");
     let out = dir.join("out");
     let cfg = dir.join("cfg").join("settings.ron");
@@ -475,59 +475,42 @@ fn export_again_repeats_the_last_choices_and_asks_for_the_sheet_when_it_has_none
     v.use_settings_file(cfg.clone());
     v.save_to(&file).unwrap();
     v.settings.devices = DevicesChoice::This;
-    // Nothing exported from this document yet: the sheet is needed, and nothing is written.
-    let needs = matches!(v.export_again(), Again::NeedsSheet) && !v.can_export_again();
-    // The first export goes by a request, as the sheet will make it.
+    // Nothing exported from this document yet: no folder is remembered for it.
+    let none = v.last_export_folder().is_none();
+    // The first export goes by a request, as the sheet makes it.
     v.set_profile(NOMAD_ID);
     let req = v.export_request(None, out.clone());
     v.run_export(&req).unwrap();
     let one = out.join("rung-1-slice-nomad.png");
     let wrote_one = one.is_file() && !out.join("rung-1-slice-manta.png").exists();
-    let can = v.can_export_again();
-    std::fs::remove_file(&one).unwrap();
-    // Export again: the same devices, template and folder, no sheet.
-    let again = match v.export_again() {
-        Again::Done(r) => r.paths() == [one.clone()] && r.replaced == 0,
-        _ => false,
-    };
+    let can = v.last_export_folder() == Some(out.clone());
     // The memory is in settings.ron by the document's path, so a new run of the app has it too.
     let mut w = Viewer::default();
     w.use_settings_file(cfg.clone());
     let bytes = std::fs::read(&file).unwrap();
     w.open_bytes(Source::File(file.clone()), &bytes).unwrap();
-    let remembered = w.can_export_again() && w.export_again_folder() == Some(out.clone());
-    // "This device" is the one on screen, so the new window shows the Nomad too.
+    let remembered = w.last_export_folder() == Some(out.clone());
+    // The template and note changed in settings are what the next request carries.
     w.set_profile(NOMAD_ID);
-    std::fs::remove_file(&one).unwrap();
-    let again2 = matches!(w.export_again(), Again::Done(_)) && one.is_file();
-    // The template and note changed in settings are used by the next Export again.
     w.change_settings(|s| s.note = false);
     w.change_settings(|s| s.devices = DevicesChoice::All);
-    let all = matches!(w.export_again(), Again::Done(r) if r.files.len() == 2);
+    let again = w.export_request(None, out.clone());
+    let all = w.run_export(&again).is_ok_and(|r| r.files.len() == 2);
     let text_gone = notes(&one).0.is_empty();
     // A different saved document has no memory of this one's folder, but starts there.
     let other = dir.join("doc").join("other.quad");
     w.save_to(&other).unwrap();
-    // (Saved under a new name, the same window keeps what it exported this session: Export again still works.)
-    let kept_session = w.can_export_again();
+    // (Saved under a new name, the same window keeps what it exported this session.)
+    let kept_session = w.last_export_folder().is_some();
     let mut x = Viewer::default();
     x.use_settings_file(cfg.clone());
     x.open_bytes(Source::File(other.clone()), &std::fs::read(&other).unwrap())
         .unwrap();
-    let separate = !x.can_export_again() && kept_session;
+    let separate = x.last_export_folder().is_none() && kept_session;
     let starts = x.export_start_folder() == Some(out.clone());
-    let ok = needs
-        && wrote_one
-        && can
-        && again
-        && remembered
-        && again2
-        && all
-        && text_gone
-        && separate
-        && starts;
+    let ok = none && wrote_one && can && remembered && all && text_gone && separate && starts;
     println!(
-        "CHECK crate=ui name=export_again result={} sheet_needed_first={needs} first_export={wrote_one} again_same_choices={again} remembered_across_runs={remembered} can={can} again2={again2} changes_used={all} bare_after_note_off={text_gone} other_document_separate={separate} starts_in_last_folder={starts}",
+        "CHECK crate=ui name=export_folder_memory result={} none_at_first={none} first_export={wrote_one} remembered={can} remembered_across_runs={remembered} changes_used={all} bare_after_note_off={text_gone} other_document_separate={separate} starts_in_last_folder={starts}",
         pass(ok)
     );
     assert!(ok);

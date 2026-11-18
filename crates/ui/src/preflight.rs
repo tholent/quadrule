@@ -133,7 +133,7 @@ impl ViewerUi {
         self.preflight.is_some()
     }
 
-    /// Starts with one part of the window showing, for a look at it (`quadrule --look lint|style|preflight|welcome|file-menu`):
+    /// Starts with one part of the window showing, for a look at it (`quadrule --look lint|style|preflight|welcome|file-menu|gallery-mine`):
     /// the Lint tab; the Style tab with the first object that has a Custom stroke selected; or the sheet
     /// before exporting this device.
     pub fn show_look(&mut self, look: &str) {
@@ -161,6 +161,11 @@ impl ViewerUi {
             // The welcome screen with nothing open; the File menu open over the page.
             "welcome" => self.show_welcome(),
             "file-menu" => self.look_file_menu(),
+            // My templates, the tab the person's own pages are on.
+            "gallery-mine" => {
+                self.show_welcome();
+                self.set_welcome_category(crate::welcome::Category::MyTemplates);
+            }
             other => self.show_export_look(other),
         }
     }

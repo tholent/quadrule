@@ -54,7 +54,7 @@ use std::sync::Arc;
 
 /// Preference keys in eframe's storage.
 /// What `--look` takes: a part of the window to start with, for a screenshot (rungs 14b, 15 and 16).
-const LOOKS: [&str; 10] = [
+const LOOKS: [&str; 11] = [
     "lint",
     "style",
     "preflight",
@@ -65,6 +65,7 @@ const LOOKS: [&str; 10] = [
     "exported-open",
     "welcome",
     "file-menu",
+    "gallery-mine",
 ];
 const KEY_THEME: &str = "theme";
 const KEY_RULER: &str = "screen_px_per_mm";
@@ -105,7 +106,8 @@ impl App {
         let timing = args.bench_drag.is_some()
             || args.bench_draw.is_some()
             || args.bench_type.is_some()
-            || args.bench_rotate.is_some();
+            || args.bench_rotate.is_some()
+            || args.bench_welcome.is_some();
         quadrule_profiles::active::set(
             match directories::ProjectDirs::from("org", "quadrule", "quadrule") {
                 Some(d) if !timing => {
@@ -226,13 +228,37 @@ impl App {
                     .with_tool(args.bench_tool.unwrap_or(quadrule_ui::Tool::Pattern))
             })
         };
+        // The gallery with test starters (rung 16 bbq, Defaulted "Speed"): 24 pages made from the sample documents,
+        // for a look at a full grid and for `--bench-welcome`.
+        if args.gallery_test_starters || args.bench_welcome.is_some() {
+            let made = quadrule_ui::test_starters::test_starters(24);
+            let list: Vec<(&str, &str, &[u8])> = made
+                .iter()
+                .map(|(f, s, b)| (f.as_str(), s.as_str(), b.as_slice()))
+                .collect();
+            ui.set_starters(quadrule_ui::starters::load(&list));
+        }
+        if let Some(name) = &args.gallery_device {
+            // A short name (`manta`, `nomad`) or a profile id.
+            let id = quadrule_profiles::active::device_ids()
+                .into_iter()
+                .find(|id| {
+                    quadrule_profiles::active::lookup(id)
+                        .is_ok_and(|p| p.short_name.eq_ignore_ascii_case(name))
+                })
+                .unwrap_or_else(|| name.clone());
+            ui.set_welcome_device(&id);
+        }
+        if let Some(frames) = args.bench_welcome {
+            ui.welcome_bench = Some(quadrule_ui::welcome::WelcomeBench::new(frames));
+        }
         if args.profiles {
             ui.open_profiles_window();
         }
         if let Some(look) = &args.look {
             // A look with no page named opens the sample page, so there is something to export; the welcome
             // screen's look is the screen with nothing open.
-            if ui.viewer.open.is_none() && look != "welcome" {
+            if ui.viewer.open.is_none() && look != "welcome" && look != "gallery-mine" {
                 ui.viewer.open_sample();
             }
             ui.show_look(look);
@@ -494,6 +520,12 @@ struct Args {
     bench_draw: Option<u32>,
     /// Type this many letters into a long text box and close (`--bench-type [frames]`).
     bench_type: Option<u32>,
+    /// Time the welcome screen while 24 test starters are drawn and after (`--bench-welcome [frames]`, rung 16).
+    bench_welcome: Option<u32>,
+    /// Start the welcome screen with 24 test starters in its gallery (`--gallery-test-starters`, rung 16).
+    gallery_test_starters: bool,
+    /// The welcome screen's Device filter to start on (`--gallery-device manta|nomad|<profile id>`, rung 16).
+    gallery_device: Option<String>,
     /// Open the shapes page (every new kind) instead of the empty start (`--shapes-page`); the
     /// benchmarks then run over it.
     shapes_page: bool,
@@ -584,6 +616,18 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
                 .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
                 .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
             out.bench_type = Some(steps.unwrap_or(150));
+        } else if a == "--bench-welcome" {
+            let steps = args
+                .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
+                .and_then(|n| n.to_str().and_then(|s| s.parse().ok()));
+            out.bench_welcome = Some(steps.unwrap_or(150));
+        } else if a == "--gallery-test-starters" {
+            out.gallery_test_starters = true;
+        } else if a == "--gallery-device" {
+            match args.next().and_then(|v| v.into_string().ok()) {
+                Some(v) => out.gallery_device = Some(v),
+                None => return Err("--gallery-device takes manta, nomad or a profile id".into()),
+            }
         } else if a == "--bench-rotate" {
             let steps = args
                 .next_if(|n| n.to_str().is_some_and(|s| s.parse::<u32>().is_ok()))
@@ -620,7 +664,7 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
                 Some(v) if LOOKS.contains(&v.as_str()) => {
                     out.look = Some(v)
                 }
-                _ => return Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome or file-menu".into()),
+                _ => return Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome, file-menu or gallery-mine".into()),
             }
         } else if a == "--fonts-page" {
             out.fonts_page = true;
@@ -804,7 +848,7 @@ mod tests {
             ),
             (
                 p(&["--look", "sparkles"]),
-                Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome or file-menu".into()),
+                Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome, file-menu or gallery-mine".into()),
             ),
             (
                 p(&["--paper-page", "--bench-drag", "30"]),
@@ -844,6 +888,25 @@ mod tests {
                     profiles: true,
                     ..Args::default()
                 }),
+            ),
+            (
+                p(&["--gallery-test-starters", "--gallery-device", "nomad"]),
+                Ok(Args {
+                    gallery_test_starters: true,
+                    gallery_device: Some("nomad".into()),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--bench-welcome", "40"]),
+                Ok(Args {
+                    bench_welcome: Some(40),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--gallery-device"]),
+                Err("--gallery-device takes manta, nomad or a profile id".into()),
             ),
             (
                 p(&["--textbox-page", "--bench-type", "40"]),

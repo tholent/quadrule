@@ -88,7 +88,7 @@ impl ViewerUi {
         self.completion = None;
         let folder = self
             .viewer
-            .export_again_folder()
+            .last_export_folder()
             .or_else(|| self.viewer.export_start_folder());
         self.export_sheet = Some(ExportSheet {
             folder,
