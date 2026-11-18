@@ -120,6 +120,7 @@ fn every_new_setting_round_trips() {
         gap_mm: 1.5,
         pitch_units: 4,
         grand: true,
+        grand_space_units: None,
     });
     region.bound = false;
     region.h_spacing_mm = Some(3.0);

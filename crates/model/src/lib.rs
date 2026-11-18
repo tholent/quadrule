@@ -1569,12 +1569,19 @@ pub enum Pattern {
         /// The gap between the five lines in mm.
         #[serde(default = "staff_gap")]
         gap_mm: f64,
-        /// A new staff every this many rhythm units.
+        /// A new staff every this many rhythm units, top to top. With `grand` on and
+        /// `grand_space_units` absent, a new grand staff every this many (the older meaning).
         #[serde(default = "three")]
         pitch_units: u32,
         /// Pairs the staves (treble and bass) with a brace line at the left.
         #[serde(default)]
         grand: bool,
+        /// With `grand` on: the space between grand staves in rhythm units, from the bottom of one grand
+        /// staff's bass staff to the top of the next one's treble staff, so they never overlap and the
+        /// space holds when the line gap changes (fixes batch 1 bbq, Q2; format 0.18). Absent: the older
+        /// meaning, `pitch_units` top to top. Left out of a file when absent. Ignored with `grand` off.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        grand_space_units: Option<u32>,
     },
 }
 
@@ -1588,6 +1595,19 @@ fn three() -> u32 {
 
 fn staff_gap() -> f64 {
     STAFF_GAP_DEFAULT_MM
+}
+
+/// The space between grand staves, in rhythm units, to start with when Grand staff is turned on (fixes batch 1, Q2):
+/// the one that looks closest to what the staff's `pitch_units` gave top to top, which is today's space from the bass
+/// staff's bottom to the next top (`pitch_units` less the two staves, 8 line gaps, and the unit between them), rounded
+/// to a whole unit and never below 1, because grand staves must not overlap. `unit_mm` is the rhythm unit going down
+/// the page. At the defaults (a 2 mm line gap, 3 units) the old look overlapped, so this is 1.
+pub fn grand_space_closest(gap_mm: f64, pitch_units: u32, unit_mm: f64) -> u32 {
+    if !(unit_mm.is_finite() && unit_mm > 0.0) {
+        return 1;
+    }
+    let space = f64::from(pitch_units) - 1.0 - 8.0 * gap_mm / unit_mm;
+    (space.round().max(1.0) as u32).min(PATTERN_UNITS_MAX)
 }
 
 /// The gap between a music staff's lines unless the region says otherwise: an 8 mm staff.
@@ -1678,6 +1698,7 @@ impl PatternKind {
                 gap_mm: STAFF_GAP_DEFAULT_MM,
                 pitch_units: 3,
                 grand: false,
+                grand_space_units: None,
             },
         }
     }

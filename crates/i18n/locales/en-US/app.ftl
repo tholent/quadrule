@@ -263,6 +263,7 @@ app-cornell-summary = Summary band
 app-staff-gap = Line gap
 app-staff-pitch = Staff every
 app-staff-grand = Grand staff
+app-staff-grand-space = Space between grand staves
 app-pattern-bound = Bound to rhythm
 app-pattern-across = Spacing across
 app-pattern-down = Spacing down

@@ -41,6 +41,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.14.0", "0.15.0", v0_14_to_v0_15),
     ("0.15.0", "0.16.0", v0_15_to_v0_16),
     ("0.16.0", "0.17.0", v0_16_to_v0_17),
+    ("0.17.0", "0.18.0", v0_17_to_v0_18),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -189,6 +190,15 @@ fn v0_15_to_v0_16(_scene: &mut Value) -> Result<(), FormatError> {
 /// and exports as it did. A 0.16 build keeps the new field as an unknown one on a save, but would draw the
 /// region with no border.
 fn v0_16_to_v0_17(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.18 adds an optional `grand_space_units` on a music staff pattern (fixes batch 1 bbq, docs/bbq/2026-11-18-fixes-before-16b.md,
+/// Q2): with Grand staff on, the space from the bottom of one grand staff to the top of the next, in rhythm units. A staff
+/// with none keeps `pitch_units` as the distance from the top of one grand staff to the top of the next, and the field is
+/// left out of its file, so a 0.17 scene needs no rewriting and draws and exports as it did. A 0.17 build keeps the new
+/// field as an unknown one on a save, but would space the grand staves by `pitch_units`.
+fn v0_17_to_v0_18(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

@@ -515,6 +515,13 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the grand-staff page: grand staves with a space of their own between them, an older one, a single staff.
+    /// Like the sample, it has no file.
+    pub fn open_grand_staff(&mut self) {
+        let doc = quadrule_model::sample::grand_staff_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens the rung 12b pattern-angle page: the ruling turned inside its frame and cut at it (the
     /// benchmarks drag its dot region). Like the sample, it has no file.
     pub fn open_pattern_angle(&mut self) {

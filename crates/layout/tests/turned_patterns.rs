@@ -69,6 +69,7 @@ fn kinds() -> Vec<(&'static str, Pattern)> {
                 gap_mm: 1.5,
                 pitch_units: 5,
                 grand: false,
+                grand_space_units: None,
             },
         ),
         (
@@ -77,6 +78,7 @@ fn kinds() -> Vec<(&'static str, Pattern)> {
                 gap_mm: 1.5,
                 pitch_units: 5,
                 grand: true,
+                grand_space_units: None,
             },
         ),
     ]

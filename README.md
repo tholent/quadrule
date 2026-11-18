@@ -157,8 +157,8 @@ and error.
   it); click a picture to put that device on screen, or fold the strip shut. The Page tab lists the devices: tick them
   in and out (taking one out asks first if it has changes), and **Make primary** makes a device's layout the design
   without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
-  top of another object or squeezed thin on a secondary device. Files are saved as format 0.17.0 (0.16 added a small picture of the main device's page
-  inside the file, written at Save and Save As so a gallery can show the file; 0.17 adds the pattern region's border); older files
+  top of another object or squeezed thin on a secondary device. Files are saved as format 0.18.0 (0.16 added a small picture of the main device's page
+  inside the file, written at Save and Save As so a gallery can show the file; 0.17 adds the pattern region's border; 0.18 adds the space between grand staves); older files
   open unchanged and get the picture at their next save.
 - Landscape pages. Pick **Portrait** or **Landscape** in New… or in the Page tab (one undo step: objects follow their
   own constraints onto the turned page). A landscape page is designed upright on screen and exported turned a quarter
@@ -168,7 +168,7 @@ and error.
 - A pattern library. A pattern region can be ruled lines, dots, a square grid, **isometric** (the triangle grid with vertical lines, as
   lines or as dots), **hexagons** (flat top or pointy top, a whole number of rhythm units high), a **Cornell** page (a
   cue column and a summary band) or **music staves** (five lines with a gap of their own, one staff every N rhythm
-  units, optionally paired as a grand staff with a brace line). Each pattern's own settings are in the inspector's
+  units, optionally paired as a grand staff with a brace line; a grand staff takes the **space between grand staves** in rhythm units, from the bottom of one to the top of the next, so they never overlap, where a single staff takes "Staff every", top to top; a grand staff from an older file keeps "Staff every" until Grand staff is turned off and on again). Each pattern's own settings are in the inspector's
   Style tab under the pattern choice. The rhythm has a **Type** in the Page tab: Rectangular, or Isometric with one
   side length, which snaps, nudges (Shift+arrow) and sizes drawn shapes on one column across and half a side down, and
   whose overlay draws the triangles. The rhythm also has **Major every N** (off by default): the pattern regions that
@@ -215,7 +215,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts on the welcome screen (Blank page or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --bordered-page` for borders round pattern regions, or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --bordered-page` for borders round pattern regions, or `-- --grand-staff-page` for grand staves (`-- --look grand-staff` shows the inspector on the first), or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

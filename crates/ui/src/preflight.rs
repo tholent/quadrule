@@ -165,6 +165,14 @@ impl ViewerUi {
                         .is_some_and(|o| matches!(&o.kind, quadrule_model::ObjectKind::Pattern(p) if p.border.is_some()));
                 }
             }
+            // The Style tab on the grand-staff page's first grand staff: Line gap, Space between grand staves, Grand staff.
+            "grand-staff" => {
+                let id = quadrule_model::sample::grand_ids::FIRST;
+                if self.viewer.doc().is_some_and(|d| d.object(id).is_some()) {
+                    self.viewer.select_row(id, false);
+                    self.tab = crate::panels::Tab::Style;
+                }
+            }
             "preflight" => {
                 let which = ExportWhich::ThisDevice;
                 let req = self.sheet_request(which);

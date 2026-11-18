@@ -430,9 +430,10 @@ fn layout_in(
             gap_mm,
             pitch_units,
             grand,
+            grand_space_units,
         } => {
             let gap = spacing_px(gap_mm, env.rhythm, env.target).max(1.0);
-            music_staff(&mut c, &g, gap, pitch_units, grand);
+            music_staff(&mut c, &g, gap, pitch_units, grand, grand_space_units);
         }
     }
 }
@@ -1188,19 +1189,36 @@ fn cornell(c: &mut Ctx, g: &Grid, cue: Option<u32>, summary: Option<u32>) {
 /// below the first row in the region; only a staff whose five lines all lie in the region is
 /// drawn. A grand staff pairs two (treble and bass), the bass one rhythm unit below the treble's
 /// last line, a pair every `pitch` rows, with a brace line down the region's left edge joining them.
-fn music_staff(c: &mut Ctx, g: &Grid, gap: f64, pitch: u32, grand: bool) {
+fn music_staff(c: &mut Ctx, g: &Grid, gap: f64, pitch: u32, grand: bool, grand_space: Option<u32>) {
     let (x0, y0, x1, y1) = c.reg;
     let rows = indexed(g.oy, g.uy, y0, y1);
-    let Some(&(first, _)) = rows.first() else {
+    let Some(&(first, first_top)) = rows.first() else {
         return;
     };
-    let pitch = i64::from(pitch.clamp(1, 99));
     let height = 4.0 * gap;
     let pen = c.pen;
-    for &(k, top) in &rows {
-        if (k - first) % pitch != 0 {
-            continue;
+    // Where each staff or grand staff starts: every `pitch` rhythm rows from the first row, top to top;
+    // or, for a grand staff with a space of its own (format 0.18), from the bottom of one grand staff
+    // (the bass staff, a rhythm unit under the treble) that many rhythm units to the top of the next,
+    // so they never overlap and the space does not change with the line gap.
+    let tops: Vec<f64> = match (grand, grand_space) {
+        (true, Some(space)) => {
+            let block = 2.0 * height + g.uy;
+            let step = block + f64::from(space.clamp(1, 99)) * g.uy;
+            (0..)
+                .map(|n| first_top + f64::from(n) * step)
+                .take_while(|&top| top + block <= y1)
+                .collect()
         }
+        _ => {
+            let pitch = i64::from(pitch.clamp(1, 99));
+            rows.iter()
+                .filter(|&&(k, _)| (k - first) % pitch == 0)
+                .map(|&(_, top)| top)
+                .collect()
+        }
+    };
+    for top in tops {
         let staves: &[f64] = if grand { &[0.0, height + g.uy] } else { &[0.0] };
         let bottom = top + staves[staves.len() - 1] + height;
         if bottom > y1 {

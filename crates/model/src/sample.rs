@@ -1655,6 +1655,7 @@ fn pattern_cells() -> Vec<(&'static str, PatternRegion, LineRole)> {
                 gap_mm: 1.5,
                 pitch_units: 5,
                 grand: true,
+                grand_space_units: None,
             }),
             guide,
         ),
@@ -1866,6 +1867,7 @@ pub fn turned_patterns_document() -> Document {
                 gap_mm: 1.5,
                 pitch_units: 5,
                 grand: true,
+                grand_space_units: None,
             })),
             guide,
             352.0,
@@ -2126,6 +2128,7 @@ pub fn pattern_angle_document() -> Document {
                     gap_mm: 1.5,
                     pitch_units: 5,
                     grand: true,
+                    grand_space_units: None,
                 },
                 8.0,
             )),
@@ -2486,6 +2489,102 @@ pub fn pattern_borders_document() -> Document {
     }
     doc.layers = vec![Layer {
         name: "Pattern borders".into(),
+        visible: true,
+        locked: false,
+        objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}
+
+/// Fixed ids for the grand-staff page's objects.
+pub mod grand_ids {
+    use crate::Uuid;
+    /// The `n`th object of the grand-staff page.
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0016_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+    /// The first grand staff (space 2 units, the app's default line gap): the one the look picks.
+    pub const FIRST: Uuid = nth(1);
+}
+
+/// The grand-staff page (docs/bbq/2026-11-18-fixes-before-16b.md, Q2): six labelled cells of music staves. Four grand
+/// staves with a space of their own between them (2 units; 1 unit; 3 units at a 1.5 mm line gap; 2 units at a 1 mm line gap, to
+/// show the space holding while the line gap changes), a grand staff from an older file with no space field (`Staff every`
+/// 6 units, top to top), and a single staff every 3 units. Each frame sits on the 5 mm rhythm. Every object keeps its
+/// millimetres on the Nomad (Left and Top), so a page of 31 by 60 mm frames fits both screens. Designed on the Manta,
+/// also targeting the Nomad.
+pub fn grand_staff_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Grand staves".into();
+    doc.metadata.description =
+        "Music staves: grand staves with a space between them, one from an older file, a single staff.".into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.resolution = RhythmResolution::PhysicalLocked;
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    doc.rhythm.major_every = Some(5);
+    let title = doc.layers[1].objects[0].clone();
+    let keep = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+    let (cols, pitch_x, pitch_y) = (3, 34.0, 68.0);
+    let staff = |gap_mm: f64, pitch_units: u32, grand: bool, space: Option<u32>| {
+        PatternRegion::new(Pattern::MusicStaff {
+            gap_mm,
+            pitch_units,
+            grand,
+            grand_space_units: space,
+        })
+    };
+    let cells: Vec<(&str, PatternRegion)> = vec![
+        ("Grand, space 2 u", staff(2.0, 3, true, Some(2))),
+        ("Grand, space 1 u", staff(2.0, 3, true, Some(1))),
+        ("Line gap 1.5, space 3 u", staff(1.5, 3, true, Some(3))),
+        ("Line gap 1, space 2 u", staff(1.0, 3, true, Some(2))),
+        ("Old file, every 6 u", staff(2.0, 6, true, None)),
+        ("Single, every 3 u", staff(2.0, 3, false, None)),
+    ];
+    let mut head = title.clone();
+    head.id = grand_ids::TITLE;
+    head.name = "Title".into();
+    head.frame = Frame::new(margin, margin, MANTA_W_MM - 2.0 * margin, 8.0);
+    if let ObjectKind::Text(t) = &mut head.kind {
+        t.content = "Grand staves".into();
+        t.size_pt = 12.0;
+    }
+    head.constraints = Constraints::default();
+    let mut objs: Vec<Object> = vec![head];
+    for (i, (label, pr)) in cells.into_iter().enumerate() {
+        let (col, row) = ((i % cols) as f64, (i / cols) as f64);
+        let x = margin + col * pitch_x;
+        let y = margin + 10.0 + row * pitch_y;
+        let mut text = title.clone();
+        text.id = grand_ids::nth(100 + i as u128);
+        text.name = format!("Label {}", i + 1);
+        text.frame = Frame::new(x, y, 33.0, 6.0);
+        if let ObjectKind::Text(t) = &mut text.kind {
+            t.content = label.into();
+            t.size_pt = 7.0;
+            t.weight = 400;
+        }
+        text.constraints = keep;
+        objs.push(text);
+        objs.push(object(
+            grand_ids::nth(1 + i as u128),
+            label,
+            Frame::new(x, y + 7.0, 31.0, 60.0),
+            keep,
+            Style::Role(LineRole::Guide),
+            ObjectKind::Pattern(pr),
+        ));
+    }
+    doc.layers = vec![Layer {
+        name: "Grand staves".into(),
         visible: true,
         locked: false,
         objects: objs,

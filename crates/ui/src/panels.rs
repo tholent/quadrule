@@ -1753,6 +1753,7 @@ impl ViewerUi {
                         gap_mm,
                         pitch_units,
                         grand,
+                        grand_space_units,
                     } => {
                         if let Some(mm) = self.length_row(
                             ui,
@@ -1773,26 +1774,67 @@ impl ViewerUi {
                             });
                         }
                         ui.end_row();
-                        if let Some(v) = self.units_row(ui, "app-staff-pitch", pitch_units, enabled)
-                        {
-                            set!(
-                                Some("pattern-staff-pitch"),
-                                |p| if let Pattern::MusicStaff { pitch_units, .. } = &mut p.pattern
+                        // A grand staff with its own space shows that (bass bottom to the next top); a single
+                        // staff, and a grand staff from an older file with none, show "Staff every" (top to top).
+                        match grand_space_units.filter(|_| grand) {
+                            Some(space) => {
+                                if let Some(v) =
+                                    self.units_row(ui, "app-staff-grand-space", space, enabled)
                                 {
-                                    *pitch_units = v;
+                                    set!(Some("pattern-staff-grand-space"), |p| {
+                                        if let Pattern::MusicStaff {
+                                            grand_space_units, ..
+                                        } = &mut p.pattern
+                                        {
+                                            *grand_space_units = Some(v);
+                                        }
+                                    });
                                 }
-                            );
+                            }
+                            None => {
+                                if let Some(v) =
+                                    self.units_row(ui, "app-staff-pitch", pitch_units, enabled)
+                                {
+                                    set!(Some("pattern-staff-pitch"), |p| {
+                                        if let Pattern::MusicStaff { pitch_units, .. } =
+                                            &mut p.pattern
+                                        {
+                                            *pitch_units = v;
+                                        }
+                                    });
+                                }
+                            }
                         }
                         ui.end_row();
                         let label = ui.label(self.t("app-staff-grand"));
                         let mut g = grand;
                         if ui.checkbox(&mut g, "").labelled_by(label.id).changed() {
-                            set!(
-                                None,
-                                |p| if let Pattern::MusicStaff { grand, .. } = &mut p.pattern {
+                            // Turning it on writes the space, starting where the staves look closest to
+                            // what "Staff every" gave; turning it off keeps the field for a turn back on.
+                            set!(None, |p| {
+                                let unit = if p.bound {
+                                    steps.1
+                                } else {
+                                    p.v_spacing_mm.unwrap_or(steps.1)
+                                };
+                                if let Pattern::MusicStaff {
+                                    gap_mm,
+                                    pitch_units,
+                                    grand,
+                                    grand_space_units,
+                                } = &mut p.pattern
+                                {
                                     *grand = g;
+                                    if g && grand_space_units.is_none() {
+                                        *grand_space_units =
+                                            Some(quadrule_model::grand_space_closest(
+                                                *gap_mm,
+                                                *pitch_units,
+                                                unit,
+                                            ));
+                                    }
                                 }
-                            );
+                            });
                         }
                         ui.end_row();
                     }
