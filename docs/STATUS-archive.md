@@ -131,3 +131,22 @@ From Log:
   11a/11b, built (four Sonnet 5.5 high legs), baseline gap and chip-typing fix at chris's word, approved; one release
   `v0.11.0`; ADR-002 amended; board re-planned; rung 12 prompt written (`docs/STATUS-log.md`,
   `docs/arcs/v1/rung-12-PROMPT-2026-11-16.md`).
+
+## Moved from STATUS.md on 2026-11-18 (rung 16a close), word for word
+
+- Rung 14, lint and preflight, is done: 14a and 14b approved by chris 2026-11-17 ("approved", "14b approved"), shipped
+  together as `v0.14.0` (record `docs/bbq/2026-11-17-rung-14-lint-and-preflight.md`, with its Amendments; ADR-012
+  amended). **14a**: L03, L05, L07, L09, L13, L14 judge the gray on the page (opacity included) against limits in each
+  profile's new `lint` block (`LintThresholds`), filled from the calibration sheets, edited in the Profiles window's
+  Lint checks section; lint lists the checks skipped on each device and why; L02's diagonal note moved to L14
+  (`crates/lint/src/lib.rs`, `crates/profiles/src/lib.rs`). **14b**: the Lint tab's Findings for picker, quick fixes
+  (`crates/lint/src/fix.rs`), Ignore this rule for this document and Ignored rules, Free placement (Arrange tab), the
+  Before you export sheet with the installed-fonts row, gray swatches with the matches badge and Use recommended
+  (`crates/ui/src/lint_ui.rs`, `crates/ui/src/preflight.rs`, `crates/ui/src/swatches.rs`). File format 0.15.0
+  (`crates/render/tests/fixtures/v0.14/`). The 29 golden lines unchanged (`crates/render/tests/golden/SHA256SUMS`).
+  Speed on the Pi, 90th percentile: 17–23 ms on the lint page, 30.6 ms worst (groups page drag, chip)
+  (`docs/STATUS-log.md`). Try it: `cargo run --release -p quadrule-app -- --lint-page`.
+- 2026-11-16/17: rung 12 planned (bbq, 9 questions; pattern rotation unparked by chris, hinting to v1.1), split 12a/12b,
+  built (Sonnet 5.5 high: 12a, stopped once by an account error and resumed; 12b with chris's pattern-angle addition),
+  approved; one release `v0.12.0`; ADR-001 and ADR-002 built status; board re-planned; rung 13 prompt written
+  (`docs/STATUS-log.md`, `docs/arcs/v1/rung-13-PROMPT-2026-11-17.md`).

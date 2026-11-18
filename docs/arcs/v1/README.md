@@ -30,7 +30,7 @@ GitHub release on its tag, marked pre-release until v1.0, with notes on what the
 | 13 | Profile system: user profiles in the config folder, the profile editor, local override and Reset to built-in, `.ron` import and export. Added 2026-11-17 by chris (bbq Q10): built-in paper-size profiles (spec §3.3.1, pulled from v1.1). Split (bbq Q11, `docs/bbq/2026-11-17-rung-13-profile-system.md`): **13a** the profile system; **13b** paper sizes; one `v0.13.0` when both are approved | medium + small–medium: 13a + 13b | done: `v0.13.0` (13a and 13b in one release), both approved by chris 2026-11-17 (ADR-016 ratified; large paper pages on the export canvas left to rung 17, chris's "C") |
 | 14 | Lint and preflight: L03, L05, L07, L09, L13, L14 from measured values; quick fixes; Ignore for this document; Free placement; filter by device; the preflight sheet with Export anyway; Style tab gray swatches, "matches Guide", "Use recommended" (§8.2). L04 is v1.1 (Q7). Split (bbq Q1, `docs/bbq/2026-11-17-rung-14-lint-and-preflight.md`): **14a** the six rules and their limits in the profiles (ADR-012 amended); **14b** the lint window, fixes, preflight and swatches; one `v0.14.0` | medium–large: 14a + 14b | done: `v0.14.0` (14a and 14b in one release), both approved by chris 2026-11-17 |
 | 15 | Export: the naming template and its tokens, Export all, per-device subfolders, Export as set, a remembered folder, the completion sheet with the MyStyle note, the PNG text note, `.quad` thumbnails in `previews/`. Ruled (bbq, `docs/bbq/2026-11-17-rung-15-export.md`): one Export sheet plus Export again; an app-wide path template, default `{title}-{device}.png`, folders by `/`; a main-device thumbnail only | medium | done: `v0.15.0`, approved by chris 2026-11-17 (ADR-013 amended) |
-| 16 | Welcome screen and the starter gallery (§13, about 24 starters): device filter, search, thumbnails, My templates; each starter lint-clean and golden-tested on both devices | large | — |
+| 16 | Welcome screen and the starter gallery (§13, about 24 starters): device filter, search, thumbnails, My templates; each starter lint-clean and golden-tested on both devices. Split (bbq Q1, `docs/bbq/2026-11-17-rung-16-welcome-and-gallery.md`): **16a** the welcome screen, gallery, My templates, recent files, a File menu and one Export… (placed here by chris); **16b** the starters and the inspector's basic section, after chris's five designs | large: 16a + 16b | 16a done: `v0.16.0`, approved by chris 2026-11-18 (ADR-013 amended); 16b waits for chris's starters |
 | 17 | Polish and debt sweep: UI scaling 75–200 %, keyboard shortcuts, an AccessKit check, readable JSON export; the debt the rungs left (Q17). Added 2026-11-17 (rung 13 record, Amendments; chris: "C"): large paper pages on the export-pixels canvas (Tabloid or A3 at 600 PPI draws at 410–440 ms a frame on the Pi) | small–medium | — |
 | 18 | Release: installers built in CI (unsigned `.dmg`, MSI, AppImage), `1.0.0-rc.1` on GitHub for testers, blind tastetest, then `1.0.0` (Q12, Q14, Q18) | medium | — |
 
@@ -62,6 +62,9 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
   - Planning (daily, weekly, monthly, to-do): **buildable now** (rung 10 done, 2026-11-13).
   - Bullet journal (rapid log, habit tracker, future log, index): **buildable now** (rung 10 done, 2026-11-13).
   - Creative (storyboard, music staff, handwriting practice): **buildable now** (rung 9 done).
+  - 2026-11-18: the gallery is built (16a, `v0.16.0`). chris makes one starter per category in the app and keeps each
+    with File ▸ Save as template…; the 16b lead copies them into `crates/ui/starters/<category>/` and agents follow
+    them for the rest (`docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`).
 - **Looks:** one per rung or part (ADR-007).
 
 ## Standing rules for every rung
@@ -189,3 +192,12 @@ above (which chris approves before it counts).
   (4) an open question can come out of a look (a File menu), and goes in the next prompt rather than growing the rung.
   No change to the rungs is proposed; the File menu is an open question for chris, a candidate for rung 17. Next lead's
   prompt: `docs/arcs/v1/rung-16-PROMPT-2026-11-17.md`.
+- 2026-11-18, after rung 16a: 16a took one lead session and one Sonnet 5.5 high builder in two legs (356,390 tokens at
+  leg 1's end, 492,413 at leg 2's end, likely including leg 1) and moved the weekly meter 6 points (59 → 65 %, chris's
+  readings); chris lifted the week's hard limits mid-rung. Approved with no changes. Lessons: (1) a builder found that
+  GNU make defines `LINT` itself, so `LINT ?=` never took effect and every `make bench-*` since rung 14a timed the lint
+  page; check a Makefile default against `make -p` before trusting numbers made through it; (2) when the owner's design
+  work gates a rung, split so the machinery ships first and the owner's examples flow in through the app itself (Save as
+  template…); (3) an answer that is itself a question ("can export again be combined with export?") is worth one more
+  question rather than a default. No change to the rungs is proposed. Next lead's prompt (when chris's starters are
+  ready): `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`.

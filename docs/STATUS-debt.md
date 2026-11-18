@@ -302,14 +302,16 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Rung 15, lead's close (`crates/ui/src/viewer.rs`, `crates/ui/src/export_ui.rs`): Save renders the main device's
   export pixels for the 480 px preview on the interface thread, about 23 ms on the Pi (41 ms on A4 paper); a 600 PPI
   Tabloid or A3 page will take far longer, so this joins rung 17's large-page item. Open question for chris (rung 15
-  look, word for word: "I don't _love_ this. Let's put an item into open questions for a file menu creation"): a File
+  look; CLOSED 2026-11-18: placed in rung 16 by chris and built in 16a, with Export again merged into Export…; word for word: "I don't _love_ this. Let's put an item into open questions for a file menu creation"): a File
   menu to hold Open, Save, Save As, Export… and Export again, in place of the toolbar's Export menu. The Manta was not
   tablet-checked with a noted PNG (chris: "the nomad check is enough").
 
 
 - Rung 16a, owed (`crates/ui/src/welcome.rs`, `file_menu.rs`, `templates.rs`, `recent.rs`, `export_ui.rs`): (1) the wording of every
   new word and the look of the welcome screen (tile size, the grey "Not found" lines, the dark box a stored picture sits on)
-  are the builder's proposals for chris's look; the judgement calls are in the log's leg 1 entry. (2) ADR-013 needs its
+  are the builder's proposals for chris's look; the judgement calls are in the log's leg 1 entry. DONE 2026-11-18: chris
+  approved the look with no changes ("Approved. Ratify adr-013."), so they stand as built. (2) DONE 2026-11-18 (ADR-013
+  amended, proof line updated, ratified by chris): ADR-013 needs its
   amendment (Q2 start, Q6 File menu, Q9 one Export…) and its `proof` line names two tests that moved:
   `export_sheets.rs::the_export_menu_opens_one_sheet_with_the_remembered_choices` still exists (now checks the File menu) but
   `export_again_writes_with_the_last_choices_or_opens_the_sheet` is now
@@ -322,7 +324,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 
 - Rung 16a leg 2, owed (`crates/ui/src/thumbs.rs`, `welcome.rs`, `starters.rs`, `build.rs`, `test_starters.rs`, `Makefile`): (1) the look of the
   tiles ("drawn on <device>" under a tile, the plain outline for a page that failed, the size of a tile) is the builder's
-  proposal for chris's look. (2) Thumbnails use the bundled fonts only and a copy of the profile registry taken when a job is
+  proposal for chris's look (DONE 2026-11-18: approved as built). (2) Thumbnails use the bundled fonts only and a copy of the profile registry taken when a job is
   queued; a page set in an installed font that its file does not carry shows the saved outlines (or the fallback), and a
   profile edited while a picture is drawing shows after the next filter change. (3) A failed thumbnail is not retried this
   session; a template saved again has a new file time and so a new picture. (4) The cache is never emptied during a session (a

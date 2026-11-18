@@ -2295,3 +2295,27 @@ device filter", "Where starters live" and "Speed"). Worked on `main`; token use 
 - Blocked: nothing. Build notes: the app and ui tests were built apart, as asked; building an older commit in a worktree against the
   same `target` left a stale words file in the release build until `i18n` was touched (a "(app-welcome-tile-on)" showed instead of
   the words), so after such a build touch a crate or run `make build-proof`.
+
+## 2026-11-18 — rung 16a lead (Opus 5.5, high)
+
+- Session start: `echo "$CLAUDE_EFFORT"` → `high`; `make build-proof` → `BUILD head=0b18202 dirty=no rebuilt=0`. Budget
+  12 points by chris, reserve 4, start 59 % (given by chris, logged). Asked again: starters (chris: none yet, he will
+  make them); the File menu (chris: rung 16).
+- bbq, 9 questions (record `docs/bbq/2026-11-17-rung-16-welcome-and-gallery.md`): 16a now, 16b after chris's starters,
+  two tags; one welcome screen (actions left, gallery right); thumbnails drawn live in the background; a templates
+  folder with Save as template…; every category shown "coming soon" (overruled: the recommendation hid empty ones);
+  the toolbar's file buttons into File; the basic section in 16b; chris asked whether Export again could join Export,
+  and chose one Export… where Enter writes (Q9).
+- Built by one Sonnet 5.5 high builder in two legs (356,390 tokens at leg 1's end; 492,413 at leg 2's end, likely
+  including leg 1; their entries above). Between legs the meter read 63 % and chris ruled, word for word: "for this
+  week only, unset any hard limits" (record, Amendments). The lead checked each leg: `make build-proof` clean
+  (`df6bd0c`, `c1d654b`), `sha256sum -c SHA256SUMS | grep -c ": OK"` → 30, fixtures untouched; looked at the
+  `welcome`, `file-menu`, `welcome-nomad` and `gallery-mine` screenshots; confirmed the builder's Makefile finding
+  (`make -p -f /dev/null | grep '^LINT '` → `LINT = lint`, so `LINT ?=` from `547c39d`, rung 14a, never took effect and
+  every `make bench-*` since then timed the lint page; fixed to `LINT :=` in `c1d654b`).
+- ADR-013 amendment drafted with `makeadr` (`9941f13`; proof line moved to 16a's tests; `adr-check` → `16 ADRs, 0
+  failure(s)`). chris at the look, meter 65 %: "Approved. Ratify adr-013." Ratified the same day.
+- Close: version 0.16.0, `docs/arcs/v1/release-notes/v0.16.0.md`, tag `v0.16.0`; board row, queue and re-plan;
+  STATUS.md (rung 14 bullet and the rung 12 Log line moved word for word to `docs/STATUS-archive.md`); rung 16b prompt
+  `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`; calibration row. `spend-ledger.py measure --latest --meter 59 65` →
+  `sonnet 85% · opus 15% | $19.92 | 59 → 65 · alone here · 6 pts`.

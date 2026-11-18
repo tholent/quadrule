@@ -79,6 +79,9 @@ Drivers:
   chris (proposed)" below; **awaiting chris's ratification at the 16a look**. The proof header changed because 16a
   renamed a cited test (Export again is gone) and added the welcome screen's and File menu's tests. Prior header value:
   proof `` `crates/ui/tests/window.rs::empty_start_then_sample`, `crates/ui/tests/window.rs::layers_sit_under_the_inspector_on_the_right`, `crates/ui/tests/window.rs::findings_zoom_and_theme`, `crates/ui/tests/viewer.rs::file_names_are_safe`, `crates/app/src/main.rs::gtk_font_names`, `crates/ui/tests/export.rs::the_default_template_and_the_three_presets`, `crates/ui/tests/export.rs::folders_are_remembered_by_document_path_and_capped`, `crates/ui/tests/export_sheets.rs::the_export_menu_opens_one_sheet_with_the_remembered_choices`, `crates/ui/tests/export_sheets.rs::export_again_writes_with_the_last_choices_or_opens_the_sheet` ``.
+- 2026-11-18: the rung 16 amendment ratified by chris at the 16a look, word for word: "Approved. Ratify adr-013." Its
+  heading lost "(proposed)" and its status line was "**Status: proposed, awaiting chris's ratification at the rung 16a
+  look.**".
 
 ## Amendment — 2026-11-17, chris
 
@@ -104,9 +107,9 @@ question:
 Why: spec §11.2 asks for a configurable naming scheme, per-profile subfolders, a set folder and a remembered folder,
 and §11.1 for the text note; chris chose the shorter default name at the bbq.
 
-## Amendment — 2026-11-18, chris (proposed)
+## Amendment — 2026-11-18, chris
 
-**Status: proposed, awaiting chris's ratification at the rung 16a look.** Touches Decision item 4 (Start), item 5 and
+**Ratified by chris 2026-11-18, word for word: "Approved. Ratify adr-013."** (at the rung 16a look). Touches Decision item 4 (Start), item 5 and
 the 2026-11-17 amendment's first bullet (Export). The rulings are chris's, from the rung 16 bbq
 (`docs/bbq/2026-11-17-rung-16-welcome-and-gallery.md`), cited by question:
 

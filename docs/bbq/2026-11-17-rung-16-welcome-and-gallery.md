@@ -160,6 +160,10 @@ Empty. Q9 (owed by the Q6 answer) was asked.
   unset any hard limits". Until the weekly reset (Saturday 2026-11-21, 5 pm EST), the 12-point share line, the 71 %
   backstop and the 75 / 80 / 85 / 93 % hard stops do not stop work; the lead still reads the meter at each leg's end and
   reports it. The reserve of 4 is read as lifted with them (the lead's reading; chris may correct it).
+- **2026-11-18, the 16a look** (meter 65 %, chris's reading): chris, word for word: "Approved. Ratify adr-013." 16a is
+  approved with no changes, so the builder's twenty judgement calls and proposed words stand as built (`docs/STATUS-log.md`,
+  the two 16a builder entries). ADR-013's rung 16 amendment is ratified. Shipped as `v0.16.0`; 16b waits for chris's
+  starters (`docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`).
 
 ## Kickoff
 
