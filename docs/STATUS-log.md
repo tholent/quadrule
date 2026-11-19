@@ -2612,3 +2612,5 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
   `pattern_borders.rs` updated.
 - `make check-all JOBS=12` (VM) → `TESTS scope=workspace checks=749 check_fail=0 passed=696 failed=0 status=ok`; fmt
   and clippy clean. The VM (no FMA) now passes every golden test.
+- CI on the branch with the re-made golden images, run 44598291874: `ubuntu-latest: success`, `macos-latest:
+  success`, `windows-latest: success` (`gh run view 44598291874`). Merged to `main` as a fast-forward; branch deleted.
