@@ -1,11 +1,12 @@
 ---
-status: proposed
-status-note: "drafted 2026-11-19 from chris's ruling (\"let's go with option A\") and answers; awaiting ratification"
+status: accepted
+status-note: "ratified by chris 2026-11-19 (\"3. ratified\")"
+ratified-by: chris
+ratified-on: "2026-11-19"
 owner: chris
 kind: architecture
-built: partial
-proof: "`crates/render/tests/render.rs::export_draws_at_the_fallback_level`, `crates/render/src/lib.rs`"
-owed: the golden images and the migration tests' stored export hashes re-made after chris's look; drag and draw speed measured on the Pi against ADR-009's 50 ms
+built: landed
+proof: "`crates/render/tests/render.rs::export_draws_at_the_fallback_level`, `crates/render/tests/devices.rs::devices_page_goldens`, `crates/render/tests/golden/SHA256SUMS`, `.github/workflows/ci.yml`"
 supersedes: ADR-017
 amends: "ADR-003 §Decision item 2 (the lever if machines disagree)"
 revisit-when: vello_cpu or fearless_simd change what the fallback level computes, or the Pi's speed measured against ADR-009 no longer fits
@@ -89,13 +90,24 @@ Drivers:
 - A computer without FMA, like chris's VM, passes the golden tests.
 - `quadrule-render` depends on fearless_simd directly; an upgrade of vello_cpu moves both together.
 
-## Asks left open
-
-1. Ratify ADR-018, after the golden images' look and the Pi's speed numbers.
-
 ## History
 
 - 2026-11-19: drafted from chris's ruling, "let's go with option A", and three answers in one round (goforit: no
   more questions, every point cited; the FMA-off job: "Revert it"; too slow on the Pi: "Stop and report"). Record
   `docs/bbq/2026-11-19-adr-identical-maths.md`, Amendments. ADR-017 superseded and ADR-003 item 2 given a banner in
   the same commit.
+- 2026-11-19: ratified by chris, with his look at the golden images and a ruling on item 5, word for word: "1. looks
+  good; 2. we are dropping the timing comparisons; 3. ratified". Prior header values: status `proposed`, status-note
+  `drafted 2026-11-19 from chris's ruling ("let's go with option A") and answers; awaiting ratification`. The Asks
+  left open section, now answered, is removed. Item 5 is changed by the amendment below.
+
+## Amendment — 2026-11-19, chris
+
+Item 5 (speed measured on the Pi before landing) is dropped: "we are dropping the timing comparisons". It lands
+without a Pi bench; ADR-009's budgets still stand for later work. Touches §Decision item 5 and the `owed` field.
+- 2026-11-19: built and landed: golden images re-made with `QUADRULE_BLESS=1` (23 pages, the ones chris looked at),
+  the `SHA256SUMS` order kept, the migration fixtures' stored export hashes and the two older-lines hashes
+  (`grand_staff.rs`, `pattern_borders.rs`) updated. Prior header values: built `partial`, proof
+  `` `crates/render/tests/render.rs::export_draws_at_the_fallback_level`, `crates/render/src/lib.rs` ``, owed `the golden
+  images and the migration tests' stored export hashes re-made after chris's look; drag and draw speed measured on
+  the Pi against ADR-009's 50 ms`.

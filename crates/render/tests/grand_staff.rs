@@ -34,8 +34,9 @@ use std::path::PathBuf;
 
 const PREFIX: &str = "grand-staff";
 
-/// The sha256 of the thirty-two lines of `SHA256SUMS` that were there before this page (each ending in a newline).
-const OLD_32_SHA256: &str = "206e90e8660c0408bf1dbc16892f2d4c1b8f60e0be4afda4262c9c01779e2e55";
+/// The sha256 of the thirty-two lines of `SHA256SUMS` that were there before this page (each ending in a newline),
+/// as re-made at the fallback level (ADR-018).
+const OLD_32_SHA256: &str = "fc8c82f86631d43ac34ed6a7a0b50e434650e13a7bea5da32dcc76bd2ee4e95c";
 
 fn pass(ok: bool) -> &'static str {
     if ok { "pass" } else { "fail" }

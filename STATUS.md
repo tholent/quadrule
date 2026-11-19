@@ -203,6 +203,12 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
   only where Block is (every changed pixel lighter, by at most 34) (`crates/profiles/data/`,
   `docs/device-measurements/supernote.a6x2/calibration.md`, `crates/render/tests/golden/SHA256SUMS`).
+- Export bytes are the same on every computer by construction (ADR-018, ratified by chris 2026-11-19, superseding
+  ADR-017): vello_cpu draws at fearless_simd's fallback level everywhere, so a processor's fused multiply-add no longer
+  moves edge pixels (chris's VM, without FMA, had differed by 1 level). Any other level is a build error
+  (`crates/render/src/lib.rs`, `crates/render/tests/render.rs`). 23 golden pages re-made after chris's look (285 px, 1
+  level each); the other ten unchanged (`crates/render/tests/golden/SHA256SUMS`). The pruning plan for the build folder
+  (`docs/proposals/build-pruning-2026-11-19.md`) is chris's to run on the VM.
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with eighteen rules of spec §8.3 (L04 and L12 are v1.1) (`crates/lint/src/lib.rs`); `cargo xtask lint`.
@@ -250,13 +256,6 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `v0.16.4` (menus for each system, the status bar's toggles into View, the macOS double-click), and batch 3, `v0.16.5`
   (Quick Look). Rung 16b, the starters, becomes `v0.16.6`; its lead's prompt is
   `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md` (`docs/arcs/v1/README.md`).
-- **ADR-018 (proposed) supersedes ADR-017** (chris, 2026-11-19: "let's go with option A"): export, the export
-  canvas and thumbnails draw at fearless_simd's fallback level on every computer, so a processor's fused
-  multiply-add no longer changes pixels (`docs/decisions/ADR-018-export-at-the-fallback-level.md`). Built on branch
-  `adr-018-fallback-level` (`crates/render/src/lib.rs`); waits on chris's look at 23 changed golden pages (285 px,
-  1 level each), his Pi benches against ADR-009, and ratification; then the golden images are re-made and it merges
-  (`docs/STATUS-log.md`). The pruning plan for the build folder (`docs/proposals/build-pruning-2026-11-19.md`) is
-  chris's to run on the VM.
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1

@@ -2602,3 +2602,13 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
 - Review by a Sonnet 5.5 subagent (read-only, commit `c9f4261`): no correctness bugs. Noted: the level test would
   not catch `render()` going back to `RenderSettings::default()` (the golden images on CI would; ADR-018 item 6);
   the system's `sin` and `cos` still differ by system in principle (ADR-018 Context, "What it does not cover").
+- chris, word for word: "1. looks good; 2. we are dropping the timing comparisons; 3. ratified". ADR-018 ratified,
+  amended (item 5, the Pi benches, dropped) and marked landed.
+- Golden images re-made: `QUADRULE_BLESS=1 cargo test -p quadrule-render --no-fail-fast` re-wrote the 23 changed
+  pages; the tests bless in parallel and reorder `SHA256SUMS`, so it was put back in its old order with the new sums
+  (every sum checked against `sha256sum` of its file). Migration fixtures' stored export hashes: 24 replaced from the
+  old-to-new golden map, 4 more (the landscape repeats export and the devices page's user-profile device, v0.10 and
+  v0.14 to v0.17) from a throwaway print, removed. The stored hashes of the older sums lines in `grand_staff.rs` and
+  `pattern_borders.rs` updated.
+- `make check-all JOBS=12` (VM) → `TESTS scope=workspace checks=749 check_fail=0 passed=696 failed=0 status=ok`; fmt
+  and clippy clean. The VM (no FMA) now passes every golden test.

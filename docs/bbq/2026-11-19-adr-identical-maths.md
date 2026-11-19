@@ -79,8 +79,7 @@ chris, word for word: "ok, I understand more clearly. We can move forward with o
 
 - (2026-11-19 asks: both answered, see Amendments)
 - (2026-11-19 premise question: answered, see Amendments)
-- chris: the look at the changed golden images; the drag and draw benches on the Pi on branch `adr-018-fallback-level`;
-  ratifying ADR-018.
+- (none; the look, the benches and ratification answered 2026-11-19, see Amendments)
 
 ## Amendments
 
@@ -116,3 +115,6 @@ chris, word for word: "ok, I understand more clearly. We can move forward with o
   the VM exported before the change (`diff` of the CHECK lines' checksums, before and after: none). 23 pages change
   against the golden images, 285 pixels in all, each by 1 level; 10 pages (slice, fonts, textbox, grand staff,
   landscape, both devices) do not change, and the noted page passes.
+- 2026-11-19, chris, word for word: "1. looks good; 2. we are dropping the timing comparisons; 3. ratified". The
+  golden images are approved as shown (https://claude.ai/artifact/2PuHNfNFZpHmfHkBUwirX9); the Pi benches are
+  dropped (ADR-018 amended, item 5); ADR-018 is ratified. Golden images re-made and the branch merged to `main`.
