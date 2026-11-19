@@ -2594,3 +2594,11 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
   and the new exports): 23 of 33 pages, 285 px, every one 1 level, all on curved or turned edges; for chris's look on
   a private page, https://claude.ai/artifact/2PuHNfNFZpHmfHkBUwirX9. Golden images not re-made: they wait on that look.
 
+- CI on the branch, run 44579062510 (`gh workflow run CI --ref adr-018-fallback-level`): all three jobs fail on
+  golden bytes, as expected before the re-make, and stop at the first failing program (`devices`). There, Linux x86
+  (AVX2, FMA), macOS ARM and Windows x86 each print the VM's checksums: `devices_golden profile=supernote.a5x2 …
+  sha256=ef53067c…` and `profile=supernote.a6x2 … sha256=e2cc42fd…` (job logs 135754403446, 135754403882,
+  135754403980). Under the old fast level those pages differed by 16 and 7 px between the VM and CI.
+- Review by a Sonnet 5.5 subagent (read-only, commit `c9f4261`): no correctness bugs. Noted: the level test would
+  not catch `render()` going back to `RenderSettings::default()` (the golden images on CI would; ADR-018 item 6);
+  the system's `sin` and `cos` still differ by system in principle (ADR-018 Context, "What it does not cover").
