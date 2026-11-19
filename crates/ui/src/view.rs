@@ -2690,7 +2690,7 @@ impl ViewerUi {
                 Some(t) => t,
                 None => {
                     let start = std::time::Instant::now();
-                    let img = quadrule_render::render(&list, quadrule_render::Math::Fastest);
+                    let img = quadrule_render::render(&list);
                     self.chip_state.cpu_ms = Some(start.elapsed().as_secs_f64() * 1000.0);
                     let image =
                         ColorImage::from_gray([img.width as usize, img.height as usize], &img.data);

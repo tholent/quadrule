@@ -15,7 +15,7 @@
 //! The graphics-chip canvas's rules, headless (rung 3 bbq Q4, Defaulted "The chip canvas on the
 //! Pi will be slow"). Each test prints one structured `CHECK` line (run with `-- --nocapture`).
 
-use quadrule_render::{Math, render};
+use quadrule_render::render;
 use quadrule_ui::Viewer;
 use quadrule_ui::canvas::{ChipState, Fallback, SLOW_FRAME_MS, ScreenView, screen_list};
 
@@ -67,7 +67,7 @@ fn screen_list_matches_the_export_at_one_to_one_and_keeps_thin_lines() {
         width: dl.width,
         height: dl.height,
     };
-    let same = render(&screen_list(dl, &whole), Math::Fastest).data == page.image.data;
+    let same = render(&screen_list(dl, &whole)).data == page.image.data;
     // Zoomed out to a quarter, the 1 px ruled lines still show (lighter, not gone).
     let quarter = ScreenView {
         scale: 0.25,
@@ -76,7 +76,7 @@ fn screen_list_matches_the_export_at_one_to_one_and_keeps_thin_lines() {
         width: dl.width / 4,
         height: dl.height / 4,
     };
-    let small = render(&screen_list(dl, &quarter), Math::Fastest);
+    let small = render(&screen_list(dl, &quarter));
     // Below 116 mm only the ruled lines are drawn: count runs of inked rows, in the export and
     // in the quarter-size view. Each line must still show.
     let runs = |img: &quadrule_render::Gray, from: u32| {
@@ -99,7 +99,7 @@ fn screen_list_matches_the_export_at_one_to_one_and_keeps_thin_lines() {
         width: 64,
         height: 64,
     };
-    let crop = render(&screen_list(dl, &part), Math::Fastest);
+    let crop = render(&screen_list(dl, &part));
     let offset_ok =
         (0..64).all(|y| (0..64).all(|x| crop.at(x, y) == page.image.at(90 + x / 2, 300 + y / 2)));
     let dots_in_crop = crop.data.iter().any(|&p| p < 200);
@@ -169,7 +169,7 @@ fn screen_list_makes_one_path_of_a_pattern_s_lines_and_dots() {
     };
     let list = screen_list(dl, &view);
     let fewer = list.items.len() * 4 < dl.items.len();
-    let same = render(&list, Math::Fastest).data == page.image.data;
+    let same = render(&list).data == page.image.data;
     let ok = rects > 200 && fewer && same;
     println!(
         "CHECK crate=ui name=screen_list_merges_rects result={} export_items={} rects={rects} screen_items={} same_pixels_at_1_to_1={same}",

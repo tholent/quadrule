@@ -58,7 +58,7 @@ fn export(file: &QuadFile, id: &str) -> Vec<u8> {
         None => builtin_for(id, o).unwrap(),
     };
     let dl = display_list(&file.doc, &primary, &target, &file.outlines[id]).unwrap();
-    let img = render(&dl, Math::Fastest);
+    let img = render(&dl);
     let img = if o == Orientation::Landscape {
         turn_clockwise(&img)
     } else {

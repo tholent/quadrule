@@ -71,7 +71,7 @@ fn export(file: &QuadFile, id: &str) -> Vec<u8> {
         &file.outlines[id],
     )
     .unwrap();
-    encode_png(&render(&dl, Math::Fastest), None)
+    encode_png(&render(&dl), None)
 }
 
 #[test]

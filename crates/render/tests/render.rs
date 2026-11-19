@@ -43,7 +43,7 @@ fn snapped_lines_are_exact() {
     let mut ok = true;
     for id in [MANTA_ID, NOMAD_ID] {
         let (p, dl) = slice_page(id);
-        let img = render(&dl, Math::Fastest);
+        let img = render(&dl);
         let guide = p.role(LineRole::Guide);
         // The first ruled line: a wide rect of the Guide's gray and width (other roles may share
         // the gray; dots are square and the title rule is a different width or gray).
@@ -86,29 +86,21 @@ fn snapped_lines_are_exact() {
 }
 
 #[test]
-fn simd_and_portable_maths_agree() {
-    // ADR-003 item 2's lever: if this ever fails, export must switch to portable maths.
+fn export_draws_at_the_fallback_level() {
+    // ADR-018: one level on every computer, so the bytes do not hang on the processor. A
+    // detected level fuses multiply-add on AVX2 and NEON and not on SSE; the build refuses any
+    // other level (crates/render/src/lib.rs), and the golden images catch a change on CI.
+    let fallback = matches!(LEVEL, vello_cpu::Level::Fallback(_));
     let mut parts = Vec::new();
-    let mut ok = true;
+    let mut ok = fallback;
     for id in [MANTA_ID, NOMAD_ID] {
         let (_, dl) = slice_page(id);
-        let fast = render(&dl, Math::Fastest);
-        let portable = render(&dl, Math::Portable);
-        let again = render(&dl, Math::Fastest);
-        let diff = fast
-            .data
-            .iter()
-            .zip(&portable.data)
-            .filter(|(a, b)| a != b)
-            .count();
-        ok &= diff == 0 && fast == again;
-        parts.push(format!(
-            "{id}:simd_vs_portable_diff_px={diff}:repeat_identical={}",
-            fast == again
-        ));
+        let again = render(&dl) == render(&dl);
+        ok &= again;
+        parts.push(format!("{id}:repeat_identical={again}"));
     }
     println!(
-        "CHECK crate=render name=simd_vs_portable result={} {}",
+        "CHECK crate=render name=export_level result={} level_fallback={fallback} {}",
         pass(ok),
         parts.join(" ")
     );
@@ -118,7 +110,7 @@ fn simd_and_portable_maths_agree() {
 #[test]
 fn png_is_8_bit_gray_with_optional_note() {
     let (_, dl) = slice_page(NOMAD_ID);
-    let img = render(&dl, Math::Fastest);
+    let img = render(&dl);
     let read = |bytes: &[u8]| {
         let mut dec = png::Decoder::new(std::io::Cursor::new(bytes.to_vec()))
             .read_info()
@@ -205,7 +197,7 @@ fn tiny_skia_agrees_on_snapped_shapes() {
             })
             .chain([dl.background])
             .collect();
-        let vello = render(&dl, Math::Fastest);
+        let vello = render(&dl);
         let tiny = tiny_skia_rects(&dl);
         let diff = vello.data.iter().zip(&tiny).filter(|(a, b)| a != b).count();
         let stray = vello.data.iter().filter(|v| !grays.contains(v)).count();

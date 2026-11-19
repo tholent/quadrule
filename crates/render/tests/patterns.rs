@@ -58,7 +58,7 @@ fn design(doc: &Document, id: &str) -> Gray {
     let mut reg = FontRegistry::bundled_only();
     let laid = lay_out_text(doc, &primary, &target, &mut reg).unwrap();
     let dl = display_list(doc, &primary, &target, &laid.outlines).unwrap();
-    render(&dl, Math::Fastest)
+    render(&dl)
 }
 
 /// The exported image: a landscape design turned into the device's portrait pixels.
@@ -197,7 +197,7 @@ fn the_pattern_page_exports_the_same_bytes_after_a_save() {
         for id in doc.profile_ids() {
             let target = builtin_for(id, o).unwrap();
             let dl = display_list(&file.doc, &primary, &target, &file.outlines[id]).unwrap();
-            same &= render(&dl, Math::Fastest) == design(&doc, id);
+            same &= render(&dl) == design(&doc, id);
         }
         ok &= same_doc && current && same;
         parts.push(format!("{name}:doc_equal={same_doc}:export_equal={same}"));

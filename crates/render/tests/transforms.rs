@@ -71,19 +71,7 @@ fn transforms_page_goldens() {
     for id in doc.profile_ids() {
         let target = builtin(id).unwrap();
         let dl = list(id, &doc);
-        let png = encode_png(&render(&dl, Math::Fastest), None);
-        // ADR-003 item 2's lever, reported and not enforced here (as for the shapes page).
-        let (a, b) = (
-            render(&dl, Math::Fastest).data,
-            render(&dl, Math::Portable).data,
-        );
-        let d_px = a.iter().zip(&b).filter(|(x, y)| x != y).count();
-        let d_max = a
-            .iter()
-            .zip(&b)
-            .map(|(x, y)| x.abs_diff(*y))
-            .max()
-            .unwrap_or(0);
+        let png = encode_png(&render(&dl), None);
         let name = format!(
             "transforms_{id}_{}x{}.png",
             target.width_px, target.height_px
@@ -99,7 +87,7 @@ fn transforms_page_goldens() {
         let matches = golden == png;
         all_ok &= matches;
         println!(
-            "\nCHECK crate=render name=transforms_golden profile={id} result={} sha256={sha} golden_sha256={} portable_diff_px={d_px} portable_max_diff={d_max} items={} os={} arch={}",
+            "\nCHECK crate=render name=transforms_golden profile={id} result={} sha256={sha} golden_sha256={} items={} os={} arch={}",
             pass(matches),
             if golden.is_empty() {
                 "none".to_string()
@@ -199,7 +187,7 @@ fn opacity_flattens_over_what_lies_beneath() {
         top.opacity_pct = 50;
         let mut doc = tiny(bar);
         doc.layers[0].objects.push(top);
-        let img = render(&list(id, &doc), Math::Fastest);
+        let img = render(&list(id, &doc));
         let at = |x_mm: f64, y_mm: f64| f64::from(img.at((x_mm * k) as u32, (y_mm * k) as u32));
         let over_bar = at(40.0, 15.0);
         let over_page = at(55.0, 15.0);
@@ -221,8 +209,7 @@ fn opacity_flattens_over_what_lies_beneath() {
         clear.layers[0].objects[1].opacity_pct = 0;
         let mut gone = doc.clone();
         gone.layers[0].objects.truncate(1);
-        let nothing =
-            render(&list(id, &clear), Math::Fastest) == render(&list(id, &gone), Math::Fastest);
+        let nothing = render(&list(id, &clear)) == render(&list(id, &gone));
         // A stroke over its own fill, as one group: the inner half of the stroke (over the fill)
         // reads as the stroke's gray mixed with the page, not with the fill under it.
         let mut shape = base_object(rect_kind(), Frame::new(10.0, 40.0, 30.0, 20.0));
@@ -233,7 +220,7 @@ fn opacity_flattens_over_what_lies_beneath() {
         };
         shape.opacity_pct = 50;
         let sdoc = tiny(shape);
-        let simg = render(&list(id, &sdoc), Math::Fastest);
+        let simg = render(&list(id, &sdoc));
         let inner = f64::from(simg.at((10.0 * k) as u32 + 1, (50.0 * k) as u32));
         let outer = f64::from(simg.at((10.0 * k) as u32 - 2, (50.0 * k) as u32));
         let group = near(inner, expect(255.0, 0.0, 50.0)) && near(outer, expect(255.0, 0.0, 50.0));
@@ -272,14 +259,14 @@ fn quarter_turns_keep_straight_edges() {
             if deg != 180.0 {
                 flat.frame = Frame::new(20.0 + 20.0 - 8.0, 20.0 + 8.0 - 20.0, 16.0, 40.0);
             }
-            swapped &= render(&dl, Math::Fastest) == render(&list(id, &tiny(flat)), Math::Fastest);
+            swapped &= render(&dl) == render(&list(id, &tiny(flat)));
         }
         let mut o = base_object(rect_kind(), Frame::new(20.0, 20.0, 40.0, 16.0));
         o.fill = Some(Fill::Gray(120));
         o.style = Style::Role(LineRole::Structure);
         o.rotation_deg = 30.0;
         let dl = list(id, &tiny(o));
-        let img = render(&dl, Math::Fastest);
+        let img = render(&dl);
         let grays: BTreeSet<u8> = img.data.iter().copied().collect();
         let soft = dl.items.iter().all(|i| !matches!(i, Item::Rect { .. })) && grays.len() > 3;
         ok &= hard && swapped && soft;
@@ -312,7 +299,7 @@ fn a_turned_shape_turns_about_the_frames_centre() {
             );
             o.fill = Some(Fill::Gray(0));
             o.rotation_deg = deg;
-            let img = render(&list(id, &tiny(o)), Math::Fastest);
+            let img = render(&list(id, &tiny(o)));
             let (mut sx, mut sy, mut ink) = (0.0, 0.0, 0.0);
             for y in 0..img.height {
                 for x in 0..img.width {

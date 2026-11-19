@@ -30,7 +30,7 @@ use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Uuid};
 use quadrule_profiles::Profile;
 use quadrule_profiles::active::{self, lookup, lookup_in};
-use quadrule_render::{Gray, Math, encode_png, render, turn_clockwise};
+use quadrule_render::{Gray, encode_png, render, turn_clockwise};
 use quadrule_text::embed::NoEmbed;
 use quadrule_text::{BundledFont, FontRegistry};
 use std::collections::BTreeMap;
@@ -982,7 +982,7 @@ fn make_page(
     let font_facts = font_facts(doc, &laid, &how, fonts, embed_cache);
     let outlines = laid.outlines;
     let dl = display_list(doc, &primary, &target, &outlines).map_err(|e| e.to_string())?;
-    let image = render(&dl, Math::Fastest);
+    let image = render(&dl);
     let opts = Options {
         toolbars: TOOLBARS_IN_USE.to_vec(),
         fonts: font_facts.clone(),

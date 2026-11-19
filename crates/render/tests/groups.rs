@@ -74,19 +74,7 @@ fn groups_page_goldens() {
     for id in doc.profile_ids() {
         let target = builtin(id).unwrap();
         let dl = list(id, &doc);
-        let png = encode_png(&render(&dl, Math::Fastest), None);
-        // ADR-003 item 2's lever, reported and not enforced here (as for the shapes page).
-        let (a, b) = (
-            render(&dl, Math::Fastest).data,
-            render(&dl, Math::Portable).data,
-        );
-        let d_px = a.iter().zip(&b).filter(|(x, y)| x != y).count();
-        let d_max = a
-            .iter()
-            .zip(&b)
-            .map(|(x, y)| x.abs_diff(*y))
-            .max()
-            .unwrap_or(0);
+        let png = encode_png(&render(&dl), None);
         let name = format!("groups_{id}_{}x{}.png", target.width_px, target.height_px);
         std::fs::write(out_dir().join(&name), &png).unwrap();
         let sha = sha256_hex(&png);
@@ -99,7 +87,7 @@ fn groups_page_goldens() {
         let matches = golden == png;
         all_ok &= matches;
         println!(
-            "\nCHECK crate=render name=groups_golden profile={id} result={} sha256={sha} golden_sha256={} portable_diff_px={d_px} portable_max_diff={d_max} items={} os={} arch={}",
+            "\nCHECK crate=render name=groups_golden profile={id} result={} sha256={sha} golden_sha256={} items={} os={} arch={}",
             pass(matches),
             if golden.is_empty() {
                 "none".to_string()
@@ -148,7 +136,7 @@ fn px_of(img: &Gray, id: &str, x_mm: f64, y_mm: f64) -> f64 {
 }
 
 fn render_doc(id: &str, doc: &Document) -> Gray {
-    render(&list(id, doc), Math::Fastest)
+    render(&list(id, doc))
 }
 
 /// A page holding only `objects`.
@@ -436,7 +424,7 @@ fn text_inside_a_group_draws_saves_and_reopens() {
         let b = lay_out_text(&grouped, &primary, &target, &mut reg).unwrap();
         let da = display_list(&flat, &primary, &target, &a.outlines).unwrap();
         let db = display_list(&grouped, &primary, &target, &b.outlines).unwrap();
-        let (ra, rb) = (render(&da, Math::Fastest), render(&db, Math::Fastest));
+        let (ra, rb) = (render(&da), render(&db));
         let diff = ra.data.iter().zip(&rb.data).filter(|(x, y)| x != y).count();
         // Exact on both devices: the children resolve against the page, group or not.
         ok &= diff == 0;

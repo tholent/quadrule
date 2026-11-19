@@ -70,7 +70,7 @@ fn design(doc: &Document, id: &str) -> Gray {
     let mut reg = FontRegistry::bundled_only();
     let laid = lay_out_text(doc, &primary, &target, &mut reg).unwrap();
     let dl = display_list(doc, &primary, &target, &laid.outlines).unwrap();
-    render(&dl, Math::Fastest)
+    render(&dl)
 }
 
 /// The exported image: a landscape design turned into the device's portrait pixels.
@@ -281,10 +281,10 @@ fn pixels_of_l(id: &str, gap: bool) -> (Option<usize>, usize, f64) {
     }
     let with = {
         let (_, dl) = laid(&doc, id);
-        (render(&dl, Math::Fastest), dl)
+        (render(&dl), dl)
     };
     doc.layers[0].objects.retain(|o| o.id == ruled_id);
-    let without = render(&laid(&doc, id).1, Math::Fastest);
+    let without = render(&laid(&doc, id).1);
     let (img, dl) = with;
     let w = img.width as usize;
     // Rows holding a pixel only the letters made.
@@ -360,7 +360,7 @@ fn a_landscape_page_with_turned_text_exports_as_the_exact_quarter_turn() {
     for id in doc.profile_ids() {
         let target = builtin_for(id, Orientation::Landscape).unwrap();
         let (_, dl) = laid(&doc, id);
-        let upright = render(&dl, Math::Fastest);
+        let upright = render(&dl);
         let turned = turn_clockwise(&upright);
         let (w, h) = (upright.width as usize, upright.height as usize);
         let (dw, dh) = target.device_size();
@@ -403,8 +403,7 @@ fn the_page_exports_the_same_bytes_after_a_save() {
         let target = builtin_for(id, Orientation::Portrait).unwrap();
         let from_file = display_list(&again.doc, &primary, &target, &again.outlines[id]).unwrap();
         let (_, live) = laid(&doc, id);
-        ok &= encode_png(&render(&from_file, Math::Fastest), None)
-            == encode_png(&render(&live, Math::Fastest), None);
+        ok &= encode_png(&render(&from_file), None) == encode_png(&render(&live), None);
     }
     println!(
         "\nCHECK crate=render name=textbox_saved_page_exports_the_same result={}",

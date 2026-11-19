@@ -57,7 +57,7 @@ fn image(doc: &Document, id: &str) -> Gray {
     let mut reg = FontRegistry::bundled_only();
     let laid = lay_out_text(doc, &primary, &target, &mut reg).unwrap();
     let dl = display_list(doc, &primary, &target, &laid.outlines).unwrap();
-    render(&dl, Math::Fastest)
+    render(&dl)
 }
 
 fn bare(doc: &Document) -> Document {
@@ -227,8 +227,7 @@ fn overrides_round_trip_through_save() {
             display_list(&doc, &primary, &target, &laid.outlines).unwrap()
         };
         let saved = display_list(&file.doc, &primary, &target, &file.outlines[id]).unwrap();
-        export_same &= encode_png(&render(&live, Math::Fastest), None)
-            == encode_png(&render(&saved, Math::Fastest), None);
+        export_same &= encode_png(&render(&live), None) == encode_png(&render(&saved), None);
     }
     // A page without overrides writes no `overrides` and no `orientation` key.
     let plain_bytes = QuadFile::new(bare(&doc), outlines, vec![])

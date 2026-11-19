@@ -74,7 +74,7 @@ fn export(file: &QuadFile, id: &str) -> Vec<u8> {
         &file.outlines[id],
     )
     .unwrap();
-    let img = render(&dl, Math::Fastest);
+    let img = render(&dl);
     // A landscape page is exported turned into the device's portrait PNG (rung 8b).
     let img = if o == Orientation::Landscape {
         turn_clockwise(&img)

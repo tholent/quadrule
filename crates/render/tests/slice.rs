@@ -103,19 +103,13 @@ fn slice_end_to_end() {
             .unwrap()
             .outlines;
         let png_live = encode_png(
-            &render(
-                &display_list(&file.doc, &primary, &target, &live).unwrap(),
-                Math::Fastest,
-            ),
+            &render(&display_list(&file.doc, &primary, &target, &live).unwrap()),
             None,
         );
         // The same page drawn from the outlines saved in the file (ADR-002 item 5).
         let saved = &file.outlines[id];
         let png_saved = encode_png(
-            &render(
-                &display_list(&file.doc, &primary, &target, saved).unwrap(),
-                Math::Fastest,
-            ),
+            &render(&display_list(&file.doc, &primary, &target, saved).unwrap()),
             None,
         );
         let identical = png_live == png_saved;

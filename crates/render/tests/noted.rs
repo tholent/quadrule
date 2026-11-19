@@ -41,7 +41,7 @@ fn page() -> Gray {
     let mut reg = FontRegistry::bundled_only();
     let laid = lay_out_text(&doc, &primary, &target, &mut reg).unwrap();
     let dl = display_list(&doc, &primary, &target, &laid.outlines).unwrap();
-    render(&dl, Math::Fastest)
+    render(&dl)
 }
 
 const SOFTWARE: &str = "quadrule 0.0.0-golden";

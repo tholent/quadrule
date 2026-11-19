@@ -20,7 +20,7 @@ use quadrule_layout::{display_list, lay_out_text};
 use quadrule_model::sample::{MANTA_H_MM, MANTA_W_MM, slice_document};
 use quadrule_model::*;
 use quadrule_profiles::{Profile, builtin};
-use quadrule_render::{Math, render};
+use quadrule_render::render;
 use quadrule_text::FontRegistry;
 use quadrule_xtask::safezones::load_dir;
 use std::path::Path;
@@ -88,11 +88,7 @@ fn quadrule_draws_supernotes_stock_grid() {
     for id in ["supernote.a5x2", "supernote.a6x2"] {
         let p = builtin(id).unwrap();
         let laid = lay_out_text(&doc, &manta, &p, &mut FontRegistry::bundled_only()).unwrap();
-        let ours = render(
-            &display_list(&doc, &manta, &p, &laid.outlines).unwrap(),
-            Math::Fastest,
-        )
-        .data;
+        let ours = render(&display_list(&doc, &manta, &p, &laid.outlines).unwrap()).data;
         for shot in load_dir(&root.join(id)).unwrap() {
             let diff = differing(&p, &ours, &shot);
             // The Nomad's stock grid breaks its odd-pixel tie the other way: one pixel up and left.

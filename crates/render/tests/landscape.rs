@@ -57,7 +57,7 @@ fn design(doc: &Document, id: &str) -> Gray {
     let mut reg = FontRegistry::bundled_only();
     let laid = lay_out_text(doc, &primary, &target, &mut reg).unwrap();
     let dl = display_list(doc, &primary, &target, &laid.outlines).unwrap();
-    render(&dl, Math::Fastest)
+    render(&dl)
 }
 
 #[test]
@@ -191,7 +191,7 @@ fn orientation_round_trips_through_save() {
     for id in doc.profile_ids() {
         let target = builtin_for(id, o).unwrap();
         let saved = display_list(&file.doc, &primary, &target, &file.outlines[id]).unwrap();
-        export_same &= render(&saved, Math::Fastest) == design(&doc, id);
+        export_same &= render(&saved) == design(&doc, id);
     }
     let ok = same_doc && landscape && current && export_same;
     println!(

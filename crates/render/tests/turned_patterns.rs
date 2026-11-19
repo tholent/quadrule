@@ -59,7 +59,7 @@ fn design(doc: &Document, id: &str) -> Gray {
     let mut reg = FontRegistry::bundled_only();
     let laid = lay_out_text(doc, &primary, &target, &mut reg).unwrap();
     let dl = display_list(doc, &primary, &target, &laid.outlines).unwrap();
-    render(&dl, Math::Fastest)
+    render(&dl)
 }
 
 /// The same page with every pattern region unturned (0 degrees), in a group or a repeat too.
@@ -197,7 +197,7 @@ fn the_turned_pattern_page_exports_the_same_bytes_after_a_save() {
     for id in doc.profile_ids() {
         let target = builtin_for(id, o).unwrap();
         let dl = display_list(&file.doc, &primary, &target, &file.outlines[id]).unwrap();
-        same &= render(&dl, Math::Fastest) == design(&doc, id);
+        same &= render(&dl) == design(&doc, id);
     }
     let ok = same_doc && current && same;
     println!(

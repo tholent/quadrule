@@ -72,26 +72,7 @@ fn shapes_page_goldens() {
     for id in doc.profile_ids() {
         let target = builtin(id).unwrap();
         let dl = page(id, &doc);
-        let png = encode_png(&render(&dl, Math::Fastest), None);
-        let portable = encode_png(&render(&dl, Math::Portable), None);
-        // ADR-003 item 2's lever, reported and not enforced here: on x86 CI the portable maths
-        // differ from the fastest on the shapes page's anti-aliased edges (the exported golden,
-        // made with the fastest, matches on both machines), so the count is only printed.
-        let same_maths = png == portable;
-        let (d_px, d_max) = {
-            let (a, b) = (
-                render(&dl, Math::Fastest).data,
-                render(&dl, Math::Portable).data,
-            );
-            let n = a.iter().zip(&b).filter(|(x, y)| x != y).count();
-            let m = a
-                .iter()
-                .zip(&b)
-                .map(|(x, y)| x.abs_diff(*y))
-                .max()
-                .unwrap_or(0);
-            (n, m)
-        };
+        let png = encode_png(&render(&dl), None);
         let name = format!("shapes_{id}_{}x{}.png", target.width_px, target.height_px);
         std::fs::write(out_dir().join(&name), &png).unwrap();
         let sha = sha256_hex(&png);
@@ -104,7 +85,7 @@ fn shapes_page_goldens() {
         let matches = golden == png;
         all_ok &= matches;
         println!(
-            "\nCHECK crate=render name=shapes_golden profile={id} result={} sha256={sha} golden_sha256={} simd_equals_portable={same_maths} portable_diff_px={d_px} portable_max_diff={d_max} items={} os={} arch={}",
+            "\nCHECK crate=render name=shapes_golden profile={id} result={} sha256={sha} golden_sha256={} items={} os={} arch={}",
             pass(matches),
             if golden.is_empty() {
                 "none".to_string()
@@ -175,7 +156,7 @@ fn square_rectangles_are_hard_edged() {
             })
             .collect();
         grays.insert(dl.background);
-        let img = render(&dl, Math::Fastest);
+        let img = render(&dl);
         let stray = img.data.iter().filter(|v| !grays.contains(v)).count();
         ok &= only_rects && whole && stray == 0 && !dl.items.is_empty();
         parts.push(format!(

@@ -61,7 +61,7 @@ fn design(doc: &Document, id: &str) -> Gray {
     let mut reg = FontRegistry::bundled_only();
     let laid = lay_out_text(doc, &primary, &target, &mut reg).unwrap();
     let dl = display_list(doc, &primary, &target, &laid.outlines).unwrap();
-    render(&dl, Math::Fastest)
+    render(&dl)
 }
 
 /// Draws each page, compares it with its golden image and returns the sums lines.
@@ -300,7 +300,7 @@ fn the_paper_pages_draw_the_same_twice_and_a_saved_file_keeps_each_ppi() {
                 &file.outlines[id],
             )
             .unwrap();
-            kept &= render(&dl, Math::Fastest) == design(&doc, id);
+            kept &= render(&dl) == design(&doc, id);
         }
     }
     let a5_600 = paper_document().ppi_of(PAPER_A5_ID) == 600;

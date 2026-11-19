@@ -64,7 +64,7 @@ fn png(doc: &Document, id: &str, outlines: &quadrule_model::outlines::ProfileOut
     let primary = builtin_for(&doc.primary_profile_id, doc.page.orientation).unwrap();
     let target = builtin_for(id, doc.page.orientation).unwrap();
     let dl = display_list(doc, &primary, &target, outlines).unwrap();
-    encode_png(&render(&dl, Math::Fastest), None)
+    encode_png(&render(&dl), None)
 }
 
 #[test]

@@ -17,7 +17,7 @@
 
 use quadrule_layout::Item;
 use quadrule_profiles::{Profile, builtin, builtin_ids};
-use quadrule_render::{Math, render};
+use quadrule_render::render;
 use quadrule_text::FontRegistry;
 use quadrule_xtask::calib::*;
 use std::collections::{BTreeMap, BTreeSet};
@@ -112,7 +112,7 @@ fn line_samples_print_what_their_codes_say() {
             if lines.is_empty() {
                 continue;
             }
-            let img = render(&page.dl, Math::Fastest);
+            let img = render(&page.dl);
             for (s, (w, g, n)) in lines {
                 let x = ((s.area.0 + s.area.2) / 2.0) as u32;
                 let col: Vec<u8> = (s.area.1 as u32..s.area.3 as u32)
@@ -161,7 +161,7 @@ fn gray_patches_are_flat_and_the_ramp_climbs() {
     for id in builtin_ids() {
         let p = builtin(id).unwrap();
         for page in pages(&p).iter().filter(|pg| pg.sheet == "grays") {
-            let img = render(&page.dl, Math::Fastest);
+            let img = render(&page.dl);
             for s in &page.samples {
                 let (x0, y0, x1, y1) = (
                     s.area.0 as u32,
@@ -208,7 +208,7 @@ fn sheets_are_repeatable() {
         && a.iter()
             .zip(&b)
             .all(|(x, y)| x.dl == y.dl && x.samples == y.samples);
-    let same_pixels = render(&a[0].dl, Math::Fastest) == render(&b[0].dl, Math::Fastest);
+    let same_pixels = render(&a[0].dl) == render(&b[0].dl);
     let names: BTreeSet<String> = a.iter().map(|pg| pg.file_name(&p)).collect();
     let safe = names.iter().all(|n| {
         n.chars()

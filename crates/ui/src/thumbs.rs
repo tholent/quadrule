@@ -32,7 +32,7 @@ use quadrule_format::QuadFile;
 use quadrule_layout::{display_list, lay_out_text_saved};
 use quadrule_profiles::Registry;
 use quadrule_profiles::active::{self, lookup_in};
-use quadrule_render::{Gray, Math, render, turn_clockwise};
+use quadrule_render::{Gray, render, turn_clockwise};
 use quadrule_text::FontRegistry;
 use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
@@ -343,7 +343,7 @@ fn draw(job: &Job, registry: Registry, fonts: &mut FontRegistry) -> Result<Gray,
     let (laid, _) = lay_out_text_saved(doc, &primary, &target, fonts, &file.outlines)
         .map_err(|e| e.to_string())?;
     let dl = display_list(doc, &primary, &target, &laid.outlines).map_err(|e| e.to_string())?;
-    let image = render(&dl, Math::Fastest);
+    let image = render(&dl);
     let image = if target.turned {
         turn_clockwise(&image)
     } else {

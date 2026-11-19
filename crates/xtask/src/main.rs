@@ -20,7 +20,7 @@
 //! cargo xtask lint [--toolbars <list>] [<file.quad>]
 //! ```
 
-use quadrule_render::{Math, PngMeta, encode_png, render, sha256_hex};
+use quadrule_render::{PngMeta, encode_png, render, sha256_hex};
 use quadrule_text::FontRegistry;
 use quadrule_xtask::calib;
 use std::path::PathBuf;
@@ -91,7 +91,7 @@ fn calibration_sheet(args: &[String]) -> Result<(), String> {
             let software = format!("Quadrule {version}");
             let title = format!("Calibration {} {} of {}", page.sheet, page.number, page.of);
             let png = encode_png(
-                &render(&page.dl, Math::Fastest),
+                &render(&page.dl),
                 Some(PngMeta {
                     software: &software,
                     title: &title,

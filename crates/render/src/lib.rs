@@ -68,26 +68,28 @@ pub fn turn_clockwise(img: &Gray) -> Gray {
     }
 }
 
-/// Which arithmetic vello_cpu uses.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Math {
-    /// The fastest the CPU offers (SIMD). The default.
-    Fastest,
-    /// Portable scalar maths, the lever ADR-003 item 2 keeps in case machines disagree.
-    Portable,
-}
+/// The arithmetic vello_cpu draws with, on every computer (ADR-018): fearless_simd's scalar
+/// fallback. Its multiply-add is a multiply then an add, as at the SSE levels; AVX2 and NEON
+/// fuse the two into one rounding, so a detected level gave different edge pixels on a
+/// computer without FMA. Any other level here is a build error (below).
+pub const LEVEL: Level = Level::fallback();
 
-/// Draws a display list with vello_cpu.
+const _: () = assert!(
+    matches!(LEVEL, Level::Fallback(_)),
+    "ADR-018: export draws at the fallback level on every computer"
+);
+
+/// Draws a display list with vello_cpu, at [`LEVEL`].
 ///
 /// # Panics
 /// If the page is larger than 65535 pixels on a side (vello_cpu's limit); no profile is.
-pub fn render(dl: &DisplayList, math: Math) -> Gray {
+pub fn render(dl: &DisplayList) -> Gray {
     let w = u16::try_from(dl.width).expect("page width fits vello_cpu");
     let h = u16::try_from(dl.height).expect("page height fits vello_cpu");
-    let mut settings = RenderSettings::default();
-    if math == Math::Portable {
-        settings.level = Level::baseline();
-    }
+    let settings = RenderSettings {
+        level: LEVEL,
+        ..RenderSettings::default()
+    };
     let mut ctx = RenderContext::new_with(w, h, settings);
     ctx.set_paint(gray(dl.background));
     ctx.fill_rect(&Rect::new(0.0, 0.0, w as f64, h as f64));

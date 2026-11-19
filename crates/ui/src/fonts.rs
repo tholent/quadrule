@@ -28,7 +28,7 @@ use kurbo::{Point, Shape};
 use quadrule_i18n::Message;
 use quadrule_layout::{DisplayList, Item, text_path};
 use quadrule_model::{FontStyle, MM_PER_IN, ObjectKind, TextAlign, TextBox, Uuid};
-use quadrule_render::{Math, render};
+use quadrule_render::render;
 use quadrule_text::{FamilyInfo, FontRegistry, TextRequest, lay_out};
 use std::collections::HashMap;
 
@@ -74,7 +74,7 @@ pub fn raster_text(reg: &mut FontRegistry, tb: &TextBox, px_per_mm: f64) -> Opti
         background: 255,
         items: vec![Item::Fill { path, gray: 0 }],
     };
-    let img = render(&dl, Math::Fastest);
+    let img = render(&dl);
     Some(Raster {
         width,
         height,

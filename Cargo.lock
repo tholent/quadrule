@@ -2845,6 +2845,7 @@ name = "quadrule-render"
 version = "0.16.2"
 dependencies = [
  "ciborium",
+ "fearless_simd 0.7.0",
  "png",
  "quadrule-format",
  "quadrule-layout",
