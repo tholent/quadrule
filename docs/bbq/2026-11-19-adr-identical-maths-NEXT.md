@@ -17,6 +17,12 @@ diff, and chris looks at any new golden images.
 - `docs/decisions/ADR-003-export-renderer.md` (the banner at item 2) and `ADR-006-checks-and-ci.md`.
 - AGENTS.md. Start with `make build-proof` and say the BUILD line.
 
+**If this session runs on chris's VM** (Intel Xeon E5-2470 v2, 12 threads, no FMA; `grep -c fma /proc/cpuinfo` prints
+0): the golden tests **fail there before the fix**, as the record says (P1); that is expected, not your doing. After
+the fix they must pass there with no change to the golden images, which makes the VM the local proof. Build with
+`make … JOBS=12` (the Makefile defaults to 2 for the Pi), and run tests with `--no-fail-fast` so one failing test
+program doesn't hide the rest.
+
 ## Budget
 
 No share set: chris lifted this week's hard limits and said "I have a free reset this week, so I am grinding this out"
