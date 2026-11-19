@@ -77,9 +77,33 @@ chris, word for word: "ok, I understand more clearly. We can move forward with o
 
 ## Owed
 
-- (none; both answered 2026-11-19, see Amendments)
+- (2026-11-19 asks: both answered, see Amendments)
+- chris: ADR-017's premise failed (Amendments, 2026-11-19, the building session). Which way now: supersede ADR-017,
+  keep or revert the FMA-off CI job (`60eb202`), and which of the options in the session's report.
 
 ## Amendments
 
 - 2026-11-19, chris, word for word: "1. sounds good 2. ratified". The crate is `quadrule-maths` in `crates/maths/`;
   ADR-017 is ratified.
+- 2026-11-19, the building session (Opus 5.5, high), on chris's VM: **the premise is wrong; work stopped at the
+  prompt's first step, before building anything.** The FMA-off CI job (`60eb202`, run 44563345364, job
+  135698321627) had glibc's FMA and AVX2 off (`GLIBC tunables=glibc.cpu.hwcaps=-AVX2,-FMA,-FMA4 fma_cpuid=1
+  fma_active=0 avx2_cpuid=1 avx2_active=0`, glibc 2.43) and **passed with the golden checksums**:
+  `devices_golden profile=supernote.a6x2 result=pass sha256=f32e695d…` and `groups_golden profile=supernote.a6x2
+  result=pass sha256=1f2233cc…`, not the VM's `e2cc42…` and `d78f33…`. Also on the VM (glibc 2.41), glibc's plain
+  maths in place of its AVX ones (`GLIBC_TUNABLES=glibc.cpu.hwcaps=-AVX`) left the groups page unchanged
+  (`sha256=d78f33f29a37…` both ways). glibc's choice of maths is not the cause.
+- The cause, found in the same run: **vello_cpu's SIMD level, through fearless_simd 0.7.0's multiply-add.** It is
+  fused (one rounding) at the AVX2 level (`_mm_fmadd_ps`, `fearless_simd-0.7.0/src/generated/avx2.rs:359`) and the
+  NEON level (`vfmaq_f32`, `neon.rs:355`), but unfused (`a * b + c`) at the SSE4.2 and SSE2 levels (`sse4_2.rs:357`,
+  `sse2.rs:436`) and in the fallback (`fallback.rs:361`). CI's x86 runners and Windows have AVX2 and FMA, the Pi and
+  CI's Mac are NEON: all fused, all match the golden images. The VM (no AVX2, no FMA) runs at SSE4.2: unfused. Proof:
+  on CI, fast against portable differs on exactly the VM's pixels' count (`groups_golden profile=supernote.a6x2 …
+  portable_diff_px=11 portable_max_diff=1`; P1: 11 px), and on the VM fast equals portable (`portable_diff_px=0`). P3
+  read that the wrong way: the VM's fast path is the portable one; elsewhere the fast path is fused.
+- And `Math::Portable` (`Level::baseline()`, `crates/render/src/lib.rs:89`) is not the same everywhere either: it is
+  NEON (fused) on aarch64 and SSE2 (unfused) on x86_64 (`fearless_simd-0.7.0/src/lib.rs:658`). So ADR-003 item 2's
+  lever, as written, would not have made every computer agree.
+- ADR-017's item 1 (the app's own `sin` and the rest from `libm`) would not fix this; its ruled text is untouched.
+  The FMA-off CI job (item 5) stays on `main`, non-blocking, but cannot catch this cause (`GLIBC_TUNABLES` does not
+  change what `is_x86_feature_detected!` sees). The way forward is chris's (Owed).

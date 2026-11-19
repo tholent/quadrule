@@ -2541,3 +2541,33 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
   make maths identical on every computer: ADR-017 (proposed), record `docs/bbq/2026-11-19-adr-identical-maths.md`,
   prompt `docs/bbq/2026-11-19-adr-identical-maths-NEXT.md`; ADR-003 item 2 gets a dated banner pointing at it.
   `adr-check: 17 ADRs, 0 failure(s)`.
+
+## 2026-11-19 — ADR-017 build: premise wrong, stopped at step one (Opus 5.5, high, on chris's VM)
+
+- Prompt `docs/bbq/2026-11-19-adr-identical-maths-NEXT.md`. VM: `grep -c fma /proc/cpuinfo` → 0; `ldd --version` →
+  Debian GLIBC 2.41. `make build-proof JOBS=12` → `BUILD head=8e3f881 dirty=no rebuilt=0`.
+- Before any fix, on the VM: `cargo test -p quadrule-render --no-fail-fast -- --nocapture` → `error: 22 targets
+  failed`, with `devices_golden profile=supernote.a6x2 result=fail sha256=e2cc42fd…` and `groups_golden
+  profile=supernote.a6x2 result=fail sha256=d78f33f2…` (the record's P1). It fails more than the record listed:
+  shapes, transforms, paper, pattern borders and nine migration tests too.
+- `60eb202`: CI job `ubuntu-latest, FMA off` (non-blocking), `GLIBC_TUNABLES=glibc.cpu.hwcaps=-AVX2,-FMA,-FMA4`
+  (syntax from glibc's manual, Hardware Capability Tunables; names from glibc 2.39 `sysdeps/x86/cpu-tunables.c:124,133,138`);
+  it prints glibc's FMA and AVX2 bits decoded from `ld.so --list-diagnostics`.
+- Run 44563345364, job 135698321627 (`gh api repos/tholent/quadrule/actions/jobs/135698321627/logs`): glibc 2.43;
+  `GLIBC tunables=glibc.cpu.hwcaps=-AVX2,-FMA,-FMA4 fma_cpuid=1 fma_active=0 avx2_cpuid=1 avx2_active=0`; the tests
+  **passed with the golden checksums** (`devices_golden … a6x2 result=pass sha256=f32e695d…`, `groups_golden … a6x2
+  result=pass sha256=1f2233cc…`). The red arm did not go red: the prompt's stop condition. Nothing built.
+- On the VM, `GLIBC_TUNABLES=glibc.cpu.hwcaps=-AVX` (glibc's plain maths) → `groups_golden … a6x2 sha256=d78f33f29a37`,
+  the same as without it. glibc's maths is not the cause.
+- The cause: fearless_simd 0.7.0 (vello_cpu's SIMD) fuses multiply-add at AVX2 and NEON, not at SSE4.2, SSE2 or the
+  fallback; the VM runs at SSE4.2. On CI `groups_golden … a6x2 … portable_diff_px=11 portable_max_diff=1`, the VM's
+  11 px; on the VM `portable_diff_px=0`. `Math::Portable` (`Level::baseline()`) is NEON on aarch64, SSE2 on x86_64, so
+  it differs between machines too. Detail and file lines: the record's Amendments,
+  `docs/bbq/2026-11-19-adr-identical-maths.md`.
+- Options put to chris (none built): A, export and the export canvas at `Level::fallback()` everywhere (identical by
+  construction, no patches; golden images change once; speed on the Pi to be measured against ADR-009's 50 ms); B, a
+  patched fearless_simd with an unfused multiply-add at every level (keeps SIMD speed; a patch under vello, redone each
+  upgrade); C, a tolerance of 1 level on machines without FMA (the old option 2). Lead's recommendation: measure A's
+  speed on the Pi first; take A if it fits, else C. ADR-017 would need superseding either way; its text is untouched.
+- Not done: the `quadrule-maths` crate, the routing test, the three systems, golden images; ADR-017 `built: not
+  started` stands.

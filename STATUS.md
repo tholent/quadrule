@@ -250,11 +250,13 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `v0.16.4` (menus for each system, the status bar's toggles into View, the macOS double-click), and batch 3, `v0.16.5`
   (Quick Look). Rung 16b, the starters, becomes `v0.16.6`; its lead's prompt is
   `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md` (`docs/arcs/v1/README.md`).
-- **ADR-017, ratified 2026-11-19, is not built yet**: every program links its own maths functions from `libm`, so
-  every computer exports the same bytes (chris's VM, without FMA, differed by 1 gray level on a few curved edges), and
-  CI checks the golden images with FMA turned off. The prompt for the building session is
-  `docs/bbq/2026-11-19-adr-identical-maths-NEXT.md`; its first step confirms the cause in CI before anything is built.
-  The pruning plan for the build folder (`docs/proposals/build-pruning-2026-11-19.md`) is chris's to run on the VM.
+- **ADR-017, ratified 2026-11-19, is not built: its premise proved wrong** (2026-11-19). A CI job with glibc's FMA
+  maths off (`.github/workflows/ci.yml`, `fma-off`, non-blocking) passed with the golden checksums, so glibc is not the
+  cause. The cause is vello_cpu's SIMD level: fearless_simd fuses multiply-add on AVX2 and NEON but not on the VM's
+  SSE4.2, and `Math::Portable` is fused on ARM, unfused on x86 (record `docs/bbq/2026-11-19-adr-identical-maths.md`,
+  Amendments; `docs/STATUS-log.md`). Waits on chris: options A (unfused fallback level everywhere), B (patched
+  fearless_simd), C (a tolerance); ADR-017 to be superseded. The pruning plan for the build folder
+  (`docs/proposals/build-pruning-2026-11-19.md`) is chris's to run on the VM.
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1
