@@ -2534,3 +2534,10 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
   `calib/`, fuzz corpus, `spikes/text/fonts` fonts, `.claude/` and the branch `backup/pre-swap-rewrite`.
 - Plan for chris to run on the VM: `docs/proposals/build-pruning-2026-11-19.md` (smaller debug information,
   `cargo xtask prune` / `make prune`, a size cap in `make build-proof`); 4 open questions with defaults.
+- On the VM (chris's pastes): from-scratch `make build-proof` 5m 35s at 2 jobs, 1m 36s at `JOBS=12`; the Pi, timed here
+  the same way, `Finished … in 5m 06s` (`WALL seconds=307`), `BUILD head=4ebfd5a dirty=no rebuilt=11`.
+- The VM fails golden images by 1 gray level on a few curved and rotated edge pixels (devices a6x2: 7 px; groups
+  a6x2: 11 px; compared on the Pi from the VM's files); vello_cpu's fast and portable maths agree there. chris chose to
+  make maths identical on every computer: ADR-017 (proposed), record `docs/bbq/2026-11-19-adr-identical-maths.md`,
+  prompt `docs/bbq/2026-11-19-adr-identical-maths-NEXT.md`; ADR-003 item 2 gets a dated banner pointing at it.
+  `adr-check: 17 ADRs, 0 failure(s)`.

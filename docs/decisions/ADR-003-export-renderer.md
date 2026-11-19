@@ -17,6 +17,9 @@ revisit-when: the cross-machine hash check (spike R06/R09 on x86 Linux, macOS, W
 ## Decision
 
 1. The export renderer (the part that makes the PNG file) is **vello_cpu**.
+   > 2026-11-19: item 2 is replaced by ADR-017 (proposed), once ratified: machines did disagree, but not in vello_cpu's
+   > arithmetic, so this lever would change nothing. See `ADR-017-same-maths-on-every-computer.md`.
+
 2. If the cross-machine check shows Intel and ARM giving different bytes, export switches to vello_cpu's portable
    scalar mode (`Level::baseline()`).
 3. **The GPU never makes export files.**
@@ -70,3 +73,6 @@ Drivers:
 - 2026-11-09: ratified by chris ("ratify all three").
 - 2026-11-09: built status updated after the real `render` crate; golden images match byte for byte on Linux x86_64, macOS aarch64, Windows x86_64 and the Pi (CI, rung 1), so item 2 (portable maths) is not needed; tiny-skia added as the test-only second check (item 4). Prior header values: built `not started`, proof
   `queued in STATUS.md (Next) for the real render crate; evidence in spikes/render/FINDINGS.md`.
+- 2026-11-19: the revisit-when trigger fired: chris's VM (Intel Xeon E5-2470 v2, no FMA) gave different golden bytes on
+  curved and rotated edges, 1 gray level on a few pixels, with vello_cpu's fast and portable maths agreeing. ADR-017
+  (proposed) replaces item 2; banner added at item 2. Ruled text unchanged.

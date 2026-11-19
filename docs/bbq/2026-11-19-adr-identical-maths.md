@@ -30,13 +30,54 @@ processor; the plain versions can differ in the last bit. The Pi's glibc always 
 
 ## Rounds
 
-(written as each is answered)
+### Before round 1: chris's challenge and the ruling
+
+chris, word for word: "I'm debating whether we want to do all our own maths. I'm assuming kurbo is rather established
+and reviewed. We are throwing that all away because of a few pixels on a sheet being a little off. These templates
+aren't for building rocket ships and human imperceptible differences aren't that big of a deal".
+
+The lead explained that option 1 keeps kurbo and vello and changes only where their sine, cosine and the like come
+from (the system's maths library, or the pure-Rust `libm`), and, given chris's weighting, **withdrew its
+recommendation of option 1 and recommended option 2** (exact bytes on CI and the Pi; on a machine without FMA the
+golden tests allow up to 1 gray level on a handful of edge pixels, said in the CHECK line). The withdrawn
+recommendation is kept here, not deleted: it was withdrawn because chris weighs imperceptible differences as minor
+and option 1 needs build-time machinery proven on three systems.
+
+chris, word for word: "ok, I understand more clearly. We can move forward with option 1". Option 2 is overruled.
+
+### Round 1 (4 questions)
+
+- **Q1 Reach.** chris: "When the app is built (Recommended)". The app supplies its own sine, cosine and the rest
+  from `libm` as it is built, so every library inside it (kurbo and vello included, unchanged) uses them. It must be
+  proven to build on Linux, macOS and Windows in CI; a system that refuses falls back to patched copies of kurbo and
+  vello's curve code that call `libm`.
+- **Q2 Golden images.** chris: "Allowed, re-approved (Recommended)". The golden images may change once; the session
+  shows chris how many pixels changed and a picture of where, and they stand only after his look.
+- **Q3 Flag.** chris: "No flag". It lands switched on; chris's look at the golden images is the only gate. This is
+  chris's ruling for this job; ADR-007's amendment of 2026-11-10 is not changed by it.
+- **Q4 CI guard.** chris: "Permanent job (Recommended)". A CI job runs the golden tests on Linux with FMA turned off
+  (`GLIBC_TUNABLES`) on every push. Before the fix it should fail with the VM's checksums (confirming the cause);
+  after, it passes and keeps guarding.
+
+## Closing
+
+- "Anything else to protect or avoid?" chris: "Nothing more (Recommended)".
+- "Make the ADR now, and also a prompt for the next agent?" chris: "ADR + next-agent prompt (Recommended)".
+- Made: `docs/decisions/ADR-017-same-maths-on-every-computer.md` (proposed); ADR-003 gets a dated banner at item 2 and
+  a History line; the prompt is `docs/bbq/2026-11-19-adr-identical-maths-NEXT.md`.
 
 ## Defaulted
 
 | call | who does it that way | veto |
 |---|---|---|
+| The functions covered are the C maths library's transcendental ones that `libm` provides (`sin` … `tanh`, and `f32` forms); not `sqrt`, `floor`, `round` or `fma`, which IEEE 754 requires to be exact everywhere | IEEE 754 §5.4 (exactly rounded operations) | veto: cover those too |
+| The FMA-off job runs on Linux x86_64 only, and is non-blocking (`continue-on-error`) until the fix lands, then required | glibc is where the choice happens; `main` stays green while the job proves the cause | veto: required from the start |
+| The routing test sweeps many inputs and requires `f64::sin(x).to_bits() == libm::sin(x).to_bits()` (and the same for each function); its red arm is the crate left out, which must make it fail | ADR-006: tests print one CHECK line | veto: none expected |
+| The exact `GLIBC_TUNABLES` value is taken from glibc's own manual for the runner's glibc, and the job prints the processor features glibc used (`ld.so --list-diagnostics`) to show FMA is off | AGENTS.md: take values from the spec, never memory | veto: none expected |
 
 ## Owed
+
+- The crate's name (taste), proposed `quadrule-maths` in `crates/maths/` (ADR-017 ask 1).
+- Ratification of ADR-017.
 
 ## Amendments
