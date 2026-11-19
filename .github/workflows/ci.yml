@@ -88,3 +88,66 @@ jobs:
           name: slice-${{ matrix.os }}
           path: target/tmp/slice/
           if-no-files-found: warn
+
+  # ADR-017 item 5: the golden tests with glibc told to act as if the processor had no FMA or
+  # AVX2, like chris's VM (Xeon E5-2470 v2). glibc then picks its `avx` versions of sin, cos and
+  # the rest, as on the VM, instead of its `fma` ones. The value is glibc's
+  # `glibc.cpu.hwcaps=-xxx` (manual, Hardware Capability Tunables) with the names glibc 2.39
+  # parses (sysdeps/x86/cpu-tunables.c); -FMA4 keeps an AMD runner off the `fma4` versions.
+  # Non-blocking until ADR-017's fix lands.
+  fma-off:
+    name: ubuntu-latest, FMA off
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain
+        run: rustup toolchain install && rustc --version
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Prints what the processor offers and what glibc uses, read from the loader's own
+      # diagnostics: FMA is CPUID leaf 1 ECX bit 12 (features[0x0], register 0x2), AVX2 is leaf 7
+      # EBX bit 5 (features[0x1], register 0x1) (glibc 2.39 cpu-features.h, bits/platform/x86.h).
+      - name: glibc
+        run: |
+          ldd --version | head -n 1
+          features() {
+            diag=$(/lib64/ld-linux-x86-64.so.2 --list-diagnostics)
+            word() { sed -n "s/^x86.cpu_features.features\[$1\].$2\[$3\]=//p" <<<"$diag"; }
+            echo "GLIBC tunables=${GLIBC_TUNABLES:-none}" \
+              "fma_cpuid=$(( ($(word 0x0 cpuid 0x2) >> 12) & 1 ))" \
+              "fma_active=$(( ($(word 0x0 active 0x2) >> 12) & 1 ))" \
+              "avx2_cpuid=$(( ($(word 0x1 cpuid 0x1) >> 5) & 1 ))" \
+              "avx2_active=$(( ($(word 0x1 active 0x1) >> 5) & 1 ))"
+          }
+          features
+          GLIBC_TUNABLES=glibc.cpu.hwcaps=-AVX2,-FMA,-FMA4 features
+
+      - name: test (FMA off)
+        env:
+          GLIBC_TUNABLES: glibc.cpu.hwcaps=-AVX2,-FMA,-FMA4
+        run: cargo test -p quadrule-render --no-fail-fast -- --nocapture 2>&1 | tee test.log
+
+      - name: Structured results
+        if: always()
+        run: |
+          {
+            echo "### ubuntu-latest, FMA off ($(uname -m))"
+            echo '```'
+            grep '^CHECK' test.log || echo "no CHECK lines"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep '^CHECK' test.log || true
+
+      - name: Upload exported files
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: slice-fma-off
+          path: target/tmp/slice/
+          if-no-files-found: warn
