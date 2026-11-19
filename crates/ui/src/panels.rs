@@ -20,6 +20,7 @@
 
 use crate::arrange::ArrangeOp;
 use crate::editor::{DropOn, RowZone, Toward, layer_drop_place, object_drop_place, row_drop_place};
+use crate::layer_icons::LayerIcon;
 use crate::view::ViewerUi;
 use egui::{Color32, RichText, Role, ScrollArea, Sense, WidgetInfo};
 use quadrule_i18n::Message;
@@ -106,19 +107,21 @@ impl ViewerUi {
         ui.horizontal(|ui| {
             ui.heading(self.t("app-layers"));
         });
-        ui.horizontal_wrapped(|ui| {
+        // Seven line icons in one row (fixes batch 1 bbq, Q5), a little apart in three groups.
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 3.0;
             let can = !self.viewer.selection.is_empty() || self.selected_layer.is_some();
-            ui.add_enabled_ui(can, |ui| {
-                if ui.button(self.t("app-move-up")).clicked() {
-                    self.move_selected(Toward::Front);
-                }
-                if ui.button(self.t("app-move-down")).clicked() {
-                    self.move_selected(Toward::Back);
-                }
-            });
+            if self.layer_icon_button(ui, LayerIcon::MoveUp, can, None) {
+                self.move_selected(Toward::Front);
+            }
+            if self.layer_icon_button(ui, LayerIcon::MoveDown, can, None) {
+                self.move_selected(Toward::Back);
+            }
+            ui.add_space(6.0);
             // New layer and Delete layer (docs/bbq/2026-11-18-new-and-delete-layers.md).
             self.layer_buttons(ui);
-            self.group_buttons(ui);
+            ui.add_space(6.0);
+            self.group_icon_buttons(ui);
         });
         ui.separator();
         let Some(doc) = self.viewer.doc().cloned() else {
@@ -203,6 +206,28 @@ impl ViewerUi {
             .on_hover_text(self.t("app-repeat-hint"))
             .clicked()
         {
+            let _ = self.viewer.repeat_selection();
+        }
+    }
+
+    /// Group, Ungroup and Repeat as icons in the layers panel's row (fixes batch 1 bbq, Q5); the same three
+    /// conditions and hover note as [`ViewerUi::group_buttons`].
+    pub(crate) fn group_icon_buttons(&mut self, ui: &mut egui::Ui) {
+        let editable = self.viewer.editable_selection();
+        let any_group = editable.iter().any(|id| {
+            self.viewer
+                .doc()
+                .and_then(|d| d.object(*id))
+                .is_some_and(Object::is_group)
+        });
+        if self.layer_icon_button(ui, LayerIcon::Group, editable.len() >= 2, None) {
+            let _ = self.viewer.group_selection();
+        }
+        if self.layer_icon_button(ui, LayerIcon::Ungroup, any_group, None) {
+            let _ = self.viewer.ungroup_selection();
+        }
+        let hint = Some(self.t("app-repeat-hint"));
+        if self.layer_icon_button(ui, LayerIcon::Repeat, !editable.is_empty(), hint) {
             let _ = self.viewer.repeat_selection();
         }
     }

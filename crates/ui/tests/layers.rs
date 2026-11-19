@@ -93,10 +93,11 @@ fn steps(h: &Harness<'static, Window>) -> usize {
         .undo_len()
 }
 
+/// Hovers, then clicks, the button named `label` (by role: an icon button's hover note shows its name too).
 fn press(h: &mut Harness<'static, Window>, label: &str) {
-    h.get_by_label(label).hover();
+    h.get_by_role_and_label(Role::Button, label).hover();
     h.run();
-    h.get_by_label(label).click();
+    h.get_by_role_and_label(Role::Button, label).click();
     h.run();
     h.run();
 }

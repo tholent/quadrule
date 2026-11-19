@@ -35,6 +35,7 @@ pub mod export_path;
 pub mod export_ui;
 pub mod file_menu;
 pub mod fonts;
+pub mod layer_icons;
 pub mod layers;
 pub mod lint_fixes;
 pub mod lint_ui;

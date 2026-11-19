@@ -244,9 +244,12 @@ The project's live state. Update it when work lands. Every claim cites at least 
   planned (bbq, 8 questions, `docs/bbq/2026-11-11-rung-7-groups-and-align.md`): **rung 7 is done** (7a groups `v0.7.0`, 7b
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
   done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). **Rung 15 is done** (`v0.15.0`). **Rung 16a is done** (`v0.16.0`). Pattern borders are done (`v0.16.1`). Layers can be made and deleted (`v0.16.2`).
-  Next: rung 16b, the starters, when chris's five are ready (he makes one per category in the app and keeps it with
-  File ▸ Save as template…), shipping as `v0.16.3`; the next lead's prompt is `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`
-  (`docs/arcs/v1/README.md`).
+  Next: chris's seven fixes before 16b, in three batches (bbq, 8 questions, `docs/bbq/2026-11-18-fixes-before-16b.md`).
+  **Batch 1 is built** (smooth zoom, the grand staff space with file format 0.18.0, the layers panel's icons; `d0b1e40`,
+  `d54d34c`, `c7707bf` and the icons commit) and waits on chris's look before it ships as `v0.16.3`. Then batch 2,
+  `v0.16.4` (menus for each system, the status bar's toggles into View, the macOS double-click), and batch 3, `v0.16.5`
+  (Quick Look). Rung 16b, the starters, becomes `v0.16.6`; its lead's prompt is
+  `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md` (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1

@@ -17,6 +17,7 @@
 //! objects; the new layer's name field, open at once. What a click does is in this file and in `Viewer::new_layer` and
 //! `Viewer::delete_layer`; the commands are `InsertLayer` and `RemoveLayer`.
 
+use crate::layer_icons::LayerIcon;
 use crate::panels::Renaming;
 use crate::view::ViewerUi;
 use egui::{Button, Popup, PopupCloseBehavior, SetOpenCommand};
@@ -121,24 +122,17 @@ impl ViewerUi {
         }
     }
 
-    /// The two buttons of the layers panel's button row.
+    /// The two buttons of the layers panel's icon row: New layer and Delete layer.
     pub(crate) fn layer_buttons(&mut self, ui: &mut egui::Ui) {
         let picked = self.picked_layer();
         let has_doc = self.viewer.doc().is_some();
-        if ui
-            .add_enabled(has_doc, Button::new(self.t("app-layer-new")))
-            .on_hover_text(self.t("app-layer-new-hint"))
-            .clicked()
-        {
+        let hint = Some(self.t("app-layer-new-hint"));
+        if self.layer_icon_button(ui, LayerIcon::NewLayer, has_doc, hint) {
             self.new_layer(picked);
         }
         let state = self.delete_layer_state(picked);
-        let delete = ui.add_enabled(state.is_ok(), Button::new(self.t("app-layer-delete")));
-        let delete = match state {
-            Ok(_) => delete,
-            Err(why) => delete.on_disabled_hover_text(self.t(why)),
-        };
-        if delete.clicked()
+        let why = state.err().map(|why| self.t(why));
+        if self.layer_icon_button(ui, LayerIcon::DeleteLayer, state.is_ok(), why)
             && let Ok(li) = state
         {
             self.delete_layer(li);

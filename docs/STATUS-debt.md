@@ -367,7 +367,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   by Delete layer (greyed, with a note), not only a locked layer: the record named only the locked layer, but deleting the layer would
   delete a locked object that Delete refuses today; for chris's veto ("delete it anyway"). DONE 2026-11-18: approved as built. (3) The layers panel's button row now wraps
   (`horizontal_wrapped`): with seven buttons it takes two lines on the 1440 by 720 screen; chris may want the buttons ordered or
-  grouped differently. (4) No keyboard shortcut for New layer or Delete layer (the record asked for none). (5) The count in the
+  grouped differently. DONE 2026-11-18: the seven are line icons in one row (fixes batch 1, Q5; `crates/ui/src/layer_icons.rs`, `crates/ui/tests/layer_icons.rs`), in three groups: Move up, Move down; New layer, Delete layer; Group, Ungroup, Repeat. The drawings are proposals for chris's look. (4) No keyboard shortcut for New layer or Delete layer (the record asked for none). (5) The count in the
   sheet is every row the layer has in the panel (a group and each object in it count), not only the top-level objects; for chris's
   veto. DONE 2026-11-18: approved as built. (6) After Delete layer nothing is picked (not the neighbour), so a second press cannot eat the next layer. (7) The name
   field's Enter and click-away: the existing rename asked for focus before it looked for the focus being lost, so Enter and a click

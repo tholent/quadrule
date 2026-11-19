@@ -2499,3 +2499,28 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
   starts". Closed: version 0.16.2, release notes `docs/arcs/v1/release-notes/v0.16.2.md`, `STATUS.md` (rung 15's bullet
   and rung 13's Log line moved word for word to `docs/STATUS-archive.md`), debt, the board, the calibration row, the 16b
   prompt (`0.16.3`).
+
+## 2026-11-18 — fixes batch 1, resumed lead (Opus 5.5, high)
+
+- The session building batch 1 (`docs/bbq/2026-11-18-fixes-before-16b.md`, Q4) was cut off. On disk: smooth zoom (`d0b1e40`,
+  `d54d34c`) and the grand staff space (`c7707bf`, format 0.18.0, fixture `v0.17/`) committed; the layer icons
+  (`crates/ui/src/layer_icons.rs`) written and wired into `panels.rs` and `layers.rs` but not committed, with no log entry
+  for any of the three. chris: "the session got interrupted. Please take a look at where we are at and resume work".
+- Build proof at the start: `make build-proof` → `BUILD head=c7707bf dirty=yes rebuilt=10` (dirty = the uncommitted icons).
+- Finished the icons: 6 of the 7 layer tests failed because the icon's hover note shows its name, so "Delete layer" matched
+  two nodes; the tests' `press` now finds the button by role (`crates/ui/tests/layers.rs`). New test
+  `crates/ui/tests/layer_icons.rs` at 1440 by 720: `CHECK ... name=layer_icons_one_row result=pass seven=true one_row=true
+  in_order=true square=true row_width_pt=212` and `CHECK ... name=layer_icons_hover_and_grey result=pass` (greyed with
+  nothing picked, hover name and note, the greyed note, a layer pick wakes Move up, Move down, Delete layer).
+- Found and fixed: `main` failed CI's clippy step since the zoom and grand staff commits (three lints: a complex type in
+  `crates/ui/src/view.rs`, now `MipLevel`; a doc line starting with "+" in `crates/ui/src/viewer.rs`; a nested `if` in
+  `crates/render/tests/grand_staff.rs`). No behaviour change.
+- `make check-all` → `TESTS scope=workspace checks=750 check_fail=0 passed=696 failed=0 status=ok`.
+- `make bench-zoom` (release, on the Pi's screen) → `CHECK crate=ui name=zoom_bench result=pass build=release canvas=export
+  page=sample device=primary strip=on tool=zoom frames=151 mean_ms=0.4 p90_ms=0.0 worst_ms=15.5 first_ms=28.7
+  over_budget=0 budget_ms=50` (ADR-009's 50 ms).
+- Seen on screen (grim, debug build, scratch `XDG_CONFIG_HOME` and `XDG_DATA_HOME`): `--look layers`, the seven icons in one
+  row in three groups (Move up, Move down; New layer, Delete layer; Group, Ungroup, Repeat), Header picked so the last three
+  are greyed. Proposals for chris's look: the drawings (arrows; a stacked layer with a plus or a cross; a frame round two
+  boxes, the frame's corners only, a filled box and two copies), the spacing, and the hover showing the name then the note.
+- Not done here: chris's look at batch 1 and the `v0.16.3` release; the version is still 0.16.2.
