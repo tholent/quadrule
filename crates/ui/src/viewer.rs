@@ -183,8 +183,8 @@ pub enum Zoom {
     RealSize,
 }
 
-/// The zoom steps, in screen pixels per device pixel: down to 1/8, up to 16× (rung 2 bbq, Q10). The
-/// + and − buttons move by these; a pinch or Ctrl + scroll moves smoothly between them
+/// The zoom steps, in screen pixels per device pixel: down to 1/8, up to 16× (rung 2 bbq, Q10).
+/// The + and − buttons move by these; a pinch or Ctrl + scroll moves smoothly between them
 /// (fixes batch 1, Q1).
 pub const ZOOM_STEPS: [f32; 8] = [0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0];
 

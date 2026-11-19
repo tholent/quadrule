@@ -228,18 +228,17 @@ fn the_grand_staff_page_exports_the_same_bytes_after_a_save() {
     };
     let (mut with_key, mut without_key) = (0, 0);
     for o in doc.objects() {
-        if let ObjectKind::Pattern(pr) = &o.kind {
-            if let Pattern::MusicStaff {
+        if let ObjectKind::Pattern(pr) = &o.kind
+            && let Pattern::MusicStaff {
                 grand_space_units, ..
             } = &pr.pattern
-            {
-                let written = has_key(pr);
-                assert_eq!(written, grand_space_units.is_some());
-                if written {
-                    with_key += 1;
-                } else {
-                    without_key += 1;
-                }
+        {
+            let written = has_key(pr);
+            assert_eq!(written, grand_space_units.is_some());
+            if written {
+                with_key += 1;
+            } else {
+                without_key += 1;
             }
         }
     }

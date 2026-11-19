@@ -181,6 +181,9 @@ struct Ruler {
     bar: f32,
 }
 
+/// One of the page's half-size copies for a zoom gesture: its size in pixels and its tiles.
+type MipLevel = ((u32, u32), Vec<(Tile, TextureHandle)>);
+
 /// The viewer window: state plus what only the screen needs (the page texture, the dialogs).
 pub struct ViewerUi {
     /// The viewer's state.
@@ -221,7 +224,7 @@ pub struct ViewerUi {
     vector: Option<(String, VectorTexture)>,
     texture: Option<(TextureKey, Vec<(Tile, TextureHandle)>)>,
     /// The page and its half-size copies, drawn smoothed while a zoom gesture is going (fixes batch 1).
-    mips: Option<(MipKey, Vec<((u32, u32), Vec<(Tile, TextureHandle)>)>)>,
+    mips: Option<(MipKey, Vec<MipLevel>)>,
     ruler: Option<Ruler>,
     pub(crate) scroll_to_selected: bool,
     cursor_px: Option<(f32, f32)>,
