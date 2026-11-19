@@ -2524,3 +2524,13 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
   are greyed. Proposals for chris's look: the drawings (arrows; a stacked layer with a plus or a cross; a frame round two
   boxes, the frame's corners only, a filled box and two copies), the spacing, and the hover showing the name then the note.
 - Not done here: chris's look at batch 1 and the `v0.16.3` release; the version is still 0.16.2.
+
+## 2026-11-19 — build folder size (Opus 5.5, high)
+
+- chris is moving development to a new VM; the project folder was 412 GB. `du -sh target` → 411G (`target/debug/deps`
+  334G, `target/debug/incremental` 73G); 1314 test programs over 100 MB in `deps`, many copies each; disk 97 % full.
+- chris ran `cargo clean`: "Removed 548630 files, 421.4GiB total"; `df -h /` → 5 % used after.
+- Moving: copy the folder without `target/` and `crates/format/fuzz/target/` (about 70 MB); it keeps the local-only
+  `calib/`, fuzz corpus, `spikes/text/fonts` fonts, `.claude/` and the branch `backup/pre-swap-rewrite`.
+- Plan for chris to run on the VM: `docs/proposals/build-pruning-2026-11-19.md` (smaller debug information,
+  `cargo xtask prune` / `make prune`, a size cap in `make build-proof`); 4 open questions with defaults.
