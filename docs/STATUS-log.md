@@ -2571,3 +2571,26 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
   speed on the Pi first; take A if it fits, else C. ADR-017 would need superseding either way; its text is untouched.
 - Not done: the `quadrule-maths` crate, the routing test, the three systems, golden images; ADR-017 `built: not
   started` stands.
+
+## 2026-11-19 — ADR-018: export at the fallback level (Opus 5.5, high, on chris's VM; branch `adr-018-fallback-level`)
+
+- chris: "let's go with option A"; then goforit for the ADR, "Revert it" for the FMA-off job, "Stop and report" if
+  the Pi is too slow. ADR-018 (proposed) supersedes ADR-017; ADR-003 gets a second banner at item 2 and its proof
+  names the renamed test. `python3 …/makeadr/scripts/adr-check.py --root . --triggers-from 1` → `adr-check: 18 ADRs,
+  0 failure(s)` (headers and that each proof resolves; it runs no test).
+- Built: `quadrule_render::LEVEL = Level::fallback()`, a build-time assertion that refuses any other level (tried:
+  `Level::baseline()` → `error[E0080]: evaluation panicked: ADR-018: export draws at the fallback level on every
+  computer`), `render(dl)` with no `Math`; fearless_simd 0.7.0 a direct dependency with `force_support_fallback`
+  (the version vello_cpu already uses); the fast-against-portable comparisons gone from the render tests;
+  `render.rs::export_draws_at_the_fallback_level` in place of `simd_and_portable_maths_agree`. The FMA-off job reverted.
+- Speed on the VM, release build, a whole Nomad page 10 times (a throwaway test, deleted): slice 6.8 → 8.0 ms,
+  groups 14.5 → 19.0, patterns 13.9 → 15.3, fonts 17.3 → 17.0 (fast → fallback). The Pi is not reachable from the VM
+  and the VM has no screen: the benches are chris's to run.
+- `cargo test --workspace --no-fail-fast -- --nocapture` (VM) → `error: 23 targets failed`: 22 render test programs
+  and `quadrule-ui --test paper`, all on golden bytes or stored export hashes; every golden checksum equals the VM's
+  before the change (33 of 33). `cargo fmt --all --check` clean; `cargo clippy --workspace --all-targets -- -D
+  warnings` clean.
+- Changed pixels against the golden images (a throwaway PIL script over `crates/render/tests/golden/*.png`
+  and the new exports): 23 of 33 pages, 285 px, every one 1 level, all on curved or turned edges; for chris's look on
+  a private page, https://claude.ai/artifact/2PuHNfNFZpHmfHkBUwirX9. Golden images not re-made: they wait on that look.
+

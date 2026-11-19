@@ -78,8 +78,9 @@ chris, word for word: "ok, I understand more clearly. We can move forward with o
 ## Owed
 
 - (2026-11-19 asks: both answered, see Amendments)
-- chris: ADR-017's premise failed (Amendments, 2026-11-19, the building session). Which way now: supersede ADR-017,
-  keep or revert the FMA-off CI job (`60eb202`), and which of the options in the session's report.
+- (2026-11-19 premise question: answered, see Amendments)
+- chris: the look at the changed golden images; the drag and draw benches on the Pi on branch `adr-018-fallback-level`;
+  ratifying ADR-018.
 
 ## Amendments
 
@@ -107,3 +108,11 @@ chris, word for word: "ok, I understand more clearly. We can move forward with o
 - ADR-017's item 1 (the app's own `sin` and the rest from `libm`) would not fix this; its ruled text is untouched.
   The FMA-off CI job (item 5) stays on `main`, non-blocking, but cannot catch this cause (`GLIBC_TUNABLES` does not
   change what `is_x86_feature_detected!` sees). The way forward is chris's (Owed).
+- 2026-11-19, chris, word for word: "let's go with option A". Then one round of three: the new ADR's questions
+  "goforit (Recommended)"; the FMA-off CI job "Revert it (Recommended)"; if A misses ADR-009's 50 ms on the Pi "Stop
+  and report (Recommended)". Made: ADR-018 (proposed), superseding ADR-017; built on branch `adr-018-fallback-level`
+  (a branch so chris can bench on the Pi before it reaches `main`).
+- 2026-11-19, the building session: at the fallback level all 33 compared golden pages are byte-identical to what
+  the VM exported before the change (`diff` of the CHECK lines' checksums, before and after: none). 23 pages change
+  against the golden images, 285 pixels in all, each by 1 level; 10 pages (slice, fonts, textbox, grand staff,
+  landscape, both devices) do not change, and the noted page passes.

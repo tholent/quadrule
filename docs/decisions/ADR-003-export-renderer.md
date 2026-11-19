@@ -6,7 +6,7 @@ ratified-on: "2026-11-09"
 owner: chris
 kind: architecture
 built: landed
-proof: "`crates/render/tests/slice.rs::slice_end_to_end`, `crates/render/tests/render.rs::simd_and_portable_maths_agree`, `crates/render/tests/render.rs::tiny_skia_agrees_on_snapped_shapes`, `.github/workflows/ci.yml`"
+proof: "`crates/render/tests/slice.rs::slice_end_to_end`, `crates/render/tests/render.rs::export_draws_at_the_fallback_level`, `crates/render/tests/render.rs::tiny_skia_agrees_on_snapped_shapes`, `.github/workflows/ci.yml`"
 supersedes: nothing
 amends: nothing
 consulted: rendering spike worker (Opus 5.5 subagent)
@@ -19,6 +19,11 @@ revisit-when: the cross-machine hash check (spike R06/R09 on x86 Linux, macOS, W
 1. The export renderer (the part that makes the PNG file) is **vello_cpu**.
    > 2026-11-19: item 2 is replaced by ADR-017 (ratified 2026-11-19): machines did disagree, but not in vello_cpu's
    > arithmetic, so this lever would change nothing. See `ADR-017-same-maths-on-every-computer.md`.
+   >
+   > 2026-11-19, later: ADR-017 is superseded by ADR-018 (proposed): the disagreement *is* vello_cpu's arithmetic
+   > (fused multiply-add on AVX2 and NEON, not on SSE), and this lever's `Level::baseline()` is NEON on ARM, so it
+   > would not have been enough. Export draws at the fallback level everywhere. See
+   > `ADR-018-export-at-the-fallback-level.md`.
 
 2. If the cross-machine check shows Intel and ARM giving different bytes, export switches to vello_cpu's portable
    scalar mode (`Level::baseline()`).
@@ -77,3 +82,7 @@ Drivers:
   curved and rotated edges, 1 gray level on a few pixels, with vello_cpu's fast and portable maths agreeing. ADR-017
   (proposed) replaces item 2; banner added at item 2. Ruled text unchanged.
 - 2026-11-19: ADR-017 ratified by chris; the banner at item 2 now says so (it said "(proposed), once ratified").
+- 2026-11-19: ADR-017 superseded by ADR-018 (proposed), which replaces item 2; a second dated banner at item 2.
+  Proof updated for the renamed test. Prior header value: proof
+  `` `crates/render/tests/slice.rs::slice_end_to_end`, `crates/render/tests/render.rs::simd_and_portable_maths_agree`, `crates/render/tests/render.rs::tiny_skia_agrees_on_snapped_shapes`, `.github/workflows/ci.yml` ``.
+  Ruled text unchanged.

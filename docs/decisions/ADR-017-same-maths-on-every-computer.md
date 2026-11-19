@@ -1,6 +1,6 @@
 ---
-status: accepted
-status-note: "ratified by chris 2026-11-19 (\"ratified\")"
+status: superseded
+status-note: superseded by ADR-018 on 2026-11-19
 ratified-by: chris
 ratified-on: "2026-11-19"
 owner: chris
@@ -106,3 +106,6 @@ clearly. We can move forward with option 1".
   Consequences line names it and the Asks left open section, now empty, is removed.
 - 2026-11-19: ratified by chris ("ratified"). Prior header values: status `proposed`, status-note `drafted 2026-11-19
   from chris's answers (docs/bbq/2026-11-19-adr-identical-maths.md); awaiting ratification`.
+- 2026-11-19: superseded by ADR-018 (`ADR-018-export-at-the-fallback-level.md`): the FMA-off CI run (item 5's red arm)
+  passed with the golden checksums, so glibc is not the cause; vello_cpu's SIMD level is. Prior header values: status
+  `accepted`, status-note `ratified by chris 2026-11-19 ("ratified")`. Body unchanged.
