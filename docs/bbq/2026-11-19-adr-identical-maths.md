@@ -77,7 +77,9 @@ chris, word for word: "ok, I understand more clearly. We can move forward with o
 
 ## Owed
 
-- The crate's name (taste), proposed `quadrule-maths` in `crates/maths/` (ADR-017 ask 1).
-- Ratification of ADR-017.
+- (none; both answered 2026-11-19, see Amendments)
 
 ## Amendments
+
+- 2026-11-19, chris, word for word: "1. sounds good 2. ratified". The crate is `quadrule-maths` in `crates/maths/`;
+  ADR-017 is ratified.

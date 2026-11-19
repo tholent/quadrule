@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: drafted 2026-11-19 from chris's answers (docs/bbq/2026-11-19-adr-identical-maths.md); awaiting ratification
+status: accepted
+status-note: "ratified by chris 2026-11-19 (\"ratified\")"
+ratified-by: chris
+ratified-on: "2026-11-19"
 owner: chris
 kind: architecture
 built: not started
@@ -88,7 +90,7 @@ clearly. We can move forward with option 1".
 
 ## Consequences
 
-- One new crate (its name is chris's: ask 1) that every program links; the steps are in the next-agent prompt
+- One new crate, `quadrule-maths` in `crates/maths/` (named by chris 2026-11-19), that every program links; the steps are in the next-agent prompt
   (`docs/bbq/2026-11-19-adr-identical-maths-NEXT.md`): the FMA-off job first (it confirms the cause), then the crate
   and its routing test, then the three systems, then any new golden images for chris's look.
 - Golden images and the migration tests' stored export hashes may change once, after chris's look.
@@ -96,12 +98,11 @@ clearly. We can move forward with option 1".
 - The FMA-off job adds a few minutes to CI on every push.
 - Developers on computers without FMA can trust the golden tests again.
 
-## Asks left open
-
-1. The new crate's name (taste). Proposal: `quadrule-maths` in `crates/maths/`.
-2. Ratify ADR-017 as written, or not yet.
-
 ## History
 
 - 2026-11-19: drafted from chris's answers, 4 questions (`docs/bbq/2026-11-19-adr-identical-maths.md`); ADR-003 gets
   a dated note and banner at item 2 in the same commit.
+- 2026-11-19: chris answered ask 1, the crate's name: "sounds good" (to `quadrule-maths` in `crates/maths/`); the
+  Consequences line names it and the Asks left open section, now empty, is removed.
+- 2026-11-19: ratified by chris ("ratified"). Prior header values: status `proposed`, status-note `drafted 2026-11-19
+  from chris's answers (docs/bbq/2026-11-19-adr-identical-maths.md); awaiting ratification`.

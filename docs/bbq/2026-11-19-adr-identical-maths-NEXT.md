@@ -12,7 +12,7 @@ diff, and chris looks at any new golden images.
 
 ## Read first
 
-- `docs/decisions/ADR-017-same-maths-on-every-computer.md` (proposed; chris has ruled every answer in it).
+- `docs/decisions/ADR-017-same-maths-on-every-computer.md` (ratified by chris 2026-11-19).
 - `docs/bbq/2026-11-19-adr-identical-maths.md`: the premises P1 to P8, chris's words, the Defaulted table.
 - `docs/decisions/ADR-003-export-renderer.md` (the banner at item 2) and `ADR-006-checks-and-ci.md`.
 - AGENTS.md. Start with `make build-proof` and say the BUILD line.
@@ -48,7 +48,7 @@ Add a job to `.github/workflows/ci.yml`: Linux x86_64 (`ubuntu-latest`), runs `c
 - The golden images and `SHA256SUMS`: re-bless only after chris has seen the changed-pixel count and a picture of
   where (ADR-017 item 3).
 - `Math::Fastest` and `Math::Portable` stay as they are; ADR-003 is otherwise unchanged.
-- The crate's name is chris's (ADR-017 ask 1): ask before creating it; the proposal is `quadrule-maths`.
+- The crate is `quadrule-maths` in `crates/maths/` (named by chris 2026-11-19); ADR-017 is ratified.
 
 ## Stop conditions
 
@@ -61,4 +61,4 @@ Add a job to `.github/workflows/ci.yml`: Linux x86_64 (`ubuntu-latest`), runs `c
 
 `docs/STATUS-log.md` entry with every number as the command that made it; `STATUS.md`; ADR-017's `built` and `proof`
 (a test, never a commit); `DEVELOPMENT.md` (the crate, the FMA-off job); ask chris to rerun the golden tests on his VM
-(`cargo test -p quadrule-render --no-fail-fast`) and to ratify ADR-017.
+(`cargo test -p quadrule-render --no-fail-fast`).
