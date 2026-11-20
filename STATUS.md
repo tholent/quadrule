@@ -198,6 +198,12 @@ The project's live state. Update it when work lands. Every claim cites at least 
   row's right-click menu; a layer with objects asks first; the last layer, a locked layer and a layer holding locked
   objects are not deleted; Enter, click-away and Esc now close the rename field (`crates/model/src/edit.rs`,
   `crates/ui/src/panels.rs`). No format or export change. Try it: `cargo run --release -p quadrule-app -- --look layers`.
+- Fixes batch 1: approved by chris 2026-11-20 ("approved for v0.16.3"), shipped as `v0.16.3` (record
+  `docs/bbq/2026-11-18-fixes-before-16b.md`, notes `docs/arcs/v1/release-notes/v0.16.3.md`). Pinch and Ctrl+scroll zoom
+  smoothly and settle on 1:1 and Fit (`crates/ui/src/viewer.rs`, `crates/ui/src/view.rs`); a grand staff's count is the
+  space between grand staves, file format 0.18.0 (`crates/layout/src/pattern.rs`, `crates/format/src/migrate.rs`); the
+  layers panel's buttons are line icons in one row (`crates/ui/src/layer_icons.rs`). Also in it: ADR-018's one-time
+  golden change. Try it: `cargo run --release -p quadrule-app -- --grand-staff-page`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -258,8 +264,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   align and distribute `v0.7.1`). **Rung 8 is done** (`v0.8.0`, 8a and 8b in one release). **Rung 9 is
   done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). **Rung 15 is done** (`v0.15.0`). **Rung 16a is done** (`v0.16.0`). Pattern borders are done (`v0.16.1`). Layers can be made and deleted (`v0.16.2`).
   Next: chris's seven fixes before 16b, in three batches (bbq, 8 questions, `docs/bbq/2026-11-18-fixes-before-16b.md`).
-  **Batch 1 is built** (smooth zoom, the grand staff space with file format 0.18.0, the layers panel's icons; `d0b1e40`,
-  `d54d34c`, `c7707bf` and the icons commit) and waits on chris's look before it ships as `v0.16.3`. Then batch 2,
+  **Batch 1 is done** (`v0.16.3`, approved by chris 2026-11-20: smooth zoom, the grand staff space with file format
+  0.18.0, the layers panel's icons). Next, batch 2,
   `v0.16.4` (menus for each system, the status bar's toggles into View, the macOS double-click), and batch 3, `v0.16.5`
   (Quick Look). Rung 16b, the starters, becomes `v0.16.6`; its lead's prompt is
   `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md` (`docs/arcs/v1/README.md`).

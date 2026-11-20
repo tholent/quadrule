@@ -2755,3 +2755,14 @@ built and released) or are per-rung debt for rung 17's sweep.
   The starters wait for `v0.16.3` (`docs/arcs/v1/README.md`, chris's queue); the build-pruning leftovers part of the
   debt line is closed without code (`docs/STATUS-debt.md`). chris asked for a checklist for the batch 1 look; it was
   given in the session.
+
+## 2026-11-20 — fixes batch 1 approved and shipped as v0.16.3 (Opus 5.5, high, on chris's VM)
+
+- chris asked for a checklist for the batch 1 look (given in the session: zoom, grand staff space, layer icons) and
+  answered, word for word: "approved for v0.16.3".
+- Version 0.16.3 (`Cargo.toml`, `Cargo.lock`); release notes `docs/arcs/v1/release-notes/v0.16.3.md`, which also carry
+  ADR-018's one-time golden change (it landed after `v0.16.2`); the record's Amendments, the board's row 16 and
+  Re-plans, `STATUS.md`.
+- `make check` at 0.16.3 → exit 0; nextest `702 tests run: 702 passed (6 slow), 2 skipped`, 756 CHECK lines; then
+  `PRUNE target=target removed_files=305 removed_gb=7.9 kept_gb=31.5 dry_run=no`.
+- Tag `v0.16.3` pushed; the release workflow builds the packages and publishes the release.

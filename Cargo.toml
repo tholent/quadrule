@@ -21,7 +21,7 @@ members = [
 # included, as CI does (ADR-008, amendment of 2026-11-20: the opt-in app build was for the Pi).
 
 [workspace.package]
-version = "0.16.2"
+version = "0.16.3"
 edition = "2024"
 # rust-toolchain.toml pins this compiler for every machine and CI.
 rust-version = "1.99.1"

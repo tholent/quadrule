@@ -92,3 +92,9 @@ week, so I am grinding this out" (layers record, Amendments). The lead reports r
 Batch 1: one Sonnet 5.5 high builder on `main`, committing as each step lands: smooth zoom (Q1), the grand staff space
 (Q2, format 0.18.0, fixture `v0.17/`), the layer icons (Q5); tests that print one structured line; zoom speed on the
 Pi; screenshots. Then chris's look, `v0.16.3`. Batch 2 and batch 3 follow, each with its own look and release.
+
+## Amendments
+
+- **2026-11-20, the batch 1 look:** chris was given a checklist (smooth zoom, the grand staff space, the layer icons)
+  and answered, word for word: "approved for v0.16.3". Approved with no changes, so the builder's judgement calls stand
+  (the icon drawings, their spacing, the hover order). Shipped as `v0.16.3` (`docs/arcs/v1/release-notes/v0.16.3.md`).
