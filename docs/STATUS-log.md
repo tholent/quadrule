@@ -2798,3 +2798,5 @@ VM cannot build the macOS parts.
   -D warnings` clean (compiles and lints; nothing on the Mac was run).
 - Not verifiable on the VM: everything the Mac does at run time (its menu bar, ⌘ keys acting once, Quit asking first,
   the double-click at launch and while running). They wait for chris's look on his Mac.
+- CI on the branch: run 44805150907 (`6c527b4`, the menus) and run 44807675401 (`d6a613f`, the double-click):
+  `ubuntu-latest: success`, `macos-latest: success`, `windows-latest: success` both times.
