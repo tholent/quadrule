@@ -181,6 +181,24 @@ impl ViewerUi {
             // The welcome screen with nothing open; the File menu open over the page.
             "welcome" => self.show_welcome(),
             "file-menu" => self.look_file_menu(),
+            // The other menus of the menu bar, and the About sheet (fixes batch 2). Edit opens with an object picked and
+            // moved, so Undo, Copy, Cut and Duplicate show as they do when they can act; View opens Snapping too.
+            "menu-edit" => {
+                let id = quadrule_model::sample::ids::RULE;
+                if self.viewer.doc().is_some_and(|d| d.object(id).is_some()) {
+                    self.viewer.select_row(id, false);
+                    let _ = self.viewer.nudge(1.0, 0.0, false);
+                }
+                self.look_menu = Some(crate::menu_bar::LookMenu::top("menu-edit"));
+            }
+            "menu-view" => {
+                self.look_menu = Some(crate::menu_bar::LookMenu::with_sub(
+                    "app-view",
+                    "menu-snapping",
+                ));
+            }
+            "menu-help" => self.look_menu = Some(crate::menu_bar::LookMenu::top("menu-help")),
+            "about" => self.about_open = true,
             // The layers panel: New layer's name field, the ask before Delete layer, a row's right-click menu.
             "layers" | "layers-new" | "layers-ask" | "layers-menu" => self.look_layers(look),
             // My templates, the tab the person's own pages are on.

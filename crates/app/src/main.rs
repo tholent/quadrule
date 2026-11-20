@@ -45,6 +45,8 @@
 #![forbid(unsafe_code)]
 
 mod chip;
+#[cfg(target_os = "macos")]
+mod mac_menu;
 
 use eframe::egui;
 use eframe::egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
@@ -55,7 +57,7 @@ use std::sync::Arc;
 
 /// Preference keys in eframe's storage.
 /// What `--look` takes: a part of the window to start with, for a screenshot (rungs 14b, 15 and 16).
-const LOOKS: [&str; 16] = [
+const LOOKS: [&str; 20] = [
     "lint",
     "style",
     "preflight",
@@ -72,6 +74,10 @@ const LOOKS: [&str; 16] = [
     "layers-ask",
     "layers-menu",
     "grand-staff",
+    "menu-edit",
+    "menu-view",
+    "menu-help",
+    "about",
 ];
 const KEY_THEME: &str = "theme";
 const KEY_RULER: &str = "screen_px_per_mm";
@@ -99,6 +105,9 @@ struct App {
     closing: bool,
     /// Close the window at the end of this frame.
     ctx_close: bool,
+    /// The Mac's menu bar, made on the first frame (fixes batch 2, Q7).
+    #[cfg(target_os = "macos")]
+    mac_menu: Option<mac_menu::MacMenu>,
 }
 
 impl App {
@@ -124,6 +133,8 @@ impl App {
             },
         );
         let mut ui = ViewerUi::new(Viewer::default());
+        // The Mac has its menus in the system's menu bar and none in the window (fixes batch 2, Q6 and Q7).
+        ui.menu_bar = !cfg!(target_os = "macos");
         // What Export remembers (rung 15): the path template, the folders, the note tick, in
         // `settings.ron` beside `profiles/`. A timing run reads none and writes none.
         if !timing && let Some(d) = directories::ProjectDirs::from("org", "quadrule", "quadrule") {
@@ -323,6 +334,8 @@ impl App {
             title: String::new(),
             closing: false,
             ctx_close: false,
+            #[cfg(target_os = "macos")]
+            mac_menu: None,
         }
     }
 
@@ -405,8 +418,25 @@ impl eframe::App for App {
         if ctx.input(|i| i.viewport().close_requested()) && !self.closing && !self.ui.may_close() {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
         }
+        // The Mac's menu bar: made once the application exists; what was picked in it acts before the frame is drawn,
+        // so an Edit item's key reaches a text field in this frame.
+        #[cfg(target_os = "macos")]
+        {
+            let mac = self
+                .mac_menu
+                .get_or_insert_with(|| mac_menu::MacMenu::install(&ctx, &self.ui));
+            for cmd in mac.take_picked() {
+                for req in self.ui.run_cmd(&ctx, cmd) {
+                    self.answer(req);
+                }
+            }
+        }
         for req in self.ui.show(ui) {
             self.answer(req);
+        }
+        #[cfg(target_os = "macos")]
+        if let Some(mac) = &mut self.mac_menu {
+            mac.sync(&self.ui);
         }
         if self.ui.bench_finished() {
             self.closing = true;
@@ -613,6 +643,12 @@ struct Args {
     bench_tool: Option<quadrule_ui::Tool>,
 }
 
+/// The `--look` error, naming every value in [`LOOKS`] so it cannot go stale.
+fn look_error() -> String {
+    let (last, rest) = LOOKS.split_last().expect("LOOKS is not empty");
+    format!("--look takes {} or {last}", rest.join(", "))
+}
+
 fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, String> {
     let mut out = Args::default();
     let mut args = args.peekable();
@@ -693,10 +729,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.profiles = true;
         } else if a == "--look" {
             match args.next().and_then(|v| v.into_string().ok()) {
-                Some(v) if LOOKS.contains(&v.as_str()) => {
-                    out.look = Some(v)
-                }
-                _ => return Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome, file-menu, gallery-mine, layers, layers-new, layers-ask or layers-menu".into()),
+                Some(v) if LOOKS.contains(&v.as_str()) => out.look = Some(v),
+                _ => return Err(look_error()),
             }
         } else if a == "--fonts-page" {
             out.fonts_page = true;
@@ -751,7 +785,7 @@ fn main() -> eframe::Result {
 
 #[cfg(test)]
 mod tests {
-    use super::{Args, parse_args, parse_gtk_font};
+    use super::{Args, LOOKS, look_error, parse_args, parse_gtk_font};
 
     #[test]
     fn command_line() {
@@ -893,10 +927,7 @@ mod tests {
                     ..Args::default()
                 }),
             ),
-            (
-                p(&["--look", "sparkles"]),
-                Err("--look takes lint, style, preflight, export, export-preset, export-mistake, exported, exported-open, welcome, file-menu, gallery-mine, layers, layers-new, layers-ask or layers-menu".into()),
-            ),
+            (p(&["--look", "sparkles"]), Err(look_error())),
             (
                 p(&["--paper-page", "--bench-drag", "30"]),
                 Ok(Args {
@@ -993,9 +1024,11 @@ mod tests {
             && p(&["--canvas"]).is_err()
             && p(&["--bench-tool", "blob"]).is_err()
             && p(&["--bench-tool"]).is_err();
-        let ok = good && bad;
+        // The message for a look it does not know names every look it does.
+        let lists_all = LOOKS.iter().all(|l| look_error().contains(l));
+        let ok = good && bad && lists_all;
         println!(
-            "CHECK crate=app name=command_line result={} cases={} bad_refused={bad}",
+            "CHECK crate=app name=command_line result={} cases={} bad_refused={bad} look_error_lists_all={lists_all}",
             if ok { "pass" } else { "fail" },
             cases.len()
         );

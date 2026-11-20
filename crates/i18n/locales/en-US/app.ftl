@@ -670,3 +670,36 @@ app-style-show-grays = Show all grays
 app-style-matches = matches { $role }
 app-style-use-recommended = Use recommended
 app-style-use-recommended-tip = Sets the { $role } role, the nearest to this width.
+
+# Menus (fixes batch 2, Q3, Q6, Q7): the menu bar along the top of the window on Windows and Linux, the system menu bar
+# on the Mac. The File menu's words are the ones above.
+menu-edit = Edit
+menu-cut = Cut
+menu-copy = Copy
+menu-paste = Paste
+menu-duplicate = Duplicate
+menu-select-all = Select all
+menu-zoom-actual = Actual size (1:1)
+menu-strip = Device previews
+menu-snapping = Snapping
+menu-help = Help
+menu-about = About quadrule
+menu-project-page = quadrule on GitHub
+# The Mac's own menus: the app menu, Window, and the words the system gives its standard items.
+menu-app = Quadrule
+menu-about-mac = About Quadrule
+menu-settings = Settings…
+menu-hide = Hide Quadrule
+menu-hide-others = Hide Others
+menu-show-all = Show All
+menu-quit = Quit Quadrule
+menu-window = Window
+menu-minimize = Minimize
+menu-zoom-window = Zoom
+
+# About quadrule (Help, or the Quadrule menu on the Mac).
+about-title = About quadrule
+about-version = Version { $version }
+about-licence = Licensed under the Apache License, Version 2.0 (Apache-2.0).
+about-tagline = A free, open-source vector design tool for page templates and wallpapers for Supernote tablets.
+about-close = Close

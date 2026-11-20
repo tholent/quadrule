@@ -538,6 +538,10 @@ fn unticking_a_device_with_overrides_asks_first() {
     let kept = h.state().viewer.doc().unwrap().profile_ids().len() == 2;
     h.get_by_label("Target Nomad").click();
     h.run();
+    // The question sits at the foot of the Page tab, below the panel's edge since the menu bar took its line (fixes
+    // batch 2); a person scrolls to it.
+    h.get_by_label("Take out").scroll_to_me();
+    h.run();
     h.get_by_label("Take out").click();
     h.run();
     let gone = h.state().viewer.doc().unwrap().profile_ids().len() == 1

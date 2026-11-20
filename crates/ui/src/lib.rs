@@ -39,6 +39,8 @@ pub mod layer_icons;
 pub mod layers;
 pub mod lint_fixes;
 pub mod lint_ui;
+pub mod menu_bar;
+pub mod menus;
 pub mod missing;
 pub mod missing_ui;
 pub mod panels;
@@ -73,6 +75,7 @@ pub use drag::{
 pub use draw::{Draw, DrawKind, NewNames, new_polygon};
 pub use editor::{DropOn, RowZone, Toward, layer_drop_place, object_drop_place, row_drop_place};
 pub use export::{ExportError, ExportRequest, ExportResult, ExportedFile};
+pub use menus::{Cmd, CmdState, PROJECT_URL, Platform, Snap};
 pub use panels::Tab;
 pub use profile_use::{Clash, ProfileChoice, ProfileUse};
 pub use profiles_ui::{ClashDialog, ClashRow, Pick};

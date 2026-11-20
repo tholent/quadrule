@@ -304,8 +304,15 @@ pub struct ViewerUi {
     pub(crate) welcome: crate::welcome::Welcome,
     /// The welcome screen's speed run, when `--bench-welcome` asked for one.
     pub welcome_bench: Option<crate::welcome::WelcomeBench>,
-    /// Open the File menu on the next frame (`--look file-menu`).
-    pub(crate) open_file_menu: bool,
+    /// Whether the menu bar is drawn along the top of the window: it is on Windows and Linux; the Mac has the system's
+    /// menu bar instead (the app turns this off there; fixes batch 2, Q6 and Q7).
+    pub menu_bar: bool,
+    /// A menu to open on the next frames (`--look menu-edit` and the like).
+    pub(crate) look_menu: Option<crate::menu_bar::LookMenu>,
+    /// The About quadrule sheet shows.
+    pub(crate) about_open: bool,
+    /// Events for the start of the next frame: what an Edit item hands the keyboard path (see [`crate::menus`]).
+    pub(crate) queued_events: Vec<egui::Event>,
     /// Waiting on the unsaved-changes prompt.
     pending: Option<After>,
     /// The New dialog, while it shows (rung 5).
@@ -381,7 +388,10 @@ impl ViewerUi {
             link_rhythm: true,
             welcome: Default::default(),
             welcome_bench: None,
-            open_file_menu: false,
+            menu_bar: true,
+            look_menu: None,
+            about_open: false,
+            queued_events: Vec::new(),
             pending: None,
             new_dialog: None,
             new_device: quadrule_model::sample::MANTA_ID.to_string(),
@@ -408,6 +418,16 @@ impl ViewerUi {
         }
     }
 
+    /// Whether a question (the unsaved-changes prompt, the New dialog) waits for an answer.
+    pub(crate) fn question_open(&self) -> bool {
+        self.pending.is_some() || self.new_dialog.is_some()
+    }
+
+    /// Drops the drawn page, so the other canvas makes it again.
+    pub(crate) fn drop_vector(&mut self) {
+        self.vector = None;
+    }
+
     pub(crate) fn t(&self, id: &str) -> String {
         self.strings.get(id)
     }
@@ -430,6 +450,7 @@ impl ViewerUi {
         if idle {
             self.viewer.seal();
         }
+        self.inject_queued(&ctx);
         self.take_dropped_files(&ctx, &mut requests);
         self.drive_bench(&ctx);
         self.shortcuts(&ctx, &mut requests);
@@ -443,7 +464,11 @@ impl ViewerUi {
                 self.take_canvas_focus = self.viewer.is_typing();
             }
         }
-        egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut requests));
+        // The menu bar, above the toolbar; the Mac has the system's instead (fixes batch 2, Q6 and Q7).
+        if self.menu_bar {
+            egui::Panel::top("menubar").show(ui, |ui| self.menu_bar_ui(ui, &mut requests));
+        }
+        egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui));
         egui::Panel::bottom("status").show(ui, |ui| self.status_bar(ui));
         // The welcome screen takes the window's middle; the document's panels wait behind it (rung 16, Q2).
         let in_document = self.viewer.open.is_some() && !self.welcome.over_document;
@@ -506,6 +531,7 @@ impl ViewerUi {
             self.viewer.end_typing();
         }
         self.ruler_window(&ctx);
+        self.about_window(&ctx);
         self.font_picker_window(&ctx);
         self.missing_dialog_window(&ctx);
         self.clash_dialog_window(&ctx);
@@ -567,7 +593,11 @@ impl ViewerUi {
         }
         if self.welcome_showing() {
             // Esc goes back to the document the welcome screen is over.
-            if self.welcome_over_document() && key(Modifiers::NONE, Key::Escape) {
+            // An open menu takes its own Esc (fixes batch 2: closing it does nothing else).
+            if self.welcome_over_document()
+                && !egui::Popup::is_any_open(ctx)
+                && key(Modifiers::NONE, Key::Escape)
+            {
                 self.close_welcome();
             }
             return;
@@ -666,7 +696,9 @@ impl ViewerUi {
         // Inside a group, Escape first steps out of it (rung 7a bbq, Q4).
         // A name field open in the layers panel keeps its Escape: egui lets go of the field's focus on that key before
         // this runs, so taking it here would leave the field to read it as a click away and keep what was typed.
+        // An open menu, list or right-click menu takes its own Esc too: closing it keeps the selection (fixes batch 2).
         if self.renaming.is_none()
+            && !egui::Popup::is_any_open(ctx)
             && key(Modifiers::NONE, Key::Escape)
             && !self.viewer.end_tool()
             && !self.viewer.leave_group()
@@ -1232,12 +1264,10 @@ impl ViewerUi {
             .format(&Message::new(id).text("name", self.document_name()))
     }
 
-    fn toolbar(&mut self, ui: &mut egui::Ui, requests: &mut Vec<Request>) {
+    fn toolbar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal_wrapped(|ui| {
-            self.file_menu(ui, requests);
-            // What the document in view lets the rest of the bar do; the welcome screen over a document hides it.
+            // What the document in view lets the bar do; the welcome screen over a document hides it.
             let open = self.in_document();
-            ui.separator();
             let can_undo = open
                 && self
                     .viewer
@@ -1344,43 +1374,10 @@ impl ViewerUi {
                 self.show_lint = true;
                 self.tab = Tab::Lint;
             }
-            ui.separator();
-
-            // View.
-            ui.menu_button(self.t("app-view"), |ui| {
-                ui.label(self.t("app-theme"));
-                for (pref, id) in [
-                    (ThemePreference::System, "app-theme-system"),
-                    (ThemePreference::Light, "app-theme-light"),
-                    (ThemePreference::Dark, "app-theme-dark"),
-                ] {
-                    if ui.radio(self.theme == pref, self.t(id)).clicked() {
-                        self.theme = pref;
-                        ui.ctx().set_theme(pref);
-                    }
-                }
-                ui.separator();
-                let label = self.t("app-safe-zones");
-                ui.checkbox(&mut self.viewer.show_safe_zones, label);
-                ui.separator();
-                ui.label(self.t("app-canvas"));
-                for (mode, id) in [
-                    (CanvasMode::ExportPixels, "app-canvas-export"),
-                    (CanvasMode::Chip, "app-canvas-chip"),
-                ] {
-                    if ui.radio(self.canvas_mode == mode, self.t(id)).clicked() {
-                        self.canvas_mode = mode;
-                        self.vector = None;
-                    }
-                }
-                if ui.button(self.t("app-ruler-open")).clicked() {
-                    self.open_ruler(ui.ctx());
-                }
-            });
         });
     }
 
-    fn open_ruler(&mut self, ctx: &egui::Context) {
+    pub(crate) fn open_ruler(&mut self, ctx: &egui::Context) {
         let ppp = ctx.pixels_per_point();
         // Start from what the system claims (96 points per inch), so the bar is near right.
         let bar = match self.viewer.screen_px_per_mm {
@@ -1395,12 +1392,17 @@ impl ViewerUi {
 
     /// Physical screen pixels per device pixel now showing.
     fn shown_scale(&mut self, ui: &egui::Ui) -> f32 {
+        self.shown_scale_ctx(ui.ctx())
+    }
+
+    /// [`ViewerUi::shown_scale`] from the context alone (the menus zoom from it).
+    pub(crate) fn shown_scale_ctx(&mut self, ctx: &egui::Context) -> f32 {
         // The canvas's own size is known once it has been drawn (the toolbar comes first in a
         // frame); until then, the window's.
-        let ppp = ui.ctx().pixels_per_point();
+        let ppp = ctx.pixels_per_point();
         let canvas = self
             .canvas_size
-            .unwrap_or_else(|| ui.ctx().content_rect().size());
+            .unwrap_or_else(|| ctx.content_rect().size());
         self.viewer
             .scale((canvas.x, canvas.y), ppp)
             .map_or(1.0, |s| s * ppp)
@@ -1429,11 +1431,6 @@ impl ViewerUi {
                 let count = self.lint_count();
                 let msg = Message::new("app-lint-count").num("count", count as f64, 0);
                 ui.label(self.strings.format(&msg));
-            }
-            if self.in_document() {
-                // The snap helpers and the rhythm overlay, each on or off (napkin §6.2).
-                ui.separator();
-                self.snap_toggles(ui);
             }
             if let Some(line) = self.canvas_status() {
                 ui.separator();
@@ -1470,7 +1467,7 @@ impl ViewerUi {
         });
     }
 
-    /// The snap helpers' switches and the rhythm overlay's, for the status bar and the Page tab.
+    /// The snap helpers' switches and the rhythm overlay's, for the Page tab (View > Snapping holds them too; fixes batch 2, Q3).
     /// They are app settings, kept between runs, not saved in the document.
     pub(crate) fn snap_toggles(&mut self, ui: &mut egui::Ui) {
         let rows = [

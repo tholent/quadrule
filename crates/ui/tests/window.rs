@@ -31,12 +31,16 @@ struct Window {
 }
 
 fn harness() -> Harness<'static, Window> {
+    harness_sized(egui::vec2(1280.0, 860.0))
+}
+
+fn harness_sized(size: egui::Vec2) -> Harness<'static, Window> {
     let state = Window {
         ui: ViewerUi::new(Viewer::default()),
         requests: Vec::new(),
     };
     let mut h = Harness::builder()
-        .with_size(egui::vec2(1280.0, 860.0))
+        .with_size(size)
         // Opening a page adds many widgets at once; each new one asks for one more frame.
         .with_max_steps(16)
         .build_ui_state(
@@ -182,6 +186,9 @@ fn findings_zoom_and_theme() {
         && h.state().ui.viewer.screen_px_per_mm.is_some();
     // Theme (Q11).
     h.get_by_label("View").click();
+    h.run();
+    h.get_by_label("Theme").hover();
+    h.run();
     h.run();
     h.get_by_label("Dark").click();
     h.run();
@@ -413,6 +420,9 @@ fn chip_canvas_switch_and_fallback() {
     let export_default = h.state().ui.canvas_mode == quadrule_ui::CanvasMode::ExportPixels;
     h.get_by_label("View").click();
     h.run();
+    h.get_by_label("Canvas").hover();
+    h.run();
+    h.run();
     h.get_by_label("Graphics chip").click();
     h.run();
     // The warm-up frame is followed at once by a judged one, which is too slow.
@@ -501,9 +511,10 @@ fn dont_save_then_close_leaves_no_recovery_file() {
 
 #[test]
 fn snap_toggles_and_subdivisions_are_named_controls() {
-    // Rung 4a: each helper has a switch in the status bar and in the Page tab, named for screen
-    // readers by its label; the Page tab has a Subdivisions field.
-    let mut h = harness();
+    // Rung 4a: each helper has a switch in the Page tab, named for screen readers by its label; the Page tab has a
+    // Subdivisions field. Since fixes batch 2 (Q3) the status bar has none (View > Snapping holds them too).
+    // The window is tall enough to show the whole Page tab, so its switches can be pressed.
+    let mut h = harness_sized(egui::vec2(1280.0, 1700.0));
     h.get_by_label("Open sample page").click();
     h.run();
     let names = [
@@ -515,7 +526,12 @@ fn snap_toggles_and_subdivisions_are_named_controls() {
         "Equal spacing",
         "Rhythm overlay",
     ];
-    let twice = names.iter().all(|n| h.get_all_by_label(n).count() >= 2);
+    // Each is in the Page tab, in the panel on the right (the window is 1280 wide, the panel starts near 960), and
+    // none is in the status bar, which runs from the left edge.
+    let once = names.iter().all(|n| {
+        h.get_all_by_label(n).count() >= 1
+            && h.get_all_by_label(n).all(|x| x.rect().center().x > 900.0)
+    });
     let on_at_start = {
         let s = &h.state().ui.viewer;
         s.snap.pixel_grid
@@ -532,6 +548,8 @@ fn snap_toggles_and_subdivisions_are_named_controls() {
     h.get_all_by_label("Pixel grid").next().unwrap().click();
     h.run();
     let grid_off = !h.state().ui.viewer.snap.pixel_grid;
+    h.get_all_by_label("Rhythm overlay").next().unwrap().hover();
+    h.run();
     h.get_all_by_label("Rhythm overlay").next().unwrap().click();
     h.run();
     let overlay_on = h.state().ui.viewer.show_rhythm;
@@ -539,9 +557,9 @@ fn snap_toggles_and_subdivisions_are_named_controls() {
     h.run();
     let smart_off = !h.state().ui.viewer.snap.smart_guides;
     let sub_field = h.query_by_label("Subdivisions").is_some();
-    let ok = twice && on_at_start && overlay_on && grid_off && smart_off && sub_field;
+    let ok = once && on_at_start && overlay_on && grid_off && smart_off && sub_field;
     println!(
-        "\nCHECK crate=ui name=window_snap_toggles result={} in_status_and_page_tab={twice} on_at_start={on_at_start} overlay_toggles={overlay_on} pixel_grid_toggles={grid_off} smart_guides_toggles={smart_off} subdivisions_field={sub_field}",
+        "\nCHECK crate=ui name=window_snap_toggles result={} only_in_page_tab={once} on_at_start={on_at_start} overlay_toggles={overlay_on} pixel_grid_toggles={grid_off} smart_guides_toggles={smart_off} subdivisions_field={sub_field}",
         pass(ok)
     );
     assert!(ok);

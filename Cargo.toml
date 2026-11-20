@@ -48,6 +48,9 @@ eframe = { version = "0.37.0", default-features = false, features = ["wgpu", "wa
 # monochrome_emoji_fonts: egui's own fonts lack ⚠ and ℹ, which the lint panel uses.
 egui = { version = "0.37.0", features = ["monochrome_emoji_fonts"] }
 egui_kittest = "0.37.0"
+# The Mac's menu bar (fixes batch 2, Q7), on macOS only: Tauri's menu crate, MIT OR Apache-2.0, 0.21.2 of 2026-10-08.
+# Pinned exactly. `default-features = false` leaves out its GTK menus, which nothing here uses.
+muda = { version = "=0.21.2", default-features = false }
 # The system file dialog (napkin §15.2); on Linux it asks the desktop's portal.
 rfd = "0.18.0"
 # Napkin §14: every string on screen goes through Fluent (rung 2 bbq Q5).

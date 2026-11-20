@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! The File menu (rung 16 bbq, Q6, Q9 and Defaulted "The File menu, in detail"): leftmost in the top bar. New…
-//! Ctrl+N, Open… Ctrl+O, Open Recent, Save Ctrl+S, Save As… Ctrl+Shift+S, Save as template…, Export… Ctrl+E and Close
-//! Ctrl+W. The bar no longer has New, Open, Save, Save As or Export of its own. The keys themselves are read in
-//! `ViewerUi::shortcuts`; every item here does what its key does.
+//! The File menu (rung 16 bbq, Q6, Q9 and Defaulted "The File menu, in detail"): New… Ctrl+N, Open… Ctrl+O, Open
+//! Recent, Save Ctrl+S, Save As… Ctrl+Shift+S, Save as template…, Export… Ctrl+E and Close Ctrl+W. Since fixes batch 2
+//! it is the first menu of the menu bar ([`crate::menus`], [`crate::menu_bar`]), and the toolbar has no File button.
+//! What is left here is Open Recent and the "is a document on screen" question the items ask.
 
-use crate::view::{After, Request, ViewerUi};
-use egui::{Button, Key, KeyboardShortcut, Modifiers};
+use crate::view::{Request, ViewerUi};
+use egui::Button;
 use quadrule_i18n::Message;
 
 impl ViewerUi {
@@ -29,94 +29,17 @@ impl ViewerUi {
 
     /// Opens the File menu on the next frame (`--look file-menu`, for a screenshot).
     pub fn look_file_menu(&mut self) {
-        self.open_file_menu = true;
-    }
-
-    /// The File menu button and what it holds.
-    pub(crate) fn file_menu(&mut self, ui: &mut egui::Ui, requests: &mut Vec<Request>) {
-        let cmd = Modifiers::COMMAND;
-        let shift_cmd = Modifiers::COMMAND | Modifiers::SHIFT;
-        let keys = |ui: &egui::Ui, m: Modifiers, k: Key| {
-            ui.ctx().format_shortcut(&KeyboardShortcut::new(m, k))
-        };
-        let doc = self.in_document();
-        let has_doc = self.viewer.open.is_some();
-        let can_template = doc && self.viewer.templates_dir.is_some();
-        let can_export = doc && !self.export_sheets_open();
-        let menu = ui.menu_button(self.t("app-file"), |ui| {
-            if ui
-                .add(Button::new(self.t("app-new")).shortcut_text(keys(ui, cmd, Key::N)))
-                .clicked()
-            {
-                self.ask_new();
-            }
-            if ui
-                .add(Button::new(self.t("app-open")).shortcut_text(keys(ui, cmd, Key::O)))
-                .clicked()
-            {
-                requests.extend(self.guard(After::OpenDialog));
-            }
-            self.open_recent_menu(ui, requests);
-            ui.separator();
-            if ui
-                .add_enabled(
-                    doc,
-                    Button::new(self.t("app-save")).shortcut_text(keys(ui, cmd, Key::S)),
-                )
-                .clicked()
-            {
-                requests.extend(self.save());
-            }
-            if ui
-                .add_enabled(
-                    doc,
-                    Button::new(self.t("app-save-as")).shortcut_text(keys(ui, shift_cmd, Key::S)),
-                )
-                .clicked()
-            {
-                self.ask(Request::SaveAsDialog(None), requests);
-            }
-            if ui
-                .add_enabled(can_template, Button::new(self.t("app-file-save-template")))
-                .clicked()
-            {
-                self.save_as_template();
-            }
-            ui.separator();
-            if ui
-                .add_enabled(
-                    can_export,
-                    Button::new(self.t("app-export-sheet")).shortcut_text(keys(ui, cmd, Key::E)),
-                )
-                .clicked()
-            {
-                self.open_export_sheet();
-            }
-            ui.separator();
-            if ui
-                .add_enabled(
-                    has_doc,
-                    Button::new(self.t("app-file-close")).shortcut_text(keys(ui, cmd, Key::W)),
-                )
-                .clicked()
-            {
-                requests.extend(self.ask_close_document());
-            }
-        });
-        if std::mem::take(&mut self.open_file_menu) {
-            egui::Popup::open_id(ui.ctx(), egui::Popup::default_response_id(&menu.response));
-            ui.ctx().request_repaint();
-        }
+        self.look_menu = Some(crate::menu_bar::LookMenu::top("app-file"));
     }
 
     /// Open Recent: the recent list, a file that is gone greyed and marked Not found.
-    fn open_recent_menu(&mut self, ui: &mut egui::Ui, requests: &mut Vec<Request>) {
+    pub(crate) fn open_recent_menu(&mut self, ui: &mut egui::Ui, requests: &mut Vec<Request>) {
         ui.menu_button(self.t("app-file-open-recent"), |ui| {
             let recent = self.viewer.recent_files();
             if recent.is_empty() {
                 ui.add_enabled(false, Button::new(self.t("app-file-recent-none")));
             }
-            for r in recent {
+            for (i, r) in recent.into_iter().enumerate() {
                 let text = if r.exists {
                     r.name.clone()
                 } else {
@@ -127,7 +50,7 @@ impl ViewerUi {
                     .add_enabled(r.exists, Button::new(text))
                     .on_hover_text(r.path.display().to_string());
                 if button.clicked() {
-                    requests.extend(self.guard(After::OpenPath(r.path.clone())));
+                    requests.extend(self.run_cmd(ui.ctx(), crate::Cmd::OpenRecent(i)));
                 }
             }
         });

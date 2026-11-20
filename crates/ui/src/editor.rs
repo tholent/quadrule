@@ -302,6 +302,24 @@ impl Viewer {
         self.select_one(id, add);
     }
 
+    /// Selects every object on the page that a click could pick at the top level: shown, not locked, in a layer
+    /// that is shown and not locked (Edit > Select all; fixes batch 2). Groups stand for what is in them.
+    pub fn select_all(&mut self) {
+        let Some(doc) = self.doc() else {
+            return;
+        };
+        let ids: Vec<Uuid> = doc
+            .layers
+            .iter()
+            .filter(|l| l.visible && !l.locked)
+            .flat_map(|l| l.objects.iter())
+            .filter(|o| o.visible && !o.locked)
+            .map(|o| o.id)
+            .collect();
+        self.entered.clear();
+        self.selection = ids;
+    }
+
     /// Adds `id` to the selection, or takes it out if it is there. A group and something inside it
     /// are never both selected: picking one drops the other.
     pub fn toggle(&mut self, id: Uuid) {

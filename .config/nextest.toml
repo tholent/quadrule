@@ -6,8 +6,8 @@
 success-output = "final"
 failure-output = "final"
 
-# The window tests that run the speed benches take one to two and a half minutes each on the software graphics driver;
-# started first, they overlap the rest instead of finishing last.
+# The window tests that run the speed benches, and the menu tests that try each key against its item, take one to two
+# and a half minutes each on the software graphics driver; started first, they overlap the rest instead of finishing last.
 [[profile.default.overrides]]
-filter = 'package(quadrule-ui) & (test(/the_benchmarks_run/) | test(every_quick_fix_works_by_the_pointer_in_one_undo_step))'
+filter = 'package(quadrule-ui) & (test(/the_benchmarks_run/) | test(every_quick_fix_works_by_the_pointer_in_one_undo_step) | test(/_item_with_a_key_does_what_that_key_does/))'
 priority = 100
