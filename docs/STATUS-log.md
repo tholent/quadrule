@@ -2722,3 +2722,7 @@ it from now on".
   `rebuilt=0 target_gb=29.9`.
 - Pi-only debt lines removed (nextest on the Pi; prune measured only on the VM). Older records that measured on the
   Pi stay as they were.
+- CI on the branch: run 44767363085 (`55a2b7d`, nextest) and run 44769524309 (`b488760`, the Pi retired):
+  `ubuntu-latest: success`, `macos-latest: success`, `windows-latest: success` both times; nextest's summaries
+  `702 tests run: 702 passed`. Job times against the last `main` run before nextest (44744928136): macOS 15m 16s →
+  8m 52s, Linux 16m 30s → 10m 12s, Windows 13m 8s → 11m 37s. Fast-forwarded to `main`; branch deleted.
