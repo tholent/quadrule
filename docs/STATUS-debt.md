@@ -379,10 +379,4 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   (9) The look screenshots are taken at the window's size on the Pi's 1440 by 720 screen, where the Page tab leaves the layers panel
   only a few rows; the greyed states (last layer, locked) were not photographed, only tested.
 - Build pruning (`crates/xtask/src/prune.rs`): (1) once, both clippys re-checked our crates after a prune that deleted
-  0 to 2 files, and the next round of the same commands did not; cause not found. (2) Never pruned: old
-  `target/<profile>/.fingerprint` folders (50M on the VM) and `target/<profile>/build` (274M), and
-  `crates/format/fuzz/target` (the plan left it out). Measured 2026-11-20 (`du -sh target/debug/.fingerprint
-  target/debug/build`, `du -csh target/debug/build/quadrule-*`): of `build`'s 274M only 14M is ours (quadrule-ui's
-  build script, 8 copies); the rest is third-party build scripts, several versions of each in use, which prune never
-  touches. The fuzz folder does not exist on the VM. About 1 % of a 30G `target/`: the lead recommends closing (2)
-  without code; chris to say.
+  0 to 2 files, and the next round of the same commands did not; cause not found.

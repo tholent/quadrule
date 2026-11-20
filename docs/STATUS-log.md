@@ -2751,3 +2751,7 @@ built and released) or are per-rung debt for rung 17's sweep.
 - Build-pruning leftovers measured (`docs/STATUS-debt.md`): only 14M of `target/debug/build`'s 274M is ours; no code
   written; the lead recommends closing that part.
 - Still waiting on chris: the look at fixes batch 1 (`v0.16.3`), and one starter per category for rung 16b.
+- Later the same session, chris, word for word: "2. once I start using the finished v0.16.3 I'll create these; 3. yes".
+  The starters wait for `v0.16.3` (`docs/arcs/v1/README.md`, chris's queue); the build-pruning leftovers part of the
+  debt line is closed without code (`docs/STATUS-debt.md`). chris asked for a checklist for the batch 1 look; it was
+  given in the session.

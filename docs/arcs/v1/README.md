@@ -65,6 +65,8 @@ What waits on chris's hands or taste. The lead adds to it and crosses items off 
   - 2026-11-18: the gallery is built (16a, `v0.16.0`). chris makes one starter per category in the app and keeps each
     with File ▸ Save as template…; the 16b lead copies them into `crates/ui/starters/<category>/` and agents follow
     them for the rest (`docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md`).
+  - 2026-11-20, chris, word for word: "once I start using the finished v0.16.3 I'll create these". So the starters
+    wait for `v0.16.3` (fixes batch 1) to ship.
 - **Looks:** one per rung or part (ADR-007).
 
 ## Standing rules for every rung
