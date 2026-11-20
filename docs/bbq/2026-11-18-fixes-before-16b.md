@@ -98,3 +98,9 @@ Pi; screenshots. Then chris's look, `v0.16.3`. Batch 2 and batch 3 follow, each 
 - **2026-11-20, the batch 1 look:** chris was given a checklist (smooth zoom, the grand staff space, the layer icons)
   and answered, word for word: "approved for v0.16.3". Approved with no changes, so the builder's judgement calls stand
   (the icon drawings, their spacing, the hover order). Shipped as `v0.16.3` (`docs/arcs/v1/release-notes/v0.16.3.md`).
+- **2026-11-20, before batch 2:** two gaps the rounds left, asked of chris. Q7's Settings… has no settings window to
+  open; chris, word for word: "The Profiles window (Recommended)", so Settings… (⌘,) opens the Profiles window until a
+  real settings window exists. The Help menu and About; chris: "About + the project page", so Help holds About quadrule
+  (the version, the licence and the project's web address, as text; on the Mac, About sits in the Quadrule menu) and an
+  item that opens quadrule's GitHub page in the browser. Batch 2 is built on the branch `batch-2-menus`, not `main`:
+  its macOS parts cannot be built on the VM, so CI checks all three systems before it merges.
