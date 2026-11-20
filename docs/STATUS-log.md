@@ -2765,4 +2765,6 @@ built and released) or are per-rung debt for rung 17's sweep.
   Re-plans, `STATUS.md`.
 - `make check` at 0.16.3 → exit 0; nextest `702 tests run: 702 passed (6 slow), 2 skipped`, 756 CHECK lines; then
   `PRUNE target=target removed_files=305 removed_gb=7.9 kept_gb=31.5 dry_run=no`.
-- Tag `v0.16.3` pushed; the release workflow builds the packages and publishes the release.
+- Tag `v0.16.3` pushed. Release run 44785857112: `windows-x86_64`, `linux-x86_64`, `linux-aarch64`, `macos-universal` and
+  `Draft, attach, publish` all `success`; the release is published with 6 packages and `SHA256SUMS.txt`. CI on `main`
+  for `1305e12` (run 44785854666): `success`.
