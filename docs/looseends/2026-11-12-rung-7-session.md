@@ -7,8 +7,11 @@ and in step with `origin/main`, no stash, no app left running; CI green on every
 
 - [x] The rung 7 record's Defaulted calls, open to veto (`docs/bbq/2026-11-11-rung-7-groups-and-align.md`, Defaulted):
   "Settled by approval (Recommended)"; a dated line in the record says so.
-- [ ] The hardware queue, unchanged ("Nothing yet", 2026-11-12): the grays sheet on both devices; a landscape PNG check
+- [x] The hardware queue, unchanged ("Nothing yet", 2026-11-12): the grays sheet on both devices; a landscape PNG check
   and landscape toolbar screenshots, which rung 8's orientation needs (`docs/arcs/v1/README.md`, chris's queue).
+  Done 2026-11-12, all three crossed off in `docs/arcs/v1/README.md` (chris's queue, Hardware): the grays sheet read on
+  the Nomad and the Manta ruled the same; landscape toolbar screenshots captured; the landscape PNG answered (rotated
+  pixels). Ticked 2026-11-20 by `looseends project`.
 
 ## Mine (the lead)
 

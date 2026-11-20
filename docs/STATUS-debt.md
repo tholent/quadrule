@@ -2,6 +2,10 @@
 
 Known debt and owed work. One line each. When an item is paid, remove it and note it in `STATUS-log.md`.
 
+- Parked for chris until after 1.0 (chris, 2026-11-20, word for word: "Leave until after 1.0 (Recommended)"): PR #4,
+  writerblockade's draft proposing a colour mode behind a `color` feature for colour e-ink tablets. It calls itself
+  ADR-017, a number now taken (`docs/decisions/ADR-017-same-maths-on-every-computer.md`, superseded); it needs a new
+  number if ever ruled. Its author asked only that the file format and profiles leave room for colour before they freeze.
 - Parked for chris: rendering — the build-folder instruction the render worker reports (`spikes/render/FINDINGS.md`).
   (Scale vs pixel-locked rhythm on A5 X: ruled 2026-11-17, today's behaviour ratified; `docs/bbq/2026-11-17-rung-14-lint-and-preflight.md`.) (Canvas fallback to vello_cpu on weak GPUs: ruled yes, 2026-11-09.)
 - Calibration: the Manta's gray levels are ruled equal to the Nomad's, not measured (chris, 2026-11-12: "Same as the
@@ -35,10 +39,6 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   update `metadata.modified`. "Don't save" followed by
   cancelling the Open dialog leaves the document unsaved with its recovery file deleted (the next autosave writes
   it again). Only one recovery file is restored per start.
-- `CHECK` lines can share a line with the test runner's output under `--nocapture`, so `grep '^CHECK'` (used in
-  `.github/workflows/ci.yml`'s Structured results step and in past log entries) can miss one. Turn it into
-  something a test enforces: print each line starting with a newline, or count with `grep -o` (`docs/STATUS-log.md`,
-  2026-11-10). Rung 4's new checks print the newline; the older ones do not, and nothing enforces it yet.
 - Rung 4a, owed (`crates/ui/src/drag.rs`, `crates/layout/src/snap.rs`, `crates/ui/src/view.rs`): drag speed is measured
   only on the sample page at Fit zoom (export canvas: one 60.1 ms frame in 1,595; chip canvas: none over 34 ms); not
   zoomed in, not on a desktop card (a text-heavy page was timed in rungs 11a and 11b). No autoscroll when a drag reaches the canvas edge. Several objects selected on
@@ -378,11 +378,11 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   (8) A right-click on a layer row also picks that row (and clears the object pick), so the menu and the buttons work on the same layer.
   (9) The look screenshots are taken at the window's size on the Pi's 1440 by 720 screen, where the Page tab leaves the layers panel
   only a few rows; the greyed states (last layer, locked) were not photographed, only tested.
-- The `TESTS` line's `checks=` count moves by one between runs of the same code (750 then 749 at `6f1e574`; 756 and
-  755, 451 and 450 later; `docs/STATUS-log.md`, 2026-11-19 to 2026-11-20). Some test prints a `CHECK` line only
-  sometimes; which one is not known, as `target/test.log` is overwritten each run. Find it by keeping two logs and
-  diffing their `CHECK` names.
 - Build pruning (`crates/xtask/src/prune.rs`): (1) once, both clippys re-checked our crates after a prune that deleted
   0 to 2 files, and the next round of the same commands did not; cause not found. (2) Never pruned: old
   `target/<profile>/.fingerprint` folders (50M on the VM) and `target/<profile>/build` (274M), and
-  `crates/format/fuzz/target` (the plan left it out).
+  `crates/format/fuzz/target` (the plan left it out). Measured 2026-11-20 (`du -sh target/debug/.fingerprint
+  target/debug/build`, `du -csh target/debug/build/quadrule-*`): of `build`'s 274M only 14M is ours (quadrule-ui's
+  build script, 8 copies); the rest is third-party build scripts, several versions of each in use, which prune never
+  touches. The fuzz folder does not exist on the VM. About 1 % of a 30G `target/`: the lead recommends closing (2)
+  without code; chris to say.

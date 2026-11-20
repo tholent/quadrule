@@ -2726,3 +2726,28 @@ it from now on".
   `ubuntu-latest: success`, `macos-latest: success`, `windows-latest: success` both times; nextest's summaries
   `702 tests run: 702 passed`. Job times against the last `main` run before nextest (44744928136): macOS 15m 16s →
   8m 52s, Linux 16m 30s → 10m 12s, Windows 13m 8s → 11m 37s. Fast-forwarded to `main`; branch deleted.
+
+## 2026-11-20 — looseends project (Opus 5.5, high, on chris's VM)
+
+chris typed `looseends`, then chose "The project (Recommended)". `make build-proof` → `BUILD head=ff5e687 dirty=no
+rebuilt=0 target_gb=29.9`. The skill's scan (`looseends-scan.py`) listed 101 markers; checked one by one, most were
+closed (the hinting talk folded into ADR-001, hinting moved to v1.1; ADR-007 and ADR-014 accepted; old bbq veto lists
+built and released) or are per-rung debt for rung 17's sweep.
+
+- chris's rulings, word for word (answers to questions): recommendation 3 of the build-pruning plan, "Plan it after
+  16b (Recommended)" (written in `docs/proposals/build-pruning-2026-11-19.md`); PR #4, the colour-mode proposal,
+  "Leave until after 1.0 (Recommended)" (a parked line in `docs/STATUS-debt.md`, with its ADR-017 number clash); the
+  local branch `backup/pre-swap-rewrite` (2026-11-09, 8 commits, never pushed), "Keep it, leave it local
+  (Recommended)".
+- The last box in `docs/looseends/2026-11-12-rung-7-session.md` ticked: the hardware queue was done 2026-11-12
+  (`docs/arcs/v1/README.md`, chris's queue).
+- The `checks=` count that moved by one: not reproduced. Three `make test` runs kept apart (nextest) each gave
+  `TESTS scope=workspace checks=756 check_fail=0 passed=702 failed=0 status=ok runner=nextest`, and `diff` of their
+  `CHECK crate=… name=…` pairs was empty; one `cargo test --workspace -- --nocapture` gave 756 counted both at line
+  start (`grep -c '^ *CHECK'`) and anywhere (`grep -o 'CHECK crate=' | wc -l`). The drift was seen under `cargo test`,
+  where a `CHECK` line can share a line with the runner's output. The `Makefile` now counts `CHECK crate=` wherever it
+  sits (a probe line with runner text before it: old count 1, new 2); `make test` after the change → `checks=756`. Both
+  debt lines (the drift, and the line-sharing) are paid and removed. If `checks=` moves again, it is a test.
+- Build-pruning leftovers measured (`docs/STATUS-debt.md`): only 14M of `target/debug/build`'s 274M is ours; no code
+  written; the lead recommends closing that part.
+- Still waiting on chris: the look at fixes batch 1 (`v0.16.3`), and one starter per category for rung 16b.

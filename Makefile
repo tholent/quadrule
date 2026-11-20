@@ -83,6 +83,8 @@ clippy-all: clippy ## The same as clippy
 #   TESTS scope=workspace checks=<CHECK lines> check_fail=<result=fail> passed=<n> failed=<n> status=<ok|fail> runner=<nextest|cargo>
 # The line is printed whether the tests passed or not; the exit status is the tests' own. With cargo-nextest installed
 # (DEVELOPMENT.md) the tests run as separate processes, many at once (.config/nextest.toml); without it, `cargo test`.
+# CHECK lines are counted wherever they sit: under `cargo test --nocapture` one can share a line with the runner's own
+# output (docs/STATUS-debt.md).
 
 define run_tests
 @mkdir -p target
@@ -97,8 +99,8 @@ define run_tests
    passed=$$(awk '/^test result:/ {n += $$4} END {print n + 0}' $(LOG)); \
    failed=$$(awk '/^test result:/ {n += $$6} END {print n + 0}' $(LOG)); \
  fi; \
- checks=$$(grep -c '^ *CHECK' $(LOG) || true); \
- cfail=$$(grep '^ *CHECK' $(LOG) | grep -c 'result=fail' || true); \
+ checks=$$(grep -o 'CHECK crate=' $(LOG) | wc -l | tr -d ' '); \
+ cfail=$$(grep -o 'CHECK crate=.*' $(LOG) | grep -c 'result=fail' || true); \
  echo "TESTS scope=$$scope checks=$$checks check_fail=$$cfail passed=$${passed:-0} failed=$${failed:-0} status=$$status runner=$$runner"; \
  if [ "$$status" = fail ]; then \
    echo "--- failing output (full log: $(LOG)) ---"; \

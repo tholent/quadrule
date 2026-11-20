@@ -171,3 +171,6 @@ the open questions took their defaults. Step 3 changed in three ways, each found
 
 Open question 4 (recommendation 3, one test program per crate) is still open: asked of chris at the end of the run.
 
+2026-11-20, answered by chris (`looseends project`), word for word: "Plan it after 16b (Recommended)". So recommendation
+3 is planned as its own proposal once rung 16b's starters have landed, not before.
+
