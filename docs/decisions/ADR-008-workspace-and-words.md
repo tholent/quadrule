@@ -46,3 +46,17 @@ amends: nothing
 - 2026-11-10: ratified by chris (answer "Ratify" to "ADR-008 … Ratify?", in his review of the pending ADRs). Prior header
   values: status `proposed`, status-note `drafted 2026-11-10 from the project's records (backlog sweep, no
   rounds, chris's choice); awaiting ratification`.
+- 2026-11-20: amended by chris: item 3, the opt-in app build, is dropped. See "Amendment — 2026-11-20, chris"
+  below.
+
+## Amendment — 2026-11-20, chris
+
+Touches §Decision item 3 and §Consequences' line on testing headless crates on the Pi. chris, 2026-11-20, word for word: "the pi has been deprecated and we don't need to consider it from now on".
+
+Item 3 kept the window crates out of plain `cargo build` and `cargo test` so they "stay quick on the Pi". Asked
+whether to keep that split now the Pi is gone, chris answered "Drop it" (the option: plain `cargo build`/`cargo test`
+cover everything, one way of building fewer, and the quick loop goes). So `Cargo.toml` has no `default-members`: plain
+`cargo build` and `cargo test` build and test the whole workspace, the app included, as CI does; `make check` and
+`make check-all` run the same checks.
+
+The other items stand; the headless crates still build and test without a window.

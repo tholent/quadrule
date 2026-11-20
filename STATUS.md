@@ -22,8 +22,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   [file.quad]` opens a `.quad` (or the sample page), shows the exact export pixels for Manta or Nomad, zooms from
   Fit to 16× with a pixel grid or to real size (after a ruler check), lists lint findings and outlines them, overlays
   safe zones, and exports PNGs named `{title}_{manta|nomad}_{w}x{h}.png` (`crates/ui/`, `crates/app/`; record
-  `docs/bbq/2026-11-09-rung-2-viewer.md`). It is an opt-in build: plain `cargo build`/`cargo test` leave it out
-  (`Cargo.toml` `default-members`); CI builds and tests it on three OSes.
+  `docs/bbq/2026-11-09-rung-2-viewer.md`). Plain `cargo build`/`cargo test` include it since 2026-11-20 (ADR-008,
+  amendment; it was an opt-in build for the Pi); CI builds and tests it on three OSes.
 - Rung 3, the first editor, is on `main`, look approved by chris 2026-11-10 ("I approve of the look") (record `docs/bbq/2026-11-10-rung-3-first-editor.md`): click and Shift-click to select, a layers panel
   under the inspector on the right (eye, lock, rename, Move up/down; the left side is kept for a future tools bar),
   the inspector's tabs (Page; Arrange, Style, Text, Constraints; Lint) with one length

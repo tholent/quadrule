@@ -2700,3 +2700,25 @@ chris: "have we increased the simultanous jobs and threads? Also can we look at 
   check_fail=1 passed=418 failed=1 status=fail runner=nextest`, the `FAIL` and `panicked` lines shown, exit status 2;
   probe removed.
 - CI still runs `cargo test`; nextest is not tried on the Pi.
+
+## 2026-11-20 — CI on nextest; the Pi retired (Opus 5.5, high, on chris's VM; branch `ci-nextest`)
+
+chris, word for word: "1. yes, please have CI use nextest; 2. the pi has been deprecated and we don't need to consider
+it from now on".
+
+- CI (`.github/workflows/ci.yml`): `taiki-e/install-action@v2` installs `cargo-nextest@0.9.151`; the test step is
+  `cargo nextest run --workspace --no-fail-fast`; the summary collects the indented `CHECK` lines; a change to
+  `.config/nextest.toml` also starts a run. Tried on the branch first (`gh workflow run CI --ref ci-nextest`).
+- The Pi's retirement amends three ruled ADRs (makeadr, amend; answers to questions, word for word): ADR-006 item 1,
+  the build machine, is "the VM, which does have a screen" (an earlier log line said it had none; it was wrong), and
+  jobs follow the machine ("yes, please detect machine"); ADR-009 item 3, the 50 ms speed line: "Keep 50 ms, any
+  machine"; ADR-008 item 3, the opt-in app build: "Drop it". `python3 …/makeadr/scripts/adr-check.py --root .
+  --triggers-from 1` → `adr-check: 18 ADRs, 0 failure(s)` (headers and that each proof resolves; it runs no test).
+- Dropping item 3: `Cargo.toml` has no `default-members`, so plain `cargo build` and `cargo test` cover the whole
+  workspace; in the Makefile `build`, `clippy`, `test` and `check` are the workspace forms and the `-all` names are the
+  same targets. `make check` → `TESTS scope=workspace checks=756 check_fail=0 passed=702 failed=0 status=ok
+  runner=nextest`, 5m 25s; afterwards `cargo test`, `cargo test --workspace`, `cargo clippy --all-targets`, `cargo
+  build` and `cargo build --workspace` compiled nothing (one way of building fewer), and `make build-proof` →
+  `rebuilt=0 target_gb=29.9`.
+- Pi-only debt lines removed (nextest on the Pi; prune measured only on the VM). Older records that measured on the
+  Pi stay as they were.

@@ -385,6 +385,4 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Build pruning (`crates/xtask/src/prune.rs`): (1) once, both clippys re-checked our crates after a prune that deleted
   0 to 2 files, and the next round of the same commands did not; cause not found. (2) Never pruned: old
   `target/<profile>/.fingerprint` folders (50M on the VM) and `target/<profile>/build` (274M), and
-  `crates/format/fuzz/target` (the plan left it out). (3) Measured on the VM only, not on the Pi.
-- cargo-nextest (`.config/nextest.toml`, `Makefile`): not tried on the Pi (4 GB; tests run as many processes at
-  once, one per core), and CI still uses `cargo test`; whether CI should switch is chris's call.
+  `crates/format/fuzz/target` (the plan left it out).

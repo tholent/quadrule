@@ -54,3 +54,20 @@ amends: nothing
 - 2026-11-10: ratified by chris (answer "Ratify" to "ADR-006 … Ratify?", in his review of the pending ADRs). Prior header
   values: status `proposed`, status-note `drafted 2026-11-10 from the project's records (backlog sweep, no
   rounds, chris's choice); awaiting ratification`.
+- 2026-11-20: amended by chris: the Raspberry Pi is deprecated; the build machine is the VM. See "Amendment —
+  2026-11-20, chris" below.
+
+## Amendment — 2026-11-20, chris
+
+Touches §Decision item 1 (and §Consequences' line on the Pi being slow). chris, 2026-11-20, word for word: "the pi has been deprecated and we don't need to consider it from now on".
+
+- **The build machine is chris's development VM** (x86_64, 12 cores, 32 GB, Debian 13). Asked what item 1 should name
+  instead of the Pi, chris answered: "the VM, which does have a screen". Headless parts and the window build and test
+  there, and the window is checked on its screen.
+- **Build jobs follow the machine**, not a fixed 2: the Makefile's `JOBS` is one per core, at most one per 1.5 GB of
+  memory, and `JOBS=` still sets it by hand. chris, 2026-11-20, asked whether the default should detect the machine:
+  "yes, please detect machine".
+- Tests run with cargo-nextest where it is installed, on the VM and on CI (chris, 2026-11-20: "yes, please have CI use
+  nextest"); each test still prints its one `CHECK` line (item 5 unchanged).
+
+The other items stand. Older records that measured on the Pi stay as they were.

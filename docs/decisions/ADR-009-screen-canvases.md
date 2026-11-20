@@ -61,3 +61,16 @@ consulted: Claude (Opus 5.5) proposed the 100 ms fallback line in the rung 3 bbq
 - 2026-11-10: ratified by chris (answer "Ratify both" to "Ratify ADR-009 … and ADR-011 … with your answers above?").
   Prior header values: status `proposed`, status-note `drafted 2026-11-10 from the project's records (backlog sweep, no
   rounds, chris's choice); awaiting ratification`.
+- 2026-11-20: amended by chris: the speed line is judged on any machine, the Pi being deprecated. See "Amendment —
+  2026-11-20, chris" below.
+
+## Amendment — 2026-11-20, chris
+
+Touches §Decision item 3, the speed line. chris, 2026-11-20, word for word: "the pi has been deprecated and we don't need to consider it from now on".
+
+Asked where the line is judged now, chris answered "Keep 50 ms, any machine" (the option: the line stands; it is
+judged on whichever computer the benches run on, and each result names the machine). So: while dragging, in a release
+build, the 90th percentile of frames (after the first) is under 50 ms on both canvases, on the computer the bench ran
+on, which every reported number names. A miss still stops the work and goes to chris with the numbers.
+
+The other items stand.

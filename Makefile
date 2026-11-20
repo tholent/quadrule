@@ -3,16 +3,15 @@
 # `make` lists every target. A convenience for Linux and macOS: CI calls cargo directly (.github/workflows/ci.yml)
 # and does not use this file. Each target is a thin wrapper, so you can always run the cargo command it prints.
 #
-# Fast vs whole: plain `test`, `clippy` and `check` use the default members (Cargo.toml `default-members`: the
-# graphics crates ui and app are left out, which keeps the Pi quick). The `-all` forms use --workspace, exactly
-# as CI does. Run `make check-all` before pushing.
+# Every target covers the whole workspace, exactly as CI does (ADR-008, amendment of 2026-11-20). The `-all` forms
+# are the same targets under their older names. Run `make check` (or `make check-all`) before pushing.
 
 SHELL := bash
 .SHELLFLAGS := -o pipefail -ec
 .DEFAULT_GOAL := help
 
 # Build jobs follow the computer: one per core, but no more than one per 1.5 GB of memory, as linking the test programs
-# takes a lot of it (the Pi 5's 4 cores and 4 GB give 2, chris's 12-core VM 12). `make test JOBS=4` to change.
+# takes a lot of it (chris's 12-core, 32 GB VM gets 12; ADR-006, amendment of 2026-11-20). `make test JOBS=4` to change.
 ifndef JOBS
 JOBS := $(shell c=$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2); \
   m=$$(awk '/^MemTotal:/ {print int($$2 / 1024)}' /proc/meminfo 2>/dev/null || \
@@ -46,7 +45,7 @@ TOOL ?=
 PROFILE ?= all
 OUT ?= calib
 SECS ?= 60
-# What `make review` runs: check (fast) or check-all (CI parity).
+# What `make review` runs (check and check-all are the same since ADR-008's amendment of 2026-11-20).
 CHECK ?= check-all
 # `make build-proof` fails when target/ is bigger than this, in GiB (docs/proposals/build-pruning-2026-11-19.md).
 TARGET_CAP_GB ?= 50
@@ -63,11 +62,10 @@ help: ## List the targets
 
 # ---- build, format, lint -------------------------------------------------------------------------------------
 
-build: ## Build the default members (no window)
-	cargo build
-
-build-all: ## Build the whole workspace, window included (as CI)
+build: ## Build the whole workspace, window included (as CI)
 	cargo build --workspace
+
+build-all: build ## The same as build
 
 fmt: ## Format the code
 	cargo fmt --all
@@ -75,15 +73,14 @@ fmt: ## Format the code
 fmt-check: ## Check formatting (CI's rustfmt step)
 	cargo fmt --all --check
 
-clippy: ## Clippy on the default members, warnings are errors
-	cargo clippy --all-targets -- -D warnings
-
-clippy-all: ## Clippy on the whole workspace (CI's clippy step)
+clippy: ## Clippy on the whole workspace, warnings are errors (CI's clippy step)
 	cargo clippy --workspace --all-targets -- -D warnings
+
+clippy-all: clippy ## The same as clippy
 
 # ---- tests ---------------------------------------------------------------------------------------------------
 # Full output goes to $(LOG); the screen gets one line:
-#   TESTS scope=<default|workspace> checks=<CHECK lines> check_fail=<result=fail> passed=<n> failed=<n> status=<ok|fail> runner=<nextest|cargo>
+#   TESTS scope=workspace checks=<CHECK lines> check_fail=<result=fail> passed=<n> failed=<n> status=<ok|fail> runner=<nextest|cargo>
 # The line is printed whether the tests passed or not; the exit status is the tests' own. With cargo-nextest installed
 # (DEVELOPMENT.md) the tests run as separate processes, many at once (.config/nextest.toml); without it, `cargo test`.
 
@@ -110,14 +107,13 @@ define run_tests
  fi
 endef
 
-test: ## Test the default members; one summary line, full log in target/test.log
-	$(call run_tests,default,)
-
-test-all: ## Test the whole workspace (as CI); one summary line
+test: ## Test the whole workspace (as CI); one summary line, full log in target/test.log
 	$(call run_tests,workspace,--workspace)
 
-test-v: ## Test the default members with all output on screen (use `make test-v ARGS=name` to filter)
-	cargo test -- --nocapture $(ARGS)
+test-all: test ## The same as test
+
+test-v: ## Test the whole workspace with all output on screen (use `make test-v ARGS=name` to filter)
+	cargo test --workspace -- --nocapture $(ARGS)
 
 # ---- check: what to run before pushing -----------------------------------------------------------------------
 
@@ -128,11 +124,10 @@ define auto_prune
 @if [ -n "$$CI" ]; then echo "PRUNE skipped: CI"; else target/debug/xtask prune; fi
 endef
 
-check: fmt-check clippy test ## fmt + clippy + tests on the default members (quick), then prune
+check: fmt-check clippy test ## fmt + clippy + tests on the whole workspace (what CI runs), then prune
 	$(auto_prune)
 
-check-all: fmt-check clippy-all test-all ## fmt + clippy + tests on the whole workspace (what CI runs), then prune
-	$(auto_prune)
+check-all: check ## The same as check
 
 # ---- the app -------------------------------------------------------------------------------------------------
 
@@ -191,7 +186,7 @@ build-proof: ## Prove the build on disk matches HEAD: one BUILD line (rebuilt=0 
 	   echo "over the cap (TARGET_CAP_GB=$(TARGET_CAP_GB)): run make prune"; exit 1; \
 	 fi
 
-review: ## Everything a reviewer wants: BUILD line, check (CHECK=check-all|check), commits and diff against origin/main
+review: ## Everything a reviewer wants: BUILD line, check, commits and diff against origin/main
 	@$(MAKE) --no-print-directory build-proof
 	@$(MAKE) --no-print-directory $(CHECK)
 	@echo "--- commits not on origin/main ---"
