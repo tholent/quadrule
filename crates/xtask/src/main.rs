@@ -18,6 +18,7 @@
 //! cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]
 //! cargo xtask safe-zones [--profile <id>|all]
 //! cargo xtask lint [--toolbars <list>] [<file.quad>]
+//! cargo xtask prune [--dry-run]
 //! ```
 
 use quadrule_render::{PngMeta, encode_png, render, sha256_hex};
@@ -26,7 +27,7 @@ use quadrule_xtask::calib;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]\n       cargo xtask lint [--toolbars <list>] [<file.quad>]";
+const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]\n       cargo xtask lint [--toolbars <list>] [<file.quad>]\n       cargo xtask prune [--dry-run]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -39,6 +40,13 @@ fn main() -> ExitCode {
             }
         },
         Some("lint") => match lint(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("error: {e}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("prune") => match prune(&args[1..]) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("error: {e}");
@@ -162,6 +170,53 @@ fn safe_zones(args: &[String]) -> Result<(), String> {
             println!("// differs from crates/profiles/data/{id}.ron");
         }
     }
+    Ok(())
+}
+
+/// Deletes old copies of this workspace's builds from Cargo's build folder and incremental caches
+/// unused for three days (`quadrule_xtask::prune`), then prints one `PRUNE` line. `--dry-run`
+/// lists what would go and deletes nothing.
+fn prune(args: &[String]) -> Result<(), String> {
+    let dry_run = match args {
+        [] => false,
+        [flag] if flag == "--dry-run" => true,
+        _ => return Err(USAGE.into()),
+    };
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    let out = std::process::Command::new(cargo)
+        .args(["metadata", "--format-version", "1", "--manifest-path"])
+        .arg(root.join("Cargo.toml"))
+        .output()
+        .map_err(|e| format!("cargo metadata: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "cargo metadata: {}",
+            String::from_utf8_lossy(&out.stderr)
+        ));
+    }
+    let json: serde_json::Value =
+        serde_json::from_slice(&out.stdout).map_err(|e| format!("cargo metadata: {e}"))?;
+    let (target, names) = quadrule_xtask::prune::names_from_metadata(&json)?;
+    let opts = quadrule_xtask::prune::Options {
+        dry_run,
+        ..Default::default()
+    };
+    let report = quadrule_xtask::prune::prune(&target, &names, &opts)
+        .map_err(|e| format!("{}: {e}", target.display()))?;
+    for name in &report.skipped_names {
+        println!("libraries left alone: {name} (a third-party crate has the same name)");
+    }
+    if dry_run {
+        for path in &report.removed {
+            println!("would remove {}", path.display());
+        }
+    }
+    let shown = json["workspace_root"]
+        .as_str()
+        .and_then(|r| target.strip_prefix(r).ok())
+        .unwrap_or(&target);
+    println!("{}", report.line(&shown.display().to_string()));
     Ok(())
 }
 

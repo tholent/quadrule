@@ -22,6 +22,7 @@ quadrule-model.workspace = true
 quadrule-profiles.workspace = true
 quadrule-render.workspace = true
 quadrule-text.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

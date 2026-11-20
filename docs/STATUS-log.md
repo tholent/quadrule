@@ -2614,3 +2614,64 @@ Brief: build `docs/bbq/2026-11-18-new-and-delete-layers.md` (Rules Q1 to Q4 and 
   and clippy clean. The VM (no FMA) now passes every golden test.
 - CI on the branch with the re-made golden images, run 44598291874: `ubuntu-latest: success`, `macos-latest:
   success`, `windows-latest: success` (`gh run view 44598291874`). Merged to `main` as a fast-forward; branch deleted.
+
+## 2026-11-19 to 2026-11-20 — build pruning: smaller debug data, `make prune`, a size cap (Opus 5.5, high, on chris's VM)
+
+Ran `docs/proposals/build-pruning-2026-11-19.md` (chris: "please read … and follow it's directions"). Its four open
+questions took their defaults (error at 50 GB, 3 days, the checks prune by themselves except on CI, recommendation 3
+asked after). The VM: 12 cores (`nproc`), 31 GiB memory, no swap (`free -h`), 126 GB disk (`df -h .`), Debian 13,
+`rustc 1.99.1 (58cf8f9c3 2026-10-13)`. Every timing below is `JOBS=12`, so it is not comparable with the Pi's.
+
+- Step 0: `make build-proof JOBS=12` → `BUILD head=6f1e574 dirty=no rebuilt=7` (2m 17s; `target/` already held 2.9 GB).
+- A false start. The first baseline went into a checkout under `/tmp`, which on this VM is a 16 GB in-memory folder
+  (`df -h /tmp` → `tmpfs 16G`), and filled it; every command failed until chris said "yes, go ahead" and it was removed.
+  At the same time a `make check-all` was running in the main folder; I first told chris it was mine, which was wrong:
+  it was the run of this window's conversation before `/clear` (task "Clean, then time make check-all baseline"). chris
+  stopped it with `kill`. Measurements after that were in a separate checkout of `6f1e574` on the main disk
+  (`~/projects/quadrule-baseline`, removed at the end).
+- Step 1, the baseline (`6f1e574`, after `cargo clean`): `time make check-all JOBS=12` → `TESTS scope=workspace
+  checks=750 check_fail=0 passed=696 failed=0 status=ok`, real 30m 12s. `du -sh` each: `target` 27G, `target/debug/deps`
+  25G, `target/debug/incremental` 2.0G, `target/debug/build` 233M. `ls -lS target/debug/deps`: `quadrule-…` 463 MB,
+  `lint_pointer-…` 371 MB, `window-…` 365 MB.
+- Step 1.3, version bumps as a cause: `version = "0.16.99"`, `make test-all`, put back: `ls target/debug/deps | grep -c
+  '^groups-[0-9a-f]\{16\}$'` 5 → 10 (five crates have a `groups` test), `target` 27G → 51G. Confirmed.
+- Step 2, `[profile.dev] debug = "line-tables-only"` and `[profile.dev.package."*"] debug = false`, alone, after
+  `cargo clean` ("Removed 30094 files, 50.5GiB total"): `make check-all` → `checks=749 check_fail=0 passed=696 failed=0
+  status=ok`, real 22m 32s; `target` 11G, `deps` 9.5G, `incremental` 1.3G, `build` 44M; `lint_pointer-…` 148 MB,
+  `window-…` 143 MB. No golden `CHECK` line failed; `git status` showed only `Cargo.toml`. A `panic!("probe")` in
+  `crates/model/tests/model.rs` with `RUST_BACKTRACE=1` → `panicked at crates/model/tests/model.rs:366:5` and the frame
+  `at ./tests/model.rs:366:5`; removed. 749 against 750 is not the change: the unchanged code gave 750 and then 749
+  (debt).
+- Step 3, `cargo xtask prune` (`crates/xtask/src/prune.rs`, tests `crates/xtask/tests/prune.rs`, 6 `CHECK` lines). Three
+  things the plan did not foresee, found by measuring:
+  1. Names are not enough. The first version kept the newest file per name and deleted four `groups` test programs in
+     use (`groups before=1` where 5 were expected): five crates have a `groups` test, and clippy checks a library both
+     alone and with its tests. Fixed: each build is matched to Cargo's own record of it,
+     `target/<profile>/.fingerprint/<package>-<hash>/<what>.json`; a build with no record is kept. Three of our test
+     names are also third-party crate names (`layout`, `render`, `window`); for those only our old test programs go.
+  2. The same crate is built several ways. `cargo test` on the default members, `cargo test --workspace`, `cargo build`
+     and `cargo build -p quadrule-app` give some of our crates different library features, and Cargo's records cannot
+     tell those copies from old versions. Mapped in a side build folder by counting `libquadrule_text-*.rlib` after each
+     command: 1, 2, 2, 2, 3 (`build --workspace`), 4 (`build`). Keeping only the newest made every switch a rebuild:
+     after a prune, 24 s and 11 crates to `--workspace`, 12 s and 9 crates back. chris chose "Keep newest 2"; then,
+     told there are four sets, not two, "Libraries 4, programs 2"; then "Keep 4 for those two" (the `quadrule` and
+     `xtask` programs, also built four ways). So: test programs keep 2, libraries and the two programs keep 4. All four
+     sets of our libraries are 390 MB (`du -ch libquadrule_*.rlib libquadrule_*.rmeta`), test programs 11.8 GB.
+  3. `cargo xtask prune` builds xtask a fifth way. The checks run `target/debug/xtask prune` instead, the program the
+     tests just built (`cargo test` leaves its own build there, checked by inode).
+- Step 3, the version-bump trick with programs 2 and libraries 4: `du -sh target` 34G, `make prune` → `PRUNE
+  target=target removed_files=207 removed_gb=3.5 kept_gb=29.6 dry_run=no`, 30G after; `groups` 14 → 10 (two each).
+  The trick itself (bump, then put back) makes the put-back copies look older than the bumped ones, so it costs one round
+  of rebuilds; a real bump only goes forward.
+- With the final rule: `make check-all JOBS=12` → `TESTS scope=workspace checks=756 check_fail=0 passed=702 failed=0
+  status=ok` (750 and the 6 new), `PRUNE target=target removed_files=2 removed_gb=0.0 kept_gb=29.8 dry_run=no`, real
+  20m 18s; `make check` → `TESTS scope=default checks=450 … passed=418 failed=0 status=ok`, real 7m 33s. Then a prune
+  before each of `cargo test --workspace --no-run`, `cargo test --no-run`, both clippys, `cargo build --workspace`,
+  `cargo build -p quadrule-app` and `cargo build --bin xtask`, twice: the second round compiled nothing at all; in the
+  first both clippys re-checked our crates once, cause not found (debt). `make build-proof` → `BUILD head=6f1e574
+  dirty=yes rebuilt=0 target_gb=29.9`. The folder holding every way of building is 30G: `deps` 23G, `incremental` 7.5G
+  (goes after 3 days), `build` 274M.
+- The cap: `make build-proof TARGET_CAP_GB=5` → `over the cap (TARGET_CAP_GB=5): run make prune`, exit status 2.
+- `DEVELOPMENT.md` gains "Keeping the build folder small"; the Makefile `make prune` (`DRY=1`), `TARGET_CAP_GB` and
+  the prune after `check` and `check-all`. `README.md` unchanged (nothing a user sees). No release: the app is unchanged.
+- Not measured: the Pi. `make bench-*` were not run (the speed budgets are judged on the Pi; ADR-009).

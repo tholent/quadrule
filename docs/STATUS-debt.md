@@ -378,3 +378,11 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   (8) A right-click on a layer row also picks that row (and clears the object pick), so the menu and the buttons work on the same layer.
   (9) The look screenshots are taken at the window's size on the Pi's 1440 by 720 screen, where the Page tab leaves the layers panel
   only a few rows; the greyed states (last layer, locked) were not photographed, only tested.
+- The `TESTS` line's `checks=` count moves by one between runs of the same code (750 then 749 at `6f1e574`; 756 and
+  755, 451 and 450 later; `docs/STATUS-log.md`, 2026-11-19 to 2026-11-20). Some test prints a `CHECK` line only
+  sometimes; which one is not known, as `target/test.log` is overwritten each run. Find it by keeping two logs and
+  diffing their `CHECK` names.
+- Build pruning (`crates/xtask/src/prune.rs`): (1) once, both clippys re-checked our crates after a prune that deleted
+  0 to 2 files, and the next round of the same commands did not; cause not found. (2) Never pruned: old
+  `target/<profile>/.fingerprint` folders (50M on the VM) and `target/<profile>/build` (274M), and
+  `crates/format/fuzz/target` (the plan left it out). (3) Measured on the VM only, not on the Pi.

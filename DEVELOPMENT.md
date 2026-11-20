@@ -42,6 +42,7 @@ command it runs, so you can always run that directly.
 | `make bench-drag`, `make bench-draw`, `make bench-rotate`, `make bench-type`, `make bench-zoom` | Time dragging, drawing, turning, typing (into a long text box) and zooming (a pinch in and out between a quarter and twelve times; `GROUPS=1`, `BORDERED=1`; it times every frame) in a release build (`SHAPES=1`, `TRANSFORMS=1`, `GROUPS=1`, `DEVICES=1`, `LANDSCAPE=1` or `PATTERNS=1` or `ANGLE=1` (the pattern-angle page) or `BORDERED=1` (the pattern-borders page: borders round pattern regions) or `LINT=1` (the lint page: objects that make L03, L05, L07, L09, L13 and L14 fire) or `PAPER=1` (the paper page: ISO A4 at 300 PPI and ISO A5 at 600) or `TURNED=1` (the turned-patterns page; `make bench-rotate TURNED=1` turns its 45 degree grid) or `REPEATS=1` or `FONTS=1`, `TEXTBOX=1` or `MISSING=1` over the shapes, transforms, groups, overrides, landscape, pattern or repeat page, `NOMAD=1` to run on the Nomad so a drag writes overrides, `NOSTRIP=1` to fold the device previews strip shut (it is open in a bench otherwise), `TOOL=rect` to draw with another tool) |
 | `make lint` | Lint a document from the command line |
 | `make fuzz` | Fuzz the `.quad` reader and the profile loader (needs nightly Rust and `cargo-fuzz`) |
+| `make prune` | Delete old copies of the project's own builds from `target/`, and caches unused for three days (`DRY=1` lists them only) |
 
 Without `make`, CI's three steps are:
 
@@ -59,6 +60,32 @@ only moves the version number (a rung's sign-off), decided by `.github/scripts/v
 
 Tests print one `CHECK` line per check, so a result reads as a line, not prose. CI runs on Linux, macOS and
 Windows, and a change passes only when all three agree.
+
+### Keeping the build folder small
+
+Cargo never deletes old builds by itself, so `target/` only grows: on the Pi it reached 411 GB
+(`docs/proposals/build-pruning-2026-11-19.md`). Three things keep it small.
+
+- **Less debug information.** The dev profile in `Cargo.toml` keeps line numbers (a panic still names the file and line)
+  but not the full data a debugger uses to step through variables, and libraries we don't write get none. To step
+  through our own code in a debugger, build with `CARGO_PROFILE_DEV_DEBUG=true cargo build` for that session. Release
+  builds are not changed.
+- **`make prune`** (the `xtask prune` tool) deletes, in `target/<profile>/deps`, older copies of this project's own
+  libraries, test programs and programs: it keeps the newest two of each test program and the newest four of each
+  library and of the `quadrule` and `xtask` programs (Cargo's own records in `target/<profile>/.fingerprint` tell it
+  which copy is which; a copy with no record is kept). In `target/<profile>/incremental` it deletes the caches unused
+  for three days. It never touches third-party crates, `target/tmp` or the fuzz folder (where one of our test files
+  shares a third-party crate's name, such as `window`, only our old test programs go). It ends with one line,
+  `PRUNE target=target removed_files=N removed_gb=N.N kept_gb=N.N dry_run=no` (GiB, as `du -h` counts). `make check`
+  and `make check-all` run it after the tests pass, except on CI (when `CI` is set).
+
+  Why keep more than one: `make check`, `make check-all`, `cargo build` and `make run` each build some of our crates
+  with different library features, and Cargo cannot tell those copies from old versions. Test programs, most of the
+  folder, come only from the two checks, so two copies keep both; libraries and the two programs come all four ways and
+  are small (about 1.5 GB for all four), so four keep every one, and switching between these commands rebuilds nothing.
+  Deleting something still needed only costs a rebuild.
+- **A cap.** `make build-proof` adds `target_gb=N.N` to its `BUILD` line and fails with `over the cap` when `target/` is
+  bigger than `TARGET_CAP_GB` (50 by default; `make build-proof TARGET_CAP_GB=80` to change it).
 
 ## How the code is laid out
 

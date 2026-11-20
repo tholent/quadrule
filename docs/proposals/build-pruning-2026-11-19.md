@@ -4,6 +4,9 @@
 recommendations 1/2. I'll run that on the new VM after the move, as it is a significantly more powerful machine".
 The open questions at the end take their defaults unless chris says otherwise when he starts the session.
 
+**2026-11-20: run and landed on chris's VM, with three changes chris ruled; see "What was built" at the end.** The
+text above is the plan as written and is left as it was.
+
 2026-11-19 · written by Claude (Opus 5.5, high) · to be run on chris's new development VM.
 
 ## Why
@@ -147,3 +150,24 @@ Repeat Step 1's version-bump trick to make duplicates, run `make prune`, and rec
   running `make bench-*` on the Pi, or say clearly which machine a number came from.
 - Screenshots for chris's look were taken with `grim` on the Pi's own screen (`wayland-0`). Check the VM has a
   screen to draw on before a session that needs one.
+
+## What was built (2026-11-20)
+
+Run on chris's VM; every number is in `docs/STATUS-log.md` (2026-11-19 to 2026-11-20). Steps 0 to 2 as written, and
+the open questions took their defaults. Step 3 changed in three ways, each found by measuring:
+
+1. **Copies are told apart by Cargo's own records, not by name.** "Keep the newest copy" per name deleted builds in
+   use: five crates have a `groups` test, and clippy checks a library both alone and with its tests. Each build is
+   matched to `target/<profile>/.fingerprint/<package>-<hash>/<what>.json`; a build with no record is kept. Where one
+   of our test files shares a third-party crate's name (`layout`, `render`, `window`), only our old test programs go.
+2. **More than one copy is kept.** `cargo test` on the default members, `cargo test --workspace`, `cargo build` and
+   `make run` build some of our crates with different library features, and Cargo cannot tell those copies from old
+   versions; keeping one made every switch between them a rebuild. chris's rulings, word for word (answers to
+   questions, 2026-11-19/20): "Keep newest 2"; then, told there are four ways, not two, "Libraries 4, programs 2";
+   then, for the `quadrule` and `xtask` programs, "Keep 4 for those two". So: each test program keeps 2, each library
+   and those two programs keep 4.
+3. **The checks run the xtask program the tests built** (`target/debug/xtask prune`), not `cargo xtask prune`, which
+   would build our crates yet another way first. `make prune` builds it with `cargo build --bin xtask`.
+
+Open question 4 (recommendation 3, one test program per crate) is still open: asked of chris at the end of the run.
+

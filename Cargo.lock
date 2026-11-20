@@ -2906,6 +2906,7 @@ dependencies = [
  "quadrule-profiles",
  "quadrule-render",
  "quadrule-text",
+ "serde_json",
 ]
 
 [[package]]

@@ -42,14 +42,18 @@ OUT ?= calib
 SECS ?= 60
 # What `make review` runs: check (fast) or check-all (CI parity).
 CHECK ?= check-all
+# `make build-proof` fails when target/ is bigger than this, in GiB (docs/proposals/build-pruning-2026-11-19.md).
+TARGET_CAP_GB ?= 50
+# For `prune`: DRY=1 lists what would go and deletes nothing.
+DRY ?=
 
 .PHONY: help build build-all fmt fmt-check clippy clippy-all test test-all test-v check check-all \
-        run run-release bench-drag bench-draw bench-type bench-rotate bench-zoom calibration-sheet safe-zones lint fuzz build-proof review
+        run run-release bench-drag bench-draw bench-type bench-rotate bench-zoom calibration-sheet safe-zones lint fuzz build-proof review prune
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  make %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
-	@echo "Variables: JOBS=$(JOBS) FILE= FRAMES=$(FRAMES) PROFILE=$(PROFILE) OUT=$(OUT) SECS=$(SECS) CHECK=$(CHECK)"
+	@echo "Variables: JOBS=$(JOBS) FILE= FRAMES=$(FRAMES) PROFILE=$(PROFILE) OUT=$(OUT) SECS=$(SECS) CHECK=$(CHECK) TARGET_CAP_GB=$(TARGET_CAP_GB) DRY="
 
 # ---- build, format, lint -------------------------------------------------------------------------------------
 
@@ -103,9 +107,18 @@ test-v: ## Test the default members with all output on screen (use `make test-v 
 
 # ---- check: what to run before pushing -----------------------------------------------------------------------
 
-check: fmt-check clippy test ## fmt + clippy + tests on the default members (quick)
+# After the tests pass, both prune the build folder (`make prune`), except on CI, whose machines start clean. They run
+# the xtask program the tests just built (`cargo test` leaves it at target/debug/xtask): `cargo xtask` would first
+# build our crates another way (other library features), one more copy for prune to count.
+define auto_prune
+@if [ -n "$$CI" ]; then echo "PRUNE skipped: CI"; else target/debug/xtask prune; fi
+endef
 
-check-all: fmt-check clippy-all test-all ## fmt + clippy + tests on the whole workspace (what CI runs)
+check: fmt-check clippy test ## fmt + clippy + tests on the default members (quick), then prune
+	$(auto_prune)
+
+check-all: fmt-check clippy-all test-all ## fmt + clippy + tests on the whole workspace (what CI runs), then prune
+	$(auto_prune)
 
 # ---- the app -------------------------------------------------------------------------------------------------
 
@@ -141,6 +154,9 @@ safe-zones: ## Print the safe zones measured from the device screenshots (PROFIL
 lint: ## Lint a document (FILE=page.quad, or the sample page)
 	cargo xtask lint $(FILE)
 
+prune: ## Delete old copies of our own builds (keeps 2 of each test program, 4 of each library and program) and incremental caches unused for 3 days from target/ (DRY=1 to list only); one PRUNE line
+	cargo build --quiet --bin xtask && target/debug/xtask prune $(if $(DRY),--dry-run)
+
 fuzz: ## Fuzz the .quad reader and the profile loader for SECS=60 each (needs nightly Rust and cargo-fuzz)
 	cd crates/format && mkdir -p fuzz/corpus/open_quad fuzz/corpus/from_ron && \
 	cargo +nightly fuzz run open_quad fuzz/corpus/open_quad fuzz/seeds/open_quad -- -max_total_time=$(SECS) && \
@@ -148,13 +164,18 @@ fuzz: ## Fuzz the .quad reader and the profile loader for SECS=60 each (needs ni
 
 # ---- review --------------------------------------------------------------------------------------------------
 
-build-proof: ## Prove the build on disk matches HEAD: one BUILD line (rebuilt=0 means nothing was stale)
+build-proof: ## Prove the build on disk matches HEAD: one BUILD line (rebuilt=0 means nothing was stale); fails over TARGET_CAP_GB
 	@head=$$(git rev-parse --short HEAD); \
 	 dirty=$$(if [ -n "$$(git status --porcelain)" ]; then echo yes; else echo no; fi); \
 	 mkdir -p target; \
 	 cargo build --workspace 2>&1 | tee target/build-proof.log | tail -n 3; \
 	 rebuilt=$$(grep -c '^ *Compiling quadrule' target/build-proof.log || true); \
-	 echo "BUILD head=$$head dirty=$$dirty rebuilt=$$rebuilt"
+	 kb=$$(du -sk target | cut -f1); \
+	 gb=$$(awk -v kb=$$kb 'BEGIN {printf "%.1f", kb / 1048576}'); \
+	 echo "BUILD head=$$head dirty=$$dirty rebuilt=$$rebuilt target_gb=$$gb"; \
+	 if awk -v kb=$$kb -v cap=$(TARGET_CAP_GB) 'BEGIN {exit !(kb > cap * 1048576)}'; then \
+	   echo "over the cap (TARGET_CAP_GB=$(TARGET_CAP_GB)): run make prune"; exit 1; \
+	 fi
 
 review: ## Everything a reviewer wants: BUILD line, check (CHECK=check-all|check), commits and diff against origin/main
 	@$(MAKE) --no-print-directory build-proof

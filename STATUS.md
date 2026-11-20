@@ -1,6 +1,6 @@
 # STATUS — quadrule
 
-_Last updated: 2026-11-19_
+_Last updated: 2026-11-20_
 
 The project's live state. Update it when work lands. Every claim cites at least one file that exists.
 
@@ -207,8 +207,10 @@ The project's live state. Update it when work lands. Every claim cites at least 
   ADR-017): vello_cpu draws at fearless_simd's fallback level everywhere, so a processor's fused multiply-add no longer
   moves edge pixels (chris's VM, without FMA, had differed by 1 level). Any other level is a build error
   (`crates/render/src/lib.rs`, `crates/render/tests/render.rs`). 23 golden pages re-made after chris's look (285 px, 1
-  level each); the other ten unchanged (`crates/render/tests/golden/SHA256SUMS`). The pruning plan for the build folder
-  (`docs/proposals/build-pruning-2026-11-19.md`) is chris's to run on the VM.
+  level each); the other ten unchanged (`crates/render/tests/golden/SHA256SUMS`). The build folder stays small (2026-11-20, from
+  `docs/proposals/build-pruning-2026-11-19.md`): less debug data in dev builds (a clean `make check-all` 27G → 11G),
+  `make prune`, which `make check` and `make check-all` run (`crates/xtask/src/prune.rs`), and a 50 GB cap that fails
+  `make build-proof` (`Makefile`, `DEVELOPMENT.md`).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with eighteen rules of spec §8.3 (L04 and L12 are v1.1) (`crates/lint/src/lib.rs`); `cargo xtask lint`.

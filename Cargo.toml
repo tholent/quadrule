@@ -96,6 +96,16 @@ vello = "0.11.0"
 pollster = "1.0.1"
 zip = { version = "9.5.0", default-features = false, features = ["deflate"] }
 
+# Line numbers in error reports, but no full debugger data: the build folder stays a fraction of its size
+# (docs/proposals/build-pruning-2026-11-19.md). Does not change debug_assertions or optimisation.
+# `CARGO_PROFILE_DEV_DEBUG=true cargo build` gives our own crates full debugger data for one session.
+[profile.dev]
+debug = "line-tables-only"
+
+# Libraries we don't write get no debug information at all.
+[profile.dev.package."*"]
+debug = false
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
