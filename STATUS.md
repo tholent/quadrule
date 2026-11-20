@@ -211,6 +211,11 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `docs/proposals/build-pruning-2026-11-19.md`): less debug data in dev builds (a clean `make check-all` 27G → 11G),
   `make prune`, which `make check` and `make check-all` run (`crates/xtask/src/prune.rs`), and a 50 GB cap that fails
   `make build-proof` (`Makefile`, `DEVELOPMENT.md`).
+- Tests run with cargo-nextest 0.9.151, locally where installed and on CI: `make check` 5m 25s on the VM (was about
+  20 min), CI jobs 9–12 min (`.config/nextest.toml`, `.github/workflows/ci.yml`, `DEVELOPMENT.md`). Build jobs follow the
+  machine (`Makefile`). The Raspberry Pi is retired (chris, 2026-11-20): the build machine is the VM, the 50 ms speed
+  line is judged on any machine, and plain `cargo build`/`cargo test` cover the whole workspace (amendments to ADR-006,
+  ADR-009 and ADR-008 in `docs/decisions/`).
 - Every string on screen goes through Fluent (`crates/i18n/`, English in `crates/i18n/locales/en-US/`), lint
   messages included; findings about an object carry its area (`crates/lint/src/lib.rs`).
 - A linter with eighteen rules of spec §8.3 (L04 and L12 are v1.1) (`crates/lint/src/lib.rs`); `cargo xtask lint`.
