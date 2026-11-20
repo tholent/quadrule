@@ -1,6 +1,7 @@
 # Build, test, clippy and rustfmt on Linux (x86), macOS (ARM) and Windows (x86) (napkin §15.3).
-# The slice test compares each exported PNG with the golden image blessed on the Pi (ARM), so
-# a pass on all three is the cross-machine check ADR-002 (T14/T15) and ADR-003 (item 6) owe.
+# The slice test compares each exported PNG with the stored golden image, so a pass on all three
+# is the cross-machine check ADR-002 (T14/T15) and ADR-003 (item 6) owe. Tests run with
+# cargo-nextest (`.config/nextest.toml`), as `make test` does where it is installed.
 #
 # Cost: the repository is public, so GitHub's standard runners are free. Runs on pull requests
 # and pushes to main that change what it tests (the paths below), and by hand. A change to docs,
@@ -17,6 +18,7 @@ on:
       - ".cargo/**"
       # The safe-zone and stock-grid tests read the device screenshots.
       - "docs/device-measurements/**/*.png"
+      - ".config/nextest.toml"
       - ".github/workflows/ci.yml"
   push:
     branches: [main]
@@ -28,6 +30,7 @@ on:
       - ".cargo/**"
       # The safe-zone and stock-grid tests read the device screenshots.
       - "docs/device-measurements/**/*.png"
+      - ".config/nextest.toml"
       - ".github/workflows/ci.yml"
   workflow_dispatch:
 
@@ -60,6 +63,11 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      # The version DEVELOPMENT.md names, a prebuilt binary.
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.151
+
       - name: rustfmt
         if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --all --check
@@ -68,7 +76,7 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: test
-        run: cargo test --workspace -- --nocapture 2>&1 | tee test.log
+        run: cargo nextest run --workspace --no-fail-fast 2>&1 | tee test.log
 
       - name: Structured results
         if: always()
@@ -76,10 +84,10 @@ jobs:
           {
             echo "### ${{ matrix.os }} ($(uname -m))"
             echo '```'
-            grep '^CHECK' test.log || echo "no CHECK lines"
+            grep '^ *CHECK' test.log | sed 's/^ *//' || echo "no CHECK lines"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-          grep '^CHECK' test.log || true
+          grep '^ *CHECK' test.log | sed 's/^ *//' || true
 
       - name: Upload exported files
         if: always()
