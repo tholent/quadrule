@@ -68,9 +68,13 @@ and error.
 - **My templates**: File ▸ Save as template… keeps a copy of the page under My templates (a `templates` folder beside
   the autosave recovery folder in the app's data folder). Picking one opens an untitled copy on the Device filter's
   device; right-click a template to Remove it (it asks first, and removing cannot be undone) or Show in folder.
-- Open a `.quad` file (Quadrule's own format) or the built-in sample page, and save changes. Everything for files is in
-  the **File** menu, leftmost in the top bar: New…, Open…, Open Recent, Save, Save As…, Save as template…, Export… and
-  Close.
+- Open a `.quad` file (Quadrule's own format) or the built-in sample page, and save changes; on the Mac, double-click
+  a `.quad` in Finder to open it. Everything for files is in the **File** menu: New…, Open…, Open Recent, Save, Save
+  As…, Save as template…, Export… and Close.
+- The menus: **File**, **Edit** (Undo, Redo, Cut, Copy, Paste, Duplicate, Select all), **View** (zoom, the device
+  previews, **Snapping** with its seven switches, safe zones, theme, canvas) and **Help** (About quadrule, quadrule on
+  GitHub). On Windows and Linux they sit along the top of the window; on the Mac they are in the menu bar at the top of
+  the screen, after a **Quadrule** menu (About, Settings… which opens Profiles, Hide, Quit) and with a **Window** menu.
 - Draw with the tools bar on the left: a line (L), a text box (T), a pattern region (P), a rectangle (R), an ellipse
   (E) or a polygon (Y); V goes back to Select. Drag to draw (sizes snap to whole rhythm units), or click for a default
   size; Shift draws a square, a circle or a regular polygon; double-click a tool to keep it on.

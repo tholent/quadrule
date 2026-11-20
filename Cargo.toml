@@ -15,6 +15,7 @@ members = [
     "crates/i18n",
     "crates/ui",
     "crates/app",
+    "crates/macos",
     "crates/xtask",
 ]
 # No `default-members`: plain `cargo build` and `cargo test` build and test everything, the window

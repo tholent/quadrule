@@ -1,0 +1,23 @@
+[package]
+name = "quadrule-macos"
+description = "Quadrule's few words with macOS itself: the application delegate that hears which files Finder asks it to open."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# The same objc2 versions winit 0.30 uses, so one copy of each is built.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "=0.5.3"
+objc2-foundation = { version = "=0.2.2", features = ["NSArray", "NSEnumerator", "NSString", "NSThread", "NSURL"] }
+objc2-app-kit = { version = "=0.2.2", features = ["NSApplication", "NSResponder"] }
+
+# The workspace forbids unsafe code outright, which no file can lift. This crate alone denies it instead, so the
+# one place that must talk to AppKit can allow it, with a reason beside each use (fixes batch 2, Q7's double-click).
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+float_cmp = "allow"

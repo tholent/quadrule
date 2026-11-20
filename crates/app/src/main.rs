@@ -112,6 +112,12 @@ struct App {
 
 impl App {
     fn new(cc: &eframe::CreationContext<'_>, args: Args) -> Self {
+        // A file Finder hands over while the window sleeps wakes it.
+        #[cfg(target_os = "macos")]
+        {
+            let ctx = cc.egui_ctx.clone();
+            quadrule_macos::set_wake(move || ctx.request_repaint());
+        }
         let path = args.path;
         quadrule_ui::install_fonts(&cc.egui_ctx, desktop_ui_font());
         // The profiles the user keeps (rung 13a): the shipped ones, the user's edits of them and the
@@ -429,6 +435,14 @@ impl eframe::App for App {
                 for req in self.ui.run_cmd(&ctx, cmd) {
                     self.answer(req);
                 }
+            }
+        }
+        // A file double-clicked in Finder (the macOS double-click, fixes batch 2) opens as a dropped one does, the
+        // unsaved-changes prompt first. One document is open at a time, so the first goes.
+        #[cfg(target_os = "macos")]
+        if let Some(path) = quadrule_macos::take_opened().into_iter().next() {
+            for req in self.ui.open_from_system(path) {
+                self.answer(req);
             }
         }
         for req in self.ui.show(ui) {
@@ -776,6 +790,23 @@ fn main() -> eframe::Result {
             .with_drag_and_drop(true),
         ..Default::default()
     };
+    // On the Mac the event loop is made here, as eframe would make it, so the application delegate that hears
+    // double-clicked files goes in after it is made and before it runs (winit's `platform::macos` notes; fixes batch 2).
+    #[cfg(target_os = "macos")]
+    {
+        let event_loop =
+            winit::event_loop::EventLoop::<eframe::UserEvent>::with_user_event().build()?;
+        quadrule_macos::install();
+        let mut app = eframe::create_native(
+            "quadrule",
+            options,
+            Box::new(|cc| Ok(Box::new(App::new(cc, args)))),
+            &event_loop,
+        );
+        event_loop.run_app(&mut app)?;
+        Ok(())
+    }
+    #[cfg(not(target_os = "macos"))]
     eframe::run_native(
         "quadrule",
         options,

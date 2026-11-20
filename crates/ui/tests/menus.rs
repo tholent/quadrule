@@ -23,7 +23,7 @@ use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 use quadrule_model::sample::ids::RULE;
 use quadrule_ui::menus::{Entry, Kind, Native, app_menu, items_of, menus, window_menu};
-use quadrule_ui::{Cmd, Platform, Request, Snap, Viewer, ViewerUi};
+use quadrule_ui::{Cmd, Platform, Request, Snap, Source, Viewer, ViewerUi};
 use std::path::PathBuf;
 
 fn pass(ok: bool) -> &'static str {
@@ -807,6 +807,39 @@ fn the_window_still_lays_out_at_1440_by_720() {
     let ok = inside && stacked && panels && right_edge;
     println!(
         "\nCHECK crate=ui name=menu_layout_1440x720 result={} bars_inside={inside} bar_over_toolbar_over_status={stacked} panels_show={panels} toolbar_within_width={right_edge}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_file_the_system_hands_over_opens_as_a_dropped_one_does() {
+    // The Mac's Finder hands a double-clicked file to the program (quadrule-macos); the window opens it through the
+    // unsaved-changes prompt, as a file dropped on the window.
+    let dir = tmp("menus-system-open");
+    let file = dir.join("handed.quad");
+    let mut v = Viewer::default();
+    v.open_sample();
+    v.save_to(&file).unwrap();
+    // Unsaved work: it asks first and opens nothing yet.
+    let mut h = picked("menus-system-open-dirty");
+    let asked = h.state_mut().ui.open_from_system(file.clone());
+    h.run();
+    let is_file = |u: &ViewerUi| {
+        u.viewer
+            .open
+            .as_ref()
+            .is_some_and(|o| o.source == Source::File(file.clone()))
+    };
+    let waits = asked.is_empty() && h.state().ui.prompt_open() && !is_file(&h.state().ui);
+    // Nothing unsaved: it opens at once.
+    let mut c = window("menus-system-open-clean", egui::vec2(1400.0, 1000.0));
+    let asked = c.state_mut().ui.open_from_system(file.clone());
+    c.run();
+    let opened = asked.is_empty() && is_file(&c.state().ui);
+    let ok = waits && opened;
+    println!(
+        "\nCHECK crate=ui name=menu_system_open result={} unsaved_asks_first={waits} clean_opens={opened}",
         pass(ok)
     );
     assert!(ok);

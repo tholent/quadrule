@@ -27,6 +27,10 @@ pollster.workspace = true
 # The Mac's menu bar, which replaces the menu bar the window draws on Windows and Linux (fixes batch 2, Q7).
 [target.'cfg(target_os = "macos")'.dependencies]
 muda.workspace = true
+# The application delegate that hears files Finder asks to open (fixes batch 2, the macOS double-click).
+quadrule-macos = { path = "../macos" }
+# The event loop eframe would make, made here instead so the delegate goes in before it runs (the version eframe uses).
+winit = { version = "=0.30.13", default-features = false }
 
 [lints]
 workspace = true

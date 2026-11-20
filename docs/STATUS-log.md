@@ -2768,3 +2768,33 @@ built and released) or are per-rung debt for rung 17's sweep.
 - Tag `v0.16.3` pushed. Release run 44785857112: `windows-x86_64`, `linux-x86_64`, `linux-aarch64`, `macos-universal` and
   `Draft, attach, publish` all `success`; the release is published with 6 packages and `SHA256SUMS.txt`. CI on `main`
   for `1305e12` (run 44785854666): `success`.
+
+## 2026-11-20 — fixes batch 2: menus for each system, the switches into View, the macOS double-click (lead Opus 5.5, high; builder Sonnet 5.5, high; branch `batch-2-menus`)
+
+chris, word for word: "let's do batch 2 first". Two gaps asked first and written in the record's Amendments
+(Settings… opens Profiles; Help holds About and the project page). Built on the branch `batch-2-menus`, since the
+VM cannot build the macOS parts.
+
+- The builder (Sonnet 5.5, high) built the menu table, the Windows/Linux bar, the Mac menu bar and most tests, then
+  stopped on the account's weekly limit ("resets Nov 21, 5pm") with nothing committed. The lead finished it:
+  - Tests: an item's accessible name carries its key ("Undo Ctrl+Z"), and an open menu lies over the toolbar, so the
+    tests' lookup matched neither; the lookup now takes the words with or without one key after them, and skips the
+    toolbar's own row. Menus still open between two opens closed the next one; each open now closes all first. The
+    expected key text comes from egui (Ctrl+N here, ⌘N on CI's Mac). The keys-against-items test compared new objects'
+    ids across two windows (never equal for Paste and Duplicate); it compares how many are picked, is split into File
+    and Edit (433 s → about 90 s and 116 s, started first by nextest), and tries each command once (the Mac's keyed
+    items are the same commands, which the table test checks). A devices test scrolls to its Take out button, which the
+    menu bar's line pushed below the panel's edge.
+  - A bug the tests found: Esc that closed a menu also cleared the selection (and left the welcome screen). An open
+    menu, list or right-click menu now keeps its own Esc (`crates/ui/src/view.rs`, `shortcuts`).
+  - The macOS double-click: winit 0.30 installs no application delegate and says to install one after its event loop
+    is made and before it runs (winit `platform::macos`). On the Mac the app now makes the event loop itself and starts
+    through `eframe::create_native`; the new crate `crates/macos` (`quadrule-macos`) holds the delegate
+    (`application:openURLs:`), the one crate that allows `unsafe` (denied, allowed with a reason at each use; every
+    other crate still forbids it). A file handed over opens through `ViewerUi::open_from_system`, the path a dropped
+    file takes, unsaved-changes prompt first.
+- Checks: `make check` → `TESTS scope=workspace checks=769 check_fail=0 passed=715 failed=0 status=ok runner=nextest`.
+  macOS: `cargo clippy --target aarch64-apple-darwin -p quadrule-app -p quadrule-macos -p quadrule-ui --all-targets --
+  -D warnings` clean (compiles and lints; nothing on the Mac was run).
+- Not verifiable on the VM: everything the Mac does at run time (its menu bar, ⌘ keys acting once, Quit asking first,
+  the double-click at launch and while running). They wait for chris's look on his Mac.

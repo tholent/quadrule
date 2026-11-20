@@ -553,6 +553,12 @@ impl ViewerUi {
         requests
     }
 
+    /// Opens a file the system handed over (a `.quad` double-clicked in the Mac's Finder; fixes batch 2) as a file
+    /// dropped on the window opens: through the unsaved-changes prompt.
+    pub fn open_from_system(&mut self, path: PathBuf) -> Vec<Request> {
+        self.guard(After::OpenPath(path))
+    }
+
     fn take_dropped_files(&mut self, ctx: &egui::Context, requests: &mut Vec<Request>) {
         let dropped: Vec<PathBuf> = ctx.input(|i| {
             i.raw
@@ -561,8 +567,8 @@ impl ViewerUi {
                 .map(|f| f.path().to_path_buf())
                 .collect()
         });
-        if let Some(path) = dropped.first() {
-            requests.extend(self.guard(After::OpenPath(path.clone())));
+        if let Some(path) = dropped.into_iter().next() {
+            requests.extend(self.open_from_system(path));
         }
     }
 
