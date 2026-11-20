@@ -11,8 +11,14 @@ SHELL := bash
 .SHELLFLAGS := -o pipefail -ec
 .DEFAULT_GOAL := help
 
-# The Pi has 4 cores and little memory; two build jobs by default. `make test JOBS=4` to change.
-JOBS ?= 2
+# Build jobs follow the computer: one per core, but no more than one per 1.5 GB of memory, as linking the test programs
+# takes a lot of it (the Pi 5's 4 cores and 4 GB give 2, chris's 12-core VM 12). `make test JOBS=4` to change.
+ifndef JOBS
+JOBS := $(shell c=$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2); \
+  m=$$(awk '/^MemTotal:/ {print int($$2 / 1024)}' /proc/meminfo 2>/dev/null || \
+       echo $$(( $$(sysctl -n hw.memsize 2>/dev/null || echo 3221225472) / 1048576 ))); \
+  j=$$(( m / 1536 )); [ $$j -lt 1 ] && j=1; [ $$j -gt $$c ] && j=$$c; echo $$j)
+endif
 export CARGO_BUILD_JOBS := $(JOBS)
 
 LOG := target/test.log
@@ -77,21 +83,29 @@ clippy-all: ## Clippy on the whole workspace (CI's clippy step)
 
 # ---- tests ---------------------------------------------------------------------------------------------------
 # Full output goes to $(LOG); the screen gets one line:
-#   TESTS scope=<default|workspace> checks=<CHECK lines> check_fail=<result=fail> passed=<n> failed=<n> status=<ok|fail>
-# The line is printed whether the tests passed or not; the exit status is the tests' own.
+#   TESTS scope=<default|workspace> checks=<CHECK lines> check_fail=<result=fail> passed=<n> failed=<n> status=<ok|fail> runner=<nextest|cargo>
+# The line is printed whether the tests passed or not; the exit status is the tests' own. With cargo-nextest installed
+# (DEVELOPMENT.md) the tests run as separate processes, many at once (.config/nextest.toml); without it, `cargo test`.
 
 define run_tests
 @mkdir -p target
-@scope='$(1)'; flags='$(2)'; \
- status=ok; cargo test $$flags -- --nocapture > $(LOG) 2>&1 || status=fail; \
- checks=$$(grep -c '^CHECK' $(LOG) || true); \
- cfail=$$(grep '^CHECK' $(LOG) | grep -c 'result=fail' || true); \
- passed=$$(awk '/^test result:/ {n += $$4} END {print n + 0}' $(LOG)); \
- failed=$$(awk '/^test result:/ {n += $$6} END {print n + 0}' $(LOG)); \
- echo "TESTS scope=$$scope checks=$$checks check_fail=$$cfail passed=$$passed failed=$$failed status=$$status"; \
+@scope='$(1)'; flags='$(2)'; status=ok; \
+ if cargo nextest --version > /dev/null 2>&1; then \
+   runner=nextest; cargo nextest run $$flags --no-fail-fast > $(LOG) 2>&1 || status=fail; \
+   summary=$$(grep -E '^ *Summary \[' $(LOG) | tail -1); \
+   passed=$$(echo "$$summary" | sed -nE 's/.*[: ] ([0-9]+) passed.*/\1/p'); \
+   failed=$$(echo "$$summary" | sed -nE 's/.*[ ,] ([0-9]+) failed.*/\1/p'); \
+ else \
+   runner=cargo; cargo test $$flags -- --nocapture > $(LOG) 2>&1 || status=fail; \
+   passed=$$(awk '/^test result:/ {n += $$4} END {print n + 0}' $(LOG)); \
+   failed=$$(awk '/^test result:/ {n += $$6} END {print n + 0}' $(LOG)); \
+ fi; \
+ checks=$$(grep -c '^ *CHECK' $(LOG) || true); \
+ cfail=$$(grep '^ *CHECK' $(LOG) | grep -c 'result=fail' || true); \
+ echo "TESTS scope=$$scope checks=$$checks check_fail=$$cfail passed=$${passed:-0} failed=$${failed:-0} status=$$status runner=$$runner"; \
  if [ "$$status" = fail ]; then \
    echo "--- failing output (full log: $(LOG)) ---"; \
-   grep -E '^(error|test .* FAILED|failures:|---- )|panicked|result=fail' $(LOG) | head -40; \
+   grep -E '^(error|test .* FAILED|failures:|---- )|^ *(FAIL|SIGSEGV|SIGABRT|TIMEOUT) \[|panicked|result=fail' $(LOG) | head -40; \
    exit 1; \
  fi
 endef

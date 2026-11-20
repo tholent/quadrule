@@ -2675,3 +2675,28 @@ asked after). The VM: 12 cores (`nproc`), 31 GiB memory, no swap (`free -h`), 12
 - `DEVELOPMENT.md` gains "Keeping the build folder small"; the Makefile `make prune` (`DRY=1`), `TARGET_CAP_GB` and
   the prune after `check` and `check-all`. `README.md` unchanged (nothing a user sees). No release: the app is unchanged.
 - Not measured: the Pi. `make bench-*` were not run (the speed budgets are judged on the Pi; ADR-009).
+
+## 2026-11-20 — build jobs follow the computer; tests run with cargo-nextest (Opus 5.5, high, on chris's VM)
+
+chris: "have we increased the simultanous jobs and threads? Also can we look at nextest?"; then "1. yes, please do;
+2. yes, please detect machine".
+
+- Where the time went: running tests, not building them. With nothing to compile, `make check-all` still took 20m 18s;
+  the last `make check` log had 93 test programs run one after another, their `finished in` times adding to 441 s
+  (`awk` over `target/test.log`). Slowest: `migrate_v07` 31 s, `migrate_v010` 29 s, `paper` 29 s.
+- `JOBS` now follows the computer (`Makefile`): one build job per core, at most one per 1.5 GB of memory, so the Pi 5
+  (4 cores, 4 GB; ADR-006) keeps its 2 and this VM (12 cores, 32,095 MB) gets 12. `make help` → `JOBS=12`; `JOBS=4`
+  by hand still wins.
+- cargo-nextest 0.9.151 installed on the VM (`cargo install cargo-nextest --version 0.9.151 --locked`, 3m 12s;
+  0.9.152 was a week old). Trials with everything built: `cargo nextest run --workspace` → `702 tests run: 702 passed
+  (7 slow), 2 skipped`, 5m 37s; with the six speed-bench window tests and `every_quick_fix_works_by_the_pointer…` started
+  first (`.config/nextest.toml`), 5m 11s. Those tests take 60–186 s each on the software graphics driver.
+- `make test` and `make test-all` use nextest when it is installed, `cargo test` otherwise; the `TESTS` line gains
+  `runner=nextest|cargo` at its end (the rest as the makefile bbq's Q2 set it) and counts `CHECK` lines that nextest
+  indents. `make check` → `TESTS scope=default checks=451 check_fail=0 passed=418 failed=0 status=ok runner=nextest`,
+  1m 51s (was 7m 33s); then `cargo test --no-run` and `cargo test --workspace --no-run` compiled nothing, so prune
+  still runs the tests' own xtask program. `make check-all` → `TESTS scope=workspace checks=756 check_fail=0 passed=702
+  failed=0 status=ok runner=nextest`, 5m 31s (was 20m 18s). A failing probe test → `TESTS scope=default checks=452
+  check_fail=1 passed=418 failed=1 status=fail runner=nextest`, the `FAIL` and `panicked` lines shown, exit status 2;
+  probe removed.
+- CI still runs `cargo test`; nextest is not tried on the Pi.

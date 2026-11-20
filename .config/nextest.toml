@@ -1,0 +1,13 @@
+# cargo-nextest settings (`make test`, `make test-all`; DEVELOPMENT.md). nextest runs every test as its own process,
+# many at once.
+
+[profile.default]
+# Tests print one structured CHECK line each; show it for passing tests too, after the run, so `make` can count them.
+success-output = "final"
+failure-output = "final"
+
+# The window tests that run the speed benches take one to two and a half minutes each on the software graphics driver;
+# started first, they overlap the rest instead of finishing last.
+[[profile.default.overrides]]
+filter = 'package(quadrule-ui) & (test(/the_benchmarks_run/) | test(every_quick_fix_works_by_the_pointer_in_one_undo_step))'
+priority = 100

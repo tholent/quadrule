@@ -21,6 +21,16 @@ Quadrule is pre-alpha, written in Rust with [egui](https://github.com/emilk/egui
    On Linux, GitHub's stock Ubuntu runner builds it with no extra packages (`.github/workflows/ci.yml`). If your
    machine complains about fontconfig, install its development files (on Debian or Ubuntu, `libfontconfig1-dev`).
 3. Run the app: `cargo run --release -p quadrule-app`, or add `-- path/to/page.quad` to open a file.
+4. Optional, for faster tests: [cargo-nextest](https://nexte.st), at the version the project uses:
+
+   ```
+   cargo install cargo-nextest --version 0.9.151 --locked
+   ```
+
+   `make test` and `make test-all` use it when it is there and plain `cargo test` when it is not. nextest runs every
+   test as its own process, many at once, where `cargo test` runs one test program after another: on a 12-core VM the
+   whole workspace's tests took 5 min 11 s instead of about 20 min (`docs/STATUS-log.md`, 2026-11-20). Its settings
+   are in `.config/nextest.toml`. CI still uses `cargo test`.
 
 ### The window is an opt-in build
 
@@ -31,11 +41,12 @@ The graphics stack is heavy to compile, so plain `cargo build` and `cargo test` 
 ## Everyday commands
 
 If you have `make` (Linux and macOS), `make` lists the shortcuts. Each one is a thin wrapper that prints the cargo
-command it runs, so you can always run that directly.
+command it runs, so you can always run that directly. Builds use one job per core, but no more than one per 1.5 GB of
+memory (a Raspberry Pi 5 with 4 GB gets 2); `JOBS=4` sets it by hand.
 
 | Command | What it does |
 |---|---|
-| `make test` | Tests on the default members; prints one `TESTS` summary line, full log in `target/test.log` |
+| `make test` | Tests on the default members; prints one `TESTS` summary line (ending `runner=nextest` or `runner=cargo`), full log in `target/test.log` |
 | `make check` | rustfmt, clippy and tests on the default members (quick) |
 | `make check-all` | The same on the whole workspace; this is what CI runs, so run it before you push |
 | `make run` | Open the app (`FILE=page.quad` to open a file) |
