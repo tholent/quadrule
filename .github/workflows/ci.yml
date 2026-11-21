@@ -78,6 +78,22 @@ jobs:
       - name: test
         run: cargo nextest run --workspace --no-fail-fast 2>&1 | tee test.log
 
+      # Starts the real app on the Mac and lets it quit by itself after a few frames, so a crash at launch fails CI.
+      # The first batch 2 Mac build closed the moment it opened (winit panicked at a replaced delegate, 2026-11-20)
+      # and every test still passed, since no test starts the app.
+      - name: launch
+        if: matrix.os == 'macos-latest'
+        run: |
+          cargo build -p quadrule-app
+          target/debug/quadrule --bench-welcome 5 > launch.log 2>&1 & pid=$!
+          ( sleep 120; kill "$pid" 2>/dev/null ) & watchdog=$!
+          code=0; wait "$pid" || code=$?
+          kill "$watchdog" 2>/dev/null || true
+          cat launch.log
+          result=pass; [ "$code" = 0 ] || result=fail
+          echo "CHECK crate=app name=mac_launch result=$result exit=$code" | tee -a test.log
+          [ "$result" = pass ]
+
       - name: Structured results
         if: always()
         run: |

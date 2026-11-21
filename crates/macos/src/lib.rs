@@ -16,22 +16,27 @@
 //! double-click").
 //!
 //! Finder opens a double-clicked `.quad` by sending the program an Apple Event, not by naming the file on its command
-//! line, and AppKit hands that event to the application delegate's `application:openURLs:`. winit 0.30 installs no
-//! delegate of its own and says to install one after its event loop is made and before it runs (winit's
-//! `platform::macos` notes); [`install`] does that. The delegate only notes each file; the app takes them with
-//! [`take_opened`] at the start of a frame and opens the first as if it had been dropped on the window.
+//! line, and AppKit hands that event to the application delegate's `application:openURLs:`. winit 0.30.13 sets its
+//! own delegate, `WinitApplicationDelegate`, when its event loop is made, and panics at launch if the application's
+//! delegate is anything else (`ApplicationDelegate::get` in winit's `platform_impl/macos/app_state.rs`). So
+//! [`install`] leaves that delegate in place and adds the one method to its class. The method only notes each file;
+//! the app takes them with [`take_opened`] at the start of a frame and opens the first as if it had been dropped on
+//! the window.
 //!
 //! On every other system this crate is empty.
 
 #![cfg(target_os = "macos")]
 
-use objc2::rc::Retained;
-use objc2::runtime::ProtocolObject;
-use objc2::{ClassType, DeclaredClass, declare_class, msg_send_id, mutability};
-use objc2_app_kit::{NSApplication, NSApplicationDelegate};
-use objc2_foundation::{MainThreadMarker, NSArray, NSObject, NSObjectProtocol, NSURL};
+use objc2::ffi;
+use objc2::runtime::{AnyClass, AnyObject, Sel};
+use objc2::sel;
+use objc2_app_kit::NSApplication;
+use objc2_foundation::{MainThreadMarker, NSArray, NSObjectProtocol, NSURL};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
+
+/// The class of winit's application delegate (winit 0.30.13, `platform_impl/macos/app_state.rs`).
+const WINIT_DELEGATE: &str = "WinitApplicationDelegate";
 
 /// Files macOS asked the program to open, not yet taken.
 static OPENED: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
@@ -39,40 +44,18 @@ static OPENED: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
 /// Wakes the window when a file arrives while it sleeps (set once the window exists).
 static WAKE: OnceLock<Box<dyn Fn() + Send + Sync>> = OnceLock::new();
 
-#[allow(unsafe_code)]
-mod delegate {
-    use super::*;
-
-    declare_class!(
-        pub(super) struct Delegate;
-
-        // SAFETY: NSObject has no subclassing rules to keep; the delegate is made and used on the main thread only
-        // (`MainThreadOnly`), as AppKit calls it.
-        unsafe impl ClassType for Delegate {
-            type Super = NSObject;
-            type Mutability = mutability::MainThreadOnly;
-            const NAME: &'static str = "QuadruleAppDelegate";
-        }
-
-        impl DeclaredClass for Delegate {}
-
-        // SAFETY: NSObjectProtocol asks nothing NSObject does not already do.
-        unsafe impl NSObjectProtocol for Delegate {}
-
-        // SAFETY: the one method has the signature AppKit declares for `application:openURLs:` (macOS 10.13).
-        unsafe impl NSApplicationDelegate for Delegate {
-            #[method(application:openURLs:)]
-            fn application_open_urls(&self, _app: &NSApplication, urls: &NSArray<NSURL>) {
-                super::note(urls);
-            }
-        }
-    );
-
-    impl Delegate {
-        pub(super) fn new(mtm: MainThreadMarker) -> Retained<Self> {
-            // SAFETY: `init` is NSObject's own initialiser, sent once to a freshly allocated object with no ivars.
-            unsafe { msg_send_id![super(mtm.alloc().set_ivars(())), init] }
-        }
+/// `application:openURLs:` as added to winit's delegate: returns nothing, takes the delegate, the selector, the
+/// application and an array of URLs (AppKit, macOS 10.13).
+extern "C" fn open_urls(
+    _this: *mut AnyObject,
+    _cmd: Sel,
+    _app: *mut AnyObject,
+    urls: *mut NSArray<NSURL>,
+) {
+    #[allow(unsafe_code)]
+    // SAFETY: AppKit passes a valid NSArray of NSURL that it keeps alive for the call, or nil.
+    if let Some(urls) = unsafe { urls.as_ref() } {
+        note(urls);
     }
 }
 
@@ -98,18 +81,49 @@ fn note(urls: &NSArray<NSURL>) {
     }
 }
 
-/// Installs the delegate that hears which files Finder asks the program to open. Call it on the main thread after
-/// the event loop is made and before it runs, so a file double-clicked to start the program is heard too. Returns
-/// false off the main thread, where it does nothing.
+/// Teaches winit's application delegate to hear which files Finder asks the program to open. Call it on the main
+/// thread after the event loop is made (which makes winit's delegate) and before it runs, so a file double-clicked to
+/// start the program is heard too. Returns false, doing nothing, off the main thread, when winit's delegate class is
+/// missing or is not the application's delegate, or when the class already has the method; the program runs on
+/// either way, only without the double-click.
+#[allow(unsafe_code)]
 pub fn install() -> bool {
     let Some(mtm) = MainThreadMarker::new() else {
         return false;
     };
-    let delegate = delegate::Delegate::new(mtm);
+    let Some(class) = AnyClass::get(WINIT_DELEGATE) else {
+        return false;
+    };
     let app = NSApplication::sharedApplication(mtm);
-    app.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
-    // The application keeps only a weak reference to its delegate; this one lives as long as the program.
-    std::mem::forget(delegate);
+    // SAFETY: reading the delegate only; winit keeps it alive for as long as its event loop.
+    let Some(delegate) = (unsafe { app.delegate() }) else {
+        return false;
+    };
+    if !delegate.isMemberOfClass(class) {
+        return false;
+    }
+    let open: extern "C" fn(*mut AnyObject, Sel, *mut AnyObject, *mut NSArray<NSURL>) = open_urls;
+    // SAFETY: the function's arguments and result match the type string ("v@:@@": void; self, _cmd, two objects) and
+    // the signature AppKit declares for `application:openURLs:`; `class_addMethod` copies the type string and leaves
+    // an existing method alone (returning NO).
+    let added = unsafe {
+        ffi::class_addMethod(
+            class as *const AnyClass as *mut ffi::objc_class,
+            sel!(application:openURLs:).as_ptr(),
+            Some(std::mem::transmute::<
+                extern "C" fn(*mut AnyObject, Sel, *mut AnyObject, *mut NSArray<NSURL>),
+                unsafe extern "C" fn(),
+            >(open)),
+            c"v@:@@".as_ptr(),
+        )
+    };
+    if added == ffi::NO {
+        return false;
+    }
+    // AppKit may note which methods a delegate answers when the delegate is set, so set winit's again now the class
+    // has the new one (the application holds its delegate weakly; winit's event loop keeps it alive).
+    app.setDelegate(None);
+    app.setDelegate(Some(&delegate));
     true
 }
 
