@@ -2800,3 +2800,24 @@ VM cannot build the macOS parts.
   the double-click at launch and while running). They wait for chris's look on his Mac.
 - CI on the branch: run 44805150907 (`6c527b4`, the menus) and run 44807675401 (`d6a613f`, the double-click):
   `ubuntu-latest: success`, `macos-latest: success`, `windows-latest: success` both times.
+
+## 2026-11-20 — batch 2: the Mac build closed at once; fixed, and CI now starts the app on the Mac
+
+- The test-tag dry run (run 44813754066, `v0.16.4-test.1`) built every package. chris opened the Mac `.dmg`: "the app
+  closes immediately".
+- Cause: winit 0.30.13 does set an application delegate, `WinitApplicationDelegate`, when its event loop is made, and
+  panics at launch if the application's delegate is anything else (`ApplicationDelegate::get`,
+  `winit-0.30.13/src/platform_impl/macos/app_state.rs`: "tried to get a delegate that was not the one Winit has
+  registered"). `quadrule-macos` replaced it. The entry above, and the crate's comment, said winit installs none; that
+  came from memory, not from winit's source, and was wrong.
+- Fix (`crates/macos/src/lib.rs`): winit's delegate stays; `install()` adds `application:openURLs:` to its class
+  (`class_addMethod`, type `v@:@@`) and sets the delegate again so AppKit sees the new method. If the class is missing
+  or is not the delegate, it does nothing and the app runs without the double-click.
+- Why CI missed it: no test starts the app. CI now has a `launch` step on `macos-latest` that starts the built app with
+  `--bench-welcome 5` and fails on a non-zero exit (`CHECK crate=app name=mac_launch`). To prove the step catches this
+  crash, it also ran on the broken code alone (scratch branch `launch-check-proof`, `75a2cf5`).
+- CI: run 44855967555 (`b9600f6`, the fix): `ubuntu-latest: success`, `windows-latest: success`, `macos-latest:
+  success`, with `CHECK crate=app name=mac_launch result=pass exit=0` (the app drew the welcome screen's 24 tiles and
+  quit). Run 44856011998 (`75a2cf5`, the step on the broken code): `macos-latest: failure`, the log showing winit's
+  panic "tried to get a delegate that was not the one Winit has registered". Scratch branch deleted after.
+- The broken test tag `v0.16.4-test.1` is deleted; `v0.16.4-test.2` is the build for chris's look.
