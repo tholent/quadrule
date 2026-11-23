@@ -66,5 +66,6 @@ None.
 ## Kickoff
 
 Route: a fresh session (chris: "A fresh session (Recommended)"; this one had built the calendar, cut `v0.16.5`, made
-ADR-022 and amended ADR-019). Lead: Opus 5.5, high. Build `major_from` (Q1–Q7) from this record on `main`, with tests that
+ADR-022 and amended ADR-019). Lead: Opus 5.5, high. Build `major_from` (Q1–Q7) from this record and ADR-023 (`docs/decisions/ADR-023-major-lines-from.md`, once chris
+ratifies it) on `main`, with tests that
 print one `CHECK` line each, a 0.19 fixture, and one new golden page on both tablets. Then chris's look.

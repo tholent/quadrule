@@ -27,3 +27,4 @@ change the ADR and run the script again. An ADR's own header outranks this table
 | [ADR-020](ADR-020-margin-role.md) | Line roles gain an eighth, Margin, for wide, light lines such as a notebook's margin | design | accepted | partial |
 | [ADR-021](ADR-021-starters-show-no-findings.md) | A starter is lint-clean only when it shows no findings at all, and L14 and L09 leave drawing grids alone | design | accepted | partial |
 | [ADR-022](ADR-022-github-branch-and-tag-rules.md) | GitHub guards `main` and the release tags now, and adds pull requests and required checks only when work leaves `main` | process | accepted | landed |
+| [ADR-023](ADR-023-major-lines-from.md) | A pattern region's major lines count from its top, its centre or the rhythm origin, Top for new regions | design | proposed | not started |

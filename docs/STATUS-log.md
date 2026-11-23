@@ -2988,3 +2988,5 @@ VM cannot build the macOS parts.
 - bbq, 8 questions (`docs/bbq/2026-11-23-major-lines-from-top.md`): a per-region **Major lines from**: Top, Centre or
   Rhythm origin, on both axes; older files keep Rhythm origin; isometric offers Rhythm origin and Centre; a border stands
   for the first major. Built in a fresh session (chris), Opus 5.5 high; format 0.20.0.
+- ADR-023 proposed (makeadr, goforit: every part cited to the bbq record): Major lines from Top, Centre or Rhythm origin.
+  `adr-check`: 23 ADRs, 0 failures. The fresh session builds it once chris ratifies.
