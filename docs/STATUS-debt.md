@@ -380,7 +380,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   only a few rows; the greyed states (last layer, locked) were not photographed, only tested.
 - Build pruning (`crates/xtask/src/prune.rs`): (1) once, both clippys re-checked our crates after a prune that deleted
   0 to 2 files, and the next round of the same commands did not; cause not found.
-- Fixes batch 2, owed (`crates/app/src/mac_menu.rs`, `crates/macos/src/lib.rs`, `crates/ui/src/menus.rs`): the Mac's
-  menu bar, its ⌘ keys and the double-click are compiled and linted for macOS but never run by an agent (chris's look
-  is the first run); several files double-clicked at once open only the first (one document at a time); the Mac's
+- Fixes batch 2, owed (`crates/app/src/mac_menu.rs`, `crates/macos/src/lib.rs`, `crates/ui/src/menus.rs`): CI starts
+  the app on a Mac and lets it quit (`.github/workflows/ci.yml`, `launch`), and chris checked the double-click and the
+  menu bar by hand (approved for `v0.16.4`), but no test drives the Mac's menu bar, its ⌘ keys or the double-click;
+  several files double-clicked at once open only the first (one document at a time); the Mac's
   Open Recent is re-read every 2 s, not when it opens; the two keys-against-items tests take 1.5–2 minutes each.

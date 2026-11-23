@@ -1,6 +1,6 @@
 # STATUS — quadrule
 
-_Last updated: 2026-11-20_
+_Last updated: 2026-11-23_
 
 The project's live state. Update it when work lands. Every claim cites at least one file that exists.
 
@@ -204,6 +204,12 @@ The project's live state. Update it when work lands. Every claim cites at least 
   space between grand staves, file format 0.18.0 (`crates/layout/src/pattern.rs`, `crates/format/src/migrate.rs`); the
   layers panel's buttons are line icons in one row (`crates/ui/src/layer_icons.rs`). Also in it: ADR-018's one-time
   golden change. Try it: `cargo run --release -p quadrule-app -- --grand-staff-page`.
+- Fixes batch 2: approved by chris 2026-11-23 ("approved for v0.16.4"), shipped as `v0.16.4` (record
+  `docs/bbq/2026-11-18-fixes-before-16b.md`, notes `docs/arcs/v1/release-notes/v0.16.4.md`). Menus from one table
+  (`crates/ui/src/menus.rs`): a menu bar in the window on Windows and Linux (`crates/ui/src/menu_bar.rs`), the Mac's own
+  menu bar with ⌘ keys (`crates/app/src/mac_menu.rs`); the status bar's snapping switches moved to View ▸ Snapping; a
+  `.quad` double-clicked in Finder opens (`crates/macos/`, ADR-008 amended). CI starts the app on a Mac
+  (`.github/workflows/ci.yml`, `launch`).
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed
@@ -265,9 +271,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   done** (`v0.9.0`). **Rung 10 is done** (`v0.10.0`). **Rung 11 is done** (`v0.11.0`). **Rung 12 is done** (`v0.12.0`). **Rung 13 is done** (`v0.13.0`). **Rung 14 is done** (`v0.14.0`). **Rung 15 is done** (`v0.15.0`). **Rung 16a is done** (`v0.16.0`). Pattern borders are done (`v0.16.1`). Layers can be made and deleted (`v0.16.2`).
   Next: chris's seven fixes before 16b, in three batches (bbq, 8 questions, `docs/bbq/2026-11-18-fixes-before-16b.md`).
   **Batch 1 is done** (`v0.16.3`, approved by chris 2026-11-20: smooth zoom, the grand staff space with file format
-  0.18.0, the layers panel's icons). Next, batch 2,
-  `v0.16.4` (menus for each system, the status bar's toggles into View, the macOS double-click), and batch 3, `v0.16.5`
-  (Quick Look). Rung 16b, the starters, becomes `v0.16.6`; its lead's prompt is
+  0.18.0, the layers panel's icons). **Batch 2 is done** (`v0.16.4`, approved by chris 2026-11-23: menus for each
+  system, the status bar's toggles into View, the macOS double-click). Next, batch 3, `v0.16.5` (Quick Look). Rung 16b, the starters, becomes `v0.16.6`; its lead's prompt is
   `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md` (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by

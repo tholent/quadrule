@@ -104,3 +104,11 @@ Pi; screenshots. Then chris's look, `v0.16.3`. Batch 2 and batch 3 follow, each 
   (the version, the licence and the project's web address, as text; on the Mac, About sits in the Quadrule menu) and an
   item that opens quadrule's GitHub page in the browser. Batch 2 is built on the branch `batch-2-menus`, not `main`:
   its macOS parts cannot be built on the VM, so CI checks all three systems before it merges.
+- **2026-11-23, batch 2's look:** the first Mac build closed at once (winit's delegate replaced; fixed, and CI now
+  starts the app on the Mac: `docs/STATUS-log.md`, 2026-11-20). On the fixed build chris answered, word for word: "both
+  ways to open quad files now work", then "approved for v0.16.4". Approved with no changes and no vetoes, so the six
+  calls open to veto stand: View holds what the toolbar's View button held; Edit ▸ Select all, with no key; the words
+  "Device previews" and "quadrule on GitHub", Redo shown as ⇧⌘Z on the Mac and Ctrl+Y elsewhere; the `quadrule-macos`
+  crate, the one place `unsafe` is allowed (ADR-008, amendment of 2026-11-23); the Mac starting through
+  `eframe::create_native`; several files double-clicked at once open only the first. Shipped as `v0.16.4`
+  (`docs/arcs/v1/release-notes/v0.16.4.md`).

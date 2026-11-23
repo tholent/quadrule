@@ -48,6 +48,8 @@ amends: nothing
   rounds, chris's choice); awaiting ratification`.
 - 2026-11-20: amended by chris: item 3, the opt-in app build, is dropped. See "Amendment — 2026-11-20, chris"
   below.
+- 2026-11-23: amended by chris: a Mac-only crate, `macos`, the one place `unsafe` code is allowed. See "Amendment —
+  2026-11-23, chris" below.
 
 ## Amendment — 2026-11-20, chris
 
@@ -60,3 +62,29 @@ cover everything, one way of building fewer, and the quick loop goes). So `Cargo
 `make check-all` run the same checks.
 
 The other items stand; the headless crates still build and test without a window.
+
+## Amendment — 2026-11-23, chris
+
+Touches §Decision items 2 and 4 (which crates there are, and where code goes). chris, 2026-11-23, word for word:
+"approved for v0.16.4", his ruling on the fixes batch 2 look, which left standing call 4 of the calls open to veto
+(`docs/bbq/2026-11-18-fixes-before-16b.md`, Amendments).
+
+- **A new crate, `macos` (`quadrule-macos`), arrives with fixes batch 2.** It holds the program's few words with macOS
+  itself: today, teaching winit's application delegate `application:openURLs:`, so a `.quad` double-clicked in Finder
+  opens. Its code is compiled on the Mac only; on every other system the crate is empty.
+- **It is the one crate where `unsafe` code is allowed** (code the compiler cannot fully check, needed to talk to
+  macOS's Objective-C). The workspace's lint in `Cargo.toml` forbids `unsafe` in every crate; this crate's own
+  `Cargo.toml` sets it to deny instead, so each use must say `#[allow(unsafe_code)]` with a `SAFETY:` reason beside
+  it. Everything else still forbids it.
+- **Where code goes (item 4) gains one line:** talking to the operating system through its own APIs goes in `macos`
+  (and in a crate like it for another system, should one be needed); the window and settings stay in `app`, which
+  calls it.
+- **Considered and not taken:** loosening the rule for the whole `app` crate, which would let `unsafe` in beside the
+  window and settings code.
+
+Proof: `crates/macos/Cargo.toml`, `crates/macos/src/lib.rs`; CI's `launch` step on `macos-latest` starts the app (`CHECK
+crate=app name=mac_launch`), and chris checked the double-click by hand on his Mac (2026-11-23: "both ways to open quad
+files now work").
+
+The other items stand.
+
