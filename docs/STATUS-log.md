@@ -2990,3 +2990,7 @@ VM cannot build the macOS parts.
   for the first major. Built in a fresh session (chris), Opus 5.5 high; format 0.20.0.
 - ADR-023 proposed (makeadr, goforit: every part cited to the bbq record): Major lines from Top, Centre or Rhythm origin.
   `adr-check`: 23 ADRs, 0 failures. The fresh session builds it once chris ratifies.
+- ADR-024 proposed (makeadr, 4 questions, `docs/bbq/2026-11-23-adr-leaving-main.md`): work goes straight to `main` until
+  v1.0 (chris overruled "end of pre-alpha, or sooner"); then ADR-022 item 3 switches on, the agent opens and merges its
+  pull request on green, and a quick job reports the checks for documents-only pull requests. Queued before the v1.0
+  tag (`docs/STATUS-debt.md`, the board's release bar).
