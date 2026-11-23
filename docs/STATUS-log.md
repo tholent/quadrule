@@ -2934,3 +2934,5 @@ VM cannot build the macOS parts.
 - chris, word for word: "approved". No vetoes: the Defaulted calls and the lead's readings stand, the mini calendar's
   title included (record, Approved). STATUS and the board's row 16 updated.
 - Asked next: whether "approved" also covers the Full bleed tick (ADR-019's look), and whether to cut `v0.16.5`.
+- chris, word for word: "it covers the full bleed, but wait a minute on cutting a release". So the look of ADR-019's
+  Full bleed tick is approved with the calendar; `v0.16.5` is held: no version bump, notes or tag until chris says.
