@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: drafted 2026-11-23 from chris's answers (docs/bbq/2026-11-23-adr-branch-protections.md); awaiting ratification
+status: accepted
+status-note: "ratified by chris 2026-11-23 (\"ratified\")"
+ratified-by: chris
+ratified-on: "2026-11-23"
 owner: chris
 kind: process
 built: not started
@@ -79,11 +81,10 @@ the CI token cannot read repository settings.
 
 **Revisit when:** chris ends work on `main` directly (item 3 then applies), or a second person gets write access.
 
-## Asks left open
-
-1. Ratify ADR-022 as written?
-
 ## History
 
 - 2026-11-23: drafted by the lead from chris's answers to four questions (record
   `docs/bbq/2026-11-23-adr-branch-protections.md`), after chris asked what protections the repository should have.
+- 2026-11-23: ratified by chris, word for word: "ratified". Earlier values, word for word: `status: proposed`;
+  `status-note: drafted 2026-11-23 from chris's answers (docs/bbq/2026-11-23-adr-branch-protections.md); awaiting
+  ratification`.
