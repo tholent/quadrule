@@ -20,11 +20,24 @@ proposal it made when chris asked what branch protections the repository should 
 
 ## Rules
 
-(Filled in as each round returns.)
+**Q1 `main`.** chris: "Block force pushes and deletion (Recommended)". A ruleset on the default branch blocks force pushes
+and deletion; nothing else changes, agents keep pushing to `main`.
+
+**Q2 Release tags.** chris: "Block deleting and moving v* tags, test tags excepted (Recommended)". A tag ruleset on `v*`,
+excluding `v*-test*`, blocks deletion and moving (update); creating a tag stays open.
+
+**Q3 Pull requests and required checks.** chris: "Later, with the ruling that ends work on main (Recommended)". Not turned
+on now. Written as the plan: when chris ends work on `main` directly, `main` also gets a pull request first (0 approvals),
+the three CI jobs (`ubuntu-latest`, `macos-latest`, `windows-latest`) required, chris allowed to bypass, and, first, CI
+changed to run on every pull request (its path filter would leave a docs-only pull request waiting forever).
+
+**Q4 Anything else.** chris: "Also secret scanning and branch cleanup". Turn on secret scanning with push protection and
+automatic deletion of merged branches, and delete the `batch-2-menus` branch (fully merged: `git log
+origin/main..origin/batch-2-menus` → 0 commits, checked 2026-11-23).
 
 ## Owed
 
-None yet.
+None.
 
 ## Defaulted (the lead's calls; each can be vetoed)
 
@@ -33,4 +46,11 @@ None yet.
 | Rulesets, not classic branch protection | GitHub's newer mechanism: covers tags as well as branches, can be switched off without deleting, several can stack | veto: classic branch protection for `main` |
 | The `badges` branch gets no rule | the coverage workflow writes it on every run; a rule would break the badge | veto: protect it and give the workflow a bypass |
 | The two rulesets have no bypass list | they block only what nobody should do (rewriting `main`, deleting or moving a release tag); a ruleset can be switched off in Settings if ever needed | veto: chris as a bypass actor |
-| The lead applies the rulesets with `gh api` once the ADR is ratified, and reads them back | the token has admin rights; one command each, undone by deleting the ruleset | veto: chris applies them in the browser |
+| The lead applies the rulesets and the Q4 settings with `gh api` once the ADR is ratified, and reads them back | the token has admin rights; one command each, undone by deleting the ruleset or switching the setting off | veto: chris applies them in the browser |
+| Deleting `batch-2-menus` is the only one-way step; it is done last, after the read-back | the branch is fully merged into `main`, so nothing is lost | veto: keep the branch |
+
+## Outcome
+
+The last question: chris, "Just make the ADR (Recommended)". ADR-022 written, proposed
+(`docs/decisions/ADR-022-github-branch-and-tag-rules.md`); `adr-check`: 22 ADRs, 0 failures. Nothing applied on GitHub
+until chris ratifies.

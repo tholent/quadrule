@@ -2953,3 +2953,11 @@ VM cannot build the macOS parts.
   `main` not protected. Proposed, not applied: a `main` ruleset blocking force pushes and deletion, a tag ruleset on
   `v*` (excluding `v*-test*`) blocking deletion and moving; pull requests and required checks only with a ruling
   that ends work on `main` directly (CI's path filter would leave docs-only PRs waiting forever on required checks).
+
+## 2026-11-23 — ADR-022 proposed: GitHub branch and tag rules
+
+- makeadr, 4 questions (record `docs/bbq/2026-11-23-adr-branch-protections.md`). chris's answers: block force pushes
+  and deletion on `main`; block deleting and moving `v*` tags, test tags excepted; pull requests and required checks
+  later, with the ruling that ends work on `main`; also secret scanning with push protection, automatic deletion of
+  merged branches, and deleting `batch-2-menus` (fully merged). ADR-022 proposed; `adr-check`: 22 ADRs, 0 failures.
+  Nothing applied on GitHub yet: it waits for ratification.
