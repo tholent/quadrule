@@ -2878,3 +2878,4 @@ VM cannot build the macOS parts.
 - ADR-019 built `landed`; ADR-020 `partial` (calibration readings owed); ADR-021 `partial` (the starter test comes
   with 16b). `adr-check`: 21 ADRs, 0 failures. Waits for chris's look (ADR-007).
 - CI run 45230043207 on `96b141d`: `windows-latest`, `macos-latest`, `ubuntu-latest`: success.
+- chris: "let's wrap these changes as well as my new features into v0.16.5 and 16b get's bumped back to v0.16.6". Board, STATUS, record and the 16b prompt updated.

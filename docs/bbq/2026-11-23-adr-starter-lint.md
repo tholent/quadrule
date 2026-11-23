@@ -104,3 +104,8 @@ also need ADR-020's Margin role on their margin line.
 | The Full bleed mark is inherited by what is inside a marked group or repeat, as Free placement is | the same as the mark it copies | veto: per object only |
 | Page edges count on the near and the far edge of each axis (an object flush right or flush bottom passes too) | a page edge is an edge, whichever side | veto: the top and left edges only |
 | Until calibrated, the Margin role takes chris's drawn values: 5 px (0.45 mm at 300 PPI, whole pixels) and gray 204, marked chosen, not measured | ADR-012's owed list already carries "chosen, not measured" values | veto: calibrate before it ships |
+
+## Amendments
+
+- **2026-11-23, release:** chris, word for word: "let's wrap these changes as well as my new features into v0.16.5 and 16b get's bumped back to v0.16.6" The build and his new features go out together as `v0.16.5`;
+  16b becomes `v0.16.6`.

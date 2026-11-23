@@ -23,7 +23,9 @@ over. **Start 16b only when chris says his starters are ready** (Q1, arc Q13).
   `docs/bbq/2026-11-18-pattern-borders.md`. Then New layer and Delete layer shipped as `v0.16.2`,
   with no format or export change, so 16b ships as `v0.16.3`; record `docs/bbq/2026-11-18-new-and-delete-layers.md`.
   chris has bugs and features to raise before 16b starts; ask what became of them.)* *(2026-11-23: they became fixes batches 1 and 2, shipped as `v0.16.3` and `v0.16.4`; batch 3, Quick
-  Look, moved to v1.1. So 16b ships as **`v0.16.5`**; record `docs/bbq/2026-11-18-fixes-before-16b.md`.)* Each starter adds its own goldens on **both devices** (arc Q11, Q13); look at every new
+  Look, moved to v1.1. So 16b ships as **`v0.16.5`**; record `docs/bbq/2026-11-18-fixes-before-16b.md`.)* *(2026-11-23, later: chris's starters
+  showed rules to fix (ADR-019, ADR-020, ADR-021; record `docs/bbq/2026-11-23-adr-starter-lint.md`), which ship with
+  his new features as `v0.16.5`; 16b ships as **`v0.16.6`**.)* Each starter adds its own goldens on **both devices** (arc Q11, Q13); look at every new
   golden picture before blessing it (rung 8 lesson).
 - **Test starters** (24 pages made from the sample documents, `crates/ui/src/test_starters.rs`) stay for the speed run
   and the tests; `--gallery-test-starters` shows them.
