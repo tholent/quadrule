@@ -53,7 +53,7 @@ TARGET_CAP_GB ?= 50
 DRY ?=
 
 .PHONY: help build build-all fmt fmt-check clippy clippy-all test test-all test-v check check-all \
-        run run-release bench-drag bench-draw bench-type bench-rotate bench-zoom calibration-sheet safe-zones lint fuzz build-proof review prune
+        run run-release bench-drag bench-draw bench-type bench-rotate bench-zoom calibration-sheet safe-zones lint fuzz build-proof review prune check-github
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  make %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -174,6 +174,9 @@ fuzz: ## Fuzz the .quad reader and the profile loader for SECS=60 each (needs ni
 	cargo +nightly fuzz run from_ron fuzz/corpus/from_ron fuzz/seeds/from_ron -- -max_total_time=$(SECS)
 
 # ---- review --------------------------------------------------------------------------------------------------
+
+check-github: ## Read the repository's GitHub rules back against ADR-022 (rulesets, secret scanning, push protection): one GITHUB line; needs gh
+	@.github/scripts/check-github-rules.sh
 
 build-proof: ## Prove the build on disk matches HEAD: one BUILD line (rebuilt=0 means nothing was stale); fails over TARGET_CAP_GB
 	@head=$$(git rev-parse --short HEAD); \

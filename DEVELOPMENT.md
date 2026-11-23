@@ -129,6 +129,11 @@ Where things live beyond the code:
 
 ## Releases and packages
 
+The repository's own rules on GitHub (ADR-022): `main` cannot be force-pushed or deleted, a release tag `v*` (not a
+`v*-test*` one) cannot be deleted or moved, secret scanning and push protection are on, and merged branches are
+deleted. `make check-github` reads them back and prints one `GITHUB` line; it needs a signed-in `gh`, and the rules
+themselves are changed in the repository's Settings, by its owner.
+
 Each rung chris approves gets a version (`0.N.0`, or `0.N.1` for a second part such as 4b), an annotated git tag
 and a GitHub pre-release, with notes in `docs/arcs/v1/release-notes/` (`docs/arcs/v1/README.md`).
 

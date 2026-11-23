@@ -5,8 +5,9 @@ ratified-by: chris
 ratified-on: "2026-11-23"
 owner: chris
 kind: process
-built: not started
-proof: "applied by the lead with gh after ratification (docs/bbq/2026-11-23-adr-branch-protections.md, Defaulted)"
+built: partial
+proof: "`.github/scripts/check-github-rules.sh`"
+owed: "push protection: off when read back on 2026-11-23 (`make check-github` → missing=push-protection)"
 supersedes: nothing
 amends: nothing
 ---
@@ -88,3 +89,8 @@ the CI token cannot read repository settings.
 - 2026-11-23: ratified by chris, word for word: "ratified". Earlier values, word for word: `status: proposed`;
   `status-note: drafted 2026-11-23 from chris's answers (docs/bbq/2026-11-23-adr-branch-protections.md); awaiting
   ratification`.
+- 2026-11-23: applied by chris in the browser (the lead's token could not: 403), read back by the lead with
+  `.github/scripts/check-github-rules.sh` (`make check-github`): both rulesets active with no bypass (the tag ruleset
+  also blocks force pushes, which repeats Restrict updates), merged branches deleted, secret scanning on,
+  `batch-2-menus` deleted; push protection off. Earlier values, word for word: `built: not started`; `proof: "applied
+  by the lead with gh after ratification (docs/bbq/2026-11-23-adr-branch-protections.md, Defaulted)"`.

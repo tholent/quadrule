@@ -2965,3 +2965,7 @@ VM cannot build the macOS parts.
   not accessible by personal access token` (no Administration: write on the token); nothing created (`gh api
   .../rulesets --jq length` → 0). The record's premise is corrected; chris applies the rules in the browser, then the
   lead reads them back.
+- chris applied ADR-022 in the browser. Read back with the new `.github/scripts/check-github-rules.sh`
+  (`make check-github`): `GITHUB repo=tholent/quadrule rulesets=2 missing=push-protection status=fail`. Both rulesets
+  active, no bypass; merged branches deleted; secret scanning on; `batch-2-menus` gone (branches: `badges`, `main`).
+  Push protection is still off. ADR-022 built `partial`, owed push protection; `adr-check`: 22 ADRs, 0 failures.
