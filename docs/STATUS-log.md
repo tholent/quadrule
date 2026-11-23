@@ -2821,3 +2821,18 @@ VM cannot build the macOS parts.
   quit). Run 44856011998 (`75a2cf5`, the step on the broken code): `macos-latest: failure`, the log showing winit's
   panic "tried to get a delegate that was not the one Winit has registered". Scratch branch deleted after.
 - The broken test tag `v0.16.4-test.1` is deleted; `v0.16.4-test.2` is the build for chris's look.
+
+## 2026-11-23 — fixes batch 2 approved and released as v0.16.4
+
+- On the fixed build (`v0.16.4-test.2`, run 44857121017) chris answered, word for word: "both ways to open quad files
+  now work", then "approved for v0.16.4". No changes and no vetoes: the six calls stand
+  (`docs/bbq/2026-11-18-fixes-before-16b.md`, Amendments).
+- ADR-008 amended (call 4, the `quadrule-macos` crate and its `unsafe` exception) through makeadr; `adr-check`: 18 ADRs,
+  0 failures (it checks headers and that proofs resolve, not that tests pass).
+- `batch-2-menus` fast-forwarded into `main` (`ca1b973`); version 0.16.4; release notes
+  `docs/arcs/v1/release-notes/v0.16.4.md`; STATUS, the board (row 16, Re-plans), the debt line updated.
+- Batch 3: chris, word for word: "let's put this off until v1.1. I don't anticipate getting into the signing game quite
+  yet." Quick Look moved to v1.1 (record Amendments and Owed, the board's "Out of this arc" and Re-plans, STATUS);
+  16b becomes `v0.16.5`.
+- Checks on `main` with 0.16.4: `make check` → `TESTS scope=workspace checks=769 check_fail=0 passed=715 failed=0
+  status=ok runner=nextest`.

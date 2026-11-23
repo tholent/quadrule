@@ -272,7 +272,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   Next: chris's seven fixes before 16b, in three batches (bbq, 8 questions, `docs/bbq/2026-11-18-fixes-before-16b.md`).
   **Batch 1 is done** (`v0.16.3`, approved by chris 2026-11-20: smooth zoom, the grand staff space with file format
   0.18.0, the layers panel's icons). **Batch 2 is done** (`v0.16.4`, approved by chris 2026-11-23: menus for each
-  system, the status bar's toggles into View, the macOS double-click). Next, batch 3, `v0.16.5` (Quick Look). Rung 16b, the starters, becomes `v0.16.6`; its lead's prompt is
+  system, the status bar's toggles into View, the macOS double-click). Batch 3, Quick Look, moved to v1.1 (chris 2026-11-23, no signing yet). Next: rung 16b, the starters, `v0.16.5`, once chris's starters are ready; its lead's prompt is
   `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md` (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by

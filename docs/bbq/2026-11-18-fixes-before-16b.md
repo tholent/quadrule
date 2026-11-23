@@ -63,7 +63,8 @@ week, so I am grinding this out" (layers record, Amendments). The lead reports r
 
 ## Owed
 
-- Quick Look's scope (Mac only, or Windows and Linux thumbnails too) and how it is signed: asked at batch 3's start.
+- ~~Quick Look's scope (Mac only, or Windows and Linux thumbnails too) and how it is signed: asked at batch 3's start.~~
+  Withdrawn 2026-11-23: batch 3 moved to v1.1 (Amendments); both questions are asked when it is picked up.
 
 ## Defaulted (the lead's calls; each can be vetoed)
 
@@ -112,3 +113,6 @@ Pi; screenshots. Then chris's look, `v0.16.3`. Batch 2 and batch 3 follow, each 
   crate, the one place `unsafe` is allowed (ADR-008, amendment of 2026-11-23); the Mac starting through
   `eframe::create_native`; several files double-clicked at once open only the first. Shipped as `v0.16.4`
   (`docs/arcs/v1/release-notes/v0.16.4.md`).
+- **2026-11-23, batch 3:** asked whether any batch still comes before 16b, chris answered, word for word: "let's put this off until v1.1. I don't anticipate getting into the signing game quite yet." So batch
+  3, Quick Look, moves out of arc v1 to v1.1 (the arc board's "Out of this arc"), its two questions (scope, signing)
+  with it. Q4's order changes: no `v0.16.5` batch; the starters (16b) become `v0.16.5`.
