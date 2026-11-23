@@ -173,6 +173,14 @@ impl ViewerUi {
                     self.tab = crate::panels::Tab::Style;
                 }
             }
+            // The Style tab on the major-lines-from page's first region: Major lines from, set to Top.
+            "major-lines-from" => {
+                let id = quadrule_model::sample::majors_ids::FIRST;
+                if self.viewer.doc().is_some_and(|d| d.object(id).is_some()) {
+                    self.viewer.select_row(id, false);
+                    self.tab = crate::panels::Tab::Style;
+                }
+            }
             // The Style tab on the calendar page's dated calendar, or its first mini calendar.
             "calendar" | "mini-calendar" => {
                 let id = if look == "calendar" {

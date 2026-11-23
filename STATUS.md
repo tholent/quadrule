@@ -215,6 +215,12 @@ The project's live state. Update it when work lands. Every claim cites at least 
   and a Mini calendar tool (M); words laid out as saved text, L07 when they would be too small; format 0.19.0
   (`crates/layout/src/calendar.rs`, `crates/model/src/calendar.rs`, `crates/render/tests/calendar.rs`). Try it:
   `cargo run --release -p quadrule-app -- --calendar-page`.
+- **Major lines from** (ADR-023) is built and waits for chris's look (record
+  `docs/bbq/2026-11-23-major-lines-from-top.md`, Built, with three calls to veto): a pattern region counts its majors
+  from its Top (new regions), its Centre or the Rhythm origin (older files and every old golden page); isometric offers
+  Centre and Rhythm origin; format 0.20.0, a 0.19 fixture exports the same bytes (`crates/layout/src/pattern.rs`,
+  `crates/render/tests/migrate_v019.rs`, `crates/render/tests/major_lines_from.rs`). Try it:
+  `cargo run --release -p quadrule-app -- --majors-page --look major-lines-from`.
 - The grays sheet is read (chris, 2026-11-12, on the Nomad; the Manta ruled the same): every gray is clean, but on a
   flat area 0–68 all look black and 238–255 white, leaving nine distinct middle grays 85–221. Block moved from 68
   (black) to 102, "A lighter dark gray"; Shade stays 204. The shapes, transforms and groups golden pages changed

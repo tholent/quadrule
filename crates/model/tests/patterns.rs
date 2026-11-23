@@ -79,7 +79,12 @@ fn a_region_missing_the_new_fields_reads_with_their_defaults() {
         ciborium::Value::Text("Grid".into()),
     )]);
     let r: PatternRegion = old.deserialized().unwrap();
-    let defaults = r == PatternRegion::new(Pattern::Grid);
+    // Its majors count from the rhythm origin, as they did (ADR-023); a new region starts at Top.
+    let defaults = r
+        == PatternRegion {
+            major_from: MajorFrom::RhythmOrigin,
+            ..PatternRegion::new(Pattern::Grid)
+        };
     // An isometric pattern with no settings reads as lines; a hex one as flat top, one unit high.
     let iso: Pattern = ciborium::Value::Map(vec![(
         ciborium::Value::Text("Isometric".into()),

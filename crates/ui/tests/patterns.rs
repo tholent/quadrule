@@ -356,6 +356,11 @@ fn every_pattern_setting_is_one_undo_step() {
             PatternKind::Grid,
             Box::new(|p, _| p.major_role = LineRole::Emphasis),
         ),
+        (
+            "major_from",
+            PatternKind::Grid,
+            Box::new(|p, _| p.major_from = MajorFrom::Centre),
+        ),
     ];
     let steps = v.doc().unwrap().rhythm.steps_mm();
     let mut parts = Vec::new();
@@ -422,6 +427,28 @@ fn the_pattern_page_opens_with_the_dot_region_the_benchmarks_move() {
         "CHECK crate=ui name=patterns_page result={} kinds={} dots_region_has_the_sample_id={has_dots_id} unbound_region={unbound}",
         pass(ok),
         kinds.len()
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_region_drawn_with_the_pattern_tool_counts_its_majors_from_its_top() {
+    // ADR-023: every region made from now on starts at Top; switched to isometric (which has no Top) it counts from
+    // the rhythm origin, in the same step.
+    let mut v = page(RhythmPreset::Handwriting);
+    let id = region(&mut v);
+    v.seal();
+    let top = pattern_of(&v, id).major_from == MajorFrom::Top;
+    v.edit_selected(None, |x| x.set_pattern_kind(PatternKind::Isometric))
+        .unwrap();
+    v.seal();
+    let iso_origin = pattern_of(&v, id).major_from == MajorFrom::RhythmOrigin;
+    v.undo();
+    let undone = pattern_of(&v, id).major_from == MajorFrom::Top;
+    let ok = top && iso_origin && undone;
+    println!(
+        "CHECK crate=ui name=pattern_tool_major_from result={} drawn_top={top} isometric_sets_origin={iso_origin} one_undo_back_to_top={undone}",
+        pass(ok)
     );
     assert!(ok);
 }

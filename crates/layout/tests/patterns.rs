@@ -512,6 +512,11 @@ fn a_grand_staff_pairs_the_staves_with_a_brace() {
 
 #[test]
 fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
+    // Counted from the rhythm origin, as every region did before ADR-023 (a page made before format 0.20).
+    let from_origin = |p: Pattern| PatternRegion {
+        major_from: MajorFrom::RhythmOrigin,
+        ..PatternRegion::new(p)
+    };
     let m = manta();
     let (mw, mgray) = stroke(Style::Role(LineRole::Structure), &m);
     let (gw, ggray) = stroke(Style::Role(LineRole::Guide), &m);
@@ -524,14 +529,14 @@ fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
     };
     // Off by default: no row is major.
     let none = rows(&page_with(
-        PatternRegion::new(Pattern::Lines),
+        from_origin(Pattern::Lines),
         LineRole::Guide,
         None,
     ));
     let off_ok = none.iter().all(|r| r.2 == ggray && r.1 == f64::from(gw));
     // The rhythm's N = 4: rows 0, 4, 8 (from the origin at 94 px) are major.
     let follow = rows(&page_with(
-        PatternRegion::new(Pattern::Lines),
+        from_origin(Pattern::Lines),
         LineRole::Guide,
         Some(4),
     ));
@@ -542,11 +547,11 @@ fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
         .all(|r| (r.2 == mgray && r.1 == f64::from(mw)) == is_major(r.0, 4.0))
         && follow.iter().any(|r| r.2 == mgray && r.1 == f64::from(mw));
     // A region turns them off, or has its own N.
-    let mut off = PatternRegion::new(Pattern::Lines);
+    let mut off = from_origin(Pattern::Lines);
     off.major = MajorLines::Off;
     let off_region = rows(&page_with(off, LineRole::Guide, Some(4)));
     let region_off_ok = off_region.iter().all(|r| r.2 == ggray);
-    let mut own = PatternRegion::new(Pattern::Lines);
+    let mut own = from_origin(Pattern::Lines);
     own.major = MajorLines::Every(3);
     own.major_role = LineRole::Emphasis;
     let (ew, egray) = stroke(Style::Role(LineRole::Emphasis), &m);
@@ -559,7 +564,7 @@ fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
             .any(|r| r.2 == egray && r.1 == f64::from(ew));
     // Grid: rows and columns both. Dots: a dot is major when its row and column both are.
     let g = rects(&items_of(&page_with(
-        PatternRegion::new(Pattern::Grid),
+        from_origin(Pattern::Grid),
         LineRole::Guide,
         Some(4),
     )));
@@ -569,7 +574,7 @@ fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
         .count();
     let grid_ok = cols_major >= 2;
     let d = rects(&items_of(&page_with(
-        PatternRegion::new(Pattern::Dots),
+        from_origin(Pattern::Dots),
         LineRole::DotGrid,
         Some(4),
     )));
@@ -588,7 +593,7 @@ fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
     // Isometric: every Nth line on each of the three axes; Cornell: its ruling; Hex and the
     // staff have none.
     let iso = items_of(&page_with(
-        PatternRegion::new(Pattern::Isometric {
+        from_origin(Pattern::Isometric {
             style: IsoStyle::Lines,
         }),
         LineRole::Guide,
@@ -604,7 +609,7 @@ fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
         .count();
     let iso_ok = iso_major_paths == 1 && iso_rows_major >= 2;
     let hex = items_of(&page_with(
-        PatternRegion::new(PatternKind::Hex.default_pattern()),
+        from_origin(PatternKind::Hex.default_pattern()),
         LineRole::Guide,
         Some(3),
     ));

@@ -522,6 +522,13 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the major-lines-from page: Top, Centre and Rhythm origin side by side (ADR-023). Like the sample, it has
+    /// no file.
+    pub fn open_majors(&mut self) {
+        let doc = quadrule_model::sample::majors_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens the calendar page: calendar patterns dated and undated, and two mini calendars. Like the sample, it has no
     /// file.
     pub fn open_calendar(&mut self) {

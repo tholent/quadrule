@@ -47,6 +47,17 @@ pub const ATKINSON: &str = "Atkinson Hyperlegible Next";
 /// The title's text: kerning pairs (To, Wa, Yo, Ar) and a curly apostrophe and em dash.
 pub const TITLE_TEXT: &str = "Today’s Notes — Wave Your Arrows: a slice of text, dots and lines";
 
+/// A region of `pattern` as a page made before format 0.20 holds it: its major lines count from the
+/// rhythm origin. Every sample page here was made then and its golden image was blessed then, so none
+/// of them changes (ADR-023, item 2); a region made in the app now starts at Top
+/// ([`PatternRegion::new`]).
+fn region_0_19(pattern: Pattern) -> PatternRegion {
+    PatternRegion {
+        major_from: MajorFrom::RhythmOrigin,
+        ..PatternRegion::new(pattern)
+    }
+}
+
 fn object(
     id: Uuid,
     name: &str,
@@ -118,7 +129,7 @@ pub fn slice_document() -> Document {
         // Same physical size on every profile, under the pinned header.
         pinned_top,
         Style::Role(LineRole::DotGrid),
-        ObjectKind::Pattern(PatternRegion::new(Pattern::Dots)),
+        ObjectKind::Pattern(region_0_19(Pattern::Dots)),
     );
     let lines = object(
         ids::LINES,
@@ -130,7 +141,7 @@ pub fn slice_document() -> Document {
             v: VConstraint::TopBottom,
         },
         Style::Role(LineRole::Guide),
-        ObjectKind::Pattern(PatternRegion::new(Pattern::Lines)),
+        ObjectKind::Pattern(region_0_19(Pattern::Lines)),
     );
 
     Document {
@@ -847,7 +858,7 @@ pub fn transforms_document() -> Document {
         solid,
         0.0,
         30,
-        ObjectKind::Pattern(PatternRegion::new(Pattern::Lines)),
+        ObjectKind::Pattern(region_0_19(Pattern::Lines)),
     );
     add(
         "Circle, 0 percent",
@@ -1602,7 +1613,7 @@ pub mod pattern_ids {
 /// What the pattern page's cells hold, in order (left to right, then down): the label and the
 /// region.
 fn pattern_cells() -> Vec<(&'static str, PatternRegion, LineRole)> {
-    let region = |p: Pattern| PatternRegion::new(p);
+    let region = |p: Pattern| region_0_19(p);
     let guide = LineRole::Guide;
     let mut unbound = region(Pattern::Grid);
     unbound.bound = false;
@@ -1804,7 +1815,7 @@ pub fn turned_patterns_document() -> Document {
     let title = doc.layers[1].objects[0].clone();
     let unit = 5.0;
     let (cols, cell_w) = (3, 9.0);
-    let region = |p: Pattern| PatternRegion::new(p);
+    let region = |p: Pattern| region_0_19(p);
     let hex = |orientation| Pattern::Hex {
         orientation,
         height_units: 2,
@@ -2045,7 +2056,7 @@ pub fn pattern_angle_document() -> Document {
     let unit = 5.0;
     let (cols, cell_w) = (3, 9.0);
     let region = |p: Pattern, ruling: f64| {
-        let mut pr = PatternRegion::new(p);
+        let mut pr = region_0_19(p);
         pr.angle_deg = ruling;
         pr
     };
@@ -2314,7 +2325,7 @@ pub fn pattern_borders_document() -> Document {
     };
     let structure = Style::Role(LineRole::Structure);
     let region = |p: Pattern, border: Border, ruling: f64| {
-        let mut pr = PatternRegion::new(p);
+        let mut pr = region_0_19(p);
         pr.angle_deg = ruling;
         pr.border = Some(border);
         pr
@@ -2498,6 +2509,137 @@ pub fn pattern_borders_document() -> Document {
     doc
 }
 
+/// Fixed ids for the major-lines-from page's objects.
+pub mod majors_ids {
+    use crate::Uuid;
+    /// The `n`th object of the major-lines-from page (1-based: row by row, Top, Centre, Rhythm origin).
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0017_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+    /// The ruled lines counted from their top: the one the look picks.
+    pub const FIRST: Uuid = nth(1);
+}
+
+/// The major-lines-from page (ADR-023; docs/bbq/2026-11-23-major-lines-from-top.md): three columns, Top, Centre and
+/// Rhythm origin, of six labelled cells each: ruled lines, a grid, dots, Cornell, isometric lines (which has no Top:
+/// its Top cell is set to Top and draws as Rhythm origin) and a grid with a border on all four sides (the border stands
+/// on the first major line). The rhythm is 3 mm, physically locked, with a major line every 7; each region holds 11
+/// lines across and 5 down and starts one rhythm row past a major, so the three choices put their majors in three
+/// different places, and Centre leaves 1 line before its first major column and 2 after its last. Every object keeps
+/// its millimetres on the Nomad (Left and Top), so the page is the same on both screens. Designed on the Manta, also
+/// targeting the Nomad.
+pub fn majors_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Major lines from".into();
+    doc.metadata.description =
+        "Major lines counted from a region's top, its centre or the rhythm origin, on five patterns and a border."
+            .into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.resolution = RhythmResolution::PhysicalLocked;
+    doc.rhythm.h_unit_mm = 3.0;
+    doc.rhythm.v_unit_mm = 3.0;
+    doc.rhythm.major_every = Some(7);
+    let title = doc.layers[1].objects[0].clone();
+    let keep = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+    // A cell is 10 units wide and 4 down, a unit apart across; a row is the label (2 units), the cell and a unit's gap.
+    let (unit, cell_w, cell_h, gap, title_units) = (3.0, 10.0, 4.0, 1.0, 4.0);
+    let froms = [
+        (MajorFrom::Top, "Top"),
+        (MajorFrom::Centre, "Centre"),
+        (MajorFrom::RhythmOrigin, "Rhythm origin"),
+    ];
+    let mut bordered = PatternRegion::new(Pattern::Grid);
+    bordered.border = Some(Border::new());
+    let rows: [(&str, PatternRegion, LineRole); 6] = [
+        ("Lines", PatternRegion::new(Pattern::Lines), LineRole::Guide),
+        ("Grid", PatternRegion::new(Pattern::Grid), LineRole::Guide),
+        ("Dots", PatternRegion::new(Pattern::Dots), LineRole::DotGrid),
+        (
+            "Cornell",
+            PatternRegion::new(Pattern::Cornell {
+                cue_units: None,
+                summary_units: None,
+            }),
+            LineRole::Guide,
+        ),
+        (
+            "Isometric",
+            PatternRegion::new(Pattern::Isometric {
+                style: IsoStyle::Lines,
+            }),
+            LineRole::Guide,
+        ),
+        ("Grid, border", bordered, LineRole::Guide),
+    ];
+    let mut head = title.clone();
+    head.id = majors_ids::TITLE;
+    head.name = "Title".into();
+    head.frame = Frame::new(margin, margin, MANTA_W_MM - 2.0 * margin, 8.0);
+    if let ObjectKind::Text(t) = &mut head.kind {
+        t.content = "Major lines from: Top, Centre, Rhythm origin".into();
+        t.size_pt = 12.0;
+    }
+    head.constraints = Constraints::default();
+    let mut objs: Vec<Object> = vec![head];
+    for (r, (name, region, role)) in rows.into_iter().enumerate() {
+        for (c, (from, from_name)) in froms.into_iter().enumerate() {
+            let i = r * froms.len() + c;
+            let x = margin + c as f64 * (cell_w + gap) * unit;
+            let y = margin + (title_units + r as f64 * (cell_h + 3.0)) * unit;
+            let label = if from == MajorFrom::Top && !region.pattern.offers_major_top() {
+                format!("{name}, Top: from origin")
+            } else {
+                format!("{name}, {from_name}")
+            };
+            let mut text = title.clone();
+            text.id = majors_ids::nth(100 + i as u128);
+            text.name = format!("Label {}", i + 1);
+            text.frame = Frame::new(x, y, cell_w * unit, 5.0);
+            if let ObjectKind::Text(t) = &mut text.kind {
+                t.content = label.clone();
+                t.size_pt = 7.0;
+                t.weight = 400;
+            }
+            text.constraints = keep;
+            objs.push(text);
+            let pr = PatternRegion {
+                major_from: from,
+                ..region.clone()
+            };
+            // A millimetre past the rhythm lines at each edge, so the edge lines are in whatever a pixel of
+            // rounding says; a bordered frame sits on them, so its border stands on the edge lines (Q7).
+            let past = if pr.border.is_some() { 0.0 } else { 1.0 };
+            objs.push(object(
+                majors_ids::nth(1 + i as u128),
+                &label,
+                Frame::new(
+                    x - past,
+                    y + 2.0 * unit - past,
+                    cell_w * unit + 2.0 * past,
+                    cell_h * unit + 2.0 * past,
+                ),
+                keep,
+                Style::Role(role),
+                ObjectKind::Pattern(pr),
+            ));
+        }
+    }
+    doc.layers = vec![Layer {
+        name: "Major lines from".into(),
+        visible: true,
+        locked: false,
+        objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}
+
 /// Fixed ids for the grand-staff page's objects.
 pub mod grand_ids {
     use crate::Uuid;
@@ -2535,7 +2677,7 @@ pub fn grand_staff_document() -> Document {
     };
     let (cols, pitch_x, pitch_y) = (3, 34.0, 68.0);
     let staff = |gap_mm: f64, pitch_units: u32, grand: bool, space: Option<u32>| {
-        PatternRegion::new(Pattern::MusicStaff {
+        region_0_19(Pattern::MusicStaff {
             gap_mm,
             pitch_units,
             grand,
@@ -2657,7 +2799,7 @@ pub fn calendar_document() -> Document {
     }
     head.constraints = Constraints::default();
     let month = |m: Option<YearMonth>, week_start: Weekday, first_day: Weekday, days: u8| {
-        ObjectKind::Pattern(PatternRegion::new(Pattern::Calendar {
+        ObjectKind::Pattern(region_0_19(Pattern::Calendar {
             month: m,
             week_start,
             first_day,
@@ -3860,9 +4002,9 @@ pub fn lint_document() -> Document {
             ..TextBox::default()
         })
     };
-    let region = |pattern: Pattern| ObjectKind::Pattern(PatternRegion::new(pattern));
+    let region = |pattern: Pattern| ObjectKind::Pattern(region_0_19(pattern));
     let ruled_3mm = {
-        let mut pr = PatternRegion::new(Pattern::Lines);
+        let mut pr = region_0_19(Pattern::Lines);
         pr.bound = false;
         pr.v_spacing_mm = Some(3.0);
         ObjectKind::Pattern(pr)

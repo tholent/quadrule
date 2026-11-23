@@ -35,8 +35,8 @@ use crate::{Item, RhythmPx, snap_center, stroke};
 use kurbo::{Affine, BezPath};
 use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{
-    HexOrientation, IsoStyle, LineCap, LineRole, Pattern, PatternRegion, Rhythm, RhythmResolution,
-    Style, Uuid,
+    HexOrientation, IsoStyle, LineCap, LineRole, MajorFrom, Pattern, PatternRegion, Rhythm,
+    RhythmResolution, Style, Uuid,
 };
 use quadrule_profiles::Profile;
 
@@ -178,19 +178,44 @@ pub fn cornell_units(
 /// The rhythm positions between `start` and `end` (both included) with their index from the
 /// origin, on whole pixels: [`RhythmPx::positions`] with the count of each.
 fn indexed(origin: f64, unit: f64, start: f64, end: f64) -> Vec<(i64, f64)> {
-    const EPS: f64 = 1e-9;
-    if !(unit.is_finite() && unit > 0.0) {
+    let Some((first, last)) = index_span(origin, unit, start, end) else {
         return Vec::new();
-    }
-    let first = ((start - origin) / unit - EPS).ceil() as i64;
-    let last = ((end - origin) / unit + EPS).floor() as i64;
+    };
     (first..=last)
         .map(|k| (k, (origin + k as f64 * unit).round()))
         .collect()
 }
 
+/// The index from the origin of the first and the last rhythm position between `start` and `end`
+/// (both included); the first is past the last when there is none. `None` when the step is not a
+/// positive number.
+fn index_span(origin: f64, unit: f64, start: f64, end: f64) -> Option<(i64, i64)> {
+    const EPS: f64 = 1e-9;
+    if !(unit.is_finite() && unit > 0.0) {
+        return None;
+    }
+    let first = ((start - origin) / unit - EPS).ceil() as i64;
+    let last = ((end - origin) / unit + EPS).floor() as i64;
+    Some((first, last))
+}
+
+/// Whether the line `k` places from a major one is major, with a major every `n`.
 fn is_major(k: i64, n: Option<u8>) -> bool {
     n.is_some_and(|n| k.rem_euclid(i64::from(n)) == 0)
+}
+
+/// The index of a major line among the lines `first..=last` (counted from the grid's origin) of one
+/// axis, with a major every `n` (ADR-023): 0 counts from the rhythm origin; Top makes the first line
+/// major; Centre leaves as many ordinary lines before the first major as after the last, or one more
+/// after when they cannot be equal.
+fn major_base(from: MajorFrom, n: Option<u8>, span: Option<(i64, i64)>) -> i64 {
+    match (from, n, span) {
+        (MajorFrom::Top, Some(_), Some((first, last))) if first <= last => first,
+        (MajorFrom::Centre, Some(n), Some((first, last))) if first <= last => {
+            first + (last - first).rem_euclid(i64::from(n)) / 2
+        }
+        _ => 0,
+    }
 }
 
 /// What a pattern is drawn with.
@@ -208,6 +233,12 @@ struct Ctx<'a> {
     divider: Pen,
     /// Every Nth line is major.
     major: Option<u8>,
+    /// Where the majors count from (ADR-023), and the box they count in: the frame, in the axes the
+    /// ruling is laid out in.
+    from: MajorFrom,
+    count: (f64, f64, f64, f64),
+    /// The index of a major column and of a major row, counted from the grid's origin.
+    base: (i64, i64),
     /// The index in `items` of each dot drawn (a turned ruling keeps a dot whole or drops it).
     dots: &'a mut Vec<usize>,
     /// The region's border, in these axes: what sits on a bordered edge is left out, and what would reach
@@ -216,8 +247,26 @@ struct Ctx<'a> {
 }
 
 impl Ctx<'_> {
-    fn pen_for(&self, k: i64) -> Pen {
-        if is_major(k, self.major) {
+    /// Whether column `k` (counted from the grid's origin) is major.
+    fn major_col(&self, k: i64) -> bool {
+        is_major(k - self.base.0, self.major)
+    }
+
+    /// Whether row `k` (counted from the grid's origin) is major.
+    fn major_row(&self, k: i64) -> bool {
+        is_major(k - self.base.1, self.major)
+    }
+
+    fn col_pen(&self, k: i64) -> Pen {
+        if self.major_col(k) {
+            self.major_pen
+        } else {
+            self.pen
+        }
+    }
+
+    fn row_pen(&self, k: i64) -> Pen {
+        if self.major_row(k) {
             self.major_pen
         } else {
             self.pen
@@ -348,6 +397,7 @@ fn upright_items(
         pen,
         region,
         (region.0, region.1),
+        region,
         env,
         rim,
         items,
@@ -382,14 +432,16 @@ pub fn border_items_turned(
 
 /// [`pattern_items`] with the grid of an unbound region counted from `anchor`, not from the region's
 /// top-left corner (a ruling turned inside its frame lays out in a bigger box but is anchored at the
-/// frame's corner, so turning it is rigid), and the index of each dot appended to `dots`. `rim` is the
-/// region's border in the axes it is laid out in.
+/// frame's corner, so turning it is rigid), its major lines counted in `count` (the frame as the ruling's
+/// own axes see it: its top for Top, its middle for Centre; ADR-023), and the index of each dot appended
+/// to `dots`. `rim` is the region's border in the axes it is laid out in.
 #[allow(clippy::too_many_arguments)]
 fn layout_in(
     pr: &PatternRegion,
     pen: Pen,
     region: (f64, f64, f64, f64),
     anchor: (f64, f64),
+    count: (f64, f64, f64, f64),
     env: &Env,
     rim: Option<Rim>,
     items: &mut Vec<Item>,
@@ -400,6 +452,12 @@ fn layout_in(
     let (div_w, div_gray) = stroke(Style::Role(LineRole::Structure), env.target);
     // A major dot is a Dot grid dot one device pixel bigger (rung 9, chris's look).
     let (dot_w, _) = stroke(Style::Role(LineRole::DotGrid), env.target);
+    let major = pr.major_every(env.rhythm);
+    let from = pr.major_origin();
+    let base = (
+        major_base(from, major, index_span(g.ox, g.ux, count.0, count.2)),
+        major_base(from, major, index_span(g.oy, g.uy, count.1, count.3)),
+    );
     let mut c = Ctx {
         items,
         reg: region,
@@ -416,7 +474,10 @@ fn layout_in(
             w: div_w,
             gray: div_gray,
         },
-        major: pr.major_every(env.rhythm),
+        major,
+        from,
+        count,
+        base,
         dots: dot_ids,
         rim,
     };
@@ -569,8 +630,10 @@ fn ruled_items(
         pr.pattern,
         Pattern::Cornell { .. } | Pattern::MusicStaff { .. } | Pattern::Calendar { .. }
     );
-    let laid = if structured {
-        region
+    // `count` is where the majors count: the box round the frame in the ruling's own axes, whose top is
+    // the first line that meets the frame and whose middle is the frame's (ADR-023).
+    let (laid, count) = if structured {
+        (region, region)
     } else {
         // The frame's corners in the ruling's own axes: the box that holds them covers the frame.
         let corners = [
@@ -582,9 +645,9 @@ fn ruled_items(
         .map(|p| crate::rotate::rotate_point(p, pivot, -own));
         let b = crate::rotate::bounds_of(&corners);
         if quarter {
-            b
+            (b, b)
         } else {
-            (b.0.floor(), b.1.floor(), b.2.ceil(), b.3.ceil())
+            ((b.0.floor(), b.1.floor(), b.2.ceil(), b.3.ceil()), b)
         }
     };
     let mut up = Vec::new();
@@ -601,6 +664,7 @@ fn ruled_items(
         pen,
         laid,
         (region.0, region.1),
+        count,
         env,
         laid_rim,
         &mut up,
@@ -895,7 +959,7 @@ fn turn_items(upright: Vec<Item>, turn: Affine, exact: bool, out: &mut Vec<Item>
 fn lines(c: &mut Ctx, g: &Grid) {
     let (x0, y0, x1, y1) = c.reg;
     for (k, y) in indexed(g.oy, g.uy, y0, y1) {
-        let pen = c.pen_for(k);
+        let pen = c.row_pen(k);
         c.hline(x0, x1, y, pen);
     }
 }
@@ -905,7 +969,7 @@ fn dots(c: &mut Ctx, g: &Grid) {
     let cols = indexed(g.ox, g.ux, x0, x1);
     for (ky, y) in indexed(g.oy, g.uy, y0, y1) {
         for &(kx, x) in &cols {
-            let pen = if is_major(kx, c.major) && is_major(ky, c.major) {
+            let pen = if c.major_col(kx) && c.major_row(ky) {
                 c.major_dot
             } else {
                 c.pen
@@ -919,11 +983,11 @@ fn grid(c: &mut Ctx, g: &Grid) {
     let (x0, y0, x1, y1) = c.reg;
     // Horizontal lines across the region, then vertical lines down it.
     for (k, y) in indexed(g.oy, g.uy, y0, y1) {
-        let pen = c.pen_for(k);
+        let pen = c.row_pen(k);
         c.hline(x0, x1, y, pen);
     }
     for (k, x) in indexed(g.ox, g.ux, x0, x1) {
-        let pen = c.pen_for(k);
+        let pen = c.col_pen(k);
         c.vline(x, y0, y1, pen);
     }
 }
@@ -1028,12 +1092,14 @@ fn isometric_lines(c: &mut Ctx, g: &Grid, half: f64) {
         return;
     }
     for (k, x) in indexed(g.ox, g.ux, x0, x1) {
-        let pen = c.pen_for(k);
+        let pen = c.col_pen(k);
         c.vline(x, y0, y1, pen);
     }
+    let (down_left, down_right) = iso_slant_bases(c, g, half);
     let (mut normal, mut major) = (BezPath::new(), BezPath::new());
     for seg in iso_segments((g.ox, g.oy), g.ux, half, c.reg) {
-        let path = if is_major(seg.index, c.major) {
+        let base = if seg.dir < 0 { down_left } else { down_right };
+        let path = if is_major(seg.index - base, c.major) {
             &mut major
         } else {
             &mut normal
@@ -1042,6 +1108,31 @@ fn isometric_lines(c: &mut Ctx, g: &Grid, half: f64) {
         path.line_to(seg.to);
     }
     c.slanted(normal, major, LineCap::Butt);
+}
+
+/// The index of a major line in each slanted family ("/" then "\") of an isometric grid (ADR-023): 0
+/// from the rhythm origin. Centred, the majors of the three families still meet: the major crossing is
+/// on the centred major column, centred down it among the crossings the frame holds (a family's line `i`
+/// meets column `k` at `oy + half * m` where `m = 2i + dir * k`, and the majors meet every Nth side
+/// down a major column), so each family's majors sit centred across the frame too.
+fn iso_slant_bases(c: &Ctx, g: &Grid, half: f64) -> (i64, i64) {
+    let Some(n) = c.major else {
+        return (0, 0);
+    };
+    if c.from != MajorFrom::Centre {
+        return (0, 0);
+    }
+    let k = c.base.0;
+    let parity = k.rem_euclid(2);
+    // The crossings on column `k` inside the frame, `m = 2p + parity`, as a span of `p`.
+    let Some((m_lo, m_hi)) = index_span(g.oy, half, c.count.1, c.count.3) else {
+        return (0, 0);
+    };
+    let p_lo = (m_lo - parity + 1).div_euclid(2);
+    let p_hi = (m_hi - parity).div_euclid(2);
+    let p = major_base(MajorFrom::Centre, Some(n), Some((p_lo, p_hi)));
+    let m = if p_lo <= p_hi { 2 * p + parity } else { parity };
+    ((m + k).div_euclid(2), (m - k).div_euclid(2))
 }
 
 /// A dot at each crossing of the isometric grid: on column `k`, at `oy + half * m` for `m` of the
@@ -1057,6 +1148,13 @@ fn isometric_dots(c: &mut Ctx, g: &Grid, half: f64) {
     if (m_hi - m_lo) as f64 * cols.len() as f64 / 2.0 > MAX_CELLS {
         return;
     }
+    // Where the pairs of steps down a column count their majors from (ADR-023), over those in the frame.
+    let pair_base = match index_span(g.oy, half, c.count.1, c.count.3) {
+        Some((lo, hi)) if c.from != MajorFrom::RhythmOrigin => {
+            major_base(c.from, c.major, Some((lo.div_euclid(2), hi.div_euclid(2))))
+        }
+        _ => 0,
+    };
     for (k, x) in cols {
         for m in m_lo..=m_hi {
             if m.rem_euclid(2) != k.rem_euclid(2) {
@@ -1064,7 +1162,7 @@ fn isometric_dots(c: &mut Ctx, g: &Grid, half: f64) {
             }
             let y = (g.oy + half * m as f64).round();
             // A major dot: on a major column, at a major place down it (every Nth pair of steps).
-            let pen = if is_major(k, c.major) && is_major(m.div_euclid(2), c.major) {
+            let pen = if c.major_col(k) && is_major(m.div_euclid(2) - pair_base, c.major) {
                 c.major_dot
             } else {
                 c.pen
@@ -1202,7 +1300,7 @@ fn cornell(c: &mut Ctx, g: &Grid, cue: Option<u32>, summary: Option<u32>) {
             c.hline(x0, x1, y, divider);
             continue;
         }
-        let pen = c.pen_for(k);
+        let pen = c.row_pen(k);
         match div_row {
             Some(d) if k > d => c.hline(x0, x1, y, pen),
             _ => c.hline(notes_x, x1, y, pen),

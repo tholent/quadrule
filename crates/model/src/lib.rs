@@ -1301,6 +1301,15 @@ pub struct PatternRegion {
     /// The role major lines are drawn in (Structure unless changed).
     #[serde(default = "structure_role", skip_serializing_if = "is_structure_role")]
     pub major_role: LineRole,
+    /// Where the major lines are counted from: the region's top, its centre or the rhythm origin (ADR-023;
+    /// format 0.20). A file without it reads as the rhythm origin, as every region counted before, so it is
+    /// left out of a file when it is that; a new region starts at the top. Read it with
+    /// [`PatternRegion::major_origin`].
+    #[serde(
+        default = "rhythm_origin",
+        skip_serializing_if = "MajorFrom::is_rhythm_origin"
+    )]
+    pub major_from: MajorFrom,
     /// The ruling's own angle in degrees, clockwise, about the frame's centre: the pattern turns inside
     /// the frame and is cut at it, on top of the frame's own `rotation_deg` (rung 12b bbq, Q8 as amended and
     /// Q10). Format 0.13 (not yet released); a file without it reads as 0. Read it with
@@ -1431,10 +1440,16 @@ fn is_structure_role(r: &LineRole) -> bool {
     *r == LineRole::Structure
 }
 
+fn rhythm_origin() -> MajorFrom {
+    MajorFrom::RhythmOrigin
+}
+
 impl PatternRegion {
-    /// A region of `pattern`, bound to the rhythm, with the rhythm's major lines in Structure.
+    /// A region of `pattern`, bound to the rhythm, with the rhythm's major lines in Structure, counted
+    /// from its top (an isometric region, which has no top, from the rhythm origin; ADR-023).
     pub fn new(pattern: Pattern) -> Self {
         PatternRegion {
+            major_from: MajorFrom::new_for(&pattern),
             pattern,
             bound: true,
             h_spacing_mm: None,
@@ -1465,6 +1480,16 @@ impl PatternRegion {
             MajorLines::Every(n) => Some(n).filter(|n| (MAJOR_MIN..=MAJOR_MAX).contains(n)),
         }
     }
+
+    /// Where this region's major lines count from as drawn: `major_from`, except that an isometric
+    /// region set to Top counts from the rhythm origin (its slanted lines have no top; ADR-023, item 3).
+    pub fn major_origin(&self) -> MajorFrom {
+        if self.major_from == MajorFrom::Top && !self.pattern.offers_major_top() {
+            MajorFrom::RhythmOrigin
+        } else {
+            self.major_from
+        }
+    }
 }
 
 impl Object {
@@ -1475,6 +1500,10 @@ impl Object {
     pub fn set_pattern_kind(&mut self, kind: PatternKind) {
         if let ObjectKind::Pattern(pr) = &mut self.kind {
             pr.pattern = kind.default_pattern();
+            // Isometric offers no Top: a region switched to it while at Top counts from the rhythm origin.
+            if pr.major_from == MajorFrom::Top && !pr.pattern.offers_major_top() {
+                pr.major_from = MajorFrom::RhythmOrigin;
+            }
             self.settle_pattern_role();
         }
     }
@@ -1521,6 +1550,38 @@ impl MajorLines {
     /// Whether this is the default; used to leave the field out of a file when it is.
     pub fn is_follow(&self) -> bool {
         *self == MajorLines::Follow
+    }
+}
+
+/// Where a region's major lines are counted from (ADR-023; format 0.20). Along each axis: rows down,
+/// columns across.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MajorFrom {
+    /// The line on the region's top edge is major, then every Nth line down; across, the line on its
+    /// left edge, then every Nth line right. The first line at or inside the edge counts, whether or not
+    /// a border hides it.
+    Top,
+    /// The majors are placed so the ordinary lines left before the first and after the last differ by at
+    /// most one, the extra one after (below, or right).
+    Centre,
+    /// Every Nth line counted from the page's rhythm origin (as every region did before format 0.20).
+    RhythmOrigin,
+}
+
+impl MajorFrom {
+    /// Where a new region of `pattern` starts: at the top, or, where the pattern has no top
+    /// (isometric), at the rhythm origin.
+    pub fn new_for(pattern: &Pattern) -> Self {
+        if pattern.offers_major_top() {
+            MajorFrom::Top
+        } else {
+            MajorFrom::RhythmOrigin
+        }
+    }
+
+    /// Whether this is what a file without the field reads as; used to leave the field out of a file.
+    pub fn is_rhythm_origin(&self) -> bool {
+        *self == MajorFrom::RhythmOrigin
     }
 }
 
@@ -1663,6 +1724,12 @@ impl Pattern {
             self,
             Pattern::Hex { .. } | Pattern::MusicStaff { .. } | Pattern::Calendar { .. }
         )
+    }
+
+    /// Whether a region of this pattern can count its major lines from its top: not an isometric one,
+    /// whose slanted lines have no top of their own (ADR-023, item 3).
+    pub fn offers_major_top(&self) -> bool {
+        !matches!(self, Pattern::Isometric { .. })
     }
 
     /// For a calendar: the shape of its month, from its date when it has one, else from its own two settings

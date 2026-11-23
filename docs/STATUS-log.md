@@ -2996,3 +2996,23 @@ VM cannot build the macOS parts.
   tag (`docs/STATUS-debt.md`, the board's release bar).
 - chris ratified ADR-023 and ADR-024 ("Ratify" to each). `adr-check`: 24 ADRs, 0 failures. ADR-023 is ready for the
   fresh session (`docs/bbq/2026-11-23-major-lines-from-top.md`, Kickoff); ADR-024's switch waits for v1.0.
+
+## 2026-11-23 — ADR-023 built: Major lines from Top, Centre or Rhythm origin
+
+- Fresh session, lead Opus 5.5 (`echo $CLAUDE_EFFORT` → `high`), no workers. Session start: `make build-proof` →
+  `BUILD head=ab86f98 dirty=no rebuilt=4 target_gb=35.6`.
+- Fixture first: the patterns, pattern-angle and pattern-borders pages saved by the 0.19.0 build before any change
+  (`crates/render/tests/fixtures/v0.19/`, their export sums equal to those pages' goldens).
+- Built from the record and ADR-023 (`docs/bbq/2026-11-23-major-lines-from-top.md`, Built): `MajorFrom` on the pattern
+  region, format 0.20.0, the layout counting each axis from the region's choice, the inspector row, a golden page on both
+  tablets (`major-lines-from_*`; the 36 sums before it unchanged), `--majors-page` and `--look major-lines-from`.
+- Three calls the record left room for, each up for veto (record, Built): the old sample pages keep Rhythm origin so
+  their goldens stay; a turned ruling counts in the box round its frame in its own axes; isometric Centre keeps its three
+  families' majors meeting.
+- Tests: the five new layout tests fail with the old rule put back (`test result: FAILED. 0 passed; 5 failed`), pass
+  with it. `make check` → `TESTS scope=workspace checks=812 check_fail=0 passed=760 failed=0 status=ok runner=nextest`.
+  `adr-check`: 24 ADRs, 0 failures.
+- Not done: a screenshot of the window. The screen was locked (`mate-screensaver-command -q` → active, lock on); the
+  inspector row was checked headless (`crates/ui/tests/major_from.rs`).
+- STATUS.md is 330 lines, over its 300 cap (324 before this session); not trimmed here.
+- Waits for chris's look; ships in the next release.

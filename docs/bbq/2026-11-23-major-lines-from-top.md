@@ -69,3 +69,41 @@ Route: a fresh session (chris: "A fresh session (Recommended)"; this one had bui
 ADR-022 and amended ADR-019). Lead: Opus 5.5, high. Build `major_from` (Q1–Q7) from this record and ADR-023 (`docs/decisions/ADR-023-major-lines-from.md`, ratified
 by chris 2026-11-23) on `main`, with tests that
 print one `CHECK` line each, a 0.19 fixture, and one new golden page on both tablets. Then chris's look.
+
+## Built (2026-11-23)
+
+Built on `main` by the lead in a fresh session (Opus 5.5, high; `echo $CLAUDE_EFFORT` → `high`), as the Kickoff says.
+Waits for chris's look.
+
+- **Model:** `MajorFrom` (`Top`, `Centre`, `RhythmOrigin`) and `PatternRegion::major_from`; a file without it reads as
+  `RhythmOrigin`, which is never written; `PatternRegion::new` starts at Top (isometric at Rhythm origin);
+  `set_pattern_kind` to isometric while at Top sets Rhythm origin; `major_origin()` is what draws (an isometric region a
+  file sets to Top draws from the rhythm origin) (`crates/model/src/lib.rs`).
+- **Format 0.20.0**, a step that rewrites nothing (`crates/format/src/migrate.rs`). Fixture
+  `crates/render/tests/fixtures/v0.19/`: the patterns, pattern-angle and pattern-borders pages saved by the 0.19.0 build
+  before the bump, with the sha256 of each export (the same as their goldens).
+- **Layout:** each axis finds the index of a major line from the lines in the frame (`major_base`,
+  `crates/layout/src/pattern.rs`): the first for Top, the first plus half the leftover for Centre, the origin's for Rhythm
+  origin. The border only hides lines, so it never moves a major.
+- **Inspector:** a **Major lines from** row under Major lines (and Major every), before Major role: Top, Centre, Rhythm
+  origin; Top greyed on isometric; one undo step (`crates/ui/src/panels.rs`, words in `crates/i18n/locales/en-US/app.ftl`).
+- **Golden page** `major-lines-from_*` on both tablets (`majors_document`, `crates/model/src/sample.rs`): three columns
+  (Top, Centre, Rhythm origin) of lines, grid, dots, Cornell, isometric and a bordered grid, on a 3 mm rhythm with a
+  major every 7, each object keeping its millimetres on the Nomad. The 36 goldens before it are unchanged. In the app:
+  `cargo run --release -p quadrule-app -- --majors-page --look major-lines-from`.
+- **Tests** (one `CHECK` line each): `crates/layout/tests/major_from.rs` (5; each fails with the old rule put back, `test
+  result: FAILED. 0 passed; 5 failed`), `crates/model/tests/major_from.rs` (2), `crates/ui/tests/major_from.rs` (2),
+  `crates/ui/tests/patterns.rs` (the Pattern tool's region starts at Top; Major lines from is one undo step),
+  `crates/render/tests/major_lines_from.rs` (3), `crates/render/tests/migrate_v019.rs` (2).
+
+### Calls the build made where the record left room (each can be vetoed)
+
+| Call | Why | veto: |
+|---|---|---|
+| Every sample page that already had a golden keeps Rhythm origin (`region_0_19` in `crates/model/src/sample.rs`), although Defaulted listed "the samples' regions" among those that start at Top | those pages are the old goldens, and Q3, ADR-023 item 2 and Defaulted's "older pages' goldens unchanged" keep their bytes; with Top, thirteen goldens moved (patterns, its landscape, turned, angle and borders on both tablets, and the three paper pages). The only place the app makes a region, the Pattern tool, starts at Top; New… makes none | veto: re-make those goldens at Top |
+| A ruling turned inside its frame counts in the box round the frame in the ruling's own axes: Top's first line is the first one that meets the frame, Centre centres over the lines that meet it | at a quarter turn this is the frame's own edge; counting from the old anchor (the frame's corner before turning) would put Top's first major off the edge of a frame that is not square | veto: count from the old anchor |
+| Isometric, Centre: the vertical majors are centred; the slanted majors are placed so that all three families still meet at one crossing on a major column, centred down it; each slanted family is then centred to within a line, not on its own | centred one by one, the three families' majors would cross in three different places and draw small stray triangles instead of a big triangle grid | veto: centre each family on its own |
+| Isometric dots, Centre: a major dot is on a centred major column and a centred major place down it (the rule they had, counted from the frame) | the dots' own rule | none |
+
+Not seen: the inspector in the real window. The screen was locked (`mate-screensaver-command -q` → active, lock on), so
+no screenshot; the row was checked headless instead (`crates/ui/tests/major_from.rs`).

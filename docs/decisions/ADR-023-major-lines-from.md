@@ -5,8 +5,8 @@ ratified-by: chris
 ratified-on: "2026-11-23"
 owner: chris
 kind: design
-built: not started
-proof: "queued for a fresh session: docs/bbq/2026-11-23-major-lines-from-top.md, Kickoff"
+built: landed
+proof: "`crates/layout/tests/major_from.rs::each_choice_places_the_majors_on_lines_grid_dots_and_cornell`, `crates/layout/tests/major_from.rs::centre_leaves_the_odd_line_after_the_last_major`, `crates/layout/tests/major_from.rs::a_border_does_not_move_the_majors`, `crates/layout/tests/major_from.rs::isometric_has_no_top_and_its_centred_majors_still_meet`, `crates/layout/tests/major_from.rs::a_ruling_turned_a_quarter_turn_counts_in_its_own_axes`, `crates/model/tests/major_from.rs::a_file_without_the_field_reads_as_the_rhythm_origin_and_only_others_are_written`, `crates/ui/tests/major_from.rs::isometric_greys_top_and_shows_what_it_draws`, `crates/render/tests/migrate_v019.rs::v019_files_open_migrate_and_export_the_same_bytes`, `crates/render/tests/major_lines_from.rs::major_lines_from_page_goldens`"
 supersedes: nothing
 amends: "docs/bbq/2026-11-13-rung-9-pattern-library.md, Defaulted \"Which patterns have major lines\" (counting starts at the rhythm origin)"
 ---
@@ -79,3 +79,7 @@ Drivers:
   `docs/bbq/2026-11-23-major-lines-from-top.md`.
 - 2026-11-23: ratified by chris ("Ratify", asked "Ratify ADR-023 … as written?"). Earlier values, word for word:
   `status: proposed`; `status-note: drafted 2026-11-23 from chris's answers in docs/bbq/2026-11-23-major-lines-from-top.md (goforit); awaiting ratification`.
+- 2026-11-23: built on `main` by the lead in a fresh session (Opus 5.5, high), as the record's Kickoff says; waits for
+  chris's look. Earlier values, word for word: `built: not started`; `proof: "queued for a fresh session:
+  docs/bbq/2026-11-23-major-lines-from-top.md, Kickoff"`. What the build chose where the record left room is in the
+  record's Built section.
