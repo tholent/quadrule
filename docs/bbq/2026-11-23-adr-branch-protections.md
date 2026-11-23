@@ -54,3 +54,11 @@ None.
 The last question: chris, "Just make the ADR (Recommended)". ADR-022 written, proposed
 (`docs/decisions/ADR-022-github-branch-and-tag-rules.md`); `adr-check`: 22 ADRs, 0 failures. Nothing applied on GitHub
 until chris ratifies.
+
+## Correction (2026-11-23, after ratification)
+
+The premise "the signed-in `gh` token has admin rights" was wrong. `.permissions.admin: true` is chris's role on the
+repository, not what the token may do: `gh api -X POST repos/tholent/quadrule/rulesets` → `403 Resource not accessible
+by personal access token` (the token lacks Administration: write; the same 403 `gh repo edit` met on 2026-11-10). So the
+Defaulted call "the lead applies them with gh" falls to its veto: chris applies them in the browser, or gives the
+token Administration: write, and the lead reads them back.

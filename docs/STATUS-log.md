@@ -2961,3 +2961,7 @@ VM cannot build the macOS parts.
   later, with the ruling that ends work on `main`; also secret scanning with push protection, automatic deletion of
   merged branches, and deleting `batch-2-menus` (fully merged). ADR-022 proposed; `adr-check`: 22 ADRs, 0 failures.
   Nothing applied on GitHub yet: it waits for ratification.
+- ADR-022 ratified by chris ("ratified"). Applying it from here failed: `gh api -X POST .../rulesets` → `403 Resource
+  not accessible by personal access token` (no Administration: write on the token); nothing created (`gh api
+  .../rulesets --jq length` → 0). The record's premise is corrected; chris applies the rules in the browser, then the
+  lead reads them back.
