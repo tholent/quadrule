@@ -2971,3 +2971,14 @@ VM cannot build the macOS parts.
   Push protection is still off. ADR-022 built `partial`, owed push protection; `adr-check`: 22 ADRs, 0 failures.
 - chris turned push protection on (Settings → Advanced Security). `make check-github` → `GITHUB repo=tholent/quadrule
   rulesets=2 missing=none status=ok`. ADR-022 built `landed`, proof `.github/scripts/check-github-rules.sh`.
+
+## 2026-11-23 — L16: a right-aligned text box may end on the rhythm (ADR-019 amended)
+
+- chris: "for right aligned text items, we should allow for ending on rhythm"; then "Right-aligned: right edge
+  (Recommended)" and "Amend ADR-019 (Recommended)". ADR-019 amended (item 3); `adr-check`: 22 ADRs, 0 failures.
+- Built: L16 counts a Right-aligned text box as on the rhythm across when its right edge is on a rhythm line
+  (`crates/lint/src/lib.rs`). Snapping already caught a box's right edge; unchanged. Test
+  `crates/lint/tests/starter_rules.rs::l16_lets_a_right_aligned_text_box_end_on_the_rhythm`, which fails against the
+  old code (`result=fail right_aligned_ending_on_clear=false`).
+- `make check` → `TESTS scope=workspace checks=795 check_fail=0 passed=745 failed=0 status=ok runner=nextest`. Not in a
+  release yet (`v0.16.5` is out); it goes in the next one.

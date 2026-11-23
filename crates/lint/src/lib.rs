@@ -849,8 +849,17 @@ pub fn lint_against(
             // Flush on a page edge, near or far, counts as on the rhythm on that axis (ADR-019, item 3).
             let flush =
                 |lo: f64, hi: f64, page: f64| lo.round() == 0.0 || hi.round() == page.round();
-            let off_x =
-                !on(x, rhythm.origin_x, rhythm.unit_x) && !flush(frame_px.0, frame_px.2, pw);
+            // A right-aligned text box ends on the rhythm instead: its right edge counts (ADR-019, amendment of
+            // 2026-11-23).
+            let ends_on = matches!(&o.kind, ObjectKind::Text(t) if t.align == quadrule_model::TextAlign::Right)
+                && on(
+                    px(o.frame.x_mm + o.frame.w_mm).round(),
+                    rhythm.origin_x,
+                    rhythm.unit_x,
+                );
+            let off_x = !on(x, rhythm.origin_x, rhythm.unit_x)
+                && !ends_on
+                && !flush(frame_px.0, frame_px.2, pw);
             let off_y =
                 !on(y, rhythm.origin_y, rhythm.unit_y) && !flush(frame_px.1, frame_px.3, ph);
             if off_x || off_y {

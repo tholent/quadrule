@@ -14,7 +14,8 @@
 
 //! The rules chris's first starters showed to misfire (record `docs/bbq/2026-11-23-adr-starter-lint.md`): the Full bleed
 //! mark and L10's edge (ADR-019 items 1 and 2), page edges on the rhythm (item 3), L14 and L09 on drawing grids (ADR-021
-//! items 2 and 3), and L18's negative zero. Each test prints one structured `CHECK` line (run with `-- --nocapture`).
+//! items 2 and 3), L18's negative zero, and a right-aligned text box ending on the rhythm (ADR-019, amendment of
+//! 2026-11-23). Each test prints one structured `CHECK` line (run with `-- --nocapture`).
 
 use quadrule_layout::lay_out_text;
 use quadrule_lint::*;
@@ -218,6 +219,50 @@ fn l16_counts_a_page_edge_as_on_the_rhythm_on_that_axis() {
     println!(
         "\nCHECK crate=lint name=l16_page_edges result={} full_height_on_rhythm_clear={top_edge_ok} full_height_off_rhythm_across_only={across_only} flush_right_clear={right_edge_ok} loose_caught_both={loose_both}",
         pass(ok)
+    );
+    assert!(ok);
+}
+
+/// A text box of `align` from `x` mm to `right` mm, its top on the rhythm (38 mm).
+fn text_box(id: u128, x: f64, right: f64, align: TextAlign) -> Object {
+    object(
+        id,
+        Frame::new(x, 38.0, right - x, 6.0),
+        Style::Role(LineRole::Text),
+        ObjectKind::Text(TextBox {
+            content: "Notes".into(),
+            align,
+            ..TextBox::default()
+        }),
+    )
+}
+
+#[test]
+fn l16_lets_a_right_aligned_text_box_end_on_the_rhythm() {
+    let manta = builtin(MANTA_ID).unwrap();
+    // The rhythm is 6 mm from the 8 mm margin: 38 mm is on it, 10.7 and 39.3 mm are not.
+    let right_ends_on = text_box(1, 10.7, 38.0, TextAlign::Right);
+    let left_ends_on = text_box(2, 10.7, 38.0, TextAlign::Left);
+    let right_neither = text_box(3, 10.7, 39.3, TextAlign::Right);
+    let right_starts_on = text_box(4, 14.0, 39.3, TextAlign::Right);
+    let f = run(
+        &page(vec![
+            right_ends_on,
+            left_ends_on,
+            right_neither,
+            right_starts_on,
+        ]),
+        &manta,
+    );
+    let clear = |id| !has(&f, "L16", id);
+    let ok = clear(1) && !clear(2) && !clear(3) && clear(4);
+    println!(
+        "\nCHECK crate=lint name=l16_right_aligned_text_ends_on_rhythm result={} right_aligned_ending_on_clear={} left_aligned_ending_on_caught={} right_aligned_neither_caught={} right_aligned_starting_on_clear={}",
+        pass(ok),
+        clear(1),
+        !clear(2),
+        !clear(3),
+        clear(4)
     );
     assert!(ok);
 }
