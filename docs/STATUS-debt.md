@@ -385,7 +385,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   menu bar by hand (approved for `v0.16.4`), but no test drives the Mac's menu bar, its ⌘ keys or the double-click;
   several files double-clicked at once open only the first (one document at a time); the Mac's
   Open Recent is re-read every 2 s, not when it opens; the two keys-against-items tests take 1.5–2 minutes each.
-- ADR-024 (proposed 2026-11-23), owed before the v1.0 tag: switch on ADR-022 item 3 (pull request and the three CI jobs
+- ADR-024 (ratified 2026-11-23), owed before the v1.0 tag: switch on ADR-022 item 3 (pull request and the three CI jobs
   required on `main`, chris on the bypass list), a CI job that reports the required checks for documents-only pull
   requests, the AGENTS.md amendment closing work on `main`, and `.github/scripts/check-github-rules.sh` checking the
   new rules (`docs/decisions/ADR-024-leave-main-at-v1.md`, `docs/arcs/v1/README.md`, release bar).

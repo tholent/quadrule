@@ -83,7 +83,7 @@ v1.0 ships only when all of these hold: every rung look-approved; every starter 
 both devices; drawing and dragging under 50 ms at the 90th percentile on the Pi on the heaviest starter; a blind
 tastetest says READY; the release candidate has had testers on macOS and Windows (Q14).
 
-*(2026-11-23, ADR-024, proposed: before the v1.0 tag, work stops going straight to `main`: the pull request and required
+*(2026-11-23, ADR-024, ratified: before the v1.0 tag, work stops going straight to `main`: the pull request and required
 CI checks of ADR-022 item 3 are switched on, with a quick job reporting the checks for documents-only pull requests.)*
 
 ## Out of this arc

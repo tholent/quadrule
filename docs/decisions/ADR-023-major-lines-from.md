@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: drafted 2026-11-23 from chris's answers in docs/bbq/2026-11-23-major-lines-from-top.md (goforit); awaiting ratification
+status: accepted
+status-note: "ratified by chris 2026-11-23 (\"Ratify\", for ADR-023)"
+ratified-by: chris
+ratified-on: "2026-11-23"
 owner: chris
 kind: design
 built: not started
@@ -75,3 +77,5 @@ Drivers:
 
 - 2026-11-23: drafted with goforit (no rounds) from chris's answers Q1–Q8 and the lead's Defaulted calls in
   `docs/bbq/2026-11-23-major-lines-from-top.md`.
+- 2026-11-23: ratified by chris ("Ratify", asked "Ratify ADR-023 … as written?"). Earlier values, word for word:
+  `status: proposed`; `status-note: drafted 2026-11-23 from chris's answers in docs/bbq/2026-11-23-major-lines-from-top.md (goforit); awaiting ratification`.

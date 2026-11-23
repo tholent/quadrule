@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: drafted 2026-11-23 from chris's answers (docs/bbq/2026-11-23-adr-leaving-main.md); awaiting ratification
+status: accepted
+status-note: "ratified by chris 2026-11-23 (\"Ratify\", for ADR-024)"
+ratified-by: chris
+ratified-on: "2026-11-23"
 owner: chris
 kind: process
 built: not started
@@ -80,3 +82,5 @@ Q1 accepted).
 
 - 2026-11-23: drafted from chris's answers to four questions (`docs/bbq/2026-11-23-adr-leaving-main.md`), deciding when
   ADR-022 item 3 applies.
+- 2026-11-23: ratified by chris ("Ratify", asked "Ratify ADR-024 … as written?"). Earlier values, word for word:
+  `status: proposed`; `status-note: drafted 2026-11-23 from chris's answers (docs/bbq/2026-11-23-adr-leaving-main.md); awaiting ratification`.

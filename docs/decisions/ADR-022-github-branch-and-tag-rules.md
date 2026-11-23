@@ -96,4 +96,4 @@ the CI token cannot read repository settings.
 - 2026-11-23: chris turned push protection on; `make check-github` → `GITHUB repo=tholent/quadrule rulesets=2
   missing=none status=ok`. Earlier values, word for word: `built: partial`; `owed: "push protection: off when read back
   on 2026-11-23 (`make check-github` → missing=push-protection)"`.
-- 2026-11-23: when item 3 applies is decided by ADR-024 (proposed): at v1.0, before its tag.
+- 2026-11-23: when item 3 applies is decided by ADR-024 (proposed; ratified the same day): at v1.0, before its tag.

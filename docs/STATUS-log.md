@@ -2994,3 +2994,5 @@ VM cannot build the macOS parts.
   v1.0 (chris overruled "end of pre-alpha, or sooner"); then ADR-022 item 3 switches on, the agent opens and merges its
   pull request on green, and a quick job reports the checks for documents-only pull requests. Queued before the v1.0
   tag (`docs/STATUS-debt.md`, the board's release bar).
+- chris ratified ADR-023 and ADR-024 ("Ratify" to each). `adr-check`: 24 ADRs, 0 failures. ADR-023 is ready for the
+  fresh session (`docs/bbq/2026-11-23-major-lines-from-top.md`, Kickoff); ADR-024's switch waits for v1.0.
