@@ -2936,3 +2936,12 @@ VM cannot build the macOS parts.
 - Asked next: whether "approved" also covers the Full bleed tick (ADR-019's look), and whether to cut `v0.16.5`.
 - chris, word for word: "it covers the full bleed, but wait a minute on cutting a release". So the look of ADR-019's
   Full bleed tick is approved with the calendar; `v0.16.5` is held: no version bump, notes or tag until chris says.
+
+## 2026-11-23 — v0.16.5
+
+- chris opened a bbq on a week option for the calendar ("bbq 4q add 'week' option to calendar pattern"), then
+  dropped it before any answer: "ok, n/m. let's cut this release". No record written; the idea is not queued.
+- Version 0.16.5 (`Cargo.toml`, `Cargo.lock`); notes `docs/arcs/v1/release-notes/v0.16.5.md` (ADR-019, ADR-020,
+  ADR-021 built, the calendar pattern and the mini calendar, format 0.19.0); STATUS and the board's row 16 and
+  Re-plans updated.
+- `make check` on 0.16.5 → `TESTS scope=workspace checks=794 check_fail=0 passed=744 failed=0 status=ok runner=nextest`.
