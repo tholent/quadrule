@@ -210,7 +210,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   menu bar with ⌘ keys (`crates/app/src/mac_menu.rs`); the status bar's snapping switches moved to View ▸ Snapping; a
   `.quad` double-clicked in Finder opens (`crates/macos/`, ADR-008 amended). CI starts the app on a Mac
   (`.github/workflows/ci.yml`, `launch`).
-- The calendar pattern and the mini calendar are built, waiting for chris's look (record
+- The calendar pattern and the mini calendar are built and approved by chris 2026-11-23 ("approved"; record
   `docs/bbq/2026-11-23-calendar-pattern-and-mini-calendar.md`, Built): a Calendar pattern region, dated or undated,
   and a Mini calendar tool (M); words laid out as saved text, L07 when they would be too small; format 0.19.0
   (`crates/layout/src/calendar.rs`, `crates/model/src/calendar.rs`, `crates/render/tests/calendar.rs`). Try it:
@@ -280,7 +280,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   system, the status bar's toggles into View, the macOS double-click). Batch 3, Quick Look, moved to v1.1 (chris 2026-11-23, no signing yet). Next: rung 16b, the starters, `v0.16.6`, once chris's starters are ready. chris's first starters are being stepped
   through the linter (`docs/bbq/2026-11-23-adr-starter-lint.md`): ADR-019 (Full bleed, page edges on the rhythm) and
   ADR-020 (a Margin role) are ratified (2026-11-23); ADR-021 (starters show no findings; L14 and L09 leave drawing
-  grids alone) is ratified too; all three are built (format 0.19.0) and wait for chris's look; so do the calendar pattern and the mini calendar (built 2026-11-23). They ship with chris's new features (asked before the
+  grids alone) is ratified too; all three are built (format 0.19.0) and wait for chris's look; the calendar pattern and the mini calendar are built and approved (2026-11-23). They ship with chris's new features (asked before the
   planning starters) as `v0.16.5`; 16b becomes `v0.16.6`; its lead's prompt is
   `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md` (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a

@@ -111,3 +111,9 @@ Full bleed tick (ADR-019), before `v0.16.5`.
 | **The mini calendar has a title line (month and year) by default, with a tick to turn it off** | not asked for: the record names initials and numbers only; a block with no month named reads ambiguously. *Grew past the record; veto: no title* |
 | The mini calendar's rows share its height (title, initials, the month's weeks); numbers centred in their columns; initials in Label gray, numbers and title in the object's role (Text) | Defaulted roles |
 | The tool's key is M | free, and "mini" |
+
+## Approved (2026-11-23)
+
+chris, word for word, after the look (the calendar page in the window, the lead's screenshots and the three calls put to
+him: the mini calendar's title, day numbers left out under about 9.5 mm cells, week rows sharing the height): "approved".
+No vetoes: every Defaulted call and every reading in Built stands, the mini calendar's title (on by default) included.

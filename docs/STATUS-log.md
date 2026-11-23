@@ -2928,3 +2928,9 @@ VM cannot build the macOS parts.
   across, so the corner square is 2.95 mm). One Ctrl+Z put it back undated; Ctrl+Q quit with nothing changed.
 - CI run 45242627211 on `809c16c`: `ubuntu-latest`, `windows-latest`, `macos-latest`: success. Fuzz 45242627231 and
   Coverage 45242627082: success.
+
+## 2026-11-23 — the calendar pattern and the mini calendar approved
+
+- chris, word for word: "approved". No vetoes: the Defaulted calls and the lead's readings stand, the mini calendar's
+  title included (record, Approved). STATUS and the board's row 16 updated.
+- Asked next: whether "approved" also covers the Full bleed tick (ADR-019's look), and whether to cut `v0.16.5`.
