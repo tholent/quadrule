@@ -76,6 +76,8 @@ None.
 
 ## Kickoff
 
+Route: a fresh session (chris: "Fresh session (Recommended)"; this one had been summarised once). Lead: Opus 5.5, high.
+
 Build the calendar pattern (Q1, Q3–Q7) and the mini calendar (Q2, Q3, Q7) from this record, on `main`, with tests that
 print one `CHECK` line each and goldens on both tablets. Then chris's look, together with the Full bleed tick (ADR-019),
 and `v0.16.5`.
