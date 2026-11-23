@@ -2908,3 +2908,15 @@ VM cannot build the macOS parts.
 - Not done here: the window itself. This session has no display (no `DISPLAY`, no Xvfb; checked 2026-11-23), so the
   inspector rows and the tool's icon are tested headless only. Speed on the calendar page not measured.
 - Waits for chris's look (with the Full bleed tick, ADR-019), then `v0.16.5`.
+
+## 2026-11-23 — correction: this session does have a display
+
+- The entry above says the session has no display. Wrong: `DISPLAY` was unset in the shell, but an X server runs as
+  `:0` (`xdpyinfo -display :0` → X.Org 21.1.16, one screen, 1024x768, 96 DPI) and the session reaches it. chris
+  installed scrot.
+- Looked at in the window (release build, `DISPLAY=:0 ./target/release/quadrule --calendar-page --look calendar`, then
+  `--look mini-calendar`, screenshots with scrot): the Style tab shows Pattern: Calendar with Month, Year and Week starts
+  on for the dated calendar, and the Mini calendar section (Month, Year, Week starts on, Month and year) for the mini
+  calendar; the Mini calendar tool's icon is last in the tools bar; the page and the device strip draw all four
+  calendars. Not seen: the undated rows (1st falls on, Days in month) and an open menu, as nothing here can click
+  (no xdotool).
