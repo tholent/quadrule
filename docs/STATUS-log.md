@@ -2982,3 +2982,9 @@ VM cannot build the macOS parts.
   old code (`result=fail right_aligned_ending_on_clear=false`).
 - `make check` → `TESTS scope=workspace checks=795 check_fail=0 passed=745 failed=0 status=ok runner=nextest`. Not in a
   release yet (`v0.16.5` is out); it goes in the next one.
+
+## 2026-11-23 — bbq: where a region's major lines start
+
+- bbq, 8 questions (`docs/bbq/2026-11-23-major-lines-from-top.md`): a per-region **Major lines from**: Top, Centre or
+  Rhythm origin, on both axes; older files keep Rhythm origin; isometric offers Rhythm origin and Centre; a border stands
+  for the first major. Built in a fresh session (chris), Opus 5.5 high; format 0.20.0.

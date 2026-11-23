@@ -65,5 +65,6 @@ None.
 
 ## Kickoff
 
-Route: the lead's choice at the end of the bbq. Build `major_from` (Q1–Q7) from this record on `main`, with tests that
+Route: a fresh session (chris: "A fresh session (Recommended)"; this one had built the calendar, cut `v0.16.5`, made
+ADR-022 and amended ADR-019). Lead: Opus 5.5, high. Build `major_from` (Q1–Q7) from this record on `main`, with tests that
 print one `CHECK` line each, a 0.19 fixture, and one new golden page on both tablets. Then chris's look.
