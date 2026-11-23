@@ -54,7 +54,8 @@ pixels; an existing role. → ADR-020.
 
 ## Owed
 
-- ADR-019 and ADR-020 wait for chris's ratification; their build is queued before rung 16b.
+- ~~ADR-019 and ADR-020 wait for chris's ratification~~ ratified 2026-11-23, chris: "ratify 019 and 020". Their build is
+  queued before rung 16b.
 - The Margin role's calibration on both tablets (ADR-020).
 - More Paper starters, then the other categories, stepped through the same way.
 

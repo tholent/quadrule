@@ -2845,3 +2845,9 @@ VM cannot build the macOS parts.
 - chris's answers: "A Full bleed mark (Recommended)", "Page edges count as on rhythm (Recommended)", "A new Margin role
   (Recommended)". ADR-019 and ADR-020 drafted through makeadr, proposed; ADR-012 points at both. `adr-check`: 20 ADRs,
   0 failures. Build queued before 16b, after the review of more starters.
+- `v0.16.4` tagged on `9c96921` after CI run 45219511834 (`macos-latest`, `windows-latest`, `ubuntu-latest`: success).
+  Release run 45221879230: `linux-x86_64`, `windows-x86_64`, `linux-aarch64`, `macos-universal`, and Draft, attach,
+  publish: success; `gh release view v0.16.4` → `v0.16.4 draft=false pre=true assets=7`. Test tag `v0.16.4-test.2`
+  deleted.
+- chris: "ratify 019 and 020". ADR-019 and ADR-020 accepted; `adr-check`: 20 ADRs, 0 failures. Built: not started,
+  queued before 16b.
