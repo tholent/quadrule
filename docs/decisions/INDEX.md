@@ -26,4 +26,4 @@ change the ADR and run the script again. An ADR's own header outranks this table
 | [ADR-019](ADR-019-full-bleed-and-page-edges.md) | An object can be marked Full bleed, which L06 and L10 then skip, and an object flush on a page edge is on the rhythm on that axis | design | accepted | landed |
 | [ADR-020](ADR-020-margin-role.md) | Line roles gain an eighth, Margin, for wide, light lines such as a notebook's margin | design | accepted | partial |
 | [ADR-021](ADR-021-starters-show-no-findings.md) | A starter is lint-clean only when it shows no findings at all, and L14 and L09 leave drawing grids alone | design | accepted | partial |
-| [ADR-022](ADR-022-github-branch-and-tag-rules.md) | GitHub guards `main` and the release tags now, and adds pull requests and required checks only when work leaves `main` | process | accepted | partial |
+| [ADR-022](ADR-022-github-branch-and-tag-rules.md) | GitHub guards `main` and the release tags now, and adds pull requests and required checks only when work leaves `main` | process | accepted | landed |

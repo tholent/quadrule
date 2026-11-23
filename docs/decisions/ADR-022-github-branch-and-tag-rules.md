@@ -5,9 +5,8 @@ ratified-by: chris
 ratified-on: "2026-11-23"
 owner: chris
 kind: process
-built: partial
+built: landed
 proof: "`.github/scripts/check-github-rules.sh`"
-owed: "push protection: off when read back on 2026-11-23 (`make check-github` → missing=push-protection)"
 supersedes: nothing
 amends: nothing
 ---
@@ -94,3 +93,6 @@ the CI token cannot read repository settings.
   also blocks force pushes, which repeats Restrict updates), merged branches deleted, secret scanning on,
   `batch-2-menus` deleted; push protection off. Earlier values, word for word: `built: not started`; `proof: "applied
   by the lead with gh after ratification (docs/bbq/2026-11-23-adr-branch-protections.md, Defaulted)"`.
+- 2026-11-23: chris turned push protection on; `make check-github` → `GITHUB repo=tholent/quadrule rulesets=2
+  missing=none status=ok`. Earlier values, word for word: `built: partial`; `owed: "push protection: off when read back
+  on 2026-11-23 (`make check-github` → missing=push-protection)"`.

@@ -2969,3 +2969,5 @@ VM cannot build the macOS parts.
   (`make check-github`): `GITHUB repo=tholent/quadrule rulesets=2 missing=push-protection status=fail`. Both rulesets
   active, no bypass; merged branches deleted; secret scanning on; `batch-2-menus` gone (branches: `badges`, `main`).
   Push protection is still off. ADR-022 built `partial`, owed push protection; `adr-check`: 22 ADRs, 0 failures.
+- chris turned push protection on (Settings → Advanced Security). `make check-github` → `GITHUB repo=tholent/quadrule
+  rulesets=2 missing=none status=ok`. ADR-022 built `landed`, proof `.github/scripts/check-github-rules.sh`.
