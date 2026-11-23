@@ -24,6 +24,9 @@ amends: nothing
 4. **Safe zones are measured** from device screenshots by `cargo xtask safe-zones`, and a test keeps the profiles and
    screenshots in step.
 5. **Lint checks every toolbar position** (left, right, top, floating) and the footers.
+
+> 2026-11-23: items 1, 2 and 5 are amended, if ratified, by ADR-019 (objects marked Full bleed are skipped by L06) and
+> ADR-020 (a Margin role). See their files.
 6. **The overlay and the safe-zone snap show the left, right and top toolbar zones and the footers, not the floating
    one;** overlapping zones are filled once and outlined only round their combined area, with no labels.
 
@@ -62,6 +65,8 @@ amends: nothing
   measured on both devices; the Manta's pen shades (assumed equal to the Nomad's); safe zones for landscape, a collapsed
   toolbar and other floating positions; the lint rules that need calibrated values (L03, L05, L07, L09, L13, L14)"`.
   Status unchanged (`accepted`); built unchanged (`partial`).
+- 2026-11-23: two new ADRs, proposed from chris's starter lint answers, amend this one: ADR-019 (a Full bleed mark
+  that L06 skips; item 5) and ADR-020 (an eighth role, Margin; items 1 and 2). Header values unchanged.
 
 ## Amendment — 2026-11-10, chris
 

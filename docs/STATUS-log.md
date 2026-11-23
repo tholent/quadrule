@@ -2836,3 +2836,12 @@ VM cannot build the macOS parts.
   16b becomes `v0.16.5`.
 - Checks on `main` with 0.16.4: `make check` → `TESTS scope=workspace checks=769 check_fail=0 passed=715 failed=0
   status=ok runner=nextest`.
+
+## 2026-11-23 — chris's first starters against the linter: ADR-019 and ADR-020 proposed
+
+- chris asked to step through his starters' lint findings and make or amend ADRs, Paper first. `narrow_ruled.quad` and
+  `narrow_ruled_rtl.quad` (in `~/starters-draft/`, not in the repository): `cargo xtask lint` → `11 finding(s) on 2
+  profile(s)` each (L06, L10, L02, L16). Record `docs/bbq/2026-11-23-adr-starter-lint.md`.
+- chris's answers: "A Full bleed mark (Recommended)", "Page edges count as on rhythm (Recommended)", "A new Margin role
+  (Recommended)". ADR-019 and ADR-020 drafted through makeadr, proposed; ADR-012 points at both. `adr-check`: 20 ADRs,
+  0 failures. Build queued before 16b, after the review of more starters.
