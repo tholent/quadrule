@@ -25,3 +25,4 @@ change the ADR and run the script again. An ADR's own header outranks this table
 | [ADR-018](ADR-018-export-at-the-fallback-level.md) | Export draws at fearless_simd's fallback level on every computer, so no computer's processor changes a pixel | architecture | accepted | landed |
 | [ADR-019](ADR-019-full-bleed-and-page-edges.md) | An object can be marked Full bleed, which L06 and L10 then skip, and an object flush on a page edge is on the rhythm on that axis | design | accepted | not started |
 | [ADR-020](ADR-020-margin-role.md) | Line roles gain an eighth, Margin, for wide, light lines such as a notebook's margin | design | accepted | not started |
+| [ADR-021](ADR-021-starters-show-no-findings.md) | A starter is lint-clean only when it shows no findings at all, and L14 and L09 leave drawing grids alone | design | proposed | not started |

@@ -52,12 +52,46 @@ Full bleed mark covers L16; Free placement on the line. → ADR-019.
 should a starter's margin line be?" chris: "A new Margin role (Recommended)". Not taken: custom values in whole
 pixels; an existing role. → ADR-020.
 
+## Starters 3 to 7: bullet journal, Cornell, grid, hex, isometric
+
+chris: "I've sent 5 more starters. they may not violate any linting rules after the last change". ADR-019 and ADR-020
+were ratified but not built, so L06 and L10 still fired. First upload, `cargo xtask lint`: bullet journal 7, Cornell
+7, grid 7, hex 9, isometric 11 findings. Besides L06 and L10: L18 on all five (rhythm from a corner, a 27–72 px strip
+left at the right and bottom), L14 on hex and isometric, L09 on isometric (2.5 mm step).
+
+**D. Lint-clean.** "What must a starter pass to count as lint-clean (spec §13, the v1.0 release bar)?" chris: "No
+findings at all (Recommended)". → ADR-021 item 1.
+
+**E. L18.** Asked with D; chris did not pick an option but, word for word: "I've re-uploaded versions of all 5 that have
+centered rhythms". The starters change, not the rule. Re-linted: L18 gone from all five; bullet journal 5, Cornell 4,
+grid 4, hex 6, isometric 8 findings. Centring moved the bullet journal's top rule off the rhythm (L16, across and
+down): a starter fix (Snap to rhythm), no rule change. Isometric's step is now 3.0 mm.
+
+**F. L14.** "L14 on hex and isometric: 1 px slanted lines come out soft, and those patterns can't avoid slants. Since
+starters must show no findings at all, what should change?" chris: "L14 skips slanted patterns (Recommended)". Not
+taken: thicker lines in the starters; a per-object "Soft is fine" mark. → ADR-021 item 2.
+
+**G. L09.** "L09 on isometric: its rhythm steps 3.0 mm down the page, under the 5 mm handwriting limit, but isometric
+paper is for drawing. What should change?" chris: "L09 skips drawing grids (Recommended)". Not taken: a per-page "For
+drawing" mark; a bigger isometric step. → ADR-021 item 3.
+
+**H. Bullet journal's safe zones.** "the dot grid sits inside 12.7 mm margins but still under the footers and right
+toolbar, and the top rule is under the toolbars. How should it meet L06?" chris: "Mark both Full bleed (Recommended)".
+A starter change under ADR-019. Not taken: widen the margins; dots Full bleed, rule moved.
+
+What each starter still needs once ADR-019 and ADR-021 are built: Full bleed ticked on its pattern (and, in the bullet
+journal, on the dots and the top rule); the bullet journal's top rule snapped to the rhythm. The narrow-ruled pages
+also need ADR-020's Margin role on their margin line.
+
 ## Owed
 
 - ~~ADR-019 and ADR-020 wait for chris's ratification~~ ratified 2026-11-23, chris: "ratify 019 and 020". Their build is
   queued before rung 16b.
 - The Margin role's calibration on both tablets (ADR-020).
-- More Paper starters, then the other categories, stepped through the same way.
+- ADR-021 waits for chris's ratification; its build is queued with ADR-019 and ADR-020.
+- The starters' own fixes (Full bleed ticks, the bullet journal's snap, the Margin role) once the build lands; then a
+  re-lint of all seven, expecting no findings.
+- More starters, then the other categories, stepped through the same way.
 
 ## Defaulted (the lead's calls; each can be vetoed)
 

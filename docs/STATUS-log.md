@@ -2851,3 +2851,6 @@ VM cannot build the macOS parts.
   deleted.
 - chris: "ratify 019 and 020". ADR-019 and ADR-020 accepted; `adr-check`: 20 ADRs, 0 failures. Built: not started,
   queued before 16b.
+- Five more starters (bullet journal, Cornell, grid, hex, isometric) linted, then re-linted after chris centred their
+  rhythms (L18 gone). chris's answers D ("No findings at all"), F ("L14 skips slanted patterns"), G ("L09 skips drawing
+  grids") → ADR-021, proposed; H ("Mark both Full bleed") a starter change. Record updated.
