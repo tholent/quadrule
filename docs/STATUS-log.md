@@ -2854,3 +2854,4 @@ VM cannot build the macOS parts.
 - Five more starters (bullet journal, Cornell, grid, hex, isometric) linted, then re-linted after chris centred their
   rhythms (L18 gone). chris's answers D ("No findings at all"), F ("L14 skips slanted patterns"), G ("L09 skips drawing
   grids") → ADR-021, proposed; H ("Mark both Full bleed") a starter change. Record updated.
+- chris: "ratify 021". ADR-021 accepted. Spec §8.3 and §13 get dated notes pointing at ADR-019 and ADR-021.

@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: drafted 2026-11-23 from chris's answers (starter lint record, D, F and G); awaiting ratification
+status: accepted
+status-note: "ratified by chris 2026-11-23 (\"ratify 021\")"
+ratified-by: chris
+ratified-on: "2026-11-23"
 owner: chris
 kind: design
 built: not started
@@ -100,3 +102,5 @@ For 3, L09:
 ## History
 
 - 2026-11-23: drafted from chris's answers D, F and G in the starter lint record, through makeadr.
+- 2026-11-23: ratified by chris ("ratify 021"). Prior header values, word for word: status `proposed`, status-note
+  `drafted 2026-11-23 from chris's answers (starter lint record, D, F and G); awaiting ratification`.

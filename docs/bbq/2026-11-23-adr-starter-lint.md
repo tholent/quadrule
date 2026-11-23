@@ -88,7 +88,7 @@ also need ADR-020's Margin role on their margin line.
 - ~~ADR-019 and ADR-020 wait for chris's ratification~~ ratified 2026-11-23, chris: "ratify 019 and 020". Their build is
   queued before rung 16b.
 - The Margin role's calibration on both tablets (ADR-020).
-- ADR-021 waits for chris's ratification; its build is queued with ADR-019 and ADR-020.
+- ~~ADR-021 waits for chris's ratification~~ ratified 2026-11-23, chris: "ratify 021". Its build is queued with ADR-019 and ADR-020.
 - The starters' own fixes (Full bleed ticks, the bullet journal's snap, the Margin role) once the build lands; then a
   re-lint of all seven, expecting no findings.
 - More starters, then the other categories, stepped through the same way.

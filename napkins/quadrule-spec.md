@@ -476,6 +476,10 @@ The linter runs continuously, with results in a Lint panel and an issue count in
 > is marked embedded, not embedded (Embed fonts is off), or cannot be embedded (its licence) | Warn**. It is said once
 > for the document, not per device. The id is the lead's proposal; chris may rename it. L11 is built in the same rung.
 
+> Amended 2026-11-23, chris (ADR-019 and ADR-021, ratified): objects marked **Full bleed** are skipped by L06 and L10,
+> and L10 judges the frame, not a stroke's overhang; L16 counts an object flush on a page edge as on the rhythm on that
+> axis; L14 skips hex and isometric pattern regions; L09 skips an isometric rhythm and hex and isometric regions.
+
 Rhythm rules offer quick fixes: "Snap to rhythm" (single object or all off-rhythm objects), "Bind to rhythm," and "Center rhythm origin." Objects can be marked **"Free placement"** in the Arrange tab to opt out of L16 deliberately, e.g. a decorative element.
 
 Each rule has a tooltip that explains the problem in plain language and offers a quick fix ("Snap to pixel grid", "Use Guide role", "Move inside safe area"). Rules and thresholds read from the active profile's presets. Lint runs per profile, and the panel can filter by profile.
@@ -642,6 +646,9 @@ project.quad
 ## 13. Starter Gallery (v1)
 
 Each starter is a normal project file, organized into named layers, using line roles, constraints and its own rhythm so it adapts to every profile. All starters must pass lint with no rhythm warnings.
+
+> Amended 2026-11-23, chris (ADR-021, "ratify 021"): a starter passes lint only with no findings at all, Info
+> included, on every device it targets.
 
 | Category | Starters |
 |---|---|
