@@ -2879,3 +2879,4 @@ VM cannot build the macOS parts.
   with 16b). `adr-check`: 21 ADRs, 0 failures. Waits for chris's look (ADR-007).
 - CI run 45230043207 on `96b141d`: `windows-latest`, `macos-latest`, `ubuntu-latest`: success.
 - chris: "let's wrap these changes as well as my new features into v0.16.5 and 16b get's bumped back to v0.16.6". Board, STATUS, record and the 16b prompt updated.
+- bbq, 8 questions: a calendar pattern and a mini calendar (`docs/bbq/2026-11-23-calendar-pattern-and-mini-calendar.md`), for `v0.16.5`.
