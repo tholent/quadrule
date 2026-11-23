@@ -2877,3 +2877,4 @@ VM cannot build the macOS parts.
   lines: `cargo xtask lint` → 0 findings on six, 1 on the bullet journal (its top rule's L16: Snap to rhythm).
 - ADR-019 built `landed`; ADR-020 `partial` (calibration readings owed); ADR-021 `partial` (the starter test comes
   with 16b). `adr-check`: 21 ADRs, 0 failures. Waits for chris's look (ADR-007).
+- CI run 45230043207 on `96b141d`: `windows-latest`, `macos-latest`, `ubuntu-latest`: success.
