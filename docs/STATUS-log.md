@@ -2920,3 +2920,9 @@ VM cannot build the macOS parts.
   calendar; the Mini calendar tool's icon is last in the tools bar; the page and the device strip draw all four
   calendars. Not seen: the undated rows (1st falls on, Days in month) and an open menu, as nothing here can click
   (no xdotool).
+- With xdotool (installed by chris), in the window: the Undated month picked in the layers panel shows Month: Undated,
+  1st falls on: Wednesday, Days in month: 31, Week starts on: Sunday; the Month menu lists Undated then January to
+  December; picking February dates it to February 2026 (this year) in one step, the Year row replacing the undated
+  rows, four boxed rows (February 2026 starts on a Sunday). Its day numbers were left out on the Nomad, with an L07
+  in the Lint tab: "would be 5.4 pt, smaller than the 6.0 pt that reads" (the 62 mm wide region's cells are 8.9 mm
+  across, so the corner square is 2.95 mm). One Ctrl+Z put it back undated; Ctrl+Q quit with nothing changed.
