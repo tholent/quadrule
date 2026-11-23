@@ -2926,3 +2926,5 @@ VM cannot build the macOS parts.
   rows, four boxed rows (February 2026 starts on a Sunday). Its day numbers were left out on the Nomad, with an L07
   in the Lint tab: "would be 5.4 pt, smaller than the 6.0 pt that reads" (the 62 mm wide region's cells are 8.9 mm
   across, so the corner square is 2.95 mm). One Ctrl+Z put it back undated; Ctrl+Q quit with nothing changed.
+- CI run 45242627211 on `809c16c`: `ubuntu-latest`, `windows-latest`, `macos-latest`: success. Fuzz 45242627231 and
+  Coverage 45242627082: success.
