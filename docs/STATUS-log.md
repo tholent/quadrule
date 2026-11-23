@@ -2945,3 +2945,11 @@ VM cannot build the macOS parts.
   ADR-021 built, the calendar pattern and the mini calendar, format 0.19.0); STATUS and the board's row 16 and
   Re-plans updated.
 - `make check` on 0.16.5 → `TESTS scope=workspace checks=794 check_fail=0 passed=744 failed=0 status=ok runner=nextest`.
+- CI run 45255174131 on `772cfcf`: `macos-latest`, `windows-latest`, `ubuntu-latest`: success. `v0.16.5` tagged on
+  `772cfcf` (chris: "let's cut this release"). Release run 45258913684: `linux-x86_64`, `linux-aarch64`,
+  `windows-x86_64`, `macos-universal`, and Draft, attach, publish: success; `gh release view v0.16.5` →
+  `v0.16.5 draft=false pre=true assets=7` (https://github.com/tholent/quadrule/releases/tag/v0.16.5).
+- chris asked what branch protections the repository should have. Read-only: no rulesets (`gh api .../rulesets` → `[]`),
+  `main` not protected. Proposed, not applied: a `main` ruleset blocking force pushes and deletion, a tag ruleset on
+  `v*` (excluding `v*-test*`) blocking deletion and moving; pull requests and required checks only with a ruling
+  that ends work on `main` directly (CI's path filter would leave docs-only PRs waiting forever on required checks).
