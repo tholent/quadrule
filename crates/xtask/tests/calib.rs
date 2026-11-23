@@ -80,6 +80,7 @@ fn codes_are_unique_and_mean_the_same_everywhere() {
         + TEXT_SIZES_PT.len() * TEXT_WEIGHTS.len() * TEXT_GRAYS.len()
         + STRIP_LINES.len()
         + STRIP_DOTS.len()
+        + STRIP_MARGINS.len()
         + PATCH_STEP_GRAYS.len()
         + PATCH_BETWEEN_GRAYS.len()
         + 1;

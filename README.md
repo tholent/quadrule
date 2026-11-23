@@ -43,7 +43,8 @@ and error.
 - **Exact previews.** The editor shows the same pixels the export will write, per device, with a pixel grid and a
   real-size view.
 - **Line roles.** Instead of picking a width and a gray for every line, you give it a role (Whisper, Guide,
-  Structure, Emphasis, plus roles for dot grids and labels). Each profile turns a role into the width and gray that
+  Structure, Emphasis, Margin for wide, light lines such as a notebook's margin rule, plus roles for dot grids and
+  labels). Each profile turns a role into the width and gray that
   were measured to look right on that device.
 - **Recommends, never blocks.** A checker (the linter) lists what could go wrong, such as an object under the
   toolbar, and says why. You can always ignore it and export.
@@ -116,7 +117,10 @@ and error.
   nearest clean gray or a role that fits, move out of a safe area, use the smallest legible text size, snap to the rhythm
   or bind to it, centre the rhythm origin), and **Ignore this rule for this document**; ignored rules are listed at the
   end of the tab, each with a button to turn it back on. Mark an object **Free placement** in the Arrange tab to
-  exempt it from the off-rhythm check. Export opens one **Before you export** sheet when a device has a warning (or the
+  exempt it from the off-rhythm check, or **Full bleed** to say it is meant to run under the tablet's toolbars and
+  footers and to the page edge, as paper does (the safe-zone and off-the-page checks leave it). An object flush on a
+  page edge counts as on the rhythm on that side; hex and isometric patterns are not judged for soft lines or for
+  handwriting room, since they are for drawing. Export opens one **Before you export** sheet when a device has a warning (or the
   page uses fonts installed on this computer): each row can jump to its object, ignore its rule or be fixed, and
   **Export anyway** goes on. Under Custom, the Style tab shows the device's clean grays as swatches (**Show all grays**
   opens the 0 to 255 slider), says which role a stroke matches and offers **Use recommended**.
@@ -161,8 +165,8 @@ and error.
   it); click a picture to put that device on screen, or fold the strip shut. The Page tab lists the devices: tick them
   in and out (taking one out asks first if it has changes), and **Make primary** makes a device's layout the design
   without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
-  top of another object or squeezed thin on a secondary device. Files are saved as format 0.18.0 (0.16 added a small picture of the main device's page
-  inside the file, written at Save and Save As so a gallery can show the file; 0.17 adds the pattern region's border; 0.18 adds the space between grand staves); older files
+  top of another object or squeezed thin on a secondary device. Files are saved as format 0.19.0 (0.16 added a small picture of the main device's page
+  inside the file, written at Save and Save As so a gallery can show the file; 0.17 adds the pattern region's border; 0.18 adds the space between grand staves; 0.19 adds Full bleed and the Margin role); older files
   open unchanged and get the picture at their next save.
 - Landscape pages. Pick **Portrait** or **Landscape** in New… or in the Page tab (one undo step: objects follow their
   own constraints onto the turned page). A landscape page is designed upright on screen and exported turned a quarter

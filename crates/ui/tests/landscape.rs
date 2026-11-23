@@ -92,6 +92,7 @@ fn object(n: u128, frame: Frame, c: Constraints, kind: ObjectKind) -> Object {
         overrides: Default::default(),
         kind,
         free_placement: false,
+        full_bleed: false,
         extra: Extra::new(),
     }
 }

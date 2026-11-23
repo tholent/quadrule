@@ -1764,6 +1764,7 @@ pub fn group(doc: &Document, ids: &[Uuid], new_id: Uuid, name: &str) -> Result<C
         opacity_pct: crate::OPACITY_MAX,
         overrides: Default::default(),
         free_placement: false,
+        full_bleed: false,
         kind: ObjectKind::Group(GroupShape::default()),
         extra: crate::Extra::new(),
     };
@@ -1795,6 +1796,7 @@ fn container_object(id: Uuid, name: &str, frame: Frame, kind: ObjectKind) -> Obj
         opacity_pct: crate::OPACITY_MAX,
         overrides: Default::default(),
         free_placement: false,
+        full_bleed: false,
         kind,
         extra: crate::Extra::new(),
     }

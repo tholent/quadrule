@@ -129,6 +129,7 @@ fn obj(id: u128, name: &str, frame: Frame, style: Style, kind: ObjectKind) -> Ob
         opacity_pct: 100,
         overrides: Default::default(),
         free_placement: false,
+        full_bleed: false,
         kind,
         extra: Extra::new(),
     }
@@ -671,6 +672,66 @@ fn free_placement_is_a_checkbox_in_the_arrange_tab_with_a_mixed_state() {
         "CHECK crate=ui name=lint_pointer_free_placement result={} checkbox_in_arrange={present} one_step_silences_l16={on} mixed_for_two={mixed} click_sets_all={all_on} off_and_undo={}",
         pass(ok),
         all_off && undo_one
+    );
+    assert!(ok);
+}
+
+#[test]
+fn full_bleed_is_a_checkbox_beside_free_placement_with_a_mixed_state() {
+    // ADR-019: two lines 2 mm from the top, under the top toolbar's zone on the Manta (L06 each).
+    let doc = page(vec![
+        line(1, "top a", 30.0, 2.0, Style::Role(LineRole::Guide)),
+        line(2, "top b", 80.0, 2.0, Style::Role(LineRole::Guide)),
+    ]);
+    let mut h = window(doc);
+    let l06_of = |h: &mut Harness<'static, Window>, id: u128| {
+        h.state_mut().ui.viewer.page().map_or(0, |p| {
+            p.findings
+                .iter()
+                .filter(|f| f.rule == "L06" && f.object == Some(Uuid::from_u128(id)))
+                .count()
+        })
+    };
+    let bleed = |h: &Harness<'static, Window>, id: u128| {
+        h.state()
+            .ui
+            .viewer
+            .doc()
+            .unwrap()
+            .object(Uuid::from_u128(id))
+            .unwrap()
+            .full_bleed
+    };
+    let before = (l06_of(&mut h, 1), l06_of(&mut h, 2));
+    // One object: one undo step, L06 leaves it, the other is still caught.
+    h.state_mut()
+        .ui
+        .viewer
+        .select_row(Uuid::from_u128(1), false);
+    h.state_mut().ui.tab = Tab::Arrange;
+    h.run();
+    let n0 = steps(&h);
+    let present = h.query_by_label("Full bleed").is_some();
+    h.get_by_label("Full bleed").click();
+    h.run();
+    let on = bleed(&h, 1)
+        && steps(&h) == n0 + 1
+        && l06_of(&mut h, 1) == 0
+        && l06_of(&mut h, 2) == before.1;
+    // Both selected: mixed; a click marks both and L06 is silent on them.
+    h.state_mut().ui.viewer.select_row(Uuid::from_u128(2), true);
+    h.run();
+    let mixed = h.state_mut().ui.viewer.arrange_mixed().full_bleed;
+    h.get_by_label("Full bleed").click();
+    h.run();
+    let all_on = bleed(&h, 1) && bleed(&h, 2) && findings(&mut h, "L06") == 0;
+    // Undo takes back the last click only.
+    h.state_mut().ui.viewer.undo();
+    let undo_one = bleed(&h, 1) && !bleed(&h, 2);
+    let ok = present && before.0 > 0 && before.1 > 0 && on && mixed && all_on && undo_one;
+    println!(
+        "CHECK crate=ui name=lint_pointer_full_bleed result={} checkbox_in_arrange={present} l06_before={before:?} one_step_silences_l06_on_it_only={on} mixed_for_two={mixed} click_sets_all={all_on} undo_one={undo_one}",
+        pass(ok)
     );
     assert!(ok);
 }

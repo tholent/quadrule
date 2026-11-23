@@ -59,6 +59,7 @@ fn obj(id: u128, name: &str, frame: Frame, style: Style, kind: ObjectKind) -> Ob
         opacity_pct: 100,
         overrides: Default::default(),
         free_placement: false,
+        full_bleed: false,
         kind,
         extra: Extra::new(),
     }

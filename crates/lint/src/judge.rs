@@ -82,7 +82,8 @@ fn soft_stroke(o: &Object, rotation: f64, diagonal: bool) -> bool {
             | Pattern::Isometric {
                 style: IsoStyle::Dots,
             } => false,
-            Pattern::Isometric { .. } | Pattern::Hex { .. } => true,
+            // Slanted by nature: choosing the pattern is choosing slanted lines (ADR-021, item 2).
+            Pattern::Isometric { .. } | Pattern::Hex { .. } => false,
             _ => !(is_quarter_turn(rotation) && is_quarter_turn(pr.pattern_angle())),
         },
         _ => false,

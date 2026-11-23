@@ -62,6 +62,7 @@ fn line(id: u128, frame: Frame, style: Style) -> Object {
         opacity_pct: 100,
         overrides: Default::default(),
         free_placement: false,
+        full_bleed: false,
         kind: ObjectKind::Line(Line::default()),
         extra: Extra::new(),
     }

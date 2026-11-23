@@ -166,3 +166,29 @@ fn fill_roles_resolve_per_device() {
     );
     assert!(ok);
 }
+
+#[test]
+fn every_profile_has_the_margin_role_and_older_ones_read_the_default() {
+    // ADR-020: every built-in carries Margin, 5 px and gray 204 until measured; a profile saved before the role existed
+    // (a user's own, or one a file carries) has no `margin` line and reads the same default.
+    let all =
+        builtin_ids().all(|id| builtin(id).unwrap().role(LineRole::Margin) == default_margin());
+    let src = include_str!("../data/supernote.a6x2.ron");
+    let older: String = src
+        .lines()
+        .filter(|l| !l.trim_start().starts_with("margin:"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let dropped = older.len() < src.len();
+    let read = from_ron_checked(&older).map(|p| p.line_roles.margin);
+    let reads_default = read.as_ref().is_ok_and(|m| *m == default_margin());
+    // A paper page at 600 PPI draws the margin twice as wide as at 300.
+    let a4 = builtin("paper.a4").unwrap();
+    let wide = a4.at_ppi(600).role(LineRole::Margin).width_px;
+    let ok = all && dropped && reads_default && wide == 10;
+    println!(
+        "CHECK crate=profiles name=margin_role result={} every_builtin_has_it={all} older_profile_reads_default={reads_default} paper_600ppi_px={wide}",
+        if ok { "pass" } else { "fail" }
+    );
+    assert!(ok);
+}

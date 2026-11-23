@@ -29,7 +29,7 @@ use quadrule_profiles::Profile;
 pub const SWATCHES_PER_ROW: usize = 8;
 
 /// The line roles an object's stroke may be matched to: the dot grid's for dots, the gray-only roles for text, and the
-/// four line roles for anything else. Guide comes first, so it is the pick when two are as near.
+/// five line roles for anything else. Guide comes first, so it is the pick when two are as near.
 pub fn candidate_roles(o: &Object) -> &'static [LineRole] {
     match &o.kind {
         ObjectKind::Text(_) => &[LineRole::Text, LineRole::Label],
@@ -39,6 +39,7 @@ pub fn candidate_roles(o: &Object) -> &'static [LineRole] {
             LineRole::Whisper,
             LineRole::Structure,
             LineRole::Emphasis,
+            LineRole::Margin,
         ],
     }
 }
@@ -77,6 +78,7 @@ pub fn role_name_id(r: LineRole) -> &'static str {
         LineRole::Guide => "app-role-guide",
         LineRole::Structure => "app-role-structure",
         LineRole::Emphasis => "app-role-emphasis",
+        LineRole::Margin => "app-role-margin",
         LineRole::DotGrid => "app-role-dotgrid",
         LineRole::Text => "app-role-text",
         LineRole::Label => "app-role-label",

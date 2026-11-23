@@ -229,6 +229,7 @@ app-role-whisper = Whisper
 app-role-guide = Guide
 app-role-structure = Structure
 app-role-emphasis = Emphasis
+app-role-margin = Margin
 app-role-dotgrid = Dot grid
 app-role-text = Text
 app-role-label = Label
@@ -664,6 +665,8 @@ notice-reveal-failed = Could not open the folder: { $error }
 # Free placement (rung 14b).
 app-free-placement = Free placement
 app-free-placement-tip = Placed off the rhythm on purpose. The linter's off-rhythm check (L16) leaves it alone; nothing else changes.
+app-full-bleed = Full bleed
+app-full-bleed-tip = Meant to run under the tablet's toolbars and footers and to the page edge, as paper does. The linter's safe-zone check (L06) and off-the-page check (L10) leave it alone; nothing else changes.
 
 # Style tab grays (rung 14b): swatches of the device's clean levels, and which role a stroke is.
 app-style-show-grays = Show all grays

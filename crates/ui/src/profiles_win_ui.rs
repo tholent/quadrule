@@ -653,6 +653,7 @@ impl ViewerUi {
                             (&mut r.guide, "app-role-guide"),
                             (&mut r.structure, "app-role-structure"),
                             (&mut r.emphasis, "app-role-emphasis"),
+                            (&mut r.margin, "app-role-margin"),
                             (&mut r.dot_grid, "app-role-dotgrid"),
                         ] {
                             let label = ui.label(self.t(id));

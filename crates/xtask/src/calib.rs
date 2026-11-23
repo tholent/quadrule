@@ -98,6 +98,10 @@ pub const STRIP_LINES: [(u32, u8); 12] = [
 /// Writing strips W13–W18: square dot rows, size × gray (set 2: the sizes that showed on the
 /// Nomad, at the two darkest favourites).
 pub const STRIP_DOTS: [(u32, u8); 6] = [(2, 51), (2, 102), (3, 51), (3, 102), (4, 51), (4, 102)];
+/// Writing strips W19–W24: a margin rule, width × gray, beside Guide ruled lines (ADR-020: the Margin role is read
+/// from these; chris drew his margin at 0.45 mm, 5 px, gray 204).
+pub const STRIP_MARGINS: [(u32, u8); 6] =
+    [(3, 204), (4, 204), (5, 187), (5, 204), (5, 221), (6, 204)];
 
 /// Flat gray patches G1–G15: the even steps of 17 from 0 to 238, where a 16-level panel's own
 /// levels are expected to fall (added 2026-11-10 for rung 6's fills; arc v1 board, chris's queue).
@@ -356,6 +360,13 @@ impl<'a> Pager<'a> {
         let c = snap_center(y, w);
         let half = w as f64 / 2.0;
         self.rect(x0, c - half, x1, c + half, gray);
+    }
+
+    /// A vertical line `w` px wide whose centre snaps near `x`, from y0 to y1.
+    fn vline(&mut self, x: f64, y0: f64, y1: f64, w: u32, gray: u8) {
+        let c = snap_center(x, w);
+        let half = w as f64 / 2.0;
+        self.rect(c - half, y0, c + half, y1, gray);
     }
 
     fn dot(&mut self, shape: DotShape, size: u32, x: f64, y: f64, gray: u8) {
@@ -694,7 +705,7 @@ fn writing_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<V
     let mut pg = Pager::new(p, reg);
     pg.paragraph(
         "Writing strips. Write across each strip with every pen you use. Note the strips whose lines stay \
-         visible without competing with your writing. W1–W12: ruled lines 7 mm apart; W13–W18: dot rows 5 mm apart. Set 2: replaces any earlier writing pages.",
+         visible without competing with your writing. W1–W12: ruled lines 7 mm apart; W13–W18: dot rows 5 mm apart; W19–W24: a margin rule beside ruled lines (Guide, 1 px, gray 51). Set 2: replaces any earlier writing pages.",
         8.0,
         400,
     )?;
@@ -751,6 +762,36 @@ fn writing_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<V
                 x += step;
             }
         }
+        pg.sample(
+            code,
+            what,
+            (left, y0 + label_h, right, y0 + pg.mm(STRIP_MM)),
+        );
+    }
+    for &(w, g) in &STRIP_MARGINS {
+        n += 1;
+        let code = format!("W{n}");
+        let what = format!("margin rule {w} px, gray {g}");
+        let y0 = pg.row(pg.mm(STRIP_MM));
+        pg.text(
+            &format!("{code} · {what}"),
+            7.0,
+            700,
+            LABEL_GRAY,
+            (left, y0),
+            80.0,
+        )?;
+        for k in 0..3 {
+            pg.hline(
+                left,
+                right,
+                y0 + label_h + pg.mm(2.0) + k as f64 * pg.mm(7.0),
+                1,
+                51,
+            );
+        }
+        let x = left + pg.mm(20.0);
+        pg.vline(x, y0 + label_h, y0 + pg.mm(STRIP_MM), w, g);
         pg.sample(
             code,
             what,

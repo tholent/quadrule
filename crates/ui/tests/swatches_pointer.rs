@@ -46,6 +46,7 @@ fn obj(id: u128, name: &str, style: Style, fill: Option<Fill>, kind: ObjectKind)
         opacity_pct: 100,
         overrides: Default::default(),
         free_placement: false,
+        full_bleed: false,
         kind,
         extra: Extra::new(),
     }

@@ -42,6 +42,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.15.0", "0.16.0", v0_15_to_v0_16),
     ("0.16.0", "0.17.0", v0_16_to_v0_17),
     ("0.17.0", "0.18.0", v0_17_to_v0_18),
+    ("0.18.0", "0.19.0", v0_18_to_v0_19),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -199,6 +200,14 @@ fn v0_16_to_v0_17(_scene: &mut Value) -> Result<(), FormatError> {
 /// left out of its file, so a 0.17 scene needs no rewriting and draws and exports as it did. A 0.17 build keeps the new
 /// field as an unknown one on a save, but would space the grand staves by `pitch_units`.
 fn v0_17_to_v0_18(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.19 adds an optional `full_bleed` on an object (ADR-019: L06 and L10 leave it) and a line role, `Margin` (ADR-020).
+/// Both are new choices only: an object without the mark is left out of its file, so a 0.18 scene needs no rewriting
+/// and draws and exports as it did. A 0.18 build keeps `full_bleed` as an unknown field on a save, but cannot read a
+/// file that uses the Margin role; it reports an error rather than guessing.
+fn v0_18_to_v0_19(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

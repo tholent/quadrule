@@ -5,8 +5,8 @@ ratified-by: chris
 ratified-on: "2026-11-23"
 owner: chris
 kind: design
-built: not started
-proof: "queued before rung 16b (`docs/bbq/2026-11-23-adr-starter-lint.md`, Owed; `docs/arcs/v1/README.md` row 16)"
+built: landed
+proof: "`crates/lint/tests/starter_rules.rs::full_bleed_is_left_alone_by_l06_and_l10_and_the_rest_is_still_checked`, `crates/lint/tests/starter_rules.rs::l10_judges_the_frame_not_half_a_stroke_on_an_edge`, `crates/lint/tests/starter_rules.rs::l16_counts_a_page_edge_as_on_the_rhythm_on_that_axis`, `crates/ui/tests/lint_pointer.rs::full_bleed_is_a_checkbox_beside_free_placement_with_a_mixed_state`, `crates/render/tests/migrate_v018.rs::v018_files_open_migrate_and_export_the_same_bytes`"
 supersedes: nothing
 amends: "ADR-012 §Decision item 5 (lint checks every toolbar position and the footers); spec §8.3 L10 and L16"
 ---
@@ -85,3 +85,5 @@ placement on the margin line (no change, but its other axis stops being checked 
 - 2026-11-23: drafted from chris's answers A and B in the starter lint record, through makeadr.
 - 2026-11-23: ratified by chris ("ratify 019 and 020"). Prior header values, word for word: status `proposed`,
   status-note `drafted 2026-11-23 from chris's answers (starter lint record, A and B); awaiting ratification`.
+- 2026-11-23: built (lead session, after the ratification). Prior header values, word for word: built `not started`, proof
+  `"queued before rung 16b (`docs/bbq/2026-11-23-adr-starter-lint.md`, Owed; `docs/arcs/v1/README.md` row 16)"`.

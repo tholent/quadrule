@@ -89,8 +89,11 @@ also need ADR-020's Margin role on their margin line.
   queued before rung 16b.
 - The Margin role's calibration on both tablets (ADR-020).
 - ~~ADR-021 waits for chris's ratification~~ ratified 2026-11-23, chris: "ratify 021". Its build is queued with ADR-019 and ADR-020.
-- The starters' own fixes (Full bleed ticks, the bullet journal's snap, the Margin role) once the build lands; then a
-  re-lint of all seven, expecting no findings.
+- ~~The build of ADR-019, ADR-020 and ADR-021~~ built 2026-11-23 (`docs/STATUS-log.md`); waits for chris's look.
+- The starters' own fixes, chris's: tick Full bleed on each pattern (and on the bullet journal's dots and top rule),
+  snap the bullet journal's top rule to the rhythm, give the narrow-ruled margin lines the Margin role. Copies with the
+  ticks and the role applied by the lead lint at 0 findings, but the bullet journal at 1 (its rule's L16, the snap).
+- The Margin role's calibration: chris reads strips W19–W24 on both tablets (`cargo xtask calibration-sheet`).
 - More starters, then the other categories, stepped through the same way.
 
 ## Defaulted (the lead's calls; each can be vetoed)

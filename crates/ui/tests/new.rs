@@ -65,6 +65,7 @@ fn fill_region(doc: &quadrule_model::Document) -> Object {
         overrides: Default::default(),
         kind: ObjectKind::Pattern(PatternRegion::new(Pattern::Lines)),
         free_placement: false,
+        full_bleed: false,
         extra: Extra::new(),
     }
 }

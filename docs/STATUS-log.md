@@ -2855,3 +2855,25 @@ VM cannot build the macOS parts.
   rhythms (L18 gone). chris's answers D ("No findings at all"), F ("L14 skips slanted patterns"), G ("L09 skips drawing
   grids") → ADR-021, proposed; H ("Mark both Full bleed") a starter change. Record updated.
 - chris: "ratify 021". ADR-021 accepted. Spec §8.3 and §13 get dated notes pointing at ADR-019 and ADR-021.
+
+## 2026-11-23 — ADR-019, ADR-020 and ADR-021 built
+
+- chris: "go ahead and start the build. I have a few feature additions that have to occur before I can work on the
+  planning templates". Built by the lead in this session (no builder).
+- ADR-019: `Object.full_bleed` (format 0.19.0, a no-op migration, fixture `crates/render/tests/fixtures/v0.18/` resaved
+  from v0.17 by the 0.18.0 build before the bump); a Full bleed tick beside Free placement in the Arrange tab, mixed for
+  a mixed selection, one undo step; L06 and L10 skip a marked object, a marked group's or repeat's contents too; L10
+  allows half a stroke past an edge; L16 counts an object flush on a page edge, near or far, as on the rhythm on that
+  axis.
+- ADR-020: `LineRole::Margin` in the model, every built-in profile (5 px, gray 204, chosen, not measured; a profile
+  without it reads that default), the Style tab, the Profiles window, the swatch matching and the role quick fix;
+  calibration strips W19–W24 (a margin rule beside Guide ruled lines). ADR-012's owed list gains its measurement.
+- ADR-021: L14 skips hex and isometric regions; L09 skips an isometric rhythm. L18 no longer says "-0 px".
+- Tests: `crates/lint/tests/starter_rules.rs` (5; each fails against the old rules: run with `crates/lint/src` stashed,
+  `test result: FAILED. 0 passed; 5 failed`), `crates/ui/tests/lint_pointer.rs` (Full bleed), `crates/profiles/tests/
+  profiles.rs` (Margin), `crates/render/tests/migrate_v018.rs`; `newer_minor_keeps_version` now stands in 0.20.0.
+- `make check` → `TESTS scope=workspace checks=778 check_fail=0 passed=724 failed=0 status=ok runner=nextest`.
+- chris's seven starters, as scratch copies with Full bleed ticked on every object and the Margin role on the margin
+  lines: `cargo xtask lint` → 0 findings on six, 1 on the bullet journal (its top rule's L16: Snap to rhythm).
+- ADR-019 built `landed`; ADR-020 `partial` (calibration readings owed); ADR-021 `partial` (the starter test comes
+  with 16b). `adr-check`: 21 ADRs, 0 failures. Waits for chris's look (ADR-007).

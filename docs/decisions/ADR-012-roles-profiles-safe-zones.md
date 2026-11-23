@@ -7,7 +7,7 @@ owner: chris
 kind: design
 built: partial
 proof: "`crates/profiles/tests/profiles.rs::verified_profiles_have_a_record`, `crates/profiles/tests/profiles.rs::role_grays_are_clean_levels`, `crates/xtask/tests/safezones.rs::profiles_match_their_screenshots`, `crates/lint/tests/lint.rs::every_toolbar_zone_is_known`, `crates/ui/tests/drag.rs::the_right_toolbar_zone_is_shown_and_caught_by_default`, `crates/layout/tests/snap.rs::union_outline_leaves_out_borders_inside_the_combined_area`, `crates/profiles/tests/lint_block.rs::both_supernotes_carry_the_measured_values_and_paper_only_two`, `crates/lint/tests/gray_rules.rs::a_rule_follows_an_edited_overrides_lint_block_and_an_edited_role`"
-owed: "the Manta's gray levels and pen shades (ruled equal to the Nomad's, not measured); safe zones for a collapsed toolbar and other floating positions; measured values for L09, L13 and L14 (chosen, not measured)"
+owed: "the Manta's gray levels and pen shades (ruled equal to the Nomad's, not measured); safe zones for a collapsed toolbar and other floating positions; measured values for L09, L13 and L14 (chosen, not measured); measured values for the Margin role (ADR-020; chris's drawn 5 px, gray 204 until read)"
 supersedes: nothing
 amends: nothing
 ---
@@ -67,6 +67,7 @@ amends: nothing
   Status unchanged (`accepted`); built unchanged (`partial`).
 - 2026-11-23: two new ADRs from chris's starter lint answers, ratified the same day ("ratify 019 and 020"), amend this one: ADR-019 (a Full bleed mark
   that L06 skips; item 5) and ADR-020 (an eighth role, Margin; items 1 and 2). Header values unchanged.
+- 2026-11-23: owed gains the Margin role's measured values (ADR-020, built). Prior value, word for word: owed `"the Manta's gray levels and pen shades (ruled equal to the Nomad's, not measured); safe zones for a collapsed toolbar and other floating positions; measured values for L09, L13 and L14 (chosen, not measured)"`.
 
 ## Amendment — 2026-11-10, chris
 

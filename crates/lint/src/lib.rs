@@ -334,9 +334,10 @@ pub fn lint_against(
         ),
     ];
     for (near, far, origin, unit, start, end) in axes {
+        // `+ 0.0` turns a negative zero into zero, which would otherwise read "-0 px".
         let (a, b) = (
-            (origin - start).rem_euclid(unit),
-            (end - origin).rem_euclid(unit),
+            (origin - start).rem_euclid(unit) + 0.0,
+            (end - origin).rem_euclid(unit) + 0.0,
         );
         if (a - b).abs() > unit / 2.0 {
             push(
@@ -356,8 +357,10 @@ pub fn lint_against(
 
     // L09 and L13 are for a Template; a Wallpaper is not handwritten on (rung 14 bbq, Defaulted).
     let judged_for_template = judge::template_only(doc);
-    // L09: the rhythm's own vertical step is under the profile's smallest comfortable handwriting step.
+    // L09: the rhythm's own vertical step is under the profile's smallest comfortable handwriting step. An isometric
+    // rhythm is for drawing, not for writing between lines (ADR-021, item 3).
     if judged_for_template
+        && doc.rhythm.rhythm_type != quadrule_model::RhythmType::Isometric
         && let Some((min_mm, min_px)) = judge::handwriting_min_px(target)
         && rhythm.unit_y + 1e-9 < min_px
     {
@@ -598,13 +601,17 @@ pub fn lint_against(
             );
         }
 
-        // L10: off the page. A repeat and what is in its source are judged over all copies below.
-        let inside = b.0 >= 0.0 && b.1 >= 0.0 && b.2 <= pw && b.3 <= ph;
+        // L10: off the page. A repeat and what is in its source are judged over all copies below. The frame is
+        // judged, not the stroke: half a stroke past an edge the object sits on is not off the page (ADR-019,
+        // item 2). An object marked Full bleed is left alone (item 1).
+        let bleed = full_bleed(doc, o);
+        let slack = if is_text { 0.0 } else { half_stroke };
+        let inside = b.0 >= -slack && b.1 >= -slack && b.2 <= pw + slack && b.3 <= ph + slack;
         let touches = b.2 > 0.0 && b.3 > 0.0 && b.0 < pw && b.1 < ph;
         let over_copies = node.repeat || inside_repeat;
-        if !over_copies && !touches {
+        if !bleed && !over_copies && !touches {
             push("L10", Severity::Info, at("lint-l10-gone"));
-        } else if !over_copies && !inside {
+        } else if !bleed && !over_copies && !inside {
             push("L10", Severity::Info, at("lint-l10-partly"));
         }
 
@@ -719,10 +726,15 @@ pub fn lint_against(
         }
 
         // L06: safe zones, one finding per object for the fixed zones and one for the movable.
-        // (A repeat and what is in its source are judged over all copies below.)
+        // (A repeat and what is in its source are judged over all copies below.) An object marked Full bleed is
+        // meant to run under them (ADR-019).
         let mut fixed = Vec::new();
         let mut movable = Vec::new();
-        for z in target.safe_zones.iter().filter(|_| !target.is_paper()) {
+        for z in target
+            .safe_zones
+            .iter()
+            .filter(|_| !target.is_paper() && !bleed)
+        {
             // A toolbar position the user does not use is skipped; a toolbar zone the linter
             // does not know is checked, so a new profile zone is never silently ignored.
             if let Ok(Some(t)) = Toolbar::of_zone(&z.name)
@@ -788,8 +800,13 @@ pub fn lint_against(
                 ((pos - origin).rem_euclid(unit)).min(unit - (pos - origin).rem_euclid(unit)) < 0.5
             };
             let (x, y) = (px(o.frame.x_mm).round(), px(o.frame.y_mm).round());
-            let off_x = !on(x, rhythm.origin_x, rhythm.unit_x);
-            let off_y = !on(y, rhythm.origin_y, rhythm.unit_y);
+            // Flush on a page edge, near or far, counts as on the rhythm on that axis (ADR-019, item 3).
+            let flush =
+                |lo: f64, hi: f64, page: f64| lo.round() == 0.0 || hi.round() == page.round();
+            let off_x =
+                !on(x, rhythm.origin_x, rhythm.unit_x) && !flush(frame_px.0, frame_px.2, pw);
+            let off_y =
+                !on(y, rhythm.origin_y, rhythm.unit_y) && !flush(frame_px.1, frame_px.3, ph);
             if off_x || off_y {
                 let axes = match (off_x, off_y) {
                     (true, true) => "lint-axes-both",
@@ -922,18 +939,19 @@ pub fn lint_against(
             continue;
         }
         let first = &range[..range.len() / blocks];
-        // The pieces that are drawn: not the containers, not what an eye hides.
-        let pieces: Vec<Bounds> = first
+        // The pieces that are drawn: not the containers, not what an eye hides, not what is marked Full bleed
+        // (ADR-019; a marked repeat covers every piece). Each with the half stroke L10 lets past an edge.
+        let pieces: Vec<(Bounds, f64)> = first
             .iter()
             .filter(|q| !q.node.group && !doc.effectively_hidden(q.id))
             .filter_map(|q| {
                 let o = doc.object(q.id)?;
+                if full_bleed(doc, o) {
+                    return None;
+                }
+                let text = matches!(o.kind, ObjectKind::Text(_));
                 let half = quadrule_layout::stroke(o.style, target).0 as f64 / 2.0;
-                Some(bounds(
-                    &q.shape,
-                    matches!(o.kind, ObjectKind::Text(_)),
-                    half,
-                ))
+                Some((bounds(&q.shape, text, half), if text { 0.0 } else { half }))
             })
             .collect();
         if pieces.is_empty() {
@@ -945,13 +963,14 @@ pub fn lint_against(
         let (mut fixed, mut movable): (Vec<Message>, Vec<Message>) = (Vec::new(), Vec::new());
         for c in &cells {
             let moved = |b: &Bounds| (b.0 + c.d.0, b.1 + c.d.1, b.2 + c.d.0, b.3 + c.d.1);
-            let boxes: Vec<Bounds> = pieces.iter().map(moved).collect();
+            let boxes: Vec<Bounds> = pieces.iter().map(|(b, _)| moved(b)).collect();
             let all_gone = boxes
                 .iter()
                 .all(|b| !(b.2 > 0.0 && b.3 > 0.0 && b.0 < pw && b.1 < ph));
             let all_in = boxes
                 .iter()
-                .all(|b| b.0 >= 0.0 && b.1 >= 0.0 && b.2 <= pw && b.3 <= ph);
+                .zip(&pieces)
+                .all(|(b, (_, h))| b.0 >= -h && b.1 >= -h && b.2 <= pw + h && b.3 <= ph + h);
             if all_gone {
                 gone += 1;
             } else if !all_in {
@@ -1110,6 +1129,16 @@ pub fn lint_against(
 }
 
 /// Whether the object, or a group round it, is marked Free placement: L16 leaves it (rung 14 bbq, Q7).
+/// Marked Full bleed, itself or by a group or repeat it is in (ADR-019): L06 and L10 leave it.
+pub(crate) fn full_bleed(doc: &Document, o: &quadrule_model::Object) -> bool {
+    o.full_bleed
+        || doc
+            .ancestors(o.id)
+            .iter()
+            .filter_map(|a| doc.object(*a))
+            .any(|a| a.full_bleed)
+}
+
 fn free_placement(doc: &Document, o: &quadrule_model::Object) -> bool {
     o.free_placement
         || doc

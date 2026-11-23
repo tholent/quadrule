@@ -64,7 +64,7 @@ pub(crate) enum Renaming {
 }
 
 /// The line roles as the Repeat tab's rules offer them (the same words as the Style tab's).
-pub(crate) const LINE_ROLE_OPTIONS: [(LineRole, &str); 7] = ROLES;
+pub(crate) const LINE_ROLE_OPTIONS: [(LineRole, &str); 8] = ROLES;
 
 /// The fill roles as the Repeat tab's rules offer them.
 pub(crate) const FILL_ROLE_OPTIONS: [(FillRole, &str); 2] = [
@@ -72,11 +72,12 @@ pub(crate) const FILL_ROLE_OPTIONS: [(FillRole, &str); 2] = [
     (FillRole::Block, "app-fill-block"),
 ];
 
-const ROLES: [(LineRole, &str); 7] = [
+const ROLES: [(LineRole, &str); 8] = [
     (LineRole::Whisper, "app-role-whisper"),
     (LineRole::Guide, "app-role-guide"),
     (LineRole::Structure, "app-role-structure"),
     (LineRole::Emphasis, "app-role-emphasis"),
+    (LineRole::Margin, "app-role-margin"),
     (LineRole::DotGrid, "app-role-dotgrid"),
     (LineRole::Text, "app-role-text"),
     (LineRole::Label, "app-role-label"),
@@ -1379,6 +1380,24 @@ impl ViewerUi {
             .on_hover_text(self.t("app-free-placement-tip"));
         if r.changed() {
             let _ = self.viewer.set_free_placement(on);
+        }
+        // Full bleed (ADR-019): meant to run under the toolbars and footers and to the page edge; the linter's L06
+        // and L10 leave it alone. Mixed as Free placement is.
+        let picked: Vec<bool> = self
+            .viewer
+            .selection
+            .iter()
+            .filter_map(|id| self.viewer.doc().and_then(|d| d.object(*id)))
+            .map(|x| x.full_bleed)
+            .collect();
+        let mut on = !picked.is_empty() && picked.iter().all(|b| *b);
+        let checkbox =
+            egui::Checkbox::new(&mut on, self.t("app-full-bleed")).indeterminate(mixed.full_bleed);
+        let r = ui
+            .add_enabled(enabled, checkbox)
+            .on_hover_text(self.t("app-full-bleed-tip"));
+        if r.changed() {
+            let _ = self.viewer.set_full_bleed(on);
         }
     }
 

@@ -468,6 +468,11 @@ pub struct Object {
     /// group's flag covers what is inside. Nothing else changes. A file without it reads as off.
     #[serde(default, skip_serializing_if = "is_false")]
     pub free_placement: bool,
+    /// Meant to run under the tablet's toolbars and footers and to the page edge, as paper does (format 0.19,
+    /// ADR-019): the linter's L06 and L10 leave it, and a group's or repeat's flag covers what is inside. Nothing else
+    /// changes. A file without it reads as off.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub full_bleed: bool,
     /// What the object is.
     pub kind: ObjectKind,
     /// Fields from newer versions.
@@ -779,15 +784,18 @@ pub enum LineRole {
     /// Quiet labels, lighter than Text (gray only). Format 0.3 (chris, 2026-11-09:
     /// "Text + new Label").
     Label,
+    /// Wide, light lines such as a notebook's margin rule. Format 0.19 (ADR-020).
+    Margin,
 }
 
 impl LineRole {
     /// Every role, in order.
-    pub const ALL: [LineRole; 7] = [
+    pub const ALL: [LineRole; 8] = [
         LineRole::Whisper,
         LineRole::Guide,
         LineRole::Structure,
         LineRole::Emphasis,
+        LineRole::Margin,
         LineRole::DotGrid,
         LineRole::Text,
         LineRole::Label,

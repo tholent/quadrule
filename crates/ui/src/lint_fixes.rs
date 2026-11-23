@@ -198,6 +198,12 @@ impl Viewer {
         self.edit_selected(None, |x| x.free_placement = on)
     }
 
+    /// Marks the editable selected objects Full bleed, or takes the mark off (one undo step): L06 and L10 leave a
+    /// marked object, and a group's or repeat's mark covers what is in it (ADR-019).
+    pub fn set_full_bleed(&mut self, on: bool) -> Result<(), EditError> {
+        self.edit_selected(None, |x| x.full_bleed = on)
+    }
+
     /// Shows device `dev` and outlines its finding number `index` on the page.
     pub fn show_finding(&mut self, dev: &str, index: usize) {
         self.set_profile(dev);

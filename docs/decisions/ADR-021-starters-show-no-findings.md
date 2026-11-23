@@ -5,8 +5,9 @@ ratified-by: chris
 ratified-on: "2026-11-23"
 owner: chris
 kind: design
-built: not started
-proof: "queued before rung 16b with ADR-019 and ADR-020 (`docs/bbq/2026-11-23-adr-starter-lint.md`, Owed; `docs/arcs/v1/README.md` row 16)"
+built: partial
+proof: "`crates/lint/tests/starter_rules.rs::l14_and_l09_leave_drawing_grids_alone`"
+owed: "item 1's test, which lints every starter on both tablets and finds nothing, arrives with the starters in rung 16b"
 supersedes: nothing
 amends: "spec §13 (\"All starters must pass lint with no rhythm warnings\") and §8.3 L09 and L14; arc v1 release bar (Q18)"
 ---
@@ -104,3 +105,5 @@ For 3, L09:
 - 2026-11-23: drafted from chris's answers D, F and G in the starter lint record, through makeadr.
 - 2026-11-23: ratified by chris ("ratify 021"). Prior header values, word for word: status `proposed`, status-note
   `drafted 2026-11-23 from chris's answers (starter lint record, D, F and G); awaiting ratification`.
+- 2026-11-23: built (lead session, after the ratification). Prior header values, word for word: built `not started`, proof
+  `"queued before rung 16b with ADR-019 and ADR-020 (`docs/bbq/2026-11-23-adr-starter-lint.md`, Owed; `docs/arcs/v1/README.md` row 16)"`.

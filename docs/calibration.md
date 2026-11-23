@@ -22,7 +22,7 @@ same wherever the toolbar is docked; only the floating toolbar can cover them.
 | lines | line widths 1–6 px × 15 grays; dashed and dotted lines × 5 grays | `L…`, `D…` |
 | dots | square dots 1–4 px and round dots 2–6 px × 8 grays | `P…` |
 | text | Atkinson Hyperlegible Next 6–18 pt, regular and bold × 4 grays (0, 51, 102, 153) | `T…` |
-| writing | wide ruled-line and dot-row strips to write across (set 2: grays 51–187) | `W1`–`W18` |
+| writing | wide ruled-line and dot-row strips to write across (set 2: grays 51–187); margin rules beside ruled lines, for the Margin role (ADR-020: 3–6 px, grays 187–221) | `W1`–`W24` |
 | grays | flat patches: the even steps 0, 17 … 238, then halfway between them (8, 25 … 246); a smooth ramp 0–255 | `G1`–`G30`, `GR` |
 
 ## 2. Put them on the device

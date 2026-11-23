@@ -111,6 +111,7 @@ impl Fix {
                     RoleChoice::Line(LineRole::Guide) => "app-role-guide",
                     RoleChoice::Line(LineRole::Structure) => "app-role-structure",
                     RoleChoice::Line(LineRole::Emphasis) => "app-role-emphasis",
+                    RoleChoice::Line(LineRole::Margin) => "app-role-margin",
                     RoleChoice::Line(LineRole::DotGrid) => "app-role-dotgrid",
                     RoleChoice::Line(LineRole::Text) => "app-role-text",
                     RoleChoice::Line(LineRole::Label) => "app-role-label",
@@ -258,6 +259,7 @@ fn fitting_roles(doc: &Document, o: &Object, target: &Profile, part: Part) -> Ve
                     LineRole::Guide,
                     LineRole::Structure,
                     LineRole::Emphasis,
+                    LineRole::Margin,
                 ]
             };
             pool.iter()

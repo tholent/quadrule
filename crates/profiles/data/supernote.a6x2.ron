@@ -48,6 +48,7 @@
         dot_grid: (width_px: 3, gray: 51),    // W15, square: 2 px dots show but are not usable
         text_gray: 51,                        // TD2, TL2 (9 pt reads comfortably)
         label_gray: 153,                      // TD4, TL4
+        margin: (width_px: 5, gray: 204),     // ADR-020: chris's drawn values, chosen, not measured
     ),
     // The gray each fill role resolves to (rung 6 bbq, Q3 and Q7), from the grays sheet, 2026-11-12 (chris): Block
     // 68 looked black, so it moved to "A lighter dark gray" (102, G7); Shade 204 (G13) is clean and visible, kept.

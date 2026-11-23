@@ -29,6 +29,7 @@
         dot_grid: (width_px: 3, gray: 51),
         text_gray: 51,
         label_gray: 153,
+        margin: (width_px: 5, gray: 204),
     ),
     fill_roles: (
         shade: 204,

@@ -183,6 +183,7 @@ pub fn check(p: &Profile) -> Result<(), String> {
         ("structure", r.structure.width_px),
         ("emphasis", r.emphasis.width_px),
         ("dot_grid", r.dot_grid.width_px),
+        ("margin", r.margin.width_px),
     ] {
         if !ROLE_PX.contains(&w) {
             return Err(format!(

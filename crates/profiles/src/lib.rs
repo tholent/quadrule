@@ -162,6 +162,19 @@ pub struct LineRoles {
     pub text_gray: u8,
     /// The Label role (quiet labels) sets gray only.
     pub label_gray: u8,
+    /// Wide, light lines such as a notebook's margin rule (ADR-020). A profile saved before the role existed reads
+    /// as [`default_margin`].
+    #[serde(default = "default_margin")]
+    pub margin: RoleStyle,
+}
+
+/// The Margin role before it is measured: chris's drawn 0.45 mm at 300 PPI, to whole pixels, and gray 204 (ADR-020,
+/// item 3; chosen, not measured).
+pub fn default_margin() -> RoleStyle {
+    RoleStyle {
+        width_px: 5,
+        gray: 204,
+    }
 }
 
 /// Each fill role's gray on this profile (rung 6 bbq, Q3 and Q7). A fill has no width, so a role
@@ -318,6 +331,7 @@ impl Profile {
         r.structure = scale(r.structure);
         r.emphasis = scale(r.emphasis);
         r.dot_grid = scale(r.dot_grid);
+        r.margin = scale(r.margin);
         out
     }
 
@@ -422,6 +436,7 @@ impl Profile {
             LineRole::Structure => r.structure,
             LineRole::Emphasis => r.emphasis,
             LineRole::DotGrid => r.dot_grid,
+            LineRole::Margin => r.margin,
             LineRole::Text => RoleStyle {
                 width_px: 1,
                 gray: r.text_gray,
