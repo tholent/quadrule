@@ -81,3 +81,33 @@ Route: a fresh session (chris: "Fresh session (Recommended)"; this one had been 
 Build the calendar pattern (Q1, Q3–Q7) and the mini calendar (Q2, Q3, Q7) from this record, on `main`, with tests that
 print one `CHECK` line each and goldens on both tablets. Then chris's look, together with the Full bleed tick (ADR-019),
 and `v0.16.5`.
+
+## Built (2026-11-23)
+
+Built on `main` by the lead in a fresh session (Opus 5.5, high), as the Kickoff says. Waits for chris's look, with the
+Full bleed tick (ADR-019), before `v0.16.5`.
+
+- **Calendar pattern** (`Pattern::Calendar`, `crates/model/src/lib.rs`; months and weekdays `crates/model/src/calendar.rs`;
+  drawn by `crates/layout/src/calendar.rs` and `calendar` in `crates/layout/src/pattern.rs`): Month (Undated or a month)
+  and Year, 1st falls on and Days in month when undated, Week starts on; in the Style tab's pattern settings.
+- **Mini calendar** (`ObjectKind::MiniCalendar`): the Mini calendar tool (M) places this month (the computer's clock, UTC),
+  seven rhythm units by eight; Month, Year, Week starts on and Month and year in the Style tab.
+- The words are laid out as text, one text job per word under an id made from the object's (`label_id`), so they are saved
+  with the page's text outlines and draw the same from a saved file. English, from `crates/i18n/locales/en-US/calendar.ftl`.
+- L07 says when a calendar leaves its weekday names, day numbers or title out (`lint-l07-calendar`).
+- Format stays 0.19.0; the new fields default (Monday, no date, title on) and are left out of a file then.
+- Goldens `calendar_*` on both tablets, after the 34 older lines, unchanged (`crates/render/tests/calendar.rs`).
+
+**The lead's readings inside the Defaulted calls** (each can be vetoed at the look):
+
+| Reading | Why |
+|---|---|
+| Columns are seven equal parts of the region on whole pixels; the header row is one rhythm step down (at most a third of the region); the week rows share the rest equally, not snapped to rhythm lines | "Cells fill the region: 7 equal columns" |
+| The header row has no lines; only day cells are boxed | Q5 |
+| The day square shares its cell's top and right edges: a left side and a bottom drawn in the region's role | Q6, "a small square at its top" |
+| Dated, a number is centred where the square would be, its capitals half the square tall | Q6 "number alone", in that corner |
+| Weekday names' capitals are 40 % of the header row; any word takes at most 80 % of its box's width | legible, with a margin |
+| A whole kind of word is left out (all names, or all numbers), never single ones | the same size across a calendar |
+| **The mini calendar has a title line (month and year) by default, with a tick to turn it off** | not asked for: the record names initials and numbers only; a block with no month named reads ambiguously. *Grew past the record; veto: no title* |
+| The mini calendar's rows share its height (title, initials, the month's weeks); numbers centred in their columns; initials in Label gray, numbers and title in the object's role (Text) | Defaulted roles |
+| The tool's key is M | free, and "mini" |

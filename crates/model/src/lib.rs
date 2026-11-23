@@ -23,6 +23,7 @@
 #![forbid(unsafe_code)]
 
 pub mod blank;
+pub mod calendar;
 pub mod clipboard;
 pub mod edit;
 pub mod fonts;
@@ -31,6 +32,7 @@ pub mod outlines;
 pub mod repeat;
 pub mod sample;
 
+pub use calendar::{MiniCalendarShape, MonthShape, Weekday, YearMonth};
 pub use fonts::{FontClass, FontSettings, FontSignature};
 pub use repeat::{
     AlternationRule, CellEffect, Leftover, REPEAT_COPIES_MAX, REPEAT_COUNT_DEFAULT,
@@ -938,6 +940,8 @@ pub enum ObjectKind {
     /// A source drawn again in a row, a column or a grid (format 0.10): live, so editing the source
     /// changes every copy.
     Repeat(RepeatShape),
+    /// A compact month of weekday initials and day numbers, placed anywhere (format 0.19; calendar bbq, Q2).
+    MiniCalendar(MiniCalendarShape),
 }
 
 /// A group (format 0.7, rung 7a bbq, Defaulted "File format 0.7.0 (7a)"): its children, bottom
@@ -1046,6 +1050,12 @@ impl ObjectKind {
             ObjectKind::Group(g) => g.children.iter().all(|c| c.kind.can_rotate()),
             _ => true,
         }
+    }
+
+    /// Whether the kind draws only letters, its style giving their gray and no stroke: a text box, or a mini
+    /// calendar (format 0.19).
+    pub fn is_lettered(&self) -> bool {
+        matches!(self, ObjectKind::Text(_) | ObjectKind::MiniCalendar(_))
     }
 
     /// Whether this is one of the shapes (rectangle, ellipse, polygon): the kinds that have a fill
@@ -1591,6 +1601,29 @@ pub enum Pattern {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         grand_space_units: Option<u32>,
     },
+    /// A month of day cells under a row of weekday names (format 0.19; calendar bbq,
+    /// docs/bbq/2026-11-23-calendar-pattern-and-mini-calendar.md): seven equal columns, a header row one rhythm
+    /// unit tall, and as many week rows as the month spans sharing the rest of the height. Only the month's own
+    /// days are boxed; each has a small square in its top-right corner to write the day in, or, when the
+    /// calendar is dated, the day's number there instead.
+    Calendar {
+        /// The month shown, numbered; `None` is an undated calendar, shaped by `first_day` and `days`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        month: Option<YearMonth>,
+        /// The first column's day (Q3: Monday unless changed).
+        #[serde(default, skip_serializing_if = "Weekday::is_monday")]
+        week_start: Weekday,
+        /// Undated: the weekday the 1st falls on (Q1). Kept, unused, while the calendar is dated.
+        #[serde(default, skip_serializing_if = "Weekday::is_monday")]
+        first_day: Weekday,
+        /// Undated: the days in the month, 28 to 31 (Q1). Kept, unused, while the calendar is dated.
+        #[serde(default = "undated_days")]
+        days: u8,
+    },
+}
+
+fn undated_days() -> u8 {
+    calendar::UNDATED_DAYS_DEFAULT
 }
 
 fn one() -> u32 {
@@ -1624,9 +1657,33 @@ pub const STAFF_GAP_DEFAULT_MM: f64 = 2.0;
 pub const PATTERN_UNITS_MAX: u32 = 99;
 
 impl Pattern {
-    /// Whether the pattern draws major lines (Hex and Music staff do not).
+    /// Whether the pattern draws major lines (Hex, Music staff and Calendar do not).
     pub fn has_major(&self) -> bool {
-        !matches!(self, Pattern::Hex { .. } | Pattern::MusicStaff { .. })
+        !matches!(
+            self,
+            Pattern::Hex { .. } | Pattern::MusicStaff { .. } | Pattern::Calendar { .. }
+        )
+    }
+
+    /// For a calendar: the shape of its month, from its date when it has one, else from its own two settings
+    /// (the days clamped to 28 to 31). `None` for every other pattern.
+    pub fn month_shape(&self) -> Option<MonthShape> {
+        match *self {
+            Pattern::Calendar { month: Some(m), .. } => Some(MonthShape {
+                first: m.first_weekday(),
+                days: m.days(),
+            }),
+            Pattern::Calendar {
+                month: None,
+                first_day,
+                days,
+                ..
+            } => Some(MonthShape {
+                first: first_day,
+                days: days.clamp(calendar::MONTH_DAYS_MIN, calendar::MONTH_DAYS_MAX),
+            }),
+            _ => None,
+        }
     }
 
     /// Which choice in the inspector this is.
@@ -1639,6 +1696,7 @@ impl Pattern {
             Pattern::Hex { .. } => PatternKind::Hex,
             Pattern::Cornell { .. } => PatternKind::Cornell,
             Pattern::MusicStaff { .. } => PatternKind::MusicStaff,
+            Pattern::Calendar { .. } => PatternKind::Calendar,
         }
     }
 
@@ -1671,11 +1729,13 @@ pub enum PatternKind {
     Cornell,
     /// [`Pattern::MusicStaff`].
     MusicStaff,
+    /// [`Pattern::Calendar`].
+    Calendar,
 }
 
 impl PatternKind {
     /// Every choice, in the order the inspector lists them.
-    pub const ALL: [PatternKind; 7] = [
+    pub const ALL: [PatternKind; 8] = [
         PatternKind::Lines,
         PatternKind::Dots,
         PatternKind::Grid,
@@ -1683,6 +1743,7 @@ impl PatternKind {
         PatternKind::Hex,
         PatternKind::Cornell,
         PatternKind::MusicStaff,
+        PatternKind::Calendar,
     ];
 
     /// The pattern with its default settings.
@@ -1707,6 +1768,12 @@ impl PatternKind {
                 pitch_units: 3,
                 grand: false,
                 grand_space_units: None,
+            },
+            PatternKind::Calendar => Pattern::Calendar {
+                month: None,
+                week_start: Weekday::Monday,
+                first_day: Weekday::Monday,
+                days: calendar::UNDATED_DAYS_DEFAULT,
             },
         }
     }

@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 kurbo.workspace = true
+quadrule-i18n.workspace = true
 quadrule-model.workspace = true
 quadrule-profiles.workspace = true
 quadrule-text.workspace = true

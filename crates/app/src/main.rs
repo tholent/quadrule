@@ -57,7 +57,7 @@ use std::sync::Arc;
 
 /// Preference keys in eframe's storage.
 /// What `--look` takes: a part of the window to start with, for a screenshot (rungs 14b, 15 and 16).
-const LOOKS: [&str; 20] = [
+const LOOKS: [&str; 22] = [
     "lint",
     "style",
     "preflight",
@@ -74,6 +74,8 @@ const LOOKS: [&str; 20] = [
     "layers-ask",
     "layers-menu",
     "grand-staff",
+    "calendar",
+    "mini-calendar",
     "menu-edit",
     "menu-view",
     "menu-help",
@@ -224,6 +226,8 @@ impl App {
             ui.viewer.open_bordered();
         } else if args.grand_staff_page {
             ui.viewer.open_grand_staff();
+        } else if args.calendar_page {
+            ui.viewer.open_calendar();
         } else if args.pattern_angle_page {
             ui.viewer.open_pattern_angle();
         } else if args.turned_patterns_page {
@@ -618,6 +622,9 @@ struct Args {
     /// Open the grand-staff page instead of the empty start (`--grand-staff-page`: grand staves with a space of
     /// their own between them, an older one and a single staff); `--look grand-staff` picks the first.
     grand_staff_page: bool,
+    /// Open the calendar page instead of the empty start (`--calendar-page`: calendar patterns dated and undated, and
+    /// two mini calendars); `--look calendar` picks the dated one, `--look mini-calendar` the first mini calendar.
+    calendar_page: bool,
     /// Open the rung 12b pattern-angle page instead of the empty start (`--pattern-angle-page`); the
     /// benchmarks then run over it.
     pattern_angle_page: bool,
@@ -733,6 +740,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.bordered_page = true;
         } else if a == "--grand-staff-page" {
             out.grand_staff_page = true;
+        } else if a == "--calendar-page" {
+            out.calendar_page = true;
         } else if a == "--pattern-angle-page" {
             out.pattern_angle_page = true;
         } else if a == "--turned-patterns-page" {

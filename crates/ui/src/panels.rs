@@ -1653,6 +1653,7 @@ impl ViewerUi {
                         (PatternKind::Hex, "app-pattern-hex"),
                         (PatternKind::Cornell, "app-pattern-cornell"),
                         (PatternKind::MusicStaff, "app-pattern-staff"),
+                        (PatternKind::Calendar, "app-pattern-calendar"),
                     ];
                     self.combo(ui, "pattern", label.id, &mut p, &options);
                     if p != pr.pattern.kind() {
@@ -1677,7 +1678,77 @@ impl ViewerUi {
                 ui.strong(self.t("app-shape"));
                 self.shape_rows(ui, &o, &cx, enabled);
             }
+            if let ObjectKind::MiniCalendar(m) = &o.kind {
+                ui.add_space(6.0);
+                ui.strong(self.t("app-mini-calendar"));
+                self.mini_calendar_rows(ui, m, enabled);
+            }
         });
+    }
+
+    /// A mini calendar's settings (calendar bbq, Q2 and Q3): its month and year, the week's first day and
+    /// whether the month's name heads it. Each edit is one undo step (typing the year merges).
+    fn mini_calendar_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        m: &quadrule_model::MiniCalendarShape,
+        enabled: bool,
+    ) {
+        macro_rules! set {
+            ($key:expr, |$mc:ident| $body:expr) => {{
+                let _ = self.viewer.edit_selected($key, |x| {
+                    if let ObjectKind::MiniCalendar($mc) = &mut x.kind {
+                        $body;
+                    }
+                });
+            }};
+        }
+        egui::Grid::new("mini-calendar-grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                let label = ui.label(self.t("app-calendar-month"));
+                let mut n = m.month.month_clamped();
+                let ids: Vec<(u8, String)> = (1..=12u8)
+                    .map(|k| (k, format!("calendar-month-{k}")))
+                    .collect();
+                let options: Vec<(u8, &str)> =
+                    ids.iter().map(|(v, id)| (*v, id.as_str())).collect();
+                self.combo(ui, "mini-month", label.id, &mut n, &options);
+                if n != m.month.month_clamped() {
+                    set!(None, |mc| mc.month.month = n);
+                }
+                ui.end_row();
+                let label = ui.label(self.t("app-calendar-year"));
+                let mut y = m.month.year_clamped();
+                let drag = egui::DragValue::new(&mut y)
+                    .range(quadrule_model::calendar::YEAR_MIN..=quadrule_model::calendar::YEAR_MAX);
+                if ui
+                    .add_enabled(enabled, drag)
+                    .labelled_by(label.id)
+                    .changed()
+                {
+                    set!(Some("mini-calendar-year"), |mc| mc.month.year = y);
+                }
+                ui.end_row();
+                let label = ui.label(self.t("app-calendar-week-start"));
+                let mut w = m.week_start;
+                let options = weekday_options();
+                self.combo(ui, "mini-week-start", label.id, &mut w, &options);
+                if w != m.week_start {
+                    set!(None, |mc| mc.week_start = w);
+                }
+                ui.end_row();
+                let label = ui.label(self.t("app-mini-title"));
+                let mut t = m.title;
+                if ui
+                    .add_enabled(enabled, egui::Checkbox::new(&mut t, ""))
+                    .labelled_by(label.id)
+                    .changed()
+                {
+                    set!(None, |mc| mc.title = t);
+                }
+                ui.end_row();
+            });
     }
 
     /// The settings of a pattern region (rung 9 bbq, Defaulted "Where the settings live"), below the
@@ -1878,6 +1949,104 @@ impl ViewerUi {
                                             ));
                                     }
                                 }
+                            });
+                        }
+                        ui.end_row();
+                    }
+                    Pattern::Calendar {
+                        month,
+                        week_start,
+                        first_day,
+                        days,
+                    } => {
+                        // The month is one field (calendar bbq, Q1): Undated, or a month, with its year below.
+                        let label = ui.label(self.t("app-calendar-month"));
+                        let mut m = month.map(|m| m.month_clamped());
+                        let ids: Vec<(Option<u8>, String)> =
+                            std::iter::once((None, "app-calendar-undated".to_string()))
+                                .chain((1..=12u8).map(|n| (Some(n), format!("calendar-month-{n}"))))
+                                .collect();
+                        let options: Vec<(Option<u8>, &str)> =
+                            ids.iter().map(|(v, id)| (*v, id.as_str())).collect();
+                        self.combo(ui, "calendar-month", label.id, &mut m, &options);
+                        if m != month.map(|m| m.month_clamped()) {
+                            let year = month.map_or_else(this_month_year, |m| m.year_clamped());
+                            set!(
+                                None,
+                                |p| if let Pattern::Calendar { month, .. } = &mut p.pattern {
+                                    *month = m.map(|n| quadrule_model::YearMonth::new(year, n));
+                                }
+                            );
+                        }
+                        ui.end_row();
+                        if let Some(ym) = month {
+                            let label = ui.label(self.t("app-calendar-year"));
+                            let mut y = ym.year_clamped();
+                            let drag = egui::DragValue::new(&mut y).range(
+                                quadrule_model::calendar::YEAR_MIN
+                                    ..=quadrule_model::calendar::YEAR_MAX,
+                            );
+                            if ui
+                                .add_enabled(enabled, drag)
+                                .labelled_by(label.id)
+                                .changed()
+                            {
+                                set!(
+                                    Some("pattern-calendar-year"),
+                                    |p| if let Pattern::Calendar { month: Some(m), .. } =
+                                        &mut p.pattern
+                                    {
+                                        m.year = y;
+                                    }
+                                );
+                            }
+                            ui.end_row();
+                        } else {
+                            // Undated, the month's shape is its own: where the 1st falls and how many days.
+                            let label = ui.label(self.t("app-calendar-first-day"));
+                            let mut d = first_day;
+                            let options = weekday_options();
+                            self.combo(ui, "calendar-first-day", label.id, &mut d, &options);
+                            if d != first_day {
+                                set!(None, |p| if let Pattern::Calendar { first_day, .. } =
+                                    &mut p.pattern
+                                {
+                                    *first_day = d;
+                                });
+                            }
+                            ui.end_row();
+                            let label = ui.label(self.t("app-calendar-days"));
+                            let mut n = days.clamp(
+                                quadrule_model::calendar::MONTH_DAYS_MIN,
+                                quadrule_model::calendar::MONTH_DAYS_MAX,
+                            );
+                            let drag = egui::DragValue::new(&mut n).range(
+                                quadrule_model::calendar::MONTH_DAYS_MIN
+                                    ..=quadrule_model::calendar::MONTH_DAYS_MAX,
+                            );
+                            if ui
+                                .add_enabled(enabled, drag)
+                                .labelled_by(label.id)
+                                .changed()
+                            {
+                                set!(
+                                    Some("pattern-calendar-days"),
+                                    |p| if let Pattern::Calendar { days, .. } = &mut p.pattern {
+                                        *days = n;
+                                    }
+                                );
+                            }
+                            ui.end_row();
+                        }
+                        let label = ui.label(self.t("app-calendar-week-start"));
+                        let mut w = week_start;
+                        let options = weekday_options();
+                        self.combo(ui, "calendar-week-start", label.id, &mut w, &options);
+                        if w != week_start {
+                            set!(None, |p| if let Pattern::Calendar { week_start, .. } =
+                                &mut p.pattern
+                            {
+                                *week_start = w;
                             });
                         }
                         ui.end_row();
@@ -3188,6 +3357,25 @@ impl DashChoice {
 pub const GRAY_STEP: u8 = 17;
 
 /// The step of 17 nearest `g`.
+/// The seven weekdays as a combo's choices, by their whole names, Monday first.
+fn weekday_options() -> [(quadrule_model::Weekday, &'static str); 7] {
+    use quadrule_model::Weekday;
+    [
+        (Weekday::Monday, "calendar-day-mon"),
+        (Weekday::Tuesday, "calendar-day-tue"),
+        (Weekday::Wednesday, "calendar-day-wed"),
+        (Weekday::Thursday, "calendar-day-thu"),
+        (Weekday::Friday, "calendar-day-fri"),
+        (Weekday::Saturday, "calendar-day-sat"),
+        (Weekday::Sunday, "calendar-day-sun"),
+    ]
+}
+
+/// The year it is now, by this computer's clock: what a calendar dated for the first time takes.
+fn this_month_year() -> i32 {
+    crate::draw::this_month().year
+}
+
 fn snap_gray(g: u8) -> u8 {
     (u16::from(g) + u16::from(GRAY_STEP) / 2) as u8 / GRAY_STEP * GRAY_STEP
 }

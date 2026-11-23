@@ -112,7 +112,7 @@ pub(crate) fn object_hits(
     let off_levels = |g: u8| !levels.is_empty() && !levels.contains(&g);
 
     let stroke = stroke_opt(o.style, target);
-    let is_text = matches!(o.kind, ObjectKind::Text(_));
+    let is_text = o.kind.is_lettered();
     let dots = match &o.kind {
         ObjectKind::Pattern(pr) => matches!(
             pr.pattern,

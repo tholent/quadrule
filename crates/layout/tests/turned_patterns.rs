@@ -99,6 +99,7 @@ fn draw(p: Pattern, deg: f64, bound: bool) -> Vec<Item> {
         target: &manta,
         rhythm: &doc.rhythm,
         rhythm_px: RhythmPx::new(&doc, &manta),
+        labels: None,
     };
     let mut pr = PatternRegion::new(p);
     pr.bound = bound;
@@ -138,6 +139,7 @@ fn a_region_turned_by_nothing_draws_exactly_as_before() {
         target: &manta,
         rhythm: &doc.rhythm,
         rhythm_px: RhythmPx::new(&doc, &manta),
+        labels: None,
     };
     let mut same = true;
     for (_, p) in kinds() {
@@ -324,6 +326,7 @@ fn draw_own(p: Pattern, frame: f64, own: f64) -> Vec<Item> {
         target: &manta,
         rhythm: &doc.rhythm,
         rhythm_px: RhythmPx::new(&doc, &manta),
+        labels: None,
     };
     let mut pr = PatternRegion::new(p);
     pr.angle_deg = own;

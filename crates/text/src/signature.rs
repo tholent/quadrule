@@ -79,6 +79,35 @@ impl<'a> Face<'a> {
     }
 }
 
+/// How wide `text` is in the bundled upright face of `family` at `weight`, in em: the sum of its letters'
+/// advances, without kerning (calendar bbq: a calendar picks "Monday", "Mon" or "M" by the room there is).
+/// `None` when the family is not bundled or a letter is not in it.
+pub fn bundled_advance_em(family: &str, weight: u16, text: &str) -> Option<f64> {
+    let font = crate::BundledFont::for_family(family)?;
+    let face = Face::new(font.data, 0, Some(weight))?;
+    let gm = face.f.glyph_metrics(Size::unscaled(), face.at());
+    let cmap = face.f.charmap();
+    let mut sum = 0.0_f64;
+    for c in text.chars() {
+        sum += f64::from(gm.advance_width(cmap.map(c)?)?);
+    }
+    Some(sum / f64::from(face.upem))
+}
+
+/// The capital height of the bundled upright face of `family` at `weight`, in em (the height of a figure too,
+/// in a face with lining figures), from the font's own metrics or else from the letter H. `None` when the family
+/// is not bundled.
+pub fn bundled_cap_em(family: &str, weight: u16) -> Option<f64> {
+    let font = crate::BundledFont::for_family(family)?;
+    let face = Face::new(font.data, 0, Some(weight))?;
+    let m = face.f.metrics(Size::unscaled(), face.at());
+    let cap = match m.cap_height {
+        Some(c) if c > 0.0 => c,
+        _ => bounds(&face, 'H')?.3,
+    };
+    Some(f64::from(cap / face.upem))
+}
+
 /// Measures the face at `index` of a font file of the family `family` (the name is the last resort for
 /// the class). `weight` sets a variable font's weight axis (clamped
 /// to its range); `None` leaves its default. `None` when the file cannot be read or has no letters.

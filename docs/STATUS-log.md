@@ -2880,3 +2880,31 @@ VM cannot build the macOS parts.
 - CI run 45230043207 on `96b141d`: `windows-latest`, `macos-latest`, `ubuntu-latest`: success.
 - chris: "let's wrap these changes as well as my new features into v0.16.5 and 16b get's bumped back to v0.16.6". Board, STATUS, record and the 16b prompt updated.
 - bbq, 8 questions: a calendar pattern and a mini calendar (`docs/bbq/2026-11-23-calendar-pattern-and-mini-calendar.md`), for `v0.16.5`.
+
+## 2026-11-23 — the calendar pattern and the mini calendar built
+
+- Fresh session, lead Opus 5.5 high, as the Kickoff of `docs/bbq/2026-11-23-calendar-pattern-and-mini-calendar.md` asks.
+  Build on disk against HEAD: `make build-proof` → `BUILD head=09196d8 dirty=no rebuilt=7` (the docs-only commits since
+  the last build left 7 crates stale), again → `BUILD head=09196d8 dirty=no rebuilt=0 target_gb=30.5`.
+- Built on `main`, no flag (ADR-007; no export change to any older page): `Pattern::Calendar` and
+  `ObjectKind::MiniCalendar` in format 0.19.0; months and weekdays (`crates/model/src/calendar.rs`); the plan, the words
+  and L07's left-out kinds (`crates/layout/src/calendar.rs`); the lines (`crates/layout/src/pattern.rs`); the words as
+  text jobs under ids made from the object's, saved with the page's outlines (`text_jobs`); measuring from the bundled
+  font (`bundled_advance_em`, `bundled_cap_em` in `crates/text/src/signature.rs`); the words in
+  `crates/i18n/locales/en-US/calendar.ftl`; the inspector rows and the Mini calendar tool (M) (`crates/ui/src/panels.rs`,
+  `crates/ui/src/tools.rs`, `crates/ui/src/draw.rs`); `--calendar-page`, `--look calendar|mini-calendar`.
+- A first render showed scrambled words on three of the four calendars: the label ids were the object's id XOR the slot,
+  which collide for neighbouring ids (object 1 slot 2 = object 2 slot 1). Now both halves are mixed (SplitMix64);
+  a test checks 64 neighbouring ids × every slot for clashes.
+- The lead's readings inside the Defaulted calls, and one thing grown past the record (the mini calendar's title line,
+  on by default, veto-able), are in the record's Built section.
+- Tests, one `CHECK` line each: `crates/model/tests/calendar.rs` (2), `crates/layout/tests/calendar.rs` (6),
+  `crates/lint/tests/calendar.rs` (1), `crates/ui/tests/calendar.rs` (2), `crates/render/tests/calendar.rs` (3), and unit
+  tests in both `calendar.rs` files. Goldens `calendar_*` blessed on both tablets after the 34 older lines (their sha256
+  checked unchanged); looked at by the lead on both before blessing.
+- On the calendar page, `lint` gives only page-placement findings (L06, L16, L18, L19, as the other sample pages); none
+  about the calendars' own words or lines.
+- `make check` → `TESTS scope=workspace checks=794 check_fail=0 passed=744 failed=0 status=ok runner=nextest`.
+- Not done here: the window itself. This session has no display (no `DISPLAY`, no Xvfb; checked 2026-11-23), so the
+  inspector rows and the tool's icon are tested headless only. Speed on the calendar page not measured.
+- Waits for chris's look (with the Full bleed tick, ADR-019), then `v0.16.5`.

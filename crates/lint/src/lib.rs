@@ -417,11 +417,7 @@ pub fn lint_against(
         let px = |mm: f64| target.mm_to_px(mm);
         let rotation = node.angle;
         let half_stroke = quadrule_layout::stroke(o.style, target).0 as f64 / 2.0;
-        let b = bounds(
-            &placed.shape,
-            matches!(o.kind, ObjectKind::Text(_)),
-            half_stroke,
-        );
+        let b = bounds(&placed.shape, o.kind.is_lettered(), half_stroke);
         let frame_px = (
             px(f.x_mm).min(px(f.x_mm + f.w_mm)),
             px(f.y_mm).min(px(f.y_mm + f.h_mm)),
@@ -430,7 +426,7 @@ pub fn lint_against(
         );
         // A turned shape, text box or pattern region meets a zone by its turned corners (rung 6b;
         // text, rung 11b; patterns, rung 12b).
-        let is_text = matches!(o.kind, ObjectKind::Text(_));
+        let is_text = o.kind.is_lettered();
         let is_pattern = matches!(o.kind, ObjectKind::Pattern(_));
         let turned = rotation != 0.0 && (o.kind.is_shape() || is_text || is_pattern);
         let at = |id| Message::new(id).text("name", o.name.clone());
@@ -439,7 +435,7 @@ pub fn lint_against(
         // L01 and L02: strokes. A shape reads its own stroke the same way a line does (rung 6 bbq,
         // Q8). L02 asks only about straight, unrotated edges: a curve or a slanted edge is soft by
         // design (Q2), so a stroke width that is not whole pixels does not matter there.
-        let stroked = !matches!(o.kind, ObjectKind::Text(_));
+        let stroked = !o.kind.is_lettered();
         let hard_edges = quadrule_layout::shapes::has_axis_aligned_edge(&o.kind, rotation);
         if stroked && let Style::Custom { width_mm, .. } = o.style {
             let exact = px(width_mm);
@@ -527,6 +523,55 @@ pub fn lint_against(
             push(h.rule, h.severity, h.message);
         }
 
+        // L07 for a calendar's words (calendar bbq, Defaulted "Text drawn by the pattern"): they shrink to fit their
+        // cells, and a kind of word that would be smaller than the smallest text size here is left out.
+        if let Some(t_min) = target.lint.smallest_text_pt {
+            let left_out = match &o.kind {
+                ObjectKind::Pattern(pr) => {
+                    let env = quadrule_layout::pattern::Env {
+                        target,
+                        rhythm: &doc.rhythm,
+                        rhythm_px: rhythm,
+                        labels: None,
+                    };
+                    let region = quadrule_layout::region_px(&f, target);
+                    let g = quadrule_layout::pattern::region_grid(pr, &env, region);
+                    quadrule_layout::calendar::month_plan(&pr.pattern, region, (g.ux, g.uy), target)
+                        .map(|p| p.left_out)
+                        .unwrap_or_default()
+                }
+                ObjectKind::MiniCalendar(m) => {
+                    quadrule_layout::calendar::mini_plan(
+                        m,
+                        quadrule_layout::region_px(&f, target),
+                        0,
+                        target,
+                    )
+                    .left_out
+                }
+                _ => Vec::new(),
+            };
+            for l in left_out {
+                use quadrule_layout::calendar::LabelKind;
+                let what = match l.kind {
+                    LabelKind::Weekday => "lint-l07-calendar-weekdays",
+                    LabelKind::Day => "lint-l07-calendar-days",
+                    LabelKind::Title => "lint-l07-calendar-title",
+                };
+                push(
+                    "L07",
+                    Severity::Warn,
+                    at("lint-l07-calendar")
+                        .arg(
+                            "what",
+                            quadrule_i18n::Arg::Msg(Box::new(Message::new(what))),
+                        )
+                        .num("pt", l.pt, 1)
+                        .num("min", t_min, 1),
+                );
+            }
+        }
+
         // L09 for a ruled region: its own vertical step is under the handwriting step. A region bound to
         // the rhythm with nothing of its own is already said by the rhythm's finding.
         if judged_for_template
@@ -538,6 +583,7 @@ pub fn lint_against(
                 target,
                 rhythm: &doc.rhythm,
                 rhythm_px: rhythm,
+                labels: None,
             };
             let (_, step_px) = quadrule_layout::pattern::region_spacing_px(pr, &env);
             let same_as_rhythm = pr.bound && (step_px - rhythm.unit_y).abs() < 1e-9;
@@ -831,6 +877,7 @@ pub fn lint_against(
                 target,
                 rhythm: &doc.rhythm,
                 rhythm_px: rhythm,
+                labels: None,
             };
             let (sx, sy) = quadrule_layout::pattern::region_spacing_px(pr, &env);
             let (use_x, use_y) = pattern_axes(&pr.pattern);
@@ -949,7 +996,7 @@ pub fn lint_against(
                 if full_bleed(doc, o) {
                     return None;
                 }
-                let text = matches!(o.kind, ObjectKind::Text(_));
+                let text = o.kind.is_lettered();
                 let half = quadrule_layout::stroke(o.style, target).0 as f64 / 2.0;
                 Some((bounds(&q.shape, text, half), if text { 0.0 } else { half }))
             })
@@ -1272,7 +1319,10 @@ fn pattern_axes(p: &quadrule_model::Pattern) -> (bool, bool) {
     use quadrule_model::{HexOrientation, Pattern};
     match p {
         Pattern::Lines | Pattern::Isometric { .. } | Pattern::MusicStaff { .. } => (false, true),
-        Pattern::Dots | Pattern::Grid | Pattern::Cornell { .. } => (true, true),
+        // A calendar's day square is one step across, its header row one step down.
+        Pattern::Dots | Pattern::Grid | Pattern::Cornell { .. } | Pattern::Calendar { .. } => {
+            (true, true)
+        }
         Pattern::Hex { orientation, .. } => match orientation {
             HexOrientation::Flat => (false, true),
             HexOrientation::Pointy => (true, false),

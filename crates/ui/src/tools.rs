@@ -38,11 +38,13 @@ pub enum Tool {
     Ellipse,
     /// Draw a polygon; a star is a polygon with Star ticked (rung 6a).
     Polygon,
+    /// Place a mini calendar of this month (calendar bbq, Q2).
+    MiniCalendar,
 }
 
 impl Tool {
     /// Every tool, in the order of the bar.
-    pub const ALL: [Tool; 7] = [
+    pub const ALL: [Tool; 8] = [
         Tool::Select,
         Tool::Line,
         Tool::Text,
@@ -50,6 +52,7 @@ impl Tool {
         Tool::Rect,
         Tool::Ellipse,
         Tool::Polygon,
+        Tool::MiniCalendar,
     ];
 
     /// The Fluent message that names it for screen readers (`crates/i18n/locales/en-US/app.ftl`).
@@ -62,6 +65,7 @@ impl Tool {
             Tool::Rect => "tool-rect",
             Tool::Ellipse => "tool-ellipse",
             Tool::Polygon => "tool-polygon",
+            Tool::MiniCalendar => "tool-mini-calendar",
         }
     }
 
@@ -75,11 +79,12 @@ impl Tool {
             Tool::Rect => "tool-rect-tip",
             Tool::Ellipse => "tool-ellipse-tip",
             Tool::Polygon => "tool-polygon-tip",
+            Tool::MiniCalendar => "tool-mini-calendar-tip",
         }
     }
 
     /// The tool a command-line name picks (`--bench-tool`): `select`, `line`, `text`, `pattern`,
-    /// `rect`, `ellipse` or `polygon`.
+    /// `rect`, `ellipse`, `polygon` or `mini-calendar`.
     pub fn from_name(name: &str) -> Option<Tool> {
         Tool::ALL
             .into_iter()
@@ -96,10 +101,11 @@ impl Tool {
             Tool::Rect => "rect",
             Tool::Ellipse => "ellipse",
             Tool::Polygon => "polygon",
+            Tool::MiniCalendar => "mini-calendar",
         }
     }
 
-    /// Its shortcut key (V, L, T, P, R, E, Y).
+    /// Its shortcut key (V, L, T, P, R, E, Y, M).
     pub fn key(self) -> Key {
         match self {
             Tool::Select => Key::V,
@@ -109,6 +115,7 @@ impl Tool {
             Tool::Rect => Key::R,
             Tool::Ellipse => Key::E,
             Tool::Polygon => Key::Y,
+            Tool::MiniCalendar => Key::M,
         }
     }
 
@@ -122,6 +129,7 @@ impl Tool {
             Tool::Rect => Some(DrawKind::Rect),
             Tool::Ellipse => Some(DrawKind::Ellipse),
             Tool::Polygon => Some(DrawKind::Polygon),
+            Tool::MiniCalendar => Some(DrawKind::MiniCalendar),
         }
     }
 }
@@ -182,6 +190,15 @@ fn paint_icon(painter: &egui::Painter, tool: Tool, c: Pos2, color: Color32) {
                 })
                 .collect();
             painter.add(Shape::closed_line(pts, stroke));
+        }
+        Tool::MiniCalendar => {
+            // A calendar page: a box with a heading bar and a few days as dots.
+            let r = egui::Rect::from_center_size(c, vec2(18.0, 18.0));
+            painter.rect_stroke(r, 2.0, stroke, egui::StrokeKind::Middle);
+            painter.line_segment([at(-9.0, -4.0), at(9.0, -4.0)], stroke);
+            for (x, y) in [(-5.0, 0.5), (0.0, 0.5), (5.0, 0.5), (-5.0, 5.0), (0.0, 5.0)] {
+                painter.circle_filled(at(x, y), 1.3, color);
+            }
         }
     }
 }

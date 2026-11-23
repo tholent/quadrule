@@ -55,6 +55,16 @@ pub enum DrawKind {
     Ellipse,
     /// A six-sided polygon, point up, stroke role Structure, no fill (rung 6a).
     Polygon,
+    /// A mini calendar of this month, in the Text role (calendar bbq, Q2).
+    MiniCalendar,
+}
+
+/// The month it is now, by this computer's clock (UTC): what a new mini calendar shows.
+pub fn this_month() -> quadrule_model::YearMonth {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    quadrule_model::YearMonth::from_unix_days((secs / 86_400) as i64)
 }
 
 impl DrawKind {
@@ -102,6 +112,8 @@ pub struct NewNames {
     pub group: String,
     /// A new repeat's name (rung 10).
     pub repeat: String,
+    /// A mini calendar's name (calendar bbq).
+    pub mini_calendar: String,
 }
 
 impl Default for NewNames {
@@ -116,6 +128,7 @@ impl Default for NewNames {
             text_content: "Text".into(),
             group: "Group".into(),
             repeat: "Repeat".into(),
+            mini_calendar: "Mini calendar".into(),
         }
     }
 }
@@ -290,6 +303,14 @@ fn make_object(
             Style::Role(LineRole::Structure),
             ObjectKind::Polygon(new_polygon()),
         ),
+        DrawKind::MiniCalendar => mm_object(
+            id,
+            &names.mini_calendar,
+            frame,
+            constraints,
+            Style::Role(LineRole::Text),
+            ObjectKind::MiniCalendar(quadrule_model::MiniCalendarShape::new(this_month())),
+        ),
     }
 }
 
@@ -443,7 +464,8 @@ impl Viewer {
             | DrawKind::Pattern
             | DrawKind::Rect
             | DrawKind::Ellipse
-            | DrawKind::Polygon => {
+            | DrawKind::Polygon
+            | DrawKind::MiniCalendar => {
                 let (mut dx, mut dy) = (x - s.0, y - s.1);
                 // Shift on a shape: a square, a circle or a regular polygon, whichever way the
                 // pointer went (the dominant side wins), then snapped along it.
@@ -524,9 +546,11 @@ impl Viewer {
         let degenerate = draw.rect.is_none_or(|r| match draw.kind {
             DrawKind::Line => r.w() < MIN_SIZE_PX && r.h() < MIN_SIZE_PX,
             DrawKind::Text => r.w() < MIN_SIZE_PX,
-            DrawKind::Pattern | DrawKind::Rect | DrawKind::Ellipse | DrawKind::Polygon => {
-                r.w() < MIN_SIZE_PX || r.h() < MIN_SIZE_PX
-            }
+            DrawKind::Pattern
+            | DrawKind::Rect
+            | DrawKind::Ellipse
+            | DrawKind::Polygon
+            | DrawKind::MiniCalendar => r.w() < MIN_SIZE_PX || r.h() < MIN_SIZE_PX,
         });
         let object = if draw.moved && !degenerate {
             draw.object.clone()?
@@ -588,6 +612,23 @@ impl Viewer {
                     let side = DEFAULT_UNITS * r.unit_x;
                     (side, side / draw.kind.regular_ratio())
                 };
+                let h = f64::from(shown.height_px);
+                let x0 = s.0.min((w - w_px).max(0.0));
+                let y0 = s.1.min((h - h_px).max(0.0));
+                (
+                    PxRect {
+                        x0,
+                        y0,
+                        x1: (x0 + w_px).min(w),
+                        y1: (y0 + h_px).min(h),
+                    },
+                    Constraints::default(),
+                )
+            }
+            DrawKind::MiniCalendar => {
+                // A rhythm unit for each column and row: seven across, and eight down for the title, the
+                // initials and six weeks; from the click point, slid to fit the page.
+                let (w_px, h_px) = (7.0 * r.unit_x, 8.0 * r.unit_y);
                 let h = f64::from(shown.height_px);
                 let x0 = s.0.min((w - w_px).max(0.0));
                 let y0 = s.1.min((h - h_px).max(0.0));

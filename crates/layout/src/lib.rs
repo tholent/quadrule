@@ -24,6 +24,7 @@
 
 pub mod align;
 pub mod border;
+pub mod calendar;
 pub mod device;
 pub mod newpage;
 pub mod pattern;
@@ -438,7 +439,81 @@ pub fn text_jobs<'a>(doc: &'a Document, primary: &Profile, target: &Profile) -> 
             }
             _ => None,
         })
+        .chain(calendar_jobs(doc, primary, target))
         .collect()
+}
+
+/// The words of the document's calendars (calendar patterns and mini calendars, calendar bbq) as they fall on
+/// `target`: one job per label, under the label's own id ([`calendar::label_id`]), each one line aligned in the
+/// box the calendar's plan gives it there. Hidden calendars are included, as hidden text is.
+fn calendar_jobs<'a>(doc: &Document, primary: &Profile, target: &Profile) -> Vec<TextJob<'a>> {
+    let has = doc.objects().any(|o| match &o.kind {
+        ObjectKind::Pattern(pr) => matches!(pr.pattern, quadrule_model::Pattern::Calendar { .. }),
+        ObjectKind::MiniCalendar(_) => true,
+        _ => false,
+    });
+    if !has {
+        return Vec::new();
+    }
+    let ov = override_key(primary, target);
+    // Placed as `display_list` places them: a repeat's copies a whole number of device pixels apart.
+    let nodes = tree::resolve_nodes_env(
+        doc,
+        primary.page_mm(),
+        target.page_mm(),
+        ov,
+        Some(device_scale(doc, target)),
+    );
+    let rhythm = RhythmPx::new(doc, target);
+    let px_per_mm = target.mm_to_px(1.0);
+    let mut out = Vec::new();
+    for o in doc.objects() {
+        let Some(node) = nodes.iter().find(|n| n.id == o.id) else {
+            continue;
+        };
+        let labels = match &o.kind {
+            ObjectKind::Pattern(pr) => {
+                let env = pattern::Env {
+                    target,
+                    rhythm: &doc.rhythm,
+                    rhythm_px: rhythm,
+                    labels: None,
+                };
+                let region = region_px(&node.frame, target);
+                let g = pattern::region_grid(pr, &env, region);
+                calendar::month_plan(&pr.pattern, region, (g.ux, g.uy), target)
+                    .map(|p| p.labels)
+                    .unwrap_or_default()
+            }
+            ObjectKind::MiniCalendar(m) => {
+                let gray = stroke_opt(o.style, target).map_or(0, |(_, g)| g);
+                calendar::mini_plan(m, region_px(&node.frame, target), gray, target).labels
+            }
+            _ => continue,
+        };
+        for l in labels {
+            out.push(TextJob {
+                object_id: calendar::label_id(o.id, l.slot),
+                text: std::borrow::Cow::Owned(l.text_box()),
+                width_mm: l.w / px_per_mm,
+                height_mm: None,
+                paragraph_mm: 0.0,
+                grid: None,
+            });
+        }
+    }
+    out
+}
+
+/// A frame on `target` as a pattern region is drawn in: left, top, right and bottom on whole pixels.
+pub fn region_px(f: &quadrule_model::Frame, target: &Profile) -> (f64, f64, f64, f64) {
+    let px = |mm: f64| target.mm_to_px(mm).round();
+    (
+        px(f.x_mm),
+        px(f.y_mm),
+        px(f.x_mm + f.w_mm),
+        px(f.y_mm + f.h_mm),
+    )
 }
 
 /// Lays out the document's text on `target` from the fonts (live text).
@@ -686,16 +761,15 @@ fn draw_objects(
                 ));
             }
             ObjectKind::Pattern(pr) => {
-                let region = (
-                    px(f.x_mm).round(),
-                    px(f.y_mm).round(),
-                    px(f.x_mm + f.w_mm).round(),
-                    px(f.y_mm + f.h_mm).round(),
-                );
+                let region = region_px(&f, target);
                 let pattern_env = pattern::Env {
                     target,
                     rhythm: env.doc_rhythm,
                     rhythm_px: rhythm,
+                    labels: Some(pattern::Labels {
+                        outlines,
+                        object: o.id,
+                    }),
                 };
                 let Some((w, gray)) = stroke_opt(o.style, target) else {
                     // No stroke of its own draws no ruling, but the border still draws.
@@ -734,6 +808,24 @@ fn draw_objects(
                     path.apply_affine(shapes::rotation_about((centre.x, centre.y), angle));
                 }
                 items.push(Item::Fill { path, gray });
+            }
+            ObjectKind::MiniCalendar(m) => {
+                let Some((_, gray)) = stroke_opt(o.style, target) else {
+                    continue;
+                };
+                let frame = region_px(&f, target);
+                let plan = calendar::mini_plan(m, frame, gray, target);
+                let start = items.len();
+                items.extend(calendar::label_items(&plan.labels, o.id, outlines, px(1.0)));
+                // A turned mini calendar turns about its middle, as a text box does.
+                if angle != 0.0 {
+                    let turn = shapes::rotation_about(rotate::centre(frame), angle);
+                    for it in &mut items[start..] {
+                        if let Item::Fill { path, .. } = it {
+                            path.apply_affine(turn);
+                        }
+                    }
+                }
             }
             // Handled above: a group draws its children, a repeat its copies.
             ObjectKind::Group(_) | ObjectKind::Repeat(_) => {}
@@ -1225,6 +1317,7 @@ pub fn placed_objects(
             | ObjectKind::Ellipse(_)
             | ObjectKind::Polygon(_)
             | ObjectKind::Pattern(_)
+            | ObjectKind::MiniCalendar(_)
             | ObjectKind::Group(_)
                 if angle != 0.0 =>
             {
@@ -1242,6 +1335,7 @@ pub fn placed_objects(
             | ObjectKind::Rect(_)
             | ObjectKind::Ellipse(_)
             | ObjectKind::Polygon(_)
+            | ObjectKind::MiniCalendar(_)
             | ObjectKind::Group(_)
             | ObjectKind::Repeat(_) => Shape::Box {
                 x0: x0.min(x1),

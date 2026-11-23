@@ -342,6 +342,7 @@ impl ViewerUi {
             text_content: strings.get("new-text-content"),
             group: strings.get("new-name-group"),
             repeat: strings.get("new-name-repeat"),
+            mini_calendar: strings.get("new-name-mini-calendar"),
         };
         ViewerUi {
             viewer,

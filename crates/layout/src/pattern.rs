@@ -33,9 +33,10 @@
 use crate::border::{Rim, clip_convex};
 use crate::{Item, RhythmPx, snap_center, stroke};
 use kurbo::{Affine, BezPath};
+use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{
     HexOrientation, IsoStyle, LineCap, LineRole, Pattern, PatternRegion, Rhythm, RhythmResolution,
-    Style,
+    Style, Uuid,
 };
 use quadrule_profiles::Profile;
 
@@ -81,6 +82,18 @@ pub struct Env<'a> {
     pub rhythm: &'a Rhythm,
     /// The rhythm resolved on `target`.
     pub rhythm_px: RhythmPx,
+    /// Where a calendar's words are drawn from; `None` draws its lines only.
+    pub labels: Option<Labels<'a>>,
+}
+
+/// The laid-out text a calendar region draws its words from (calendar bbq): the page's text outlines on the
+/// device and the region's own id, which its labels' ids are made from ([`crate::calendar::label_id`]).
+#[derive(Clone, Copy)]
+pub struct Labels<'a> {
+    /// The page's text outlines on the device drawn.
+    pub outlines: &'a ProfileOutlines,
+    /// The region.
+    pub object: Uuid,
 }
 
 /// A spacing in mm as `target` resolves it, in pixels: whole when the rhythm is pixel-locked, never
@@ -435,6 +448,21 @@ fn layout_in(
             let gap = spacing_px(gap_mm, env.rhythm, env.target).max(1.0);
             music_staff(&mut c, &g, gap, pitch_units, grand, grand_space_units);
         }
+        Pattern::Calendar { .. } => {
+            if let Some(plan) =
+                crate::calendar::month_plan(&pr.pattern, region, (g.ux, g.uy), env.target)
+            {
+                calendar(&mut c, &plan);
+                if let Some(l) = env.labels {
+                    c.items.extend(crate::calendar::label_items(
+                        &plan.labels,
+                        l.object,
+                        l.outlines,
+                        env.target.mm_to_px(1.0),
+                    ));
+                }
+            }
+        }
     }
 }
 
@@ -539,7 +567,7 @@ fn ruled_items(
     let turn = crate::shapes::rotation_about(pivot, own);
     let structured = matches!(
         pr.pattern,
-        Pattern::Cornell { .. } | Pattern::MusicStaff { .. }
+        Pattern::Cornell { .. } | Pattern::MusicStaff { .. } | Pattern::Calendar { .. }
     );
     let laid = if structured {
         region
@@ -1233,6 +1261,77 @@ fn music_staff(c: &mut Ctx, g: &Grid, gap: f64, pitch: u32, grand: bool, grand_s
         if grand {
             let divider = c.divider;
             c.vline(x0.round(), top.round(), bottom.round(), divider);
+        }
+    }
+}
+
+/// A month of day cells (calendar bbq): only the month's own days are boxed, so the outline steps round the
+/// cells before the 1st and after the last day (Q5); an edge is drawn where it borders at least one day, in runs
+/// joined at the corners. Undated, each day has a small square in its top-right corner (Q6). The words are the
+/// labels, drawn after.
+fn calendar(c: &mut Ctx, plan: &crate::calendar::MonthPlan) {
+    let pen = c.pen;
+    let half = f64::from(pen.w) / 2.0;
+    // A line's outer end, so lines meeting at a corner overlap and fill it.
+    let lo = |p: f64| snap_center(p, pen.w) - half;
+    let hi = |p: f64| snap_center(p, pen.w) + half;
+    let is_day = |r: i64, col: i64| plan.day_at(r, col).is_some();
+    let weeks = plan.weeks() as i64;
+    // The horizontal edges, between week rows k - 1 and k.
+    for k in 0..=weeks {
+        let y = plan.rows[k as usize];
+        let mut col = 0;
+        while col < 7 {
+            if !(is_day(k - 1, col) || is_day(k, col)) {
+                col += 1;
+                continue;
+            }
+            let start = col;
+            while col < 7 && (is_day(k - 1, col) || is_day(k, col)) {
+                col += 1;
+            }
+            c.hline(
+                lo(plan.cols[start as usize]),
+                hi(plan.cols[col as usize]),
+                y,
+                pen,
+            );
+        }
+    }
+    // The vertical edges, between columns j - 1 and j.
+    for j in 0..=7_i64 {
+        let x = plan.cols[j as usize];
+        let mut row = 0;
+        while row < weeks {
+            if !(is_day(row, j - 1) || is_day(row, j)) {
+                row += 1;
+                continue;
+            }
+            let start = row;
+            while row < weeks && (is_day(row, j - 1) || is_day(row, j)) {
+                row += 1;
+            }
+            c.vline(
+                x,
+                lo(plan.rows[start as usize]),
+                hi(plan.rows[row as usize]),
+                pen,
+            );
+        }
+    }
+    // The squares to write each day in, undated: a left side and a bottom inside the cell's top-right corner.
+    if !plan.dated && plan.square >= 2.0 {
+        let s = plan.square;
+        for r in 0..weeks {
+            for col in 0..7 {
+                if !is_day(r, col) {
+                    continue;
+                }
+                let (right, top) = (plan.cols[col as usize + 1], plan.rows[r as usize]);
+                let (sx, sy) = (right - s, top + s);
+                c.vline(sx, top, hi(sy), pen);
+                c.hline(lo(sx), right, sy, pen);
+            }
         }
     }
 }

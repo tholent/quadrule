@@ -78,6 +78,7 @@ fn draw_region(pr: PatternRegion, deg: f64) -> (Vec<Item>, usize) {
         target: &manta,
         rhythm: &doc.rhythm,
         rhythm_px: RhythmPx::new(&doc, &manta),
+        labels: None,
     };
     let reg = region(&doc);
     let borders = region_rim(&pr, reg, &env).map_or(0, |r| r.items().len());
@@ -400,6 +401,7 @@ fn a_region_with_no_border_draws_the_same_items_through_every_entry_point() {
         target: &manta,
         rhythm: &doc.rhythm,
         rhythm_px: RhythmPx::new(&doc, &manta),
+        labels: None,
     };
     let reg = region(&doc);
     let mut same = true;

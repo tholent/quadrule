@@ -184,6 +184,16 @@ and error.
   them off or use its own N, and the overlay draws them stronger. A region can be **unbound** from the rhythm to have
   spacing of its own (the linter's L17 says when that spacing is not a whole multiple or fraction of the rhythm). The
   pattern page opens from the command line with `--patterns-page`.
+- A **calendar**. A pattern region can be a **Calendar**: a month of day cells under a row of weekday names, seven
+  columns, a header row one rhythm unit tall and as many week rows as the month spans. Pick a **Month** and **Year**
+  and the days are numbered in their cells, each number in the day's top-right corner; leave it **Undated** and set
+  where the **1st falls** and the **days in the month** (28 to 31), and each day gets a small empty square there to
+  write its number in. Only the month's own days are boxed. **Week starts on** is Monday unless you change it. The
+  weekday names are as long as the columns have room for (Monday, Mon or M). A **mini calendar** (the Mini calendar
+  tool, M) is a small block of one month, weekday initials and day numbers with the month and year above, to place
+  anywhere, such as a corner of a daily page. A calendar's words shrink to fit, but never below the smallest size that
+  reads on the device; if they would, they are left out and the linter's L07 says so. The words are in English for
+  now. The calendar page opens from the command line with `--calendar-page`.
 - A **repeat** draws one object, or a group, again in a row, a column or a grid (the **Repeat** button beside Group and
   Ungroup). It is live: edit the first one and every copy follows, and **Expand** in the Repeat tab turns the copies into
   plain objects in one group. A repeat counts a set number of copies, or **fills** its box with as many as fit (so a box
@@ -223,7 +233,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts on the welcome screen (Blank page or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --bordered-page` for borders round pattern regions, or `-- --grand-staff-page` for grand staves (`-- --look grand-staff` shows the inspector on the first), or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --bordered-page` for borders round pattern regions, or `-- --grand-staff-page` for grand staves (`-- --look grand-staff` shows the inspector on the first), or `-- --calendar-page` for calendar patterns and mini calendars (`-- --look calendar` or `-- --look mini-calendar` shows the inspector on one), or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

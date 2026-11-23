@@ -35,6 +35,10 @@ const ENGLISH: &[(&str, &str)] = &[
         "profiles.ftl",
         include_str!("../locales/en-US/profiles.ftl"),
     ),
+    (
+        "calendar.ftl",
+        include_str!("../locales/en-US/calendar.ftl"),
+    ),
 ];
 
 /// The English Fluent files built into the program, as `(file name, source)`.

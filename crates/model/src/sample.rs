@@ -2594,6 +2594,145 @@ pub fn grand_staff_document() -> Document {
     doc
 }
 
+/// Fixed ids for the calendar page's objects.
+pub mod calendar_ids {
+    use crate::Uuid;
+    /// The `n`th object of the calendar page.
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0016_5000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+    /// The dated calendar (November 2026, Monday first): the one the look picks.
+    pub const DATED: Uuid = nth(1);
+    /// The undated calendar (31 days, the 1st on a Wednesday, Sunday first).
+    pub const UNDATED: Uuid = nth(2);
+    /// The mini calendar of November 2026, with its title.
+    pub const MINI: Uuid = nth(3);
+    /// The mini calendar of February 2028, Sunday first, without its title.
+    pub const MINI_PLAIN: Uuid = nth(4);
+}
+
+/// The calendar page (docs/bbq/2026-11-23-calendar-pattern-and-mini-calendar.md): a dated calendar pattern
+/// (November 2026, weeks starting on Monday: six rows, the 1st in the last column), an undated one (31 days, the
+/// 1st on a Wednesday, weeks starting on Sunday: five rows, a square in each day), and two mini calendars
+/// (November 2026 with its title; February 2028, a leap month, Sunday first, without one), each under a label.
+/// Every object keeps its millimetres on the Nomad (Left and Top), on the 5 mm rhythm. Designed on the Manta, also
+/// targeting the Nomad.
+pub fn calendar_document() -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = "Calendars".into();
+    doc.metadata.description =
+        "Calendar patterns, dated and undated, and two mini calendars.".into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.resolution = RhythmResolution::PhysicalLocked;
+    doc.rhythm.h_unit_mm = 5.0;
+    doc.rhythm.v_unit_mm = 5.0;
+    let title = doc.layers[1].objects[0].clone();
+    let keep = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+    let label = |n: u128, text: &str, x: f64, y: f64, w: f64| {
+        let mut t = title.clone();
+        t.id = calendar_ids::nth(100 + n);
+        t.name = format!("Label {n}");
+        t.frame = Frame::new(x, y, w, 4.0);
+        if let ObjectKind::Text(tb) = &mut t.kind {
+            tb.content = text.into();
+            tb.size_pt = 7.0;
+            tb.weight = 400;
+        }
+        t.constraints = keep;
+        t
+    };
+    let mut head = title.clone();
+    head.id = calendar_ids::TITLE;
+    head.name = "Title".into();
+    head.frame = Frame::new(margin, margin, MANTA_W_MM - 2.0 * margin, 8.0);
+    if let ObjectKind::Text(t) = &mut head.kind {
+        t.content = "Calendars".into();
+        t.size_pt = 12.0;
+    }
+    head.constraints = Constraints::default();
+    let month = |m: Option<YearMonth>, week_start: Weekday, first_day: Weekday, days: u8| {
+        ObjectKind::Pattern(PatternRegion::new(Pattern::Calendar {
+            month: m,
+            week_start,
+            first_day,
+            days,
+        }))
+    };
+    let mini = |m: YearMonth, week_start: Weekday, title: bool| {
+        let mut c = MiniCalendarShape::new(m);
+        c.week_start = week_start;
+        c.title = title;
+        ObjectKind::MiniCalendar(c)
+    };
+    let right = MANTA_W_MM.min(118.9) - margin;
+    let full = 102.0;
+    let (side_x, side_w) = (margin + 64.0, right - margin - 64.0);
+    let objs: Vec<Object> = vec![
+        head,
+        label(1, "Dated: November 2026, Monday first", margin, 17.0, full),
+        object(
+            calendar_ids::DATED,
+            "November 2026",
+            Frame::new(margin, 21.0, full, 65.0),
+            keep,
+            Style::Role(LineRole::Guide),
+            month(
+                Some(YearMonth::new(2026, 11)),
+                Weekday::Monday,
+                Weekday::Monday,
+                31,
+            ),
+        ),
+        label(
+            2,
+            "Undated: 31 days, 1st on Wed, Sunday first",
+            margin,
+            88.0,
+            62.0,
+        ),
+        object(
+            calendar_ids::UNDATED,
+            "Undated month",
+            Frame::new(margin, 92.0, 62.0, 58.0),
+            keep,
+            Style::Role(LineRole::Guide),
+            month(None, Weekday::Sunday, Weekday::Wednesday, 31),
+        ),
+        label(3, "Mini: November 2026", side_x, 88.0, side_w),
+        object(
+            calendar_ids::MINI,
+            "Mini November 2026",
+            Frame::new(side_x, 92.0, side_w, 27.0),
+            keep,
+            Style::Role(LineRole::Text),
+            mini(YearMonth::new(2026, 11), Weekday::Monday, true),
+        ),
+        label(4, "Mini: Feb 2028, Sunday first", side_x, 121.0, side_w),
+        object(
+            calendar_ids::MINI_PLAIN,
+            "Mini February 2028",
+            Frame::new(side_x, 125.0, side_w, 25.0),
+            keep,
+            Style::Role(LineRole::Text),
+            mini(YearMonth::new(2028, 2), Weekday::Sunday, false),
+        ),
+    ];
+    doc.layers = vec![Layer {
+        name: "Calendars".into(),
+        visible: true,
+        locked: false,
+        objects: objs,
+        extra: Extra::new(),
+    }];
+    doc
+}
+
 /// Fixed ids for the fonts page's objects.
 pub mod fonts_ids {
     use crate::Uuid;
