@@ -97,6 +97,8 @@ Drivers:
 - 2026-11-23: amended again by chris at his look: Centre puts a major on the middle line (see Amendment — 2026-11-23,
   chris, second, below). Built in the same session; the proof's Centre test is renamed. Earlier value, word for word:
   `proof: "`crates/layout/tests/major_from.rs::each_choice_places_the_majors_on_lines_grid_dots_and_cornell`, `crates/layout/tests/major_from.rs::centre_leaves_the_odd_line_after_the_last_major`, `crates/layout/tests/major_from.rs::a_border_does_not_move_the_majors`, `crates/layout/tests/major_from.rs::isometric_has_no_top_and_its_centred_majors_still_meet`, `crates/layout/tests/major_from.rs::a_ruling_turned_a_quarter_turn_counts_in_its_own_axes`, `crates/model/tests/major_from.rs::a_file_without_the_field_reads_as_the_rhythm_origin_and_only_others_are_written`, `crates/ui/tests/major_from.rs::isometric_greys_top_and_shows_what_it_draws`, `crates/render/tests/migrate_v019.rs::v019_files_open_migrate_and_export_the_same_bytes`, `crates/render/tests/major_lines_from.rs::major_lines_from_page_goldens`, `crates/render/tests/major_lines_from.rs::major_lines_per_axis_page_goldens`"`.
+- 2026-11-23: look approved by chris ("ok, let's approve these changes"), as built with both amendments; no calls
+  vetoed (record, Approved).
 
 ## Amendment — 2026-11-23, chris
 

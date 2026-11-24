@@ -3048,3 +3048,10 @@ VM cannot build the macOS parts.
   failed=0 status=ok runner=nextest`. `adr-check`: 24 ADRs, 0 failures.
 - Calls up for veto (record, "Look, second"): rows follow the same rule as columns; even counts take the upper or left
   middle line.
+
+## 2026-11-23 — Major lines from: look approved
+
+- chris, word for word: "ok, let's approve these changes". ADR-023's build, with both amendments (a choice per axis;
+  Centre on the middle line), is approved as it stands at `8fa0da4`; no calls vetoed. Recorded in the record's
+  Approved section, ADR-023's History and STATUS.md. Not yet in a release.
+- STATUS.md is 331 lines, still over its 300 cap; not trimmed here.

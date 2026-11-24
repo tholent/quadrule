@@ -155,3 +155,9 @@ the old Centre rule put back, `5 tests run: 1 passed, 4 failed`.
 | Applied to rows as well as columns, though chris said "on the column" | Centre is one word for both settings; a centred row that worked differently from a centred column would be two meanings for one word | veto: rows keep the old Centre |
 | An even number of lines puts the major on the upper (or left) of the two middle lines, the extra line below (or right) | Q4's odd line goes below and right | veto: the lower (or right) one |
 | The isometric test uses a twelve-line region: on nine or eleven, the middle crossing happens to fall on one of the rhythm origin's, so rows from Centre and from Rhythm origin draw alike there | that is right for those sizes, not a fault; the test needs a size where they differ | none |
+
+## Approved (2026-11-23)
+
+chris, word for word: "ok, let's approve these changes". The look is approved: ADR-023 as amended twice, as built
+(`8fa0da4`). He vetoed none of the calls in the Built, Look and "Look, second" tables, so they stand. It ships in the
+next release.
