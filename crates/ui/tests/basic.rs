@@ -11,9 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! The Basic section (rung 16b, Q5; ADR-026, proposed): the **Show in Basic** switches and the **Basic** tab, first in
-//! the inspector. With the flag off (`ViewerUi::basic_section`, the app's `--basic-section`) neither shows and a file
-//! with marks opens the same; with it on, the Arrange tab and the Page tab have the switches, the Basic tab lists what
+//! The Basic section (rung 16b, Q5; ADR-026): the **Show in Basic** switches and the **Basic** tab, first in the
+//! inspector. Both always show: the Arrange tab and the Page tab have the switches, the Basic tab lists what
 //! is marked (whether or not anything is selected) with the other tabs' own widgets, says so in a sentence when
 //! nothing is marked, and an edit made there is the same edit, in one undo step, with the selection left as it was.
 //! Headless. Each test prints one structured `CHECK` line starting with a newline (run with `-- --nocapture`).
@@ -36,8 +35,8 @@ struct Window {
 const SHOW: &str = "Show in Basic";
 
 /// The sample page, with the Cornell pattern on its ruled lines; `marked` objects (and, when `page`, the page's three
-/// settings) are marked; `flag` is the app's `--basic-section`; `tab` is showing.
-fn page(flag: bool, marked: &[Uuid], page: bool, tab: Tab) -> Harness<'static, Window> {
+/// settings) are marked; `tab` is showing.
+fn page(marked: &[Uuid], page: bool, tab: Tab) -> Harness<'static, Window> {
     let mut v = Viewer::default();
     v.open_sample();
     v.selection = vec![ids::LINES];
@@ -57,8 +56,7 @@ fn page(flag: bool, marked: &[Uuid], page: bool, tab: Tab) -> Harness<'static, W
         }
     }
     v.selection.clear();
-    let mut ui = ViewerUi::new(v);
-    ui.basic_section = flag;
+    let ui = ViewerUi::new(v);
     let mut h = Harness::builder()
         .with_size(egui::vec2(1280.0, 1400.0))
         .with_max_steps(16)
@@ -111,33 +109,37 @@ fn has(h: &Harness<'static, Window>, label: &str) -> bool {
 }
 
 #[test]
-fn nothing_shows_without_the_flag() {
-    // Flag off, with marks in the file: no Basic tab, no switch on the Arrange or Page tab, and the marks are read.
-    let mut h = page(false, &[ids::RULE, ids::LINES], true, Tab::Page);
-    let page_clean = count(&h, Role::CheckBox, SHOW) == 0;
-    let no_tab = !has(&h, "Basic");
+fn the_basic_tab_is_first_and_always_there() {
+    // No flag: with nothing selected the tabs are Basic, Page; with one object selected Basic is still first, ahead
+    // of Arrange; the Page tab has three switches and the Arrange tab one; and the marks in the file are read.
+    let mut h = page(&[ids::RULE, ids::LINES], true, Tab::Page);
+    let first_of = |h: &Harness<'static, Window>, next: &str| {
+        let basic = h.get_by_role_and_label(Role::Button, "Basic").rect();
+        let other = h.get_by_role_and_label(Role::Button, next).rect();
+        basic.top() == other.top() && basic.left() < other.left()
+    };
+    let page_first = first_of(&h, "Page");
+    let page_switches = count(&h, Role::CheckBox, SHOW);
     select(&mut h, ids::RULE);
     h.state_mut().ui.tab = Tab::Arrange;
     h.run();
-    let arrange_clean = count(&h, Role::CheckBox, SHOW) == 0 && !has(&h, "Basic");
+    let arrange_first = first_of(&h, "Arrange");
+    let arrange_switches = count(&h, Role::CheckBox, SHOW);
     let doc = h.state().ui.viewer.doc().unwrap();
     let read = doc.page.basic.any()
         && object(&h, ids::RULE).show_in_basic
         && object(&h, ids::LINES).show_in_basic;
-    let ok = page_clean && no_tab && arrange_clean && read;
+    let ok = page_first && page_switches == 3 && arrange_first && arrange_switches == 1 && read;
     println!(
-        "\nCHECK crate=ui name=basic_flag_off result={} page_tab_switches={} basic_tab={} arrange_switch={} marks_read={read}",
-        pass(ok),
-        !page_clean,
-        !no_tab,
-        !arrange_clean
+        "\nCHECK crate=ui name=basic_always result={} basic_before_page={page_first} page_tab_switches={page_switches} basic_before_arrange={arrange_first} arrange_switches={arrange_switches} marks_read={read}",
+        pass(ok)
     );
     assert!(ok);
 }
 
 #[test]
 fn empty_basic_tab_says_how_to_mark_something() {
-    let mut h = page(true, &[], false, Tab::Basic);
+    let mut h = page(&[], false, Tab::Basic);
     let words = h.state().ui.strings.get("app-basic-empty");
     let nothing_selected = has(&h, "Basic") && has(&h, &words);
     // The same with an object selected: Basic is still the first tab and still about the document.
@@ -153,7 +155,7 @@ fn empty_basic_tab_says_how_to_mark_something() {
 
 #[test]
 fn the_switches_mark_and_unmark_in_one_undo_step_each() {
-    let mut h = page(true, &[], false, Tab::Arrange);
+    let mut h = page(&[], false, Tab::Arrange);
     select(&mut h, ids::RULE);
     h.state_mut().ui.tab = Tab::Arrange;
     h.run();
@@ -202,7 +204,7 @@ fn the_switches_mark_and_unmark_in_one_undo_step_each() {
 
 #[test]
 fn the_basic_tab_lists_what_is_marked_with_the_other_tabs_widgets() {
-    let h = page(true, &[ids::TITLE, ids::RULE, ids::LINES], true, Tab::Basic);
+    let h = page(&[ids::TITLE, ids::RULE, ids::LINES], true, Tab::Basic);
     // The page: its heading and its three, each with its widgets (the Page tab's).
     let page_part = has(&h, "Page")
         && has(&h, "Margins")
@@ -245,7 +247,7 @@ fn the_basic_tab_lists_what_is_marked_with_the_other_tabs_widgets() {
 
 #[test]
 fn an_edit_in_the_basic_tab_is_the_same_edit_and_leaves_the_selection() {
-    let mut h = page(true, &[ids::LINES], false, Tab::Basic);
+    let mut h = page(&[ids::LINES], false, Tab::Basic);
     let was_bound = |h: &Harness<'static, Window>| match &object(h, ids::LINES).kind {
         ObjectKind::Pattern(p) => p.bound,
         _ => panic!("not a pattern"),
@@ -293,7 +295,7 @@ fn an_edit_in_the_basic_tab_is_the_same_edit_and_leaves_the_selection() {
 
 #[test]
 fn select_picks_the_object_on_the_page() {
-    let mut h = page(true, &[ids::RULE], false, Tab::Basic);
+    let mut h = page(&[ids::RULE], false, Tab::Basic);
     let none = h.state().ui.viewer.selection.is_empty();
     h.get_by_role_and_label(Role::Button, "Select").click();
     h.run();
@@ -315,7 +317,6 @@ fn the_basic_look_marks_a_page_and_shows_the_tab() {
     v.open_sample();
     let mut ui = ViewerUi::new(v);
     ui.show_look("basic");
-    let flag = ui.basic_section;
     let page_marks = ui.viewer.doc().unwrap().page.basic
         == BasicPage {
             margins: true,
@@ -324,9 +325,9 @@ fn the_basic_look_marks_a_page_and_shows_the_tab() {
         };
     let marked = ui.viewer.basic_objects().len();
     let tab = ui.tab == Tab::Basic;
-    let ok = flag && page_marks && marked == 3 && tab;
+    let ok = page_marks && marked == 3 && tab;
     println!(
-        "\nCHECK crate=ui name=basic_look result={} flag={flag} page_marks={page_marks} objects_marked={marked} tab_basic={tab}",
+        "\nCHECK crate=ui name=basic_look result={} page_marks={page_marks} objects_marked={marked} tab_basic={tab}",
         pass(ok)
     );
     assert!(ok);

@@ -262,7 +262,12 @@ fn select_in_layers_and_edit_in_the_inspector() {
     h.get_by_label("Title rule").click();
     h.run();
     let selected = h.state().ui.viewer.selection == vec![ids::RULE];
-    let arrange = h.state().ui.tab == Tab::Arrange;
+    // The Basic tab is first in the inspector (ADR-026), so the Page tab, which a selection hides, falls back to it;
+    // the Arrange tab is one press away.
+    let falls_back_to_basic = h.state().ui.tab == Tab::Basic;
+    h.get_by_label("Arrange").click();
+    h.run();
+    let arrange = falls_back_to_basic && h.state().ui.tab == Tab::Arrange;
     let x0 = x_of(&h, ids::RULE);
     h.get_by_label("X").focus();
     h.run();
@@ -282,7 +287,7 @@ fn select_in_layers_and_edit_in_the_inspector() {
     let clean_title = h.state().ui.window_title() == "Sample page — quadrule";
     let ok = page_tab && selected && arrange && typed && dirty_title && undone && clean_title;
     println!(
-        "CHECK crate=ui name=window_select_and_inspect result={} page_tab_when_none={page_tab} row_selects={selected} arrange_tab={arrange} typed_20mm={typed} title_dot={dirty_title} one_undo={undone} title_clean={clean_title}",
+        "CHECK crate=ui name=window_select_and_inspect result={} page_tab_when_none={page_tab} row_selects={selected} basic_then_arrange_tab={arrange} typed_20mm={typed} title_dot={dirty_title} one_undo={undone} title_clean={clean_title}",
         pass(ok)
     );
     assert!(ok);

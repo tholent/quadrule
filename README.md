@@ -168,7 +168,7 @@ and error.
   top of another object or squeezed thin on a secondary device. Files are saved as format 0.21.0 (0.16 added a small picture of the main device's page
   inside the file, written at Save and Save As so a gallery can show the file; 0.17 adds the pattern region's border; 0.18 adds the space between grand staves; 0.19 adds Full bleed and the Margin role; 0.20 adds where a region's major lines count from; 0.21 adds the Show in Basic marks); older files
   open unchanged and get the picture at their next save.
-- A **Basic** tab (in progress; start the app with `--basic-section` to see it). Mark an object **Show in Basic** in the
+- A **Basic** tab. Mark an object **Show in Basic** in the
   Arrange tab, or the page's title, margins or rhythm in the Page tab, and the Basic tab, first in the inspector, lists
   it with its main settings: a Cornell region's cue column and summary band, a ruled region's spacing, a line's role, a
   text box's text. It is about the document, so it shows whether or not anything is selected, and every setting stays

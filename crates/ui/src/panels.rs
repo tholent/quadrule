@@ -39,8 +39,7 @@ use quadrule_model::{
 /// The inspector's tabs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tab {
-    /// What is marked Show in Basic, with its main settings; first in the inspector, and only with
-    /// `--basic-section` (rung 16b, ADR-026).
+    /// What is marked Show in Basic, with its main settings; first in the inspector (rung 16b, ADR-026).
     Basic,
     /// Nothing selected: the page's settings.
     Page,
@@ -567,9 +566,7 @@ impl ViewerUi {
             vec![(Tab::Page, self.t("app-tab-page"))]
         };
         // The Basic tab is about the document, so it is there whether or not anything is selected.
-        if self.show_switches() {
-            tabs.insert(0, (Tab::Basic, self.t("app-tab-basic")));
-        }
+        tabs.insert(0, (Tab::Basic, self.t("app-tab-basic")));
         if text_selected {
             tabs.push((Tab::Text, self.t("app-tab-text")));
         }
@@ -704,11 +701,9 @@ impl ViewerUi {
         };
         egui::Grid::new("page-grid").num_columns(2).show(ui, |ui| {
             self.title_row(ui, &doc);
-            if self.show_switches() {
-                ui.label("");
-                self.page_mark_tick(ui, crate::basic::PageMark::Title);
-                ui.end_row();
-            }
+            ui.label("");
+            self.page_mark_tick(ui, crate::basic::PageMark::Title);
+            ui.end_row();
 
             // Display unit.
             let label = ui.label(self.t("app-page-units"));
@@ -778,9 +773,7 @@ impl ViewerUi {
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             ui.strong(self.t("app-page-margins"));
-            if self.show_switches() {
-                self.page_mark_tick(ui, crate::basic::PageMark::Margins);
-            }
+            self.page_mark_tick(ui, crate::basic::PageMark::Margins);
         });
         self.margins_rows(ui, &doc, cx, cy);
 
@@ -788,9 +781,7 @@ impl ViewerUi {
         ui.add_space(6.0);
         ui.horizontal(|ui| {
             ui.strong(self.t("app-rhythm"));
-            if self.show_switches() {
-                self.page_mark_tick(ui, crate::basic::PageMark::Rhythm);
-            }
+            self.page_mark_tick(ui, crate::basic::PageMark::Rhythm);
         });
         let r = doc.rhythm.clone();
         // The type first (rung 9 bbq, Q7): rectangular units, or one side length.
@@ -1257,9 +1248,7 @@ impl ViewerUi {
             .and_then(|d| o.override_on(d))
             .cloned()
             .unwrap_or_default();
-        if self.show_switches() {
-            self.show_in_basic_tick(ui, enabled, mixed.show_in_basic);
-        }
+        self.show_in_basic_tick(ui, enabled, mixed.show_in_basic);
         ui.horizontal(|ui| self.group_buttons(ui));
         self.align_section(ui);
         egui::Grid::new("arrange-grid")

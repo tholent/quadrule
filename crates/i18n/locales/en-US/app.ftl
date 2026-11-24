@@ -724,7 +724,7 @@ about-licence = Licensed under the Apache License, Version 2.0 (Apache-2.0).
 about-tagline = A free, open-source vector design tool for page templates and wallpapers for Supernote tablets.
 about-close = Close
 
-# The Basic section (rung 16b, Q5; ADR-026, proposed). Shown only when the app starts with --basic-section.
+# The Basic section (rung 16b, Q5; ADR-026).
 app-tab-basic = Basic
 app-show-in-basic = Show in Basic
 app-show-in-basic-tip = Lists this in the Basic tab, the first tab, with its main settings. Every setting stays in the other tabs too, and nothing on the page changes.

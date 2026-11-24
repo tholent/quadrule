@@ -392,7 +392,10 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Rung 16b leg 1, owed (`crates/ui/src/basic.rs`, `docs/decisions/ADR-026-basic-section.md`): chris's look at the Basic
   tab and the Show in Basic switches, behind `--basic-section` (every word and the places are proposals); then ratify
   ADR-026 and remove the flag (one field in `ViewerUi`, the `show_switches()` checks in `inspector`, `arrange_tab` and `page_tab`, the `Args` field and
-  option, the `basic` look). The layers panel has no sign for a marked object; the Basic tab has no way to reorder its
+  option, the `basic` look). DONE 2026-11-24: chris approved the look ("1. looks good 2. all good, for now") and
+  ratified ADR-026 ("3. ratified"); the flag, `ViewerUi::basic_section`, `show_switches()` and the `--basic-section`
+  option are gone (`--look basic` stays, as the sample page with its marks), so the Basic tab and the switches always
+  show. Still owed: the layers panel has no sign for a marked object; the Basic tab has no way to reorder its
   list (it follows the page); a marked group or repeat lists its name and says the rest is in the other tabs. Legs 2 and 3 (the starters) save each
   starter with its marks.
 - Rung 16b leg 2, owed (`crates/xtask/src/starters.rs`, `docs/arcs/v1/starters-from-chris/2026-11-24/`): (1) chris's look at the

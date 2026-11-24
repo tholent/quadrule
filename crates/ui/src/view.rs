@@ -196,9 +196,6 @@ pub struct ViewerUi {
     pub show_lint: bool,
     /// Scroll the Style tab to its Border section once (`--look style` on the pattern-borders page, for a screenshot).
     pub look_border: bool,
-    /// Show the Basic section: the Basic tab and the Show in Basic switches (ADR-026, proposed; `--basic-section`,
-    /// removed once chris approves the look).
-    pub basic_section: bool,
     /// The inspector's tab.
     pub tab: Tab,
     /// Where unsaved changes are written while the window is open (the app sets it; `None` in
@@ -353,7 +350,6 @@ impl ViewerUi {
             theme: ThemePreference::System,
             show_lint: true,
             look_border: false,
-            basic_section: false,
             tab: Tab::Page,
             recovery: None,
             canvas_mode: CanvasMode::ExportPixels,

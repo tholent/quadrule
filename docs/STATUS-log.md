@@ -3274,3 +3274,26 @@ VM cannot build the macOS parts.
   the Manta (`device=secondary`: the app opened the files on its remembered tablet): habit tracker drag 28.3 and 35.7,
   draw 29.2 and 32.3; isometric drag 32.0 and 45.0, draw 40.2 and 41.4. All under 50; isometric drag is the closest.
   The Pi was not measured.
+
+## 2026-11-24 — The Basic section switched on for good (builder)
+
+- chris approved the look of the Basic section and ratified ADR-026 (`docs/bbq/2026-11-24-rung-16b-starters.md`,
+  Amendments), so by ADR-007 the `--basic-section` flag came out. On `main`, not pushed.
+- Removed: `ViewerUi::basic_section` (`crates/ui/src/view.rs`), `show_switches()` (`crates/ui/src/basic.rs`), and
+  its five checks in `crates/ui/src/panels.rs` (the Basic entry in the inspector's tab list; the Page tab's title
+  switch, Margins switch and Rhythm switch; the Arrange tab's Show in Basic tick), each kept now unconditional; the
+  `--basic-section` option, its `Args` field, its line in `parse_args`, its two parse tests (the `--look basic` one is
+  kept, without the flag) and the line in `crates/app/src/main.rs`. `--look basic` stays: the sample page with its
+  title, margins, rhythm and three objects marked, the Basic tab showing; it no longer sets a flag.
+- Tests (`crates/ui/tests/basic.rs`): the `flag` parameter is gone; `nothing_shows_without_the_flag` became
+  `the_basic_tab_is_first_and_always_there` (Basic sits left of Page with nothing selected and left of Arrange with an
+  object selected, the Page tab has three Show in Basic switches, the Arrange tab one, and the marks in a file are read).
+  `the_basic_look_marks_a_page_and_shows_the_tab` no longer reads a flag.
+- One more test followed the new behaviour (`crates/ui/tests/window.rs::select_in_layers_and_edit_in_the_inspector`):
+  with the Basic tab always first, selecting an object when the Page tab was showing falls back to the first tab, now
+  Basic (before the flag came out, Arrange). The test now expects Basic, then presses Arrange. This is what chris saw
+  at the look with the flag on; whether a selection should land on Arrange instead is his to rule.
+- ADR-026 header: `built: landed`, `owed:` removed, `proof:` names the new test; a History line says so with the old
+  values. README, DEVELOPMENT.md, the Fluent comment and `docs/STATUS-debt.md` (item marked DONE) say the section
+  always shows.
+- No golden line and no fixture changed.

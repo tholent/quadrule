@@ -5,9 +5,8 @@ ratified-by: chris
 ratified-on: "2026-11-24"
 owner: chris
 kind: design
-built: partial
-proof: "`crates/format/tests/basic_marks.rs::marks_round_trip_and_unmarked_files_write_none`, `crates/format/tests/basic_marks.rs::taking_a_mark_off_writes_nothing_for_it`, `crates/render/tests/migrate_v020.rs::v020_files_open_migrate_and_export_the_same_bytes`, `crates/render/tests/migrate_v020.rs::the_chain_has_the_0_20_to_0_21_step`, `crates/ui/tests/basic.rs::nothing_shows_without_the_flag`, `crates/ui/tests/basic.rs::empty_basic_tab_says_how_to_mark_something`, `crates/ui/tests/basic.rs::the_switches_mark_and_unmark_in_one_undo_step_each`, `crates/ui/tests/basic.rs::the_basic_tab_lists_what_is_marked_with_the_other_tabs_widgets`, `crates/ui/tests/basic.rs::an_edit_in_the_basic_tab_is_the_same_edit_and_leaves_the_selection`"
-owed: "chris's look at the Basic tab and the switches (all words and the look are the builder's proposals), then ratification; removing the `--basic-section` flag after he approves; the marks on each starter (legs 2 and 3 of rung 16b)"
+built: landed
+proof: "`crates/format/tests/basic_marks.rs::marks_round_trip_and_unmarked_files_write_none`, `crates/format/tests/basic_marks.rs::taking_a_mark_off_writes_nothing_for_it`, `crates/render/tests/migrate_v020.rs::v020_files_open_migrate_and_export_the_same_bytes`, `crates/render/tests/migrate_v020.rs::the_chain_has_the_0_20_to_0_21_step`, `crates/ui/tests/basic.rs::the_basic_tab_is_first_and_always_there`, `crates/ui/tests/basic.rs::empty_basic_tab_says_how_to_mark_something`, `crates/ui/tests/basic.rs::the_switches_mark_and_unmark_in_one_undo_step_each`, `crates/ui/tests/basic.rs::the_basic_tab_lists_what_is_marked_with_the_other_tabs_widgets`, `crates/ui/tests/basic.rs::an_edit_in_the_basic_tab_is_the_same_edit_and_leaves_the_selection`"
 supersedes: nothing
 amends: nothing
 ---
@@ -105,3 +104,7 @@ Drivers:
   built behind `--basic-section` on `main`, awaiting chris's look.
 - 2026-11-24: ratified by chris after the rung 16b look, word for word: "1. looks good 2. all good, for now 3. ratified".
   Before: `status: proposed`; `status-note: "drafted 2026-11-24 by the leg 1 builder from chris's ruling (rung 16b bbq, Q5, \"Switch per element\") and the lead's Defaulted 6 and 7; awaiting chris's look and ratification"`.
+- 2026-11-24: header only, after the flag came out (ADR-007; chris's approval and ratification above). Before:
+  `built: partial`; `owed: "chris's look at the Basic tab and the switches (all words and the look are the builder's proposals), then ratification; removing the `--basic-section` flag after he approves; the marks on each starter (legs 2 and 3 of rung 16b)"`.
+  Now `built: landed` and no `owed:` line. In `proof:`, `nothing_shows_without_the_flag` is replaced by
+  `the_basic_tab_is_first_and_always_there`, the test of the section with no flag.

@@ -11,15 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//! The Basic section (rung 16b, Q5; ADR-026, proposed): a **Show in Basic** switch on each object and on the page's
+//! The Basic section (rung 16b, Q5; ADR-026): a **Show in Basic** switch on each object and on the page's
 //! title, margins and rhythm, and a **Basic** tab, first in the inspector, that lists what is marked with its main
 //! settings. The settings are drawn by the very widgets the Style, Text and Page tabs use, so a setting is the same
 //! wherever it is changed; every setting stays in those tabs too.
 //!
-//! The section shows only when the app is started with `--basic-section` (`ViewerUi::basic_section`), until chris
-//! approves its look. To remove the flag afterwards: delete that one field and `show_switches` here, and the
-//! `show_switches()` checks in `inspector` (the tab list), `arrange_tab` and `page_tab`. The file format reads and
-//! writes the marks whether or not the flag is on.
+//! The section always shows (chris approved its look on 2026-11-24 and ratified ADR-026, so the `--basic-section`
+//! flag is gone): the Basic tab is first in the inspector, and the switches are on the Arrange and Page tabs.
 
 use crate::panels::StrokeMixed;
 use crate::view::ViewerUi;
@@ -92,16 +90,9 @@ impl crate::viewer::Viewer {
 }
 
 impl ViewerUi {
-    /// Whether the Basic tab and the **Show in Basic** switches show: only when the app was started with
-    /// `--basic-section` (ADR-026, until chris approves the look).
-    pub(crate) fn show_switches(&self) -> bool {
-        self.basic_section
-    }
-
-    /// `--look basic`: the section on, the page's three settings marked, and the first line, text box and pattern
+    /// `--look basic`: the page's three settings marked, and the first line, text box and pattern
     /// region on the page marked, with the Basic tab showing and nothing selected.
     pub fn look_basic(&mut self) {
-        self.basic_section = true;
         let Some(doc) = self.viewer.doc() else {
             return;
         };

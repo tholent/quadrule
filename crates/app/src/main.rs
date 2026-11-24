@@ -38,7 +38,7 @@
 //! `--bordered-page` (the pattern-borders page: a border round pattern regions; the benchmarks then run over it) and
 //! `--turned-patterns-page` (pattern regions turned whole, one in a group and one in a repeat; the benchmarks then run over it, and `--bench-rotate` turns its 45 degree grid). Rung 14b adds `--look lint|style|preflight|export|…` (start with that part showing, for a screenshot). Rung 14a adds `--lint-page` (objects that make the gray, text-size, handwriting, dark-fill and thin-line rules fire, beside ones that pass; the benchmarks then run over it). Rung 13b adds
 //! `--paper-page` (ISO A4 at 300 PPI and ISO A5 at 600; the benchmarks then run over it) and `--paper-landscape-page` (US Letter held sideways, exported wide).
-//! Rung 16b adds `--basic-section` (the Basic tab and the Show in Basic switches, ADR-026, until chris approves their look; it combines with any other flag, `--look welcome` included) and `--look basic` (the sample page with its title, margins, rhythm and a few objects marked, and the Basic tab showing).
+//! Rung 16b adds `--look basic` (the sample page with its title, margins, rhythm and a few objects marked, and the Basic tab showing; the Basic tab and the Show in Basic switches themselves always show, ADR-026).
 //!
 //! This crate holds only what needs a real window: eframe setup, the graphics-chip connection,
 //! the system file dialogs and remembered preferences. The window itself is `quadrule-ui`.
@@ -283,9 +283,6 @@ impl App {
         if args.profiles {
             ui.open_profiles_window();
         }
-        // The Basic section (rung 16b, ADR-026): its tab and switches show with this flag only. To remove the flag once
-        // chris approves the look, delete this line, `basic_section` in `Args` and `parse_args`, and the `basic` look.
-        ui.basic_section = args.basic_section;
         if let Some(look) = &args.look {
             // A look with no page named opens the sample page, so there is something to export; the welcome
             // screen's look is the screen with nothing open.
@@ -633,9 +630,6 @@ struct Args {
     /// Open the calendar page instead of the empty start (`--calendar-page`: calendar patterns dated and undated, and
     /// two mini calendars); `--look calendar` picks the dated one, `--look mini-calendar` the first mini calendar.
     calendar_page: bool,
-    /// Show the Basic section: the Basic tab and the Show in Basic switches (`--basic-section`; rung 16b, ADR-026, until
-    /// chris approves the look). It combines with any other flag, `--look welcome` included; `--look basic` turns it on.
-    basic_section: bool,
     /// Open the major-lines-from page instead of the empty start (`--majors-page`: Top, Centre and Rhythm origin side
     /// by side on five patterns and a bordered grid; ADR-023); `--look major-lines-from` picks its ruled lines.
     majors_page: bool,
@@ -756,8 +750,6 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.grand_staff_page = true;
         } else if a == "--calendar-page" {
             out.calendar_page = true;
-        } else if a == "--basic-section" {
-            out.basic_section = true;
         } else if a == "--majors-page" {
             out.majors_page = true;
         } else if a == "--pattern-angle-page" {
@@ -987,17 +979,8 @@ mod tests {
             ),
             (p(&["--look", "sparkles"]), Err(look_error())),
             (
-                p(&["--basic-section", "--look", "welcome"]),
+                p(&["--look", "basic", "--calendar-page"]),
                 Ok(Args {
-                    basic_section: true,
-                    look: Some("welcome".into()),
-                    ..Args::default()
-                }),
-            ),
-            (
-                p(&["--look", "basic", "--basic-section", "--calendar-page"]),
-                Ok(Args {
-                    basic_section: true,
                     look: Some("basic".into()),
                     calendar_page: true,
                     ..Args::default()
