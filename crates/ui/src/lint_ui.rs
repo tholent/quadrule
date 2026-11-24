@@ -26,8 +26,8 @@ use quadrule_profiles::active::lookup_in;
 /// What a button on a finding's row asks for.
 #[derive(Clone, Debug)]
 pub(crate) enum Action {
-    /// Outline the finding on its device.
-    Select(String, usize),
+    /// Outline the finding on its device and, when it is about an object, select the object (rung 17, Defaulted 2).
+    Select(String, usize, Finding),
     /// Do a quick fix.
     Fix(Finding, Fix),
     /// Turn the rule off for this document.
@@ -139,12 +139,16 @@ impl ViewerUi {
     /// Does what a button asked.
     pub(crate) fn do_action(&mut self, action: Action, all: &[Finding]) {
         match action {
-            Action::Select(dev, idx) => {
+            Action::Select(dev, idx, f) => {
                 let same = self.viewer.profile_id == dev && self.viewer.selected == Some(idx);
                 if same {
                     self.viewer.selected = None;
                 } else {
+                    // The object, when there is one, is picked with its handles; the Lint tab stays open, and
+                    // the canvas scrolls to it. A finding of the page itself only outlines.
                     self.viewer.show_finding(&dev, idx);
+                    let _ = self.viewer.jump_to(&f);
+                    self.viewer.selected = Some(idx);
                     self.scroll_to_selected = true;
                 }
             }
@@ -252,7 +256,7 @@ impl ViewerUi {
                 let selected = self.viewer.profile_id == *dev && self.viewer.selected == Some(i);
                 let r = ui.add(egui::Button::selectable(selected, text).wrap());
                 if r.clicked() {
-                    action = Some(Action::Select(dev.clone(), i));
+                    action = Some(Action::Select(dev.clone(), i, f.clone()));
                 }
                 if let Some(a) = self.finding_buttons(ui, f, style, l16.len()) {
                     action = Some(a);

@@ -1000,3 +1000,81 @@ fn a_paper_page_says_why_it_has_fewer_checks_and_this_device_lists_only_its_own_
     );
     assert!(ok);
 }
+
+/// Clicking a finding's line in the Lint tab picks the object it is about, with the Lint tab still open (rung 17,
+/// Defaulted 2); a finding about no object only outlines it.
+#[test]
+fn clicking_a_finding_selects_its_object_and_keeps_the_lint_tab() {
+    let mut h = lint_page_window();
+    open_lint_tab(&mut h);
+    let findings: Vec<quadrule_lint::Finding> = h
+        .state_mut()
+        .ui
+        .viewer
+        .page()
+        .map(|p| p.findings.clone())
+        .unwrap_or_default();
+    // A finding whose rule appears once on its device, so its line is found by the rule's name.
+    let unique = |f: &quadrule_lint::Finding| {
+        findings
+            .iter()
+            .filter(|g| g.rule == f.rule && g.profile == f.profile)
+            .count()
+            == 1
+    };
+    let with_object = findings
+        .iter()
+        .find(|f| f.object.is_some() && unique(f))
+        .cloned();
+    let without = findings
+        .iter()
+        .find(|f| f.object.is_none() && unique(f))
+        .cloned();
+    let mut picked = false;
+    let mut tab_kept = false;
+    let mut outlined = false;
+    if let Some(f) = &with_object {
+        let line = format!("{}  ", f.rule);
+        h.get_all_by_label_contains(&line)
+            .next()
+            .unwrap()
+            .scroll_to_me();
+        h.run();
+        h.get_all_by_label_contains(&line).next().unwrap().hover();
+        h.run();
+        h.get_all_by_label_contains(&line).next().unwrap().click();
+        h.run();
+        h.run();
+        let ui = &h.state().ui;
+        picked = ui.viewer.selection == vec![f.object.unwrap()];
+        tab_kept = ui.tab == Tab::Lint;
+        outlined = ui.viewer.selected.is_some();
+    }
+    // A finding with no object leaves the selection alone (and still outlines).
+    let mut page_only = without.is_none();
+    if let Some(f) = &without {
+        h.state_mut().ui.viewer.selection.clear();
+        h.run();
+        let line = format!("{}  ", f.rule);
+        h.get_all_by_label_contains(&line)
+            .next()
+            .unwrap()
+            .scroll_to_me();
+        h.run();
+        h.get_all_by_label_contains(&line).next().unwrap().hover();
+        h.run();
+        h.get_all_by_label_contains(&line).next().unwrap().click();
+        h.run();
+        h.run();
+        let ui = &h.state().ui;
+        page_only = ui.viewer.selection.is_empty() && ui.viewer.selected.is_some();
+    }
+    let ok = with_object.is_some() && picked && tab_kept && outlined && page_only;
+    println!(
+        "\nCHECK crate=ui name=lint_click_selects result={} has_object_finding={} object_picked={picked} lint_tab_kept={tab_kept} outlined={outlined} page_finding_only_outlines={page_only} (page finding in the lint page: {})",
+        pass(ok),
+        with_object.is_some(),
+        without.is_some()
+    );
+    assert!(ok);
+}

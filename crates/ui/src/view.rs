@@ -2246,6 +2246,13 @@ impl ViewerUi {
                     ui.scroll_to_rect(r, Some(egui::Align::Center));
                     self.scroll_to_selected = false;
                 }
+            } else if self.scroll_to_selected {
+                // A finding with no area: the object it is about, when it is picked.
+                if let Some(((x0, y0, x1, y1), _)) = outlines.first().map(|(_, o)| o) {
+                    let r = Rect::from_min_max(to_screen(*x0, *y0), to_screen(*x1, *y1));
+                    ui.scroll_to_rect(r, Some(egui::Align::Center));
+                }
+                self.scroll_to_selected = false;
             }
 
             // The groups entered: a faint dashed box.
