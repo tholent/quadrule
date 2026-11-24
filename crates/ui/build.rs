@@ -14,8 +14,8 @@
 
 //! Builds the list of starter pages into the program (rung 16 bbq, Defaulted "Where starters live"): every
 //! `starters/<category>/<slug>.quad` in this crate becomes one entry of `BUILT_IN` in `starters.rs`, with its bytes
-//! included. The folder names the category, so the file format does not change. With no starters (rung 16a ships
-//! none) the list is empty.
+//! included. The folder names the category, so the file format does not change. The files are written by
+//! `cargo xtask starters`.
 
 use std::path::{Path, PathBuf};
 

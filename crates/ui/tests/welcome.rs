@@ -145,13 +145,24 @@ fn the_welcome_screen_has_its_frame_and_every_tab_says_what_is_in_it() {
         .iter()
         .all(|l| has(&h, l));
     let recent_none = has_part(&h, "Files you open or save are listed here");
-    // Each tab with no starters in it says they are coming (Q5); My templates says how to fill it.
-    let soon_all = has_part(&h, "Starter pages are coming soon");
+    // Starters ship now (rung 16b leg 2): All and the tabs that have some list them; a tab with none (Planning and
+    // Creative, until leg 3) says they are coming (Q5); My templates says how to fill it.
+    let soon_all = !has_part(&h, "Starter pages are coming soon") && has_part(&h, "Rapid log");
     let mut soon = true;
-    for tab in ["Paper", "Notes", "Planning", "Bullet journal", "Creative"] {
+    for (tab, shows) in [
+        ("Paper", Some("Square grid")),
+        ("Notes", Some("Cornell notes")),
+        ("Planning", None),
+        ("Bullet journal", Some("Rapid log")),
+        ("Creative", None),
+    ] {
         h.get_by_label(tab).click();
         h.run();
-        soon &= has_part(&h, "Starter pages for this group are coming soon");
+        let coming = has_part(&h, "Starter pages for this group are coming soon");
+        soon &= match shows {
+            Some(title) => !coming && has_part(&h, title),
+            None => coming,
+        };
     }
     h.get_by_label("My templates").click();
     h.run();
@@ -179,7 +190,7 @@ fn the_welcome_screen_has_its_frame_and_every_tab_says_what_is_in_it() {
         && !h.state().ui.welcome_showing();
     let ok = left && right && recent_none && soon_all && soon && mine && bar && asked && sample;
     println!(
-        "CHECK crate=ui name=welcome_frame result={} left_column={left} right_side={right} recent_empty_line={recent_none} all_tab_soon={soon_all} empty_tabs_soon={soon} my_templates_line={mine} bar_has_file_only={bar} open_asks_dialog={asked} sample_link={sample}",
+        "CHECK crate=ui name=welcome_frame result={} left_column={left} right_side={right} recent_empty_line={recent_none} all_lists_starters={soon_all} tabs_with_starters_list_them_and_empty_tabs_say_soon={soon} my_templates_line={mine} bar_has_file_only={bar} open_asks_dialog={asked} sample_link={sample}",
         pass(ok)
     );
     assert!(ok);

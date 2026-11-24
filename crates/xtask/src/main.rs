@@ -19,15 +19,16 @@
 //! cargo xtask safe-zones [--profile <id>|all]
 //! cargo xtask lint [--toolbars <list>] [<file.quad>]
 //! cargo xtask prune [--dry-run]
+//! cargo xtask starters [--check]
 //! ```
 
 use quadrule_render::{PngMeta, encode_png, render, sha256_hex};
 use quadrule_text::FontRegistry;
-use quadrule_xtask::calib;
+use quadrule_xtask::{calib, lintrun};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]\n       cargo xtask lint [--toolbars <list>] [<file.quad>]\n       cargo xtask prune [--dry-run]";
+const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]\n       cargo xtask lint [--toolbars <list>] [<file.quad>]\n       cargo xtask prune [--dry-run]\n       cargo xtask starters [--check]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -47,6 +48,13 @@ fn main() -> ExitCode {
             }
         },
         Some("prune") => match prune(&args[1..]) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("error: {e}");
+                ExitCode::FAILURE
+            }
+        },
+        Some("starters") => match starters(&args[1..]) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("error: {e}");
@@ -173,6 +181,46 @@ fn safe_zones(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
+/// Writes every starter page to `crates/ui/starters/<category>/<slug>.quad` (`quadrule_xtask::starters`), the same
+/// bytes every run, and prints one `STARTERS` line. `--check` writes nothing and fails when a file there differs.
+fn starters(args: &[String]) -> Result<(), String> {
+    let check = match args {
+        [] => false,
+        [flag] if flag == "--check" => true,
+        _ => return Err(USAGE.into()),
+    };
+    let root = quadrule_xtask::starters::starters_dir();
+    if check {
+        let files = quadrule_xtask::starters::files()?;
+        let mut differ = Vec::new();
+        for (rel, bytes) in &files {
+            if std::fs::read(root.join(rel)).ok().as_ref() != Some(bytes) {
+                differ.push(rel.display().to_string());
+            }
+        }
+        for stale in quadrule_xtask::starters::stale_files(&root, &files) {
+            differ.push(stale.display().to_string());
+        }
+        println!(
+            "STARTERS check={} starters={} differ={}",
+            if differ.is_empty() { "pass" } else { "fail" },
+            files.len(),
+            differ.join(",")
+        );
+        return if differ.is_empty() {
+            Ok(())
+        } else {
+            Err("run `cargo xtask starters` to write them again".into())
+        };
+    }
+    let written = quadrule_xtask::starters::write_all(&root)?;
+    for p in &written {
+        println!("wrote {}", p.display());
+    }
+    println!("STARTERS written={}", written.len());
+    Ok(())
+}
+
 /// Deletes old copies of this workspace's builds from Cargo's build folder and incremental caches
 /// unused for three days (`quadrule_xtask::prune`), then prints one `PRUNE` line. `--dry-run`
 /// lists what would go and deletes nothing.
@@ -220,18 +268,11 @@ fn prune(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-/// Toolbar positions `cargo xtask lint` checks unless told otherwise: the docked ones (chris,
-/// 2026-11-10: "the safe area linting should look at all safe areas, including the right one", and
-/// after rung 5 that checking the floating menu bar "isn't desired"; on 2026-11-09 it was "Docked
-/// left, Docked top"; docs/device-measurements/supernote.a6x2/calibration.md). `--toolbars all` adds
-/// the floating one.
-const DEFAULT_TOOLBARS: &str = "left,right,top";
-
 /// Lints a `.quad` file (or the rung 1 slice document) on each of its profiles and prints one
 /// line per finding: profile, rule, severity, message. `--toolbars` takes a comma-separated
 /// list of `left`, `right`, `top`, `floating`, or `all`.
 fn lint(args: &[String]) -> Result<(), String> {
-    let mut toolbars = DEFAULT_TOOLBARS.to_string();
+    let mut toolbars = lintrun::DEFAULT_TOOLBARS.to_string();
     let mut path = None;
     let mut it = args.iter();
     while let Some(a) = it.next() {
@@ -241,20 +282,7 @@ fn lint(args: &[String]) -> Result<(), String> {
             _ => return Err(format!("unknown argument {a:?}\n{USAGE}")),
         }
     }
-    let opts = quadrule_lint::Options {
-        toolbars: if toolbars == "all" {
-            quadrule_lint::Toolbar::ALL.to_vec()
-        } else {
-            toolbars
-                .split(',')
-                .map(|s| {
-                    quadrule_lint::Toolbar::parse(s.trim())
-                        .ok_or_else(|| format!("unknown toolbar position {s:?}\n{USAGE}"))
-                })
-                .collect::<Result<_, _>>()?
-        },
-        ..quadrule_lint::Options::default()
-    };
+    let opts = lintrun::options(&toolbars).map_err(|e| format!("{e}\n{USAGE}"))?;
     // A file brings its saved outlines, which draw the text whose font this computer lacks (L11).
     let (doc, saved) = match path {
         None => (quadrule_model::sample::slice_document(), Default::default()),
@@ -270,32 +298,14 @@ fn lint(args: &[String]) -> Result<(), String> {
         }
     };
     println!("toolbar positions checked: {toolbars}");
-    let primary = quadrule_profiles::active::lookup_in(&doc, &doc.primary_profile_id)
-        .map_err(|e| e.to_string())?;
-    let mut reg = FontRegistry::bundled_only();
-    let strings = quadrule_i18n::Strings::english();
-    let mut count = 0;
-    for id in doc.profile_ids() {
-        let target = quadrule_profiles::active::lookup_in(&doc, id).map_err(|e| e.to_string())?;
-        let (laid, how) =
-            quadrule_layout::lay_out_text_saved(&doc, &primary, &target, &mut reg, &saved)
-                .map_err(|e| e.to_string())?;
-        let mut opts = opts.clone();
-        for id in &laid.unavailable {
-            if let Some(quadrule_model::ObjectKind::Text(t)) = doc.object(*id).map(|o| &o.kind) {
-                opts.fonts.missing.push(quadrule_lint::MissingBox {
-                    id: *id,
-                    family: t.family.clone(),
-                    needs_font: how.needs_font.contains(id),
-                });
-            }
-        }
-        for f in quadrule_lint::lint_with(&doc, &primary, &target, &laid.outlines, &opts) {
-            count += 1;
-            let message = strings.format(&f.message);
-            println!("{}  {}  {:?}  {message}", f.profile, f.rule, f.severity);
-        }
+    let lines = lintrun::lint_lines(&doc, &saved, &opts)?;
+    for l in &lines {
+        println!("{l}");
     }
-    println!("{count} finding(s) on {} profile(s)", doc.profiles.len());
+    println!(
+        "{} finding(s) on {} profile(s)",
+        lines.len(),
+        doc.profiles.len()
+    );
     Ok(())
 }

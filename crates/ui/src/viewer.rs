@@ -30,6 +30,7 @@ use quadrule_model::outlines::ProfileOutlines;
 use quadrule_model::{Document, Uuid};
 use quadrule_profiles::Profile;
 use quadrule_profiles::active::{self, lookup, lookup_in};
+pub use quadrule_render::shrink;
 use quadrule_render::{Gray, encode_png, render, turn_clockwise};
 use quadrule_text::embed::NoEmbed;
 use quadrule_text::{BundledFont, FontRegistry};
@@ -1175,24 +1176,6 @@ pub fn slug(s: &str) -> String {
     }
 }
 
-/// Shrinks `img` to `out_w` × `out_h` by averaging: each output pixel is the mean of the device
-/// pixels it covers, weighted by how much of each it covers. Zoomed out, a 1 px line or a small dot
-/// turns lighter gray but never disappears, as it would if every n-th pixel were picked.
-pub fn shrink(img: &Gray, out_w: u32, out_h: u32) -> Gray {
-    let (out_w, out_h) = (out_w.clamp(1, img.width), out_h.clamp(1, img.height));
-    // Across, then down; each pass is a box filter with fractional edges.
-    let across = box_pass(&img.data, img.width, img.height, out_w, true);
-    let down = box_pass(&across, out_w, img.height, out_h, false);
-    Gray {
-        width: out_w,
-        height: out_h,
-        data: down
-            .iter()
-            .map(|v| v.round().clamp(0.0, 255.0) as u8)
-            .collect(),
-    }
-}
-
 /// A copy of `img` at half the size (rounded up), each pixel the mean of the 2 × 2 it covers; at an odd
 /// edge the last row or column counts twice. Fast, for the ladder of copies a zoom gesture draws from.
 pub fn halve(img: &Gray) -> Gray {
@@ -1215,29 +1198,6 @@ pub fn halve(img: &Gray) -> Gray {
         height: oh as u32,
         data,
     }
-}
-
-/// One box-filter pass over a `w` × `h` image, shrinking along x (`across`) or y to `n`.
-fn box_pass<T: Copy + Into<f64>>(src: &[T], w: u32, h: u32, n: u32, across: bool) -> Vec<f64> {
-    let (len, lines) = if across { (w, h) } else { (h, w) };
-    let ratio = len as f64 / n as f64;
-    let (ow, oh) = if across { (n, h) } else { (w, n) };
-    let mut out = vec![0.0; (ow * oh) as usize];
-    for i in 0..n {
-        let (a, b) = (i as f64 * ratio, (i + 1) as f64 * ratio);
-        let (first, last) = (a.floor() as u32, (b.ceil() as u32).min(len));
-        for line in 0..lines {
-            let mut sum = 0.0;
-            for k in first..last {
-                let cover = (b.min(k as f64 + 1.0) - a.max(k as f64)).max(0.0);
-                let idx = if across { line * w + k } else { k * w + line };
-                sum += src[idx as usize].into() * cover;
-            }
-            let o = if across { line * n + i } else { i * w + line };
-            out[o as usize] = sum / ratio;
-        }
-    }
-    out
 }
 
 /// A rectangle of an image in pixels: x, y, width, height.

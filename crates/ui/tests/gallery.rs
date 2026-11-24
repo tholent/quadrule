@@ -239,8 +239,26 @@ fn a_tile_that_does_not_target_the_device_says_which_device_it_is_drawn_on() {
 
 #[test]
 fn the_starters_loader_sorts_by_category_and_the_tabs_show_theirs_with_coming_soon_for_the_rest() {
-    // Nothing is shipped in 16a.
-    let none = starters::built_in().is_empty();
+    // What ships (rung 16b leg 2): chris's seven, in tab order and then by name. Planning and Creative have none
+    // until leg 3 makes them. Each category the built-in list names is one of the five tabs.
+    let shipped_list = starters::built_in();
+    let shipped_names: Vec<&str> = shipped_list.iter().map(|e| e.name.as_str()).collect();
+    let shipped = shipped_names
+        == [
+            "Hex grid",
+            "Isometric grid",
+            "Narrow ruled",
+            "Narrow ruled, right-to-left",
+            "Square grid",
+            "Cornell notes",
+            "Rapid log",
+        ]
+        && starters::BUILT_IN
+            .iter()
+            .all(|(folder, _, _)| Category::ALL.iter().any(|c| c.folder() == Some(folder)))
+        && !starters::BUILT_IN
+            .iter()
+            .any(|(folder, _, _)| matches!(*folder, "planning" | "creative"));
     let made = test_starters(3);
     let mut list: Vec<(&str, &str, &[u8])> = made
         .iter()
@@ -296,9 +314,9 @@ fn the_starters_loader_sorts_by_category_and_the_tabs_show_theirs_with_coming_so
     }) && !h.state().ui.viewer.is_dirty()
         && !h.state().ui.welcome_showing();
     let ok =
-        none && sorted && all && paper && soon && soon2 && mine && by_category && by_tag && copy;
+        shipped && sorted && all && paper && soon && soon2 && mine && by_category && by_tag && copy;
     println!(
-        "CHECK crate=ui name=gallery_starters result={} none_shipped={none} sorted_and_stray_left_out={sorted} all_lists_three={all} paper_tab={paper} empty_tab_soon={soon} second_empty_soon={soon2} my_templates_untouched={mine} search_by_category={by_category} search_by_tag={by_tag} pick_opens_untitled_copy={copy}",
+        "CHECK crate=ui name=gallery_starters result={} seven_shipped_none_in_planning_or_creative={shipped} sorted_and_stray_left_out={sorted} all_lists_three={all} paper_tab={paper} empty_tab_soon={soon} second_empty_soon={soon2} my_templates_untouched={mine} search_by_category={by_category} search_by_tag={by_tag} pick_opens_untitled_copy={copy}",
         pass(ok)
     );
     assert!(ok);

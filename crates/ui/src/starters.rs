@@ -14,8 +14,8 @@
 
 //! The built-in starters (rung 16 bbq, Defaulted "Where starters live"): `.quad` files kept in
 //! `crates/ui/starters/<category>/<slug>.quad`, built into the program by `build.rs`. The folder names the category
-//! (`paper`, `notes`, `planning`, `bullet-journal`, `creative`), so the file format does not change. Rung 16a ships
-//! none; chris adds them in 16b. A starter opens as an untitled copy exactly as a template does
+//! (`paper`, `notes`, `planning`, `bullet-journal`, `creative`), so the file format does not change. The files are
+//! written by `cargo xtask starters` (`crates/xtask/src/starters.rs`), not by hand. A starter opens as an untitled copy exactly as a template does
 //! ([`crate::Viewer::open_copy`]).
 //!
 //! No screen in here. [`load`] turns a list of (folder, slug, bytes) into gallery entries, so a test can hand it
