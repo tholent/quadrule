@@ -24,6 +24,7 @@
 #![forbid(unsafe_code)]
 
 pub mod arrange;
+pub mod basic;
 pub mod bench;
 pub mod canvas;
 pub mod drag;

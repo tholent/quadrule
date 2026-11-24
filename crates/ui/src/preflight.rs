@@ -181,6 +181,9 @@ impl ViewerUi {
                     self.tab = crate::panels::Tab::Style;
                 }
             }
+            // The Basic tab (ADR-026): the page's title, margins and rhythm and the first line, text box and pattern
+            // region marked, on whatever page is open. Turns the section on, so it needs no other flag.
+            "basic" => self.look_basic(),
             // The Style tab on the calendar page's dated calendar, or its first mini calendar.
             "calendar" | "mini-calendar" => {
                 let id = if look == "calendar" {

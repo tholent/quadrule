@@ -165,9 +165,14 @@ and error.
   it); click a picture to put that device on screen, or fold the strip shut. The Page tab lists the devices: tick them
   in and out (taking one out asks first if it has changes), and **Make primary** makes a device's layout the design
   without changing a pixel on any device. The linter's L15 notes where constraints alone put an object off the page, on
-  top of another object or squeezed thin on a secondary device. Files are saved as format 0.20.0 (0.16 added a small picture of the main device's page
-  inside the file, written at Save and Save As so a gallery can show the file; 0.17 adds the pattern region's border; 0.18 adds the space between grand staves; 0.19 adds Full bleed and the Margin role; 0.20 adds where a region's major lines count from); older files
+  top of another object or squeezed thin on a secondary device. Files are saved as format 0.21.0 (0.16 added a small picture of the main device's page
+  inside the file, written at Save and Save As so a gallery can show the file; 0.17 adds the pattern region's border; 0.18 adds the space between grand staves; 0.19 adds Full bleed and the Margin role; 0.20 adds where a region's major lines count from; 0.21 adds the Show in Basic marks); older files
   open unchanged and get the picture at their next save.
+- A **Basic** tab (in progress; start the app with `--basic-section` to see it). Mark an object **Show in Basic** in the
+  Arrange tab, or the page's title, margins or rhythm in the Page tab, and the Basic tab, first in the inspector, lists
+  it with its main settings: a Cornell region's cue column and summary band, a ruled region's spacing, a line's role, a
+  text box's text. It is about the document, so it shows whether or not anything is selected, and every setting stays
+  in the other tabs too. `--look basic` shows it on the sample page.
 - Landscape pages. Pick **Portrait** or **Landscape** in New… or in the Page tab (one undo step: objects follow their
   own constraints onto the turned page). A landscape page is designed upright on screen and exported turned a quarter
   turn clockwise into the tablet's ordinary portrait PNG, the design's top along the tablet's right edge: read it in

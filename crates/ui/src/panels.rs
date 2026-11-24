@@ -39,6 +39,9 @@ use quadrule_model::{
 /// The inspector's tabs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Tab {
+    /// What is marked Show in Basic, with its main settings; first in the inspector, and only with
+    /// `--basic-section` (rung 16b, ADR-026).
+    Basic,
     /// Nothing selected: the page's settings.
     Page,
     /// Position and size.
@@ -55,6 +58,15 @@ pub enum Tab {
     Overrides,
     /// Lint findings on the device on screen.
     Lint,
+}
+
+/// Which parts of the stroke differ across the objects picked (they read "mixed").
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct StrokeMixed {
+    pub(crate) kind: bool,
+    pub(crate) role: bool,
+    pub(crate) width: bool,
+    pub(crate) gray: bool,
 }
 
 /// What a double-click in the layers panel is renaming.
@@ -554,6 +566,10 @@ impl ViewerUi {
         } else {
             vec![(Tab::Page, self.t("app-tab-page"))]
         };
+        // The Basic tab is about the document, so it is there whether or not anything is selected.
+        if self.show_switches() {
+            tabs.insert(0, (Tab::Basic, self.t("app-tab-basic")));
+        }
         if text_selected {
             tabs.push((Tab::Text, self.t("app-tab-text")));
         }
@@ -600,7 +616,7 @@ impl ViewerUi {
                 .small(),
             );
         }
-        if has_selection && self.tab != Tab::Lint {
+        if has_selection && self.tab != Tab::Lint && self.tab != Tab::Basic {
             let n = self.viewer.selection.len();
             ui.label(
                 self.strings
@@ -614,6 +630,7 @@ impl ViewerUi {
         ScrollArea::vertical()
             .id_salt("inspector-scroll")
             .show(ui, |ui| match self.tab {
+                Tab::Basic => self.basic_tab(ui),
                 Tab::Page => self.page_tab(ui),
                 Tab::Arrange => self.arrange_tab(ui),
                 Tab::Style => self.style_tab(ui),
@@ -686,21 +703,12 @@ impl ViewerUi {
             return;
         };
         egui::Grid::new("page-grid").num_columns(2).show(ui, |ui| {
-            // Title.
-            let label = ui.label(self.t("app-page-title"));
-            let mut title = doc.metadata.title.clone();
-            if ui
-                .add(egui::TextEdit::singleline(&mut title).desired_width(180.0))
-                .labelled_by(label.id)
-                .changed()
-            {
-                let mut m = doc.metadata.clone();
-                m.title = title;
-                let _ = self
-                    .viewer
-                    .edit(Command::SetMetadata(m), Some("page-title"));
+            self.title_row(ui, &doc);
+            if self.show_switches() {
+                ui.label("");
+                self.page_mark_tick(ui, crate::basic::PageMark::Title);
+                ui.end_row();
             }
-            ui.end_row();
 
             // Display unit.
             let label = ui.label(self.t("app-page-units"));
@@ -768,52 +776,23 @@ impl ViewerUi {
 
         // Margins, linked by default.
         ui.add_space(6.0);
-        ui.strong(self.t("app-page-margins"));
-        let link = self.t("app-link-margins");
-        ui.checkbox(&mut self.link_margins, link);
-        let m = doc.page.margins_mm;
-        egui::Grid::new("margins-grid")
-            .num_columns(2)
-            .show(ui, |ui| {
-                let sides = [
-                    ("app-margin-top", m.top, cy, 0),
-                    ("app-margin-right", m.right, cx, 1),
-                    ("app-margin-bottom", m.bottom, cy, 2),
-                    ("app-margin-left", m.left, cx, 3),
-                ];
-                for (id, v, ctx, side) in sides {
-                    if let Some(mm) =
-                        self.length_row(ui, &format!("margin-{side}"), id, v, &ctx, true)
-                    {
-                        let mut p = doc.page.clone();
-                        let mm = mm.max(0.0);
-                        if self.link_margins {
-                            p.margins_mm = quadrule_model::Margins::all(mm);
-                        } else {
-                            match side {
-                                0 => p.margins_mm.top = mm,
-                                1 => p.margins_mm.right = mm,
-                                2 => p.margins_mm.bottom = mm,
-                                _ => p.margins_mm.left = mm,
-                            }
-                        }
-                        let _ = self
-                            .viewer
-                            .edit(Command::SetPage(p), Some(&format!("margin-{side}")));
-                    }
-                    ui.end_row();
-                }
-            });
+        ui.horizontal(|ui| {
+            ui.strong(self.t("app-page-margins"));
+            if self.show_switches() {
+                self.page_mark_tick(ui, crate::basic::PageMark::Margins);
+            }
+        });
+        self.margins_rows(ui, &doc, cx, cy);
 
         // Rhythm.
         ui.add_space(6.0);
-        ui.strong(self.t("app-rhythm"));
+        ui.horizontal(|ui| {
+            ui.strong(self.t("app-rhythm"));
+            if self.show_switches() {
+                self.page_mark_tick(ui, crate::basic::PageMark::Rhythm);
+            }
+        });
         let r = doc.rhythm.clone();
-        // Rhythm units are lengths, but `u` would be circular here: read them without it.
-        let plain = |c: UnitContext| UnitContext {
-            rhythm_mm: f64::NAN,
-            ..c
-        };
         // The type first (rung 9 bbq, Q7): rectangular units, or one side length.
         egui::Grid::new("rhythm-type-grid")
             .num_columns(2)
@@ -832,59 +811,11 @@ impl ViewerUi {
                 }
                 ui.end_row();
             });
-        if !r.is_isometric() {
-            let link = self.t("app-link-rhythm");
-            ui.checkbox(&mut self.link_rhythm, link);
-        }
+        self.rhythm_link(ui, &r);
         egui::Grid::new("rhythm-grid")
             .num_columns(2)
             .show(ui, |ui| {
-                if r.is_isometric() {
-                    // One side; snapping runs on half a side across and a row down.
-                    if let Some(mm) = self.length_row(
-                        ui,
-                        "rhythm-side",
-                        "app-rhythm-side",
-                        r.side(),
-                        &plain(cx),
-                        true,
-                    ) && mm.is_finite()
-                        && mm > 0.0
-                    {
-                        let mut nr = r.clone();
-                        nr.side_mm = Some(mm);
-                        let _ = self
-                            .viewer
-                            .edit(Command::SetRhythm(nr), Some("rhythm-side"));
-                    }
-                    ui.end_row();
-                } else {
-                    for (key, id, v, ctx, across) in [
-                        (
-                            "rhythm-h",
-                            "app-rhythm-across",
-                            r.h_unit_mm,
-                            plain(cx),
-                            true,
-                        ),
-                        ("rhythm-v", "app-rhythm-down", r.v_unit_mm, plain(cy), false),
-                    ] {
-                        if let Some(mm) = self.length_row(ui, key, id, v, &ctx, true)
-                            && mm.is_finite()
-                            && mm > 0.0
-                        {
-                            let mut nr = r.clone();
-                            if self.link_rhythm || across {
-                                nr.h_unit_mm = mm;
-                            }
-                            if self.link_rhythm || !across {
-                                nr.v_unit_mm = mm;
-                            }
-                            let _ = self.viewer.edit(Command::SetRhythm(nr), Some(key));
-                        }
-                        ui.end_row();
-                    }
-                }
+                self.rhythm_unit_rows(ui, &r, cx, cy);
 
                 let label = ui.label(self.t("app-rhythm-origin"));
                 let mut origin = r.origin;
@@ -1011,6 +942,140 @@ impl ViewerUi {
             .on_hover_text(self.t("app-embed-fonts-tip"));
         if tick.changed() {
             let _ = self.viewer.set_embed_fonts(embed);
+        }
+    }
+
+    /// The page's title row, inside a two-column grid: the Page tab's and the Basic tab's (ADR-026).
+    pub(crate) fn title_row(&mut self, ui: &mut egui::Ui, doc: &Document) {
+        let label = ui.label(self.t("app-page-title"));
+        let mut title = doc.metadata.title.clone();
+        if ui
+            .add(egui::TextEdit::singleline(&mut title).desired_width(180.0))
+            .labelled_by(label.id)
+            .changed()
+        {
+            let mut m = doc.metadata.clone();
+            m.title = title;
+            let _ = self
+                .viewer
+                .edit(Command::SetMetadata(m), Some("page-title"));
+        }
+        ui.end_row();
+    }
+
+    /// The margins: the link tick and the four lengths. The Page tab's heading goes above it; so does the Basic
+    /// tab's (ADR-026).
+    pub(crate) fn margins_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        doc: &Document,
+        cx: UnitContext,
+        cy: UnitContext,
+    ) {
+        let link = self.t("app-link-margins");
+        ui.checkbox(&mut self.link_margins, link);
+        let m = doc.page.margins_mm;
+        egui::Grid::new("margins-grid")
+            .num_columns(2)
+            .show(ui, |ui| {
+                let sides = [
+                    ("app-margin-top", m.top, cy, 0),
+                    ("app-margin-right", m.right, cx, 1),
+                    ("app-margin-bottom", m.bottom, cy, 2),
+                    ("app-margin-left", m.left, cx, 3),
+                ];
+                for (id, v, ctx, side) in sides {
+                    if let Some(mm) =
+                        self.length_row(ui, &format!("margin-{side}"), id, v, &ctx, true)
+                    {
+                        let mut p = doc.page.clone();
+                        let mm = mm.max(0.0);
+                        if self.link_margins {
+                            p.margins_mm = quadrule_model::Margins::all(mm);
+                        } else {
+                            match side {
+                                0 => p.margins_mm.top = mm,
+                                1 => p.margins_mm.right = mm,
+                                2 => p.margins_mm.bottom = mm,
+                                _ => p.margins_mm.left = mm,
+                            }
+                        }
+                        let _ = self
+                            .viewer
+                            .edit(Command::SetPage(p), Some(&format!("margin-{side}")));
+                    }
+                    ui.end_row();
+                }
+            });
+    }
+
+    /// The tick that links the rhythm's two units (a rectangular rhythm has two; an isometric one has a side).
+    pub(crate) fn rhythm_link(&mut self, ui: &mut egui::Ui, r: &quadrule_model::Rhythm) {
+        if !r.is_isometric() {
+            let link = self.t("app-link-rhythm");
+            ui.checkbox(&mut self.link_rhythm, link);
+        }
+    }
+
+    /// The rhythm's spacing rows, inside a two-column grid: the side of an isometric rhythm, or the two units of a
+    /// rectangular one (the Page tab's grid has more rows after them; the Basic tab's has these only; ADR-026).
+    pub(crate) fn rhythm_unit_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        r: &quadrule_model::Rhythm,
+        cx: UnitContext,
+        cy: UnitContext,
+    ) {
+        // Rhythm units are lengths, but `u` would be circular here: read them without it.
+        let plain = |c: UnitContext| UnitContext {
+            rhythm_mm: f64::NAN,
+            ..c
+        };
+        if r.is_isometric() {
+            // One side; snapping runs on half a side across and a row down.
+            if let Some(mm) = self.length_row(
+                ui,
+                "rhythm-side",
+                "app-rhythm-side",
+                r.side(),
+                &plain(cx),
+                true,
+            ) && mm.is_finite()
+                && mm > 0.0
+            {
+                let mut nr = r.clone();
+                nr.side_mm = Some(mm);
+                let _ = self
+                    .viewer
+                    .edit(Command::SetRhythm(nr), Some("rhythm-side"));
+            }
+            ui.end_row();
+        } else {
+            for (key, id, v, ctx, across) in [
+                (
+                    "rhythm-h",
+                    "app-rhythm-across",
+                    r.h_unit_mm,
+                    plain(cx),
+                    true,
+                ),
+                ("rhythm-v", "app-rhythm-down", r.v_unit_mm, plain(cy), false),
+            ] {
+                if let Some(mm) = self.length_row(ui, key, id, v, &ctx, true)
+                    && mm.is_finite()
+                    && mm > 0.0
+                {
+                    let mut nr = r.clone();
+                    if self.link_rhythm || across {
+                        nr.h_unit_mm = mm;
+                    }
+                    if self.link_rhythm || !across {
+                        nr.v_unit_mm = mm;
+                    }
+                    let _ = self.viewer.edit(Command::SetRhythm(nr), Some(key));
+                }
+                ui.end_row();
+            }
         }
     }
 
@@ -1192,6 +1257,9 @@ impl ViewerUi {
             .and_then(|d| o.override_on(d))
             .cloned()
             .unwrap_or_default();
+        if self.show_switches() {
+            self.show_in_basic_tick(ui, enabled, mixed.show_in_basic);
+        }
         ui.horizontal(|ui| self.group_buttons(ui));
         self.align_section(ui);
         egui::Grid::new("arrange-grid")
@@ -1516,122 +1584,18 @@ impl ViewerUi {
         let stroked = shape || matches!(o.kind, ObjectKind::Line(_));
         ui.add_enabled_ui(enabled, |ui| {
             egui::Grid::new("style-grid").num_columns(2).show(ui, |ui| {
-                // Stroke: None (shapes only), a role or custom values.
-                let label = ui.label(self.t(if shape {
-                    "app-style-stroke"
-                } else {
-                    "app-style-kind"
-                }));
-                let was = StrokeChoice::of(o.style);
-                let mut want = was;
-                ui.horizontal(|ui| {
-                    if shape {
-                        ui.radio_value(&mut want, StrokeChoice::None, self.t("app-stroke-none"));
-                    }
-                    ui.radio_value(&mut want, StrokeChoice::Role, self.t("app-style-role"));
-                    ui.radio_value(&mut want, StrokeChoice::Custom, self.t("app-style-custom"));
-                    if kind_mixed {
-                        ui.label(RichText::new(self.t("app-mixed")).small());
-                    }
-                })
-                .response
-                .labelled_by(label.id);
-                if want != was {
-                    let device = self.viewer.profiles().map(|(_, shown)| shown);
-                    // Start from what the role draws on the device on screen.
-                    let from_role = |r: LineRole| {
-                        let (w, g) = device.as_ref().map_or((1, 0), |p| {
-                            let s = p.role(r);
-                            (s.width_px.max(1), s.gray)
-                        });
-                        Style::Custom {
-                            width_mm: w as f64 / cx.px_per_mm,
-                            gray: g,
-                        }
-                    };
-                    let style = match (want, o.style) {
-                        (StrokeChoice::None, _) => Style::None,
-                        (StrokeChoice::Custom, Style::Role(r)) => from_role(r),
-                        (StrokeChoice::Custom, _) => from_role(default_role(&o)),
-                        (StrokeChoice::Role, _) => Style::Role(default_role(&o)),
-                    };
-                    let _ = self.viewer.edit_selected(None, |x| {
-                        if style != Style::None || x.kind.is_shape() {
-                            x.style = style;
-                        }
-                    });
-                }
-                ui.end_row();
-
-                match o.style {
-                    Style::None => {}
-                    Style::Role(role) => {
-                        let label = ui.label(self.t("app-style-role"));
-                        let mut r = role;
-                        self.combo_mixed(ui, "role", label.id, &mut r, &ROLES, role_mixed);
-                        if r != role {
-                            let _ = self
-                                .viewer
-                                .edit_selected(None, |x| x.style = Style::Role(r));
-                        }
-                        ui.end_row();
-                    }
-                    Style::Custom { width_mm, gray } => {
-                        if let Some(mm) = self.length_row_mixed(
-                            ui,
-                            "style-width",
-                            "app-stroke-width",
-                            width_mm,
-                            &cx,
-                            enabled,
-                            width_mixed,
-                        ) {
-                            let _ = self.viewer.edit_selected(Some("style-width"), |x| {
-                                if let Style::Custom { width_mm, .. } = &mut x.style {
-                                    *width_mm = mm.max(0.0);
-                                }
-                            });
-                        }
-                        ui.end_row();
-                        // The gray: the profile's clean levels as swatches (rung 14b, Q8), then which
-                        // role it matches, or Use recommended.
-                        let shown = self.viewer.profiles().map(|(_, shown)| shown);
-                        let levels: Vec<u8> = shown
-                            .as_ref()
-                            .map(|p| p.gray_levels.clone())
-                            .unwrap_or_default();
-                        if let Some((g, drag)) = self.gray_field(
-                            ui,
-                            "stroke",
-                            "app-stroke-gray",
-                            gray,
-                            gray_mixed,
-                            &levels,
-                            enabled,
-                        ) {
-                            let merge = drag.then_some("style-gray");
-                            let _ = self.viewer.edit_selected(merge, |x| {
-                                if let Style::Custom { gray, .. } = &mut x.style {
-                                    *gray = g;
-                                }
-                            });
-                        }
-                        if let Some(shown) = shown
-                            && !width_mixed
-                            && !gray_mixed
-                        {
-                            let width_px =
-                                quadrule_layout::stroke_opt(o.style, &shown).map_or(1, |(w, _)| w);
-                            if let Some(role) =
-                                self.role_badge(ui, &o, &shown, width_px, gray, enabled)
-                            {
-                                let _ = self
-                                    .viewer
-                                    .edit_selected(None, |x| x.style = Style::Role(role));
-                            }
-                        }
-                    }
-                }
+                self.stroke_rows(
+                    ui,
+                    &o,
+                    &cx,
+                    enabled,
+                    StrokeMixed {
+                        kind: kind_mixed,
+                        role: role_mixed,
+                        width: width_mixed,
+                        gray: gray_mixed,
+                    },
+                );
 
                 if shape {
                     self.fill_rows(ui, &o, enabled);
@@ -1687,9 +1651,137 @@ impl ViewerUi {
         });
     }
 
+    /// The stroke rows, inside a two-column grid: None (a shape only), a role or custom values; the role, or the
+    /// width, the gray and the role that matches it. The Style tab's and the Basic tab's (ADR-026).
+    pub(crate) fn stroke_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        o: &Object,
+        cx: &UnitContext,
+        enabled: bool,
+        mixed: StrokeMixed,
+    ) {
+        let shape = o.kind.is_shape();
+        let cx = *cx;
+        // Stroke: None (shapes only), a role or custom values.
+        let label = ui.label(self.t(if shape {
+            "app-style-stroke"
+        } else {
+            "app-style-kind"
+        }));
+        let was = StrokeChoice::of(o.style);
+        let mut want = was;
+        ui.horizontal(|ui| {
+            if shape {
+                ui.radio_value(&mut want, StrokeChoice::None, self.t("app-stroke-none"));
+            }
+            ui.radio_value(&mut want, StrokeChoice::Role, self.t("app-style-role"));
+            ui.radio_value(&mut want, StrokeChoice::Custom, self.t("app-style-custom"));
+            if mixed.kind {
+                ui.label(RichText::new(self.t("app-mixed")).small());
+            }
+        })
+        .response
+        .labelled_by(label.id);
+        if want != was {
+            let device = self.viewer.profiles().map(|(_, shown)| shown);
+            // Start from what the role draws on the device on screen.
+            let from_role = |r: LineRole| {
+                let (w, g) = device.as_ref().map_or((1, 0), |p| {
+                    let s = p.role(r);
+                    (s.width_px.max(1), s.gray)
+                });
+                Style::Custom {
+                    width_mm: w as f64 / cx.px_per_mm,
+                    gray: g,
+                }
+            };
+            let style = match (want, o.style) {
+                (StrokeChoice::None, _) => Style::None,
+                (StrokeChoice::Custom, Style::Role(r)) => from_role(r),
+                (StrokeChoice::Custom, _) => from_role(default_role(o)),
+                (StrokeChoice::Role, _) => Style::Role(default_role(o)),
+            };
+            let _ = self.viewer.edit_selected(None, |x| {
+                if style != Style::None || x.kind.is_shape() {
+                    x.style = style;
+                }
+            });
+        }
+        ui.end_row();
+
+        match o.style {
+            Style::None => {}
+            Style::Role(role) => {
+                let label = ui.label(self.t("app-style-role"));
+                let mut r = role;
+                self.combo_mixed(ui, "role", label.id, &mut r, &ROLES, mixed.role);
+                if r != role {
+                    let _ = self
+                        .viewer
+                        .edit_selected(None, |x| x.style = Style::Role(r));
+                }
+                ui.end_row();
+            }
+            Style::Custom { width_mm, gray } => {
+                if let Some(mm) = self.length_row_mixed(
+                    ui,
+                    "style-width",
+                    "app-stroke-width",
+                    width_mm,
+                    &cx,
+                    enabled,
+                    mixed.width,
+                ) {
+                    let _ = self.viewer.edit_selected(Some("style-width"), |x| {
+                        if let Style::Custom { width_mm, .. } = &mut x.style {
+                            *width_mm = mm.max(0.0);
+                        }
+                    });
+                }
+                ui.end_row();
+                // The gray: the profile's clean levels as swatches (rung 14b, Q8), then which
+                // role it matches, or Use recommended.
+                let shown = self.viewer.profiles().map(|(_, shown)| shown);
+                let levels: Vec<u8> = shown
+                    .as_ref()
+                    .map(|p| p.gray_levels.clone())
+                    .unwrap_or_default();
+                if let Some((g, drag)) = self.gray_field(
+                    ui,
+                    "stroke",
+                    "app-stroke-gray",
+                    gray,
+                    mixed.gray,
+                    &levels,
+                    enabled,
+                ) {
+                    let merge = drag.then_some("style-gray");
+                    let _ = self.viewer.edit_selected(merge, |x| {
+                        if let Style::Custom { gray, .. } = &mut x.style {
+                            *gray = g;
+                        }
+                    });
+                }
+                if let Some(shown) = shown
+                    && !mixed.width
+                    && !mixed.gray
+                {
+                    let width_px =
+                        quadrule_layout::stroke_opt(o.style, &shown).map_or(1, |(w, _)| w);
+                    if let Some(role) = self.role_badge(ui, o, &shown, width_px, gray, enabled) {
+                        let _ = self
+                            .viewer
+                            .edit_selected(None, |x| x.style = Style::Role(role));
+                    }
+                }
+            }
+        }
+    }
+
     /// A mini calendar's settings (calendar bbq, Q2 and Q3): its month and year, the week's first day and
     /// whether the month's name heads it. Each edit is one undo step (typing the year merges).
-    fn mini_calendar_rows(
+    pub(crate) fn mini_calendar_rows(
         &mut self,
         ui: &mut egui::Ui,
         m: &quadrule_model::MiniCalendarShape,
@@ -1763,13 +1855,6 @@ impl ViewerUi {
         cx: &UnitContext,
         enabled: bool,
     ) {
-        let Some(cy) = self.viewer.unit_context(Axis::Y) else {
-            return;
-        };
-        let Some(rhythm) = self.viewer.doc().map(|d| d.rhythm.clone()) else {
-            return;
-        };
-        let steps = rhythm.steps_mm();
         // Edits one pattern setting on every selected region.
         macro_rules! set {
             ($key:expr, |$pr:ident| $body:expr) => {{
@@ -1783,320 +1868,8 @@ impl ViewerUi {
         egui::Grid::new("pattern-grid")
             .num_columns(2)
             .show(ui, |ui| {
-                match pr.pattern {
-                    Pattern::Isometric { style } => {
-                        let label = ui.label(self.t("app-iso-style"));
-                        let mut st = style;
-                        let options = [
-                            (IsoStyle::Lines, "app-iso-lines"),
-                            (IsoStyle::Dots, "app-iso-dots"),
-                        ];
-                        self.combo(ui, "iso-style", label.id, &mut st, &options);
-                        if st != style {
-                            let _ = self.viewer.edit_selected(None, |x| {
-                                if let ObjectKind::Pattern(p) = &mut x.kind {
-                                    p.pattern = Pattern::Isometric { style: st };
-                                }
-                                x.settle_pattern_role();
-                            });
-                        }
-                        ui.end_row();
-                    }
-                    Pattern::Hex {
-                        orientation,
-                        height_units,
-                    } => {
-                        let label = ui.label(self.t("app-hex-orientation"));
-                        let mut or = orientation;
-                        let options = [
-                            (HexOrientation::Flat, "app-hex-flat"),
-                            (HexOrientation::Pointy, "app-hex-pointy"),
-                        ];
-                        self.combo(ui, "hex-orientation", label.id, &mut or, &options);
-                        if or != orientation {
-                            set!(
-                                None,
-                                |p| if let Pattern::Hex { orientation, .. } = &mut p.pattern {
-                                    *orientation = or;
-                                }
-                            );
-                        }
-                        ui.end_row();
-                        if let Some(v) = self.units_row(ui, "app-hex-height", height_units, enabled)
-                        {
-                            set!(Some("pattern-hex-height"), |p| if let Pattern::Hex {
-                                height_units,
-                                ..
-                            } = &mut p.pattern
-                            {
-                                *height_units = v;
-                            });
-                        }
-                        ui.end_row();
-                    }
-                    Pattern::Cornell {
-                        cue_units,
-                        summary_units,
-                    } => {
-                        // What the region has now: its own, or the default its size gives.
-                        let (cue, sum) = quadrule_layout::pattern::cornell_units(
-                            cue_units,
-                            summary_units,
-                            (o.frame.w_mm, o.frame.h_mm),
-                            (cx.rhythm_mm, cy.rhythm_mm),
-                        );
-                        if let Some(v) = self.units_row(ui, "app-cornell-cue", cue, enabled) {
-                            set!(Some("pattern-cornell-cue"), |p| if let Pattern::Cornell {
-                                cue_units,
-                                ..
-                            } = &mut p.pattern
-                            {
-                                *cue_units = Some(v);
-                            });
-                        }
-                        ui.end_row();
-                        if let Some(v) = self.units_row(ui, "app-cornell-summary", sum, enabled) {
-                            set!(
-                                Some("pattern-cornell-summary"),
-                                |p| if let Pattern::Cornell { summary_units, .. } = &mut p.pattern {
-                                    *summary_units = Some(v);
-                                }
-                            );
-                        }
-                        ui.end_row();
-                    }
-                    Pattern::MusicStaff {
-                        gap_mm,
-                        pitch_units,
-                        grand,
-                        grand_space_units,
-                    } => {
-                        if let Some(mm) = self.length_row(
-                            ui,
-                            "pattern-staff-gap",
-                            "app-staff-gap",
-                            gap_mm,
-                            cx,
-                            enabled,
-                        ) && mm.is_finite()
-                            && mm > 0.0
-                        {
-                            set!(Some("pattern-staff-gap"), |p| if let Pattern::MusicStaff {
-                                gap_mm,
-                                ..
-                            } = &mut p.pattern
-                            {
-                                *gap_mm = mm;
-                            });
-                        }
-                        ui.end_row();
-                        // A grand staff with its own space shows that (bass bottom to the next top); a single
-                        // staff, and a grand staff from an older file with none, show "Staff every" (top to top).
-                        match grand_space_units.filter(|_| grand) {
-                            Some(space) => {
-                                if let Some(v) =
-                                    self.units_row(ui, "app-staff-grand-space", space, enabled)
-                                {
-                                    set!(Some("pattern-staff-grand-space"), |p| {
-                                        if let Pattern::MusicStaff {
-                                            grand_space_units, ..
-                                        } = &mut p.pattern
-                                        {
-                                            *grand_space_units = Some(v);
-                                        }
-                                    });
-                                }
-                            }
-                            None => {
-                                if let Some(v) =
-                                    self.units_row(ui, "app-staff-pitch", pitch_units, enabled)
-                                {
-                                    set!(Some("pattern-staff-pitch"), |p| {
-                                        if let Pattern::MusicStaff { pitch_units, .. } =
-                                            &mut p.pattern
-                                        {
-                                            *pitch_units = v;
-                                        }
-                                    });
-                                }
-                            }
-                        }
-                        ui.end_row();
-                        let label = ui.label(self.t("app-staff-grand"));
-                        let mut g = grand;
-                        if ui.checkbox(&mut g, "").labelled_by(label.id).changed() {
-                            // Turning it on writes the space, starting where the staves look closest to
-                            // what "Staff every" gave; turning it off keeps the field for a turn back on.
-                            set!(None, |p| {
-                                let unit = if p.bound {
-                                    steps.1
-                                } else {
-                                    p.v_spacing_mm.unwrap_or(steps.1)
-                                };
-                                if let Pattern::MusicStaff {
-                                    gap_mm,
-                                    pitch_units,
-                                    grand,
-                                    grand_space_units,
-                                } = &mut p.pattern
-                                {
-                                    *grand = g;
-                                    if g && grand_space_units.is_none() {
-                                        *grand_space_units =
-                                            Some(quadrule_model::grand_space_closest(
-                                                *gap_mm,
-                                                *pitch_units,
-                                                unit,
-                                            ));
-                                    }
-                                }
-                            });
-                        }
-                        ui.end_row();
-                    }
-                    Pattern::Calendar {
-                        month,
-                        week_start,
-                        first_day,
-                        days,
-                    } => {
-                        // The month is one field (calendar bbq, Q1): Undated, or a month, with its year below.
-                        let label = ui.label(self.t("app-calendar-month"));
-                        let mut m = month.map(|m| m.month_clamped());
-                        let ids: Vec<(Option<u8>, String)> =
-                            std::iter::once((None, "app-calendar-undated".to_string()))
-                                .chain((1..=12u8).map(|n| (Some(n), format!("calendar-month-{n}"))))
-                                .collect();
-                        let options: Vec<(Option<u8>, &str)> =
-                            ids.iter().map(|(v, id)| (*v, id.as_str())).collect();
-                        self.combo(ui, "calendar-month", label.id, &mut m, &options);
-                        if m != month.map(|m| m.month_clamped()) {
-                            let year = month.map_or_else(this_month_year, |m| m.year_clamped());
-                            set!(
-                                None,
-                                |p| if let Pattern::Calendar { month, .. } = &mut p.pattern {
-                                    *month = m.map(|n| quadrule_model::YearMonth::new(year, n));
-                                }
-                            );
-                        }
-                        ui.end_row();
-                        if let Some(ym) = month {
-                            let label = ui.label(self.t("app-calendar-year"));
-                            let mut y = ym.year_clamped();
-                            let drag = egui::DragValue::new(&mut y).range(
-                                quadrule_model::calendar::YEAR_MIN
-                                    ..=quadrule_model::calendar::YEAR_MAX,
-                            );
-                            if ui
-                                .add_enabled(enabled, drag)
-                                .labelled_by(label.id)
-                                .changed()
-                            {
-                                set!(
-                                    Some("pattern-calendar-year"),
-                                    |p| if let Pattern::Calendar { month: Some(m), .. } =
-                                        &mut p.pattern
-                                    {
-                                        m.year = y;
-                                    }
-                                );
-                            }
-                            ui.end_row();
-                        } else {
-                            // Undated, the month's shape is its own: where the 1st falls and how many days.
-                            let label = ui.label(self.t("app-calendar-first-day"));
-                            let mut d = first_day;
-                            let options = weekday_options();
-                            self.combo(ui, "calendar-first-day", label.id, &mut d, &options);
-                            if d != first_day {
-                                set!(None, |p| if let Pattern::Calendar { first_day, .. } =
-                                    &mut p.pattern
-                                {
-                                    *first_day = d;
-                                });
-                            }
-                            ui.end_row();
-                            let label = ui.label(self.t("app-calendar-days"));
-                            let mut n = days.clamp(
-                                quadrule_model::calendar::MONTH_DAYS_MIN,
-                                quadrule_model::calendar::MONTH_DAYS_MAX,
-                            );
-                            let drag = egui::DragValue::new(&mut n).range(
-                                quadrule_model::calendar::MONTH_DAYS_MIN
-                                    ..=quadrule_model::calendar::MONTH_DAYS_MAX,
-                            );
-                            if ui
-                                .add_enabled(enabled, drag)
-                                .labelled_by(label.id)
-                                .changed()
-                            {
-                                set!(
-                                    Some("pattern-calendar-days"),
-                                    |p| if let Pattern::Calendar { days, .. } = &mut p.pattern {
-                                        *days = n;
-                                    }
-                                );
-                            }
-                            ui.end_row();
-                        }
-                        let label = ui.label(self.t("app-calendar-week-start"));
-                        let mut w = week_start;
-                        let options = weekday_options();
-                        self.combo(ui, "calendar-week-start", label.id, &mut w, &options);
-                        if w != week_start {
-                            set!(None, |p| if let Pattern::Calendar { week_start, .. } =
-                                &mut p.pattern
-                            {
-                                *week_start = w;
-                            });
-                        }
-                        ui.end_row();
-                    }
-                    Pattern::Lines | Pattern::Dots | Pattern::Grid => {}
-                }
-
-                // Bound to the rhythm, or its own spacing (napkin §5.2).
-                let label = ui.label(self.t("app-pattern-bound"));
-                let mut bound = pr.bound;
-                if ui
-                    .add_enabled(enabled, egui::Checkbox::new(&mut bound, ""))
-                    .labelled_by(label.id)
-                    .changed()
-                {
-                    set!(None, |p| p.set_bound(bound, steps));
-                }
-                ui.end_row();
-                if !pr.bound {
-                    let own = |v: Option<f64>, step: f64| v.unwrap_or(step);
-                    for (key, id, v, ctx, across) in [
-                        (
-                            "pattern-h",
-                            "app-pattern-across",
-                            own(pr.h_spacing_mm, steps.0),
-                            *cx,
-                            true,
-                        ),
-                        (
-                            "pattern-v",
-                            "app-pattern-down",
-                            own(pr.v_spacing_mm, steps.1),
-                            cy,
-                            false,
-                        ),
-                    ] {
-                        if let Some(mm) = self.length_row(ui, key, id, v, &ctx, enabled)
-                            && mm.is_finite()
-                            && mm > 0.0
-                        {
-                            if across {
-                                set!(Some(key), |p| p.h_spacing_mm = Some(mm));
-                            } else {
-                                set!(Some(key), |p| p.v_spacing_mm = Some(mm));
-                            }
-                        }
-                        ui.end_row();
-                    }
-                }
+                self.pattern_kind_rows(ui, o, pr, cx, enabled);
+                self.pattern_spacing_rows(ui, pr, cx, enabled);
 
                 // The ruling's own angle inside the frame, in degrees clockwise, about the frame's
                 // middle (rung 12b bbq, Q8 as amended, Q11); it adds to the frame's Rotation.
@@ -2117,46 +1890,8 @@ impl ViewerUi {
                 }
                 ui.end_row();
 
-                // Major lines: follow the rhythm, off, or its own N; hex and the music staff have
-                // none, so the fields are greyed (Defaulted "Which patterns have major lines").
-                let has_major = pr.pattern.has_major();
-                let on = enabled && has_major;
-                let label = ui.label(self.t("app-pattern-major"));
-                let mode = |m: MajorLines| match m {
-                    MajorLines::Follow => 0,
-                    MajorLines::Off => 1,
-                    MajorLines::Every(_) => 2,
-                };
-                let mut want = mode(pr.major);
-                let options = [
-                    (0, "app-major-follow"),
-                    (1, "app-major-off"),
-                    (2, "app-major-own"),
-                ];
-                ui.add_enabled_ui(on, |ui| {
-                    self.combo(ui, "pattern-major", label.id, &mut want, &options);
-                });
-                if want != mode(pr.major) {
-                    let new = match want {
-                        0 => MajorLines::Follow,
-                        1 => MajorLines::Off,
-                        _ => MajorLines::Every(rhythm.major_on().unwrap_or(5)),
-                    };
-                    set!(None, |p| p.major = new);
-                }
-                ui.end_row();
-                if let MajorLines::Every(n) = pr.major {
-                    let label = ui.label(self.t("app-pattern-major-n"));
-                    let mut v = i32::from(n);
-                    let drag = egui::DragValue::new(&mut v).range(
-                        i32::from(quadrule_model::MAJOR_MIN)..=i32::from(quadrule_model::MAJOR_MAX),
-                    );
-                    if ui.add_enabled(on, drag).labelled_by(label.id).changed() {
-                        let n = u8::try_from(v).unwrap_or(quadrule_model::MAJOR_MAX);
-                        set!(Some("pattern-major-n"), |p| p.major = MajorLines::Every(n));
-                    }
-                    ui.end_row();
-                }
+                self.pattern_major_rows(ui, pr, enabled);
+                let on = enabled && pr.pattern.has_major();
                 // Where the major rows and the major columns count from, each on its own (ADR-023 as amended
                 // 2026-11-23): Top, Centre or the rhythm origin. Isometric has no Top, so it is greyed there, and a
                 // region a file sets to Top reads as what it draws: Rhythm origin. Lines and Cornell have no major
@@ -2222,6 +1957,427 @@ impl ViewerUi {
                 }
                 ui.end_row();
             });
+    }
+
+    /// The rows that are one pattern's own (its style, its height, its cue and summary sizes, its staff or its
+    /// month), inside a two-column grid: the Style tab's and the Basic tab's (ADR-026).
+    pub(crate) fn pattern_kind_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        o: &Object,
+        pr: &PatternRegion,
+        cx: &UnitContext,
+        enabled: bool,
+    ) {
+        let Some(cy) = self.viewer.unit_context(Axis::Y) else {
+            return;
+        };
+        let Some(steps) = self.viewer.doc().map(|d| d.rhythm.steps_mm()) else {
+            return;
+        };
+        // Edits one pattern setting on every selected region.
+        macro_rules! set {
+            ($key:expr, |$pr:ident| $body:expr) => {{
+                let _ = self.viewer.edit_selected($key, |x| {
+                    if let ObjectKind::Pattern($pr) = &mut x.kind {
+                        $body;
+                    }
+                });
+            }};
+        }
+        match pr.pattern {
+            Pattern::Isometric { style } => {
+                let label = ui.label(self.t("app-iso-style"));
+                let mut st = style;
+                let options = [
+                    (IsoStyle::Lines, "app-iso-lines"),
+                    (IsoStyle::Dots, "app-iso-dots"),
+                ];
+                self.combo(ui, "iso-style", label.id, &mut st, &options);
+                if st != style {
+                    let _ = self.viewer.edit_selected(None, |x| {
+                        if let ObjectKind::Pattern(p) = &mut x.kind {
+                            p.pattern = Pattern::Isometric { style: st };
+                        }
+                        x.settle_pattern_role();
+                    });
+                }
+                ui.end_row();
+            }
+            Pattern::Hex {
+                orientation,
+                height_units,
+            } => {
+                let label = ui.label(self.t("app-hex-orientation"));
+                let mut or = orientation;
+                let options = [
+                    (HexOrientation::Flat, "app-hex-flat"),
+                    (HexOrientation::Pointy, "app-hex-pointy"),
+                ];
+                self.combo(ui, "hex-orientation", label.id, &mut or, &options);
+                if or != orientation {
+                    set!(
+                        None,
+                        |p| if let Pattern::Hex { orientation, .. } = &mut p.pattern {
+                            *orientation = or;
+                        }
+                    );
+                }
+                ui.end_row();
+                if let Some(v) = self.units_row(ui, "app-hex-height", height_units, enabled) {
+                    set!(Some("pattern-hex-height"), |p| if let Pattern::Hex {
+                        height_units, ..
+                    } = &mut p.pattern
+                    {
+                        *height_units = v;
+                    });
+                }
+                ui.end_row();
+            }
+            Pattern::Cornell {
+                cue_units,
+                summary_units,
+            } => {
+                // What the region has now: its own, or the default its size gives.
+                let (cue, sum) = quadrule_layout::pattern::cornell_units(
+                    cue_units,
+                    summary_units,
+                    (o.frame.w_mm, o.frame.h_mm),
+                    (cx.rhythm_mm, cy.rhythm_mm),
+                );
+                if let Some(v) = self.units_row(ui, "app-cornell-cue", cue, enabled) {
+                    set!(Some("pattern-cornell-cue"), |p| if let Pattern::Cornell {
+                        cue_units,
+                        ..
+                    } = &mut p.pattern
+                    {
+                        *cue_units = Some(v);
+                    });
+                }
+                ui.end_row();
+                if let Some(v) = self.units_row(ui, "app-cornell-summary", sum, enabled) {
+                    set!(
+                        Some("pattern-cornell-summary"),
+                        |p| if let Pattern::Cornell { summary_units, .. } = &mut p.pattern {
+                            *summary_units = Some(v);
+                        }
+                    );
+                }
+                ui.end_row();
+            }
+            Pattern::MusicStaff {
+                gap_mm,
+                pitch_units,
+                grand,
+                grand_space_units,
+            } => {
+                if let Some(mm) = self.length_row(
+                    ui,
+                    "pattern-staff-gap",
+                    "app-staff-gap",
+                    gap_mm,
+                    cx,
+                    enabled,
+                ) && mm.is_finite()
+                    && mm > 0.0
+                {
+                    set!(Some("pattern-staff-gap"), |p| if let Pattern::MusicStaff {
+                        gap_mm, ..
+                    } = &mut p.pattern
+                    {
+                        *gap_mm = mm;
+                    });
+                }
+                ui.end_row();
+                // A grand staff with its own space shows that (bass bottom to the next top); a single
+                // staff, and a grand staff from an older file with none, show "Staff every" (top to top).
+                match grand_space_units.filter(|_| grand) {
+                    Some(space) => {
+                        if let Some(v) = self.units_row(ui, "app-staff-grand-space", space, enabled)
+                        {
+                            set!(Some("pattern-staff-grand-space"), |p| {
+                                if let Pattern::MusicStaff {
+                                    grand_space_units, ..
+                                } = &mut p.pattern
+                                {
+                                    *grand_space_units = Some(v);
+                                }
+                            });
+                        }
+                    }
+                    None => {
+                        if let Some(v) = self.units_row(ui, "app-staff-pitch", pitch_units, enabled)
+                        {
+                            set!(Some("pattern-staff-pitch"), |p| {
+                                if let Pattern::MusicStaff { pitch_units, .. } = &mut p.pattern {
+                                    *pitch_units = v;
+                                }
+                            });
+                        }
+                    }
+                }
+                ui.end_row();
+                let label = ui.label(self.t("app-staff-grand"));
+                let mut g = grand;
+                if ui.checkbox(&mut g, "").labelled_by(label.id).changed() {
+                    // Turning it on writes the space, starting where the staves look closest to
+                    // what "Staff every" gave; turning it off keeps the field for a turn back on.
+                    set!(None, |p| {
+                        let unit = if p.bound {
+                            steps.1
+                        } else {
+                            p.v_spacing_mm.unwrap_or(steps.1)
+                        };
+                        if let Pattern::MusicStaff {
+                            gap_mm,
+                            pitch_units,
+                            grand,
+                            grand_space_units,
+                        } = &mut p.pattern
+                        {
+                            *grand = g;
+                            if g && grand_space_units.is_none() {
+                                *grand_space_units = Some(quadrule_model::grand_space_closest(
+                                    *gap_mm,
+                                    *pitch_units,
+                                    unit,
+                                ));
+                            }
+                        }
+                    });
+                }
+                ui.end_row();
+            }
+            Pattern::Calendar {
+                month,
+                week_start,
+                first_day,
+                days,
+            } => {
+                // The month is one field (calendar bbq, Q1): Undated, or a month, with its year below.
+                let label = ui.label(self.t("app-calendar-month"));
+                let mut m = month.map(|m| m.month_clamped());
+                let ids: Vec<(Option<u8>, String)> =
+                    std::iter::once((None, "app-calendar-undated".to_string()))
+                        .chain((1..=12u8).map(|n| (Some(n), format!("calendar-month-{n}"))))
+                        .collect();
+                let options: Vec<(Option<u8>, &str)> =
+                    ids.iter().map(|(v, id)| (*v, id.as_str())).collect();
+                self.combo(ui, "calendar-month", label.id, &mut m, &options);
+                if m != month.map(|m| m.month_clamped()) {
+                    let year = month.map_or_else(this_month_year, |m| m.year_clamped());
+                    set!(
+                        None,
+                        |p| if let Pattern::Calendar { month, .. } = &mut p.pattern {
+                            *month = m.map(|n| quadrule_model::YearMonth::new(year, n));
+                        }
+                    );
+                }
+                ui.end_row();
+                if let Some(ym) = month {
+                    let label = ui.label(self.t("app-calendar-year"));
+                    let mut y = ym.year_clamped();
+                    let drag = egui::DragValue::new(&mut y).range(
+                        quadrule_model::calendar::YEAR_MIN..=quadrule_model::calendar::YEAR_MAX,
+                    );
+                    if ui
+                        .add_enabled(enabled, drag)
+                        .labelled_by(label.id)
+                        .changed()
+                    {
+                        set!(
+                            Some("pattern-calendar-year"),
+                            |p| if let Pattern::Calendar { month: Some(m), .. } = &mut p.pattern {
+                                m.year = y;
+                            }
+                        );
+                    }
+                    ui.end_row();
+                } else {
+                    // Undated, the month's shape is its own: where the 1st falls and how many days.
+                    let label = ui.label(self.t("app-calendar-first-day"));
+                    let mut d = first_day;
+                    let options = weekday_options();
+                    self.combo(ui, "calendar-first-day", label.id, &mut d, &options);
+                    if d != first_day {
+                        set!(
+                            None,
+                            |p| if let Pattern::Calendar { first_day, .. } = &mut p.pattern {
+                                *first_day = d;
+                            }
+                        );
+                    }
+                    ui.end_row();
+                    let label = ui.label(self.t("app-calendar-days"));
+                    let mut n = days.clamp(
+                        quadrule_model::calendar::MONTH_DAYS_MIN,
+                        quadrule_model::calendar::MONTH_DAYS_MAX,
+                    );
+                    let drag = egui::DragValue::new(&mut n).range(
+                        quadrule_model::calendar::MONTH_DAYS_MIN
+                            ..=quadrule_model::calendar::MONTH_DAYS_MAX,
+                    );
+                    if ui
+                        .add_enabled(enabled, drag)
+                        .labelled_by(label.id)
+                        .changed()
+                    {
+                        set!(
+                            Some("pattern-calendar-days"),
+                            |p| if let Pattern::Calendar { days, .. } = &mut p.pattern {
+                                *days = n;
+                            }
+                        );
+                    }
+                    ui.end_row();
+                }
+                let label = ui.label(self.t("app-calendar-week-start"));
+                let mut w = week_start;
+                let options = weekday_options();
+                self.combo(ui, "calendar-week-start", label.id, &mut w, &options);
+                if w != week_start {
+                    set!(
+                        None,
+                        |p| if let Pattern::Calendar { week_start, .. } = &mut p.pattern {
+                            *week_start = w;
+                        }
+                    );
+                }
+                ui.end_row();
+            }
+            Pattern::Lines | Pattern::Dots | Pattern::Grid => {}
+        }
+    }
+
+    /// Whether a pattern region follows the rhythm, and its own spacing when it does not, inside a two-column grid:
+    /// the Style tab's and the Basic tab's (ADR-026).
+    pub(crate) fn pattern_spacing_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        pr: &PatternRegion,
+        cx: &UnitContext,
+        enabled: bool,
+    ) {
+        let Some(cy) = self.viewer.unit_context(Axis::Y) else {
+            return;
+        };
+        let Some(steps) = self.viewer.doc().map(|d| d.rhythm.steps_mm()) else {
+            return;
+        };
+        // Edits one pattern setting on every selected region.
+        macro_rules! set {
+            ($key:expr, |$pr:ident| $body:expr) => {{
+                let _ = self.viewer.edit_selected($key, |x| {
+                    if let ObjectKind::Pattern($pr) = &mut x.kind {
+                        $body;
+                    }
+                });
+            }};
+        }
+        // Bound to the rhythm, or its own spacing (napkin §5.2).
+        let label = ui.label(self.t("app-pattern-bound"));
+        let mut bound = pr.bound;
+        if ui
+            .add_enabled(enabled, egui::Checkbox::new(&mut bound, ""))
+            .labelled_by(label.id)
+            .changed()
+        {
+            set!(None, |p| p.set_bound(bound, steps));
+        }
+        ui.end_row();
+        if !pr.bound {
+            let own = |v: Option<f64>, step: f64| v.unwrap_or(step);
+            for (key, id, v, ctx, across) in [
+                (
+                    "pattern-h",
+                    "app-pattern-across",
+                    own(pr.h_spacing_mm, steps.0),
+                    *cx,
+                    true,
+                ),
+                (
+                    "pattern-v",
+                    "app-pattern-down",
+                    own(pr.v_spacing_mm, steps.1),
+                    cy,
+                    false,
+                ),
+            ] {
+                if let Some(mm) = self.length_row(ui, key, id, v, &ctx, enabled)
+                    && mm.is_finite()
+                    && mm > 0.0
+                {
+                    if across {
+                        set!(Some(key), |p| p.h_spacing_mm = Some(mm));
+                    } else {
+                        set!(Some(key), |p| p.v_spacing_mm = Some(mm));
+                    }
+                }
+                ui.end_row();
+            }
+        }
+    }
+
+    /// A pattern region's major lines (follow the rhythm, off, or its own N) and the N, inside a two-column grid:
+    /// the Style tab's and the Basic tab's (ADR-026).
+    pub(crate) fn pattern_major_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        pr: &PatternRegion,
+        enabled: bool,
+    ) {
+        let Some(rhythm) = self.viewer.doc().map(|d| d.rhythm.clone()) else {
+            return;
+        };
+        // Edits one pattern setting on every selected region.
+        macro_rules! set {
+            ($key:expr, |$pr:ident| $body:expr) => {{
+                let _ = self.viewer.edit_selected($key, |x| {
+                    if let ObjectKind::Pattern($pr) = &mut x.kind {
+                        $body;
+                    }
+                });
+            }};
+        }
+        // Major lines: follow the rhythm, off, or its own N; hex and the music staff have
+        // none, so the fields are greyed (Defaulted "Which patterns have major lines").
+        let has_major = pr.pattern.has_major();
+        let on = enabled && has_major;
+        let label = ui.label(self.t("app-pattern-major"));
+        let mode = |m: MajorLines| match m {
+            MajorLines::Follow => 0,
+            MajorLines::Off => 1,
+            MajorLines::Every(_) => 2,
+        };
+        let mut want = mode(pr.major);
+        let options = [
+            (0, "app-major-follow"),
+            (1, "app-major-off"),
+            (2, "app-major-own"),
+        ];
+        ui.add_enabled_ui(on, |ui| {
+            self.combo(ui, "pattern-major", label.id, &mut want, &options);
+        });
+        if want != mode(pr.major) {
+            let new = match want {
+                0 => MajorLines::Follow,
+                1 => MajorLines::Off,
+                _ => MajorLines::Every(rhythm.major_on().unwrap_or(5)),
+            };
+            set!(None, |p| p.major = new);
+        }
+        ui.end_row();
+        if let MajorLines::Every(n) = pr.major {
+            let label = ui.label(self.t("app-pattern-major-n"));
+            let mut v = i32::from(n);
+            let drag = egui::DragValue::new(&mut v)
+                .range(i32::from(quadrule_model::MAJOR_MIN)..=i32::from(quadrule_model::MAJOR_MAX));
+            if ui.add_enabled(on, drag).labelled_by(label.id).changed() {
+                let n = u8::try_from(v).unwrap_or(quadrule_model::MAJOR_MAX);
+                set!(Some("pattern-major-n"), |p| p.major = MajorLines::Every(n));
+            }
+            ui.end_row();
+        }
     }
 
     /// The Border section of a pattern region's Style tab (pattern borders bbq, Defaulted "The inspector"): a tick,
@@ -2439,7 +2595,7 @@ impl ViewerUi {
         ui.end_row();
     }
 
-    fn fill_rows(&mut self, ui: &mut egui::Ui, o: &Object, _enabled: bool) {
+    pub(crate) fn fill_rows(&mut self, ui: &mut egui::Ui, o: &Object, _enabled: bool) {
         let label = ui.label(self.t("app-fill"));
         let was = FillChoice::of(o.fill);
         let mut want = was;
@@ -2637,6 +2793,39 @@ impl ViewerUi {
             });
     }
 
+    /// A text box's text, in its field with the emoji button under it: the Text tab's and the Basic tab's (ADR-026).
+    pub(crate) fn text_content_field(&mut self, ui: &mut egui::Ui, t: &quadrule_model::TextBox) {
+        let label = ui.label(self.t("app-text-content"));
+        let mut content = t.content.clone();
+        let out = egui::TextEdit::multiline(&mut content)
+            .desired_rows(3)
+            .desired_width(f32::INFINITY)
+            .show(ui);
+        let field = egui::Response::clone(&out.response).labelled_by(label.id);
+        // A text box was just drawn: the cursor goes in with all its text selected, so typing
+        // replaces it (rung 5 bbq, Defaulted "Per kind").
+        if std::mem::take(&mut self.focus_text_content) {
+            field.request_focus();
+            let mut state = out.state;
+            state
+                .cursor
+                .set_char_range(Some(egui::text::CCursorRange::two(
+                    egui::text::CCursor::new(0),
+                    egui::text::CCursor::new(content.chars().count()),
+                )));
+            state.store(ui.ctx(), field.id);
+        }
+        self.text_field_id = Some(field.id);
+        if field.changed() {
+            let _ = self.viewer.edit_selected(Some("text-content"), |x| {
+                if let ObjectKind::Text(t) = &mut x.kind {
+                    t.content.clone_from(&content);
+                }
+            });
+        }
+        self.emoji_button(ui);
+    }
+
     fn text_tab(&mut self, ui: &mut egui::Ui) {
         let Some(o) = self.first_selected() else {
             return;
@@ -2674,33 +2863,7 @@ impl ViewerUi {
                 });
             };
         ui.add_enabled_ui(enabled, |ui| {
-            let label = ui.label(self.t("app-text-content"));
-            let mut content = t.content.clone();
-            let out = egui::TextEdit::multiline(&mut content)
-                .desired_rows(3)
-                .desired_width(f32::INFINITY)
-                .show(ui);
-            let field = egui::Response::clone(&out.response).labelled_by(label.id);
-            // A text box was just drawn: the cursor goes in with all its text selected, so typing
-            // replaces it (rung 5 bbq, Defaulted "Per kind").
-            if std::mem::take(&mut self.focus_text_content) {
-                field.request_focus();
-                let mut state = out.state;
-                state
-                    .cursor
-                    .set_char_range(Some(egui::text::CCursorRange::two(
-                        egui::text::CCursor::new(0),
-                        egui::text::CCursor::new(content.chars().count()),
-                    )));
-                state.store(ui.ctx(), field.id);
-            }
-            self.text_field_id = Some(field.id);
-            if field.changed() {
-                edit_text(&mut self.viewer, "text-content", &|t| {
-                    t.content.clone_from(&content)
-                });
-            }
-            self.emoji_button(ui);
+            self.text_content_field(ui, t);
             ui.add_space(4.0);
             egui::Grid::new("text-grid").num_columns(2).show(ui, |ui| {
                 // Font: the family in use, and the button that opens the picker (rung 11a).

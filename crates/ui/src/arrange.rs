@@ -92,6 +92,8 @@ pub struct Mixed {
     pub free_placement: bool,
     /// Some are marked Full bleed and some are not (ADR-019).
     pub full_bleed: bool,
+    /// Some are marked Show in Basic and some are not (ADR-026).
+    pub show_in_basic: bool,
 }
 
 /// Two lengths in mm that are the same to a thousandth of a millimetre.
@@ -270,6 +272,8 @@ impl Viewer {
         m.free_placement = free > 0 && free < objects.len();
         let bleed = objects.iter().filter(|o| o.full_bleed).count();
         m.full_bleed = bleed > 0 && bleed < objects.len();
+        let basic = objects.iter().filter(|o| o.show_in_basic).count();
+        m.show_in_basic = basic > 0 && basic < objects.len();
         let mut turning = objects.iter().filter(|o| o.kind.can_rotate());
         if let Some(a) = turning.next() {
             m.rotation = turning.any(|b| !same_deg(a.rotation(), b.rotation()));
