@@ -3306,3 +3306,7 @@ VM cannot build the macOS parts.
 - Version 0.16.7: `Cargo.toml`, notes `docs/arcs/v1/release-notes/v0.16.7.md`, board row 16 done with a re-plan entry,
   next lead's prompt `docs/arcs/v1/rung-17-PROMPT-2026-11-24.md` (chris added four polish points to it). Starters record
   their saver as `quadrule starters`, so the version bump moves no starter file.
+- chris: "yes, tag and push please. meter is at 43%". `v0.16.7` tagged and pushed; release run 45453366262 passed
+  (macos-universal, linux-x86_64, windows-x86_64, linux-aarch64, "Draft, attach, publish", "Homebrew tap"); published
+  2026-11-24T17:56:02Z as a pre-release with 7 files (`gh release view v0.16.7`); the tap step printed `TAP tag=v0.16.7
+  version=0.16.7 ... status=ok changed=yes`. Calibration row in `docs/budget-calibration.md` (27 → 43 %, 16 of 20 points).

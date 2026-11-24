@@ -123,3 +123,10 @@ approval, 79 % at 19:13 UTC (chris), during this job's build; the 14 points cove
 most of this one, about $21 of measured tokens between them, against 16a's 6 points for $19.92, so other use on the
 meter is likely. Hard limits lifted for the week; chris: "I have a free reset this week, so I am grinding this out".
 No stop line fired. K not refitted.
+
+2026-11-24, rung 16b (kickoff, three legs, the flag removal, `v0.16.7`), lead Opus 5.5 high, four Sonnet 5.5 high
+builder subagents. `spend-ledger.py measure --latest --since 2026-11-24T10:00:00Z --lead "Opus 5.5, high"` → `fresh
+1.0k · cached 94.7M · written 2.2M · out 440k | sonnet 66% · opus 34% | $31.15 | not read`. Share 20 points, alone on
+the Saturday meter; readings (chris's) 27 % (10:34 UTC), 32 % (11:52), 34 % (12:19), 43 % (17:52, before the tag): 16
+points for about $31 of measured tokens (about $1.95 a point). No stop line fired (the share line was 47 %). K not
+refitted.
