@@ -3092,3 +3092,11 @@ VM cannot build the macOS parts.
   amended) and the Homebrew cask (ADR-025); notes `docs/arcs/v1/release-notes/v0.16.6.md`. 16b becomes `v0.16.7`.
 - The tap `tholent/homebrew-tap` has a write deploy key (`gh api repos/tholent/homebrew-tap/keys`, 2026-11-23); whether
   this repository holds the `HOMEBREW_TAP_DEPLOY_KEY` secret could not be read (HTTP 403 for the token).
+- The tag push was refused by Claude Code's auto-mode check (not by GitHub: ADR-022 item 2 leaves creating tags open,
+  and ADR-024 keeps agents pushing until v1.0). chris asked how agents were to have access until v1.0, then: "yes,
+  please add rule #1": `.claude/settings.local.json` (git-ignored, this computer only) allows `git tag -a v*` and
+  `git push origin v*`; agents still ask before each release.
+- `v0.16.6` tagged and pushed; release run 45367622255 passed (four builds, "Draft, attach, publish", "Homebrew tap");
+  published 2026-11-24T09:45:19Z as a pre-release with 7 files (`gh release view v0.16.6`). The tap step printed
+  `TAP tag=v0.16.6 status=skip reason=no-deploy-key`: the secret `HOMEBREW_TAP_DEPLOY_KEY` is not set on
+  tholent/quadrule, though the tap has its deploy key, so `brew install` still fails (`docs/STATUS-debt.md`).
