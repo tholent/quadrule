@@ -118,6 +118,13 @@ impl ViewerUi {
         self.tab = crate::panels::Tab::Basic;
     }
 
+    /// The name of a **Show in Basic** tick that stands beside others: the words it shows, then what it is for.
+    pub(crate) fn show_in_basic_for(&self, what: &str) -> String {
+        self.strings.format(
+            &quadrule_i18n::Message::new("app-show-in-basic-for").text("what", what.to_string()),
+        )
+    }
+
     /// The **Show in Basic** tick on the Arrange tab for the selected objects; mixed when some have it and some do
     /// not.
     pub(crate) fn show_in_basic_tick(&mut self, ui: &mut Ui, enabled: bool, mixed: bool) {
@@ -147,6 +154,13 @@ impl ViewerUi {
         let tick = ui
             .checkbox(&mut want, self.t("app-show-in-basic"))
             .on_hover_text(self.t("app-show-in-basic-tip"));
+        // Three of these stand in one tab, so each says which setting it is for.
+        let what = self.t(match which {
+            PageMark::Title => "app-page-title",
+            PageMark::Margins => "app-page-margins",
+            PageMark::Rhythm => "app-rhythm",
+        });
+        crate::a11y::name_check(&tick, true, want, &self.show_in_basic_for(&what));
         if tick.changed() {
             let _ = self.viewer.set_page_basic(which, want);
         }
@@ -231,6 +245,7 @@ impl ViewerUi {
                 let tick = ui
                     .checkbox(&mut on, self.t("app-show-in-basic"))
                     .on_hover_text(self.t("app-show-in-basic-tip"));
+                crate::a11y::name_check(&tick, true, on, &self.show_in_basic_for(&o.name));
                 if tick.changed() {
                     let _ = self.viewer.set_show_in_basic(on);
                 }

@@ -3310,3 +3310,56 @@ VM cannot build the macOS parts.
   (macos-universal, linux-x86_64, windows-x86_64, linux-aarch64, "Draft, attach, publish", "Homebrew tap"); published
   2026-11-24T17:56:02Z as a pre-release with 7 files (`gh release view v0.16.7`); the tap step printed `TAP tag=v0.16.7
   version=0.16.7 ... status=ok changed=yes`. Calibration row in `docs/budget-calibration.md` (27 → 43 %, 16 of 20 points).
+
+## 2026-11-24 — Rung 17 leg 1 built (Sonnet 5.5 high builder)
+
+What landed, by commit (`git log --oneline`; the first three are on `main` before this entry):
+
+- Zoom jump, `84f8a92` (D9). Cause, measured with a per-frame test that drives Ctrl + `MouseWheel` events through the
+  window's own handler: the zoom was read at the end of the canvas frame and the scroll that keeps the pixel under the
+  pointer was queued for the frame after, so each notch drew one frame at the new scale with the old scroll (148 px off
+  on the first frame drawn from 1:1, 124 px from Fit). The zoom is now read before the page is laid out, and the scroll
+  offset is set for that same frame (`ViewerUi::take_zoom_input`, `ScrollArea::scroll_offset`); worst drift on any
+  drawn frame is now 0.6 px (`crates/ui/tests/zoom.rs`, `zoom_scroll_anchor_every_frame`). `egui_kittest` could make a
+  scroll-zoom after all (`event_modifiers` with an `Event::MouseWheel`); the old note was wrong.
+- Inspector tabs, `925a9df`: one row of line icons (`crates/ui/src/tab_icons.rs`), Style before Arrange, Lint's count
+  beside its icon, the open tab's name under the row.
+- Clicking a lint finding, `a2bf393`: picks its object, keeps the Lint tab, scrolls the canvas to it.
+- Preferences (Q3), Keyboard shortcuts (Q4) with D6 and D7, screen readers (Q5) with D8, readable JSON (Q6): committed
+  together at the end of the leg (one commit; the four share `view.rs`, `menus.rs`, `main.rs` and `app.ftl`, so they
+  could not be cut apart without hand-picking hunks). The commit is named in the leg's report.
+  - Preferences: `crates/ui/src/preferences.rs`; Ctrl+, , File ▸ Preferences…, the Mac's Quadrule menu (it was
+    Settings…, which opened Profiles; Profiles stays on the Page tab and has a button in Preferences). Interface size
+    through egui's zoom factor (kept in eframe storage as `interface_size`; the theme keeps its `theme` key, read as
+    before), and egui's own Ctrl +/-/0 whole-interface zoom is switched off so those keys can zoom the page. The theme left
+    the View menu.
+  - D2: the status bar has held no snap switches since fixes batch 2 (View ▸ Snapping and the Page tab hold them); the
+    debt line was stale, so nothing was built; the status bar was checked at 1024 px and at 200 % (screenshots).
+  - Keys: `crates/ui/src/keys.rs` is the one table (44 rows); the window reads keys through it, the menus show them from
+    it, the sheet is made from it; `crates/ui/tests/keys.rs` fails on any other reader of a key. Keys now match
+    exactly (egui's own matching ignores extra Shift and Alt, so Alt+V would have been the V tool).
+  - D6: Shift while drawing a line turns it in 15° steps (`crates/ui/src/draw.rs`). D7: arrows and Enter in the font list
+    and the emoji grid. A font-preview picture is cut at 2048 px wide (some chips take no more; the egui test window
+    panicked on a 2055 px one).
+  - Screen readers: `crates/ui/tests/screen_readers.rs` walks the AccessKit tree of 40 windows and sheets (2,800+
+    controls) and fails on an unnamed control or a name two controls share. It found: three "Show in Basic" ticks, two
+    "Profiles…", two "Emoji", the Arrange tab's Group/Ungroup/Repeat against the layers icons, every finding's buttons
+    (the Ignore row of D8 and a finding listed once per device), the Repeat tab against the Repeat icon, four margin
+    fields under one name, the Missing fonts dialog's unnamed choice, the layers row menu against the panel's icons, the
+    real-size bar's + and − against the zoom buttons. Each is fixed by a name that begins with the shown words
+    (`crates/ui/src/a11y.rs`). 17 existing tests that looked controls up by their old exact names were changed to find
+    them by words and a colon (`lint_pointer.rs`, `basic.rs`, `layers.rs`, `groups.rs`, `window.rs`, `repeat.rs`).
+  - Readable JSON: Help ▸ Developer ▸ Export as readable JSON… (`Request::ExportJsonDialog`, `Viewer::export_json`);
+    `.json` opens through File ▸ Open, a drop and the Mac's open as an unsaved page (`Viewer::open_json_bytes`).
+- Judgement calls for chris's look: Interface size's Follow system and 100 % draw the same (the system's scale is
+  always applied); Alt+Shift+H/V distribute by spacing (the by-centres buttons have no key); Ctrl+= is also read as
+  Ctrl+Shift+= and Ctrl+Plus; the tab icons' drawings; the Repeat tab is now called Repeat settings; every new word is
+  in `app.ftl` (`prefs-*`, `keys-*`, `menu-preferences`, `menu-shortcuts`, `menu-developer`, `app-finding-tag`, the
+  `*-picked` and `*-for` names).
+- Hard rules: no golden line and no fixture folder changed; no export byte and no file format changed (the JSON form is
+  the existing debug one).
+- Process slips, said plainly: two commits (`925a9df`, `a2bf393`) were made with `git add … && git commit …`, which
+  AGENTS.md forbids; every git command since is its own call.
+- Screenshots (taken on this machine's 1024 × 768 screen at `DISPLAY=:0`, a scratch profile under `/tmp/claude-1000/xdg`):
+  `/tmp/claude-1000/shots/tabs.png`, `lint-click.png`, `prefs-100.png`, `prefs-200.png`, `shortcuts.png`,
+  `menu-view.png`, `menu-developer.png`, `menu-file.png`.

@@ -198,27 +198,26 @@ impl ViewerUi {
                 .and_then(|d| d.object(*id))
                 .is_some_and(Object::is_group)
         });
-        if ui
-            .add_enabled(editable.len() >= 2, egui::Button::new(self.t("app-group")))
-            .clicked()
-        {
+        // The layers panel has icon buttons of the same three names, so these say what they act on.
+        let r = ui.add_enabled(editable.len() >= 2, egui::Button::new(self.t("app-group")));
+        crate::a11y::name_button(&r, editable.len() >= 2, &self.t("app-group-picked"));
+        if r.clicked() {
             let _ = self.viewer.group_selection();
         }
-        if ui
-            .add_enabled(any_group, egui::Button::new(self.t("app-ungroup")))
-            .clicked()
-        {
+        let r = ui.add_enabled(any_group, egui::Button::new(self.t("app-ungroup")));
+        crate::a11y::name_button(&r, any_group, &self.t("app-ungroup-picked"));
+        if r.clicked() {
             let _ = self.viewer.ungroup_selection();
         }
         // Repeat: the picked objects become the source of a repeat (rung 10).
-        if ui
+        let r = ui
             .add_enabled(
                 !editable.is_empty(),
                 egui::Button::new(self.t("app-repeat")),
             )
-            .on_hover_text(self.t("app-repeat-hint"))
-            .clicked()
-        {
+            .on_hover_text(self.t("app-repeat-hint"));
+        crate::a11y::name_button(&r, !editable.is_empty(), &self.t("app-repeat-picked"));
+        if r.clicked() {
             let _ = self.viewer.repeat_selection();
         }
     }
@@ -1084,11 +1083,12 @@ impl ViewerUi {
         ui.horizontal(|ui| {
             ui.strong(self.t("app-page-devices"));
             // The Profiles window (rung 13a, Q5): beside the device ticks.
-            if ui
+            let r = ui
                 .button(self.t("profiles-open"))
-                .on_hover_text(self.t("profiles-open-tip"))
-                .clicked()
-            {
+                .on_hover_text(self.t("profiles-open-tip"));
+            // The toolbar has a Profiles… button too, so this one says which devices.
+            crate::a11y::name_button(&r, true, &self.t("profiles-open-devices"));
+            if r.clicked() {
                 self.open_profiles_window();
             }
         });
@@ -2818,7 +2818,7 @@ impl ViewerUi {
                 }
             });
         }
-        self.emoji_button(ui);
+        self.emoji_button(ui, Some(self.t("app-emoji-text-tab")));
     }
 
     fn text_tab(&mut self, ui: &mut egui::Ui) {

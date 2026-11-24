@@ -105,6 +105,10 @@ pub(crate) struct EmojiPicker {
     group: Option<usize>,
     list: Option<Vec<&'static Emoji>>,
     pictures: Pictures,
+    /// The emoji the arrow keys stand on (rung 17, D7): Enter picks it.
+    cursor: Option<&'static str>,
+    /// How far the grid was scrolled and how tall it showed, on the last frame (to keep the cursor in view).
+    scrolled: (f32, f32),
 }
 
 impl EmojiPicker {
@@ -116,6 +120,8 @@ impl EmojiPicker {
             self.list = Some(drawable(&mut reg));
         }
         self.search.clear();
+        self.cursor = None;
+        self.scrolled = (0.0, 0.0);
         self.focus_search = true;
         self.open = true;
     }
@@ -123,11 +129,14 @@ impl EmojiPicker {
 
 impl ViewerUi {
     /// The Emoji button of the toolbar and the Text tab.
-    pub(crate) fn emoji_button(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn emoji_button(&mut self, ui: &mut egui::Ui, name: Option<String>) {
         let open = self.viewer.open.is_some();
         let r = ui
             .add_enabled(open, egui::Button::new(self.t("app-emoji")))
             .on_hover_text(self.t("app-emoji-tip"));
+        if let Some(name) = name {
+            crate::a11y::name_button(&r, open, &name);
+        }
         if r.clicked() {
             if self.emoji_picker.open {
                 self.emoji_picker.open = false;
@@ -136,6 +145,25 @@ impl ViewerUi {
                 self.emoji_picker.open(fonts);
             }
         }
+    }
+
+    /// The emoji the arrow keys stand on, for tests.
+    #[doc(hidden)]
+    pub fn emoji_picker_cursor(&self) -> Option<String> {
+        self.emoji_picker.cursor.map(String::from)
+    }
+
+    /// The emoji the picker shows with nothing searched for (the group on show), for tests.
+    #[doc(hidden)]
+    pub fn emoji_picker_shown(&self) -> Vec<String> {
+        let want = GROUPS[self.emoji_picker.group.unwrap_or(0)].0;
+        self.emoji_picker
+            .list
+            .iter()
+            .flatten()
+            .filter(|e| e.group() == want)
+            .map(|e| e.as_str().to_string())
+            .collect()
     }
 
     /// The picker window, while it is open.
@@ -199,50 +227,104 @@ impl ViewerUi {
                 }
                 let cols = ((ui.available_width() / CELL).floor() as usize).max(1);
                 let rows = shown.len().div_ceil(cols);
-                ScrollArea::vertical()
-                    .auto_shrink([false, false])
-                    .show_rows(ui, CELL, rows, |ui, range| {
-                        for row in range {
-                            ui.horizontal(|ui| {
-                                ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
-                                for e in shown.iter().skip(row * cols).take(cols) {
-                                    let (rect, resp) = ui.allocate_exact_size(
-                                        egui::vec2(CELL, CELL),
-                                        Sense::click(),
+                // The arrow keys walk the grid, Enter picks the emoji they stand on, or the first match of a name
+                // being searched for (rung 17, D7). With text in the search field, Left and Right stay with it.
+                let sideways = needle.is_empty();
+                let (down, up, enter) = crate::keys::picker_keys(ctx);
+                let (left, right) = if sideways {
+                    crate::keys::picker_sideways(ctx)
+                } else {
+                    (0, 0)
+                };
+                let mut want_offset: Option<f32> = None;
+                if !shown.is_empty() && left + right + up + down > 0 {
+                    let at = self
+                        .emoji_picker
+                        .cursor
+                        .and_then(|c| shown.iter().position(|e| e.as_str() == c));
+                    let mut i = at.map_or(0, |i| i as isize);
+                    if at.is_some() {
+                        i += right as isize - left as isize;
+                        i += (down as isize - up as isize) * cols as isize;
+                    }
+                    let i = i.clamp(0, shown.len() as isize - 1) as usize;
+                    self.emoji_picker.cursor = Some(shown[i].as_str());
+                    let row_h = CELL + ui.spacing().item_spacing.y;
+                    let (offset, view) = self.emoji_picker.scrolled;
+                    let (top, bottom) = ((i / cols) as f32 * row_h, (i / cols + 1) as f32 * row_h);
+                    if top < offset {
+                        want_offset = Some(top);
+                    } else if view > 0.0 && bottom > offset + view {
+                        want_offset = Some(bottom - view);
+                    }
+                }
+                if enter > 0 {
+                    picked = self
+                        .emoji_picker
+                        .cursor
+                        .and_then(|c| shown.iter().copied().find(|e| e.as_str() == c))
+                        .or_else(|| {
+                            (!needle.is_empty())
+                                .then(|| shown.first().copied())
+                                .flatten()
+                        });
+                }
+                let mut grid = ScrollArea::vertical().auto_shrink([false, false]);
+                if let Some(o) = want_offset {
+                    grid = grid.vertical_scroll_offset(o);
+                }
+                let grid_out = grid.show_rows(ui, CELL, rows, |ui, range| {
+                    for row in range {
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing = egui::vec2(0.0, 0.0);
+                            for e in shown.iter().skip(row * cols).take(cols) {
+                                let (rect, resp) =
+                                    ui.allocate_exact_size(egui::vec2(CELL, CELL), Sense::click());
+                                resp.widget_info(|| {
+                                    WidgetInfo::labeled(Role::Button, true, e.name())
+                                });
+                                if resp.hovered() {
+                                    ui.painter().rect_filled(
+                                        rect,
+                                        3.0,
+                                        ui.visuals().widgets.hovered.bg_fill,
                                     );
-                                    resp.widget_info(|| {
-                                        WidgetInfo::labeled(Role::Button, true, e.name())
-                                    });
-                                    if resp.hovered() {
-                                        ui.painter().rect_filled(
-                                            rect,
-                                            3.0,
-                                            ui.visuals().widgets.hovered.bg_fill,
-                                        );
-                                    }
-                                    let key = format!("e|{}|{ppx}", e.as_str());
-                                    let tb = emoji_box(e.as_str());
-                                    if let Some((id, size)) =
-                                        self.emoji_picker.pictures.picture(ctx, key, &tb, ppx, true)
-                                    {
-                                        let r = egui::Rect::from_center_size(rect.center(), size);
-                                        ui.painter().image(
-                                            id,
-                                            r,
-                                            egui::Rect::from_min_max(
-                                                egui::pos2(0.0, 0.0),
-                                                egui::pos2(1.0, 1.0),
-                                            ),
-                                            ink,
-                                        );
-                                    }
-                                    if resp.on_hover_text(e.name()).clicked() {
-                                        picked = Some(e);
-                                    }
                                 }
-                            });
-                        }
-                    });
+                                if self.emoji_picker.cursor == Some(e.as_str()) {
+                                    ui.painter().rect_stroke(
+                                        rect,
+                                        3.0,
+                                        egui::Stroke::new(1.5, ui.visuals().selection.stroke.color),
+                                        egui::StrokeKind::Inside,
+                                    );
+                                }
+                                let key = format!("e|{}|{ppx}", e.as_str());
+                                let tb = emoji_box(e.as_str());
+                                if let Some((id, size)) =
+                                    self.emoji_picker.pictures.picture(ctx, key, &tb, ppx, true)
+                                {
+                                    let r = egui::Rect::from_center_size(rect.center(), size);
+                                    ui.painter().image(
+                                        id,
+                                        r,
+                                        egui::Rect::from_min_max(
+                                            egui::pos2(0.0, 0.0),
+                                            egui::pos2(1.0, 1.0),
+                                        ),
+                                        ink,
+                                    );
+                                }
+                                if resp.on_hover_text(e.name()).clicked() {
+                                    picked = Some(e);
+                                }
+                            }
+                        });
+                    }
+                });
+                self.emoji_picker.scrolled = (
+                    grid_out.state.clamped_offset().y,
+                    grid_out.inner_rect.height(),
+                );
                 self.emoji_picker.list = Some(list);
             });
         self.emoji_picker.open = open && self.emoji_picker.open;

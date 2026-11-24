@@ -532,7 +532,7 @@ notice-expanded = Expanded into { $count ->
 }.
 notice-expanded-differs = Expanded into { $count } objects, as the { $primary } drew them. The { $device } drew { $drawn } before; the copies keep the { $primary } count.
 app-status-repeat-capped = A repeat draws at most { $max } copies; the rest are left out.
-app-tab-repeat = Repeat
+app-tab-repeat = Repeat settings
 app-repeat-layout = Layout
 app-repeat-across = Across
 app-repeat-down = Down
@@ -708,7 +708,6 @@ menu-project-page = quadrule on GitHub
 # The Mac's own menus: the app menu, Window, and the words the system gives its standard items.
 menu-app = Quadrule
 menu-about-mac = About Quadrule
-menu-settings = Settings…
 menu-hide = Hide Quadrule
 menu-hide-others = Hide Others
 menu-show-all = Show All
@@ -733,3 +732,52 @@ app-basic-page = Page
 app-basic-select = Select
 app-basic-select-tip = Picks this on the page, to change the rest of its settings in the other tabs.
 app-basic-other-tabs = The rest of its settings are in the other tabs.
+
+# Preferences (rung 17 bbq, Q3): the window, Interface size and the theme (moved here from the View menu).
+menu-preferences = Preferences…
+prefs-title = Preferences
+prefs-size = Interface size
+prefs-size-follow = Follow system
+prefs-size-percent = { $percent } %
+prefs-size-note = Applied on top of your system's own scale. Kept for this computer, not saved in any page.
+prefs-theme = Theme
+prefs-profiles = Device profiles…
+
+# Keyboard shortcuts (rung 17 bbq, Q4): the sheet under Help, one table of keys (`crates/ui/src/keys.rs`).
+menu-shortcuts = Keyboard shortcuts
+keys-title = Keyboard shortcuts
+keys-group-file = File
+keys-group-edit = Edit
+keys-group-view = Zoom
+keys-group-arrange = Align and move
+keys-group-tools = Tools
+keys-group-other = Other
+keys-or = { " or " }
+keys-delete = Delete
+keys-front = Move up (toward the front)
+keys-back = Move down (toward the back)
+keys-nudge = Nudge one pixel
+keys-nudge-rhythm = Nudge one rhythm unit
+keys-arrows = Arrow keys
+keys-arrows-shift = Shift + arrow keys
+keys-picker = In the font and emoji lists: move and pick
+keys-picker-keys = Arrow keys, Enter
+keys-escape = Drop a drag, end a tool, step out of a group, then clear the selection
+keys-note = Ctrl is Cmd on the Mac and Alt is Option. No key works while a text field has the keyboard.
+
+# Help > Developer (rung 17 bbq, Q6): the readable JSON form of a page (napkin §12.1).
+menu-developer = Developer
+menu-export-json = Export as readable JSON…
+notice-json-exported = Wrote the page as readable JSON to { $path }.
+notice-json-failed = Could not write the readable JSON: { $error }
+
+# Names for screen readers where the shown words would be the same as another control's in the window (rung 17 bbq, Q5).
+app-show-in-basic-for = Show in Basic: { $what }
+app-group-picked = Group the picked objects
+app-ungroup-picked = Ungroup the picked group
+app-repeat-picked = Repeat the picked objects
+app-emoji-text-tab = Emoji, add to this text
+app-finding-tag = { $rule }, { $object }, { $device }
+app-finding-tag-page = { $rule }, { $device }
+app-ruler-shorter = − Make the bar one pixel shorter
+app-ruler-longer = + Make the bar one pixel longer

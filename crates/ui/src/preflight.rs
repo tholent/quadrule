@@ -142,6 +142,38 @@ impl ViewerUi {
                 self.show_lint = true;
                 self.tab = crate::panels::Tab::Lint;
             }
+            // The Lint tab with the first finding about an object clicked: the object picked with its handles, the
+            // tab still open (rung 17).
+            "lint-click" => {
+                self.show_lint = true;
+                self.tab = crate::panels::Tab::Lint;
+                let profile = self.viewer.profile_id.clone();
+                let found = self.viewer.page().and_then(|p| {
+                    p.findings
+                        .iter()
+                        .enumerate()
+                        .find(|(_, f)| f.object.is_some())
+                        .map(|(i, f)| (i, f.clone()))
+                });
+                if let Some((i, f)) = found {
+                    self.do_action(crate::lint_ui::Action::Select(profile, i, f), &[]);
+                }
+            }
+            // The tab row with an object picked (rung 17): the sample's rule, on its Style tab.
+            "tabs" => {
+                let id = quadrule_model::sample::ids::RULE;
+                if self.viewer.doc().is_some_and(|d| d.object(id).is_some()) {
+                    self.viewer.select_row(id, false);
+                    self.tab = crate::panels::Tab::Style;
+                }
+            }
+            "shortcuts" => self.shortcuts_open = true,
+            "menu-developer" => {
+                self.look_menu = Some(crate::menu_bar::LookMenu::with_sub(
+                    "menu-help",
+                    "menu-developer",
+                ));
+            }
             "style" => {
                 let pick = self.viewer.doc().and_then(|d| {
                     d.objects()
@@ -221,7 +253,14 @@ impl ViewerUi {
                 ));
             }
             "menu-help" => self.look_menu = Some(crate::menu_bar::LookMenu::top("menu-help")),
+            "menu-file" => self.look_menu = Some(crate::menu_bar::LookMenu::top("app-file")),
             "about" => self.about_open = true,
+            // Preferences, at the system's scale and at 200 % (rung 17).
+            "preferences" => self.open_preferences(),
+            "preferences-200" => {
+                self.interface_size = crate::InterfaceSize::Percent(200);
+                self.open_preferences();
+            }
             // The layers panel: New layer's name field, the ask before Delete layer, a row's right-click menu.
             "layers" | "layers-new" | "layers-ask" | "layers-menu" => self.look_layers(look),
             // My templates, the tab the person's own pages are on.

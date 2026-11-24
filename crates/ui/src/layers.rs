@@ -172,11 +172,20 @@ impl ViewerUi {
         let state = self.delete_layer_state(Some(li));
         let why = state.err().map(|id| self.t(id));
         let mut act = None;
+        let layer = self
+            .viewer
+            .doc()
+            .and_then(|d| d.layers.get(li))
+            .map_or_else(String::new, |l| l.name.clone());
         popup.show(|ui| {
-            if ui.button(new_text).clicked() {
+            // The panel's icon buttons have these names too, so the menu's say which layer.
+            let new = ui.button(&new_text);
+            crate::a11y::name_button(&new, true, &format!("{new_text} {layer}"));
+            if new.clicked() {
                 act = Some(RowAct::New(li));
             }
-            let delete = ui.add_enabled(state.is_ok(), Button::new(delete_text));
+            let delete = ui.add_enabled(state.is_ok(), Button::new(&delete_text));
+            crate::a11y::name_button(&delete, state.is_ok(), &format!("{delete_text} {layer}"));
             let delete = match &why {
                 Some(w) => delete.on_disabled_hover_text(w.clone()),
                 None => delete,

@@ -581,7 +581,7 @@ impl ViewerUi {
                 }
                 ui.end_row();
 
-                let label = ui.label(self.t("profiles-margins"));
+                ui.label(self.t("profiles-margins"));
                 ui.horizontal(|ui| {
                     let m = &mut p.default_margins_mm;
                     for (v, tip) in [
@@ -590,9 +590,12 @@ impl ViewerUi {
                         (&mut m.bottom, "profiles-margin-bottom"),
                         (&mut m.left, "profiles-margin-left"),
                     ] {
-                        ui.add(egui::DragValue::new(v).range(0.0..=100.0).max_decimals(1))
-                            .on_hover_text(self.t(tip))
-                            .labelled_by(label.id);
+                        let value = *v;
+                        let r = ui
+                            .add(egui::DragValue::new(v).range(0.0..=100.0).max_decimals(1))
+                            .on_hover_text(self.t(tip));
+                        // Four fields stand under one label, so each is named for its side.
+                        crate::a11y::name_spin(&r, true, value, &self.t(tip));
                     }
                     ui.label("mm");
                 });

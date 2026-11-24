@@ -435,20 +435,31 @@ impl Viewer {
             DrawKind::Line => {
                 // A line goes where the pointer goes, up or down, left or right (its frame is
                 // the box between the two ends and it keeps whichever diagonal they make). With
-                // Shift held it runs along whichever axis the pointer went further on.
+                // Shift held it turns in 15 degree steps (rung 17, D6; 0 and 90 are among them, so it still
+                // runs along an axis when the pointer is near one): the end is the pointer's distance along the
+                // nearest step, snapped along that line.
                 let (dx, dy) = (x - s.0, y - s.1);
-                let axis = mods.shift;
-                let horizontal = dx.abs() >= dy.abs();
-                let raw = match (axis, horizontal) {
-                    (true, true) => (x, s.1),
-                    (true, false) => (s.0, y),
-                    (false, _) => (x, y),
+                let toward = if mods.shift {
+                    let step = 15.0_f64.to_radians();
+                    let a = (dy.atan2(dx) / step).round() * step;
+                    Some((a.cos(), a.sin()))
+                } else {
+                    None
+                };
+                let raw = match toward {
+                    Some((ux, uy)) => {
+                        let along = dx * ux + dy * uy;
+                        (s.0 + ux * along, s.1 + uy * along)
+                    }
+                    None => (x, y),
                 };
                 let snapped = draw.world.snap_point(raw, reach, toggles);
-                let end = match (axis, horizontal) {
-                    (true, true) => (snapped.at.0, s.1),
-                    (true, false) => (s.0, snapped.at.1),
-                    (false, _) => snapped.at,
+                let end = match toward {
+                    Some((ux, uy)) => {
+                        let along = (snapped.at.0 - s.0) * ux + (snapped.at.1 - s.1) * uy;
+                        (s.0 + ux * along, s.1 + uy * along)
+                    }
+                    None => snapped.at,
                 };
                 draw.line_dir = if (end.0 - s.0) * (end.1 - s.1) < 0.0 {
                     LineDir::Up

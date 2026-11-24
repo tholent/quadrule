@@ -23,6 +23,7 @@
 
 #![forbid(unsafe_code)]
 
+mod a11y;
 pub mod arrange;
 pub mod basic;
 pub mod bench;
@@ -36,6 +37,7 @@ pub mod export_path;
 pub mod export_ui;
 pub mod file_menu;
 pub mod fonts;
+pub mod keys;
 pub mod layer_icons;
 pub mod layers;
 pub mod lint_fixes;
@@ -45,6 +47,7 @@ pub mod menus;
 pub mod missing;
 pub mod missing_ui;
 pub mod panels;
+pub mod preferences;
 pub mod preflight;
 pub mod profile_use;
 pub mod profiles_ui;
@@ -79,6 +82,7 @@ pub use editor::{DropOn, RowZone, Toward, layer_drop_place, object_drop_place, r
 pub use export::{ExportError, ExportRequest, ExportResult, ExportedFile};
 pub use menus::{Cmd, CmdState, PROJECT_URL, Platform, Snap};
 pub use panels::Tab;
+pub use preferences::InterfaceSize;
 pub use profile_use::{Clash, ProfileChoice, ProfileUse};
 pub use profiles_ui::{ClashDialog, ClashRow, Pick};
 pub use profiles_win::{Confirm, ImportAsk, ImportPick, ListEntry, NewForm, ProfilesWindow};

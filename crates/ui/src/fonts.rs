@@ -40,6 +40,8 @@ const ROW_HEIGHT: f32 = 30.0;
 const MAX_PX: (u32, u32) = (4096, 1200);
 /// Pictures kept; past this the cache starts again.
 const MAX_PICTURES: usize = 600;
+/// The widest a picture of text is made: one texture, which some graphics chips take 2048 wide at most.
+const MAX_PICTURE_SIDE: usize = 2048;
 
 /// A line of text drawn as device pixels: black on white, 0 to 255.
 pub struct Raster {
@@ -129,9 +131,13 @@ impl Pictures {
             let r = raster_text(reg, tb, px_per_mm)?;
             // Names take the text colour of the window (a mask); the preview is the export's own
             // black on white.
+            // No wider than a graphics chip may take in one texture (some take 2048); a longer line is cut off at the
+            // right, and the preview scrolls sideways only as far as that.
+            let width = (r.width as usize).min(MAX_PICTURE_SIDE);
             let pixels: Vec<Color32> = r
                 .gray
-                .iter()
+                .chunks(r.width as usize)
+                .flat_map(|row| row.iter().take(width))
                 .map(|&g| {
                     if ink {
                         Color32::from_white_alpha(255 - g)
@@ -140,9 +146,9 @@ impl Pictures {
                     }
                 })
                 .collect();
-            let img = ColorImage::new([r.width as usize, r.height as usize], pixels);
+            let img = ColorImage::new([width, r.height as usize], pixels);
             let tex = ctx.load_texture(format!("font-{key}"), img, TextureOptions::NEAREST);
-            Some((tex, [r.width, r.height]))
+            Some((tex, [width as u32, r.height]))
         });
         let ppp = ctx.pixels_per_point();
         entry
@@ -160,6 +166,10 @@ pub(crate) struct FontPicker {
     focus_search: bool,
     /// The family under the pointer on the last frame, whose preview shows.
     hovered: Option<String>,
+    /// The family the arrow keys stand on (rung 17, D7): Enter picks it.
+    cursor: Option<String>,
+    /// How far the list was scrolled and how tall it showed, on the last frame (to keep the cursor in view).
+    scrolled: (f32, f32),
     families: Vec<FamilyInfo>,
     pub(crate) pictures: Pictures,
 }
@@ -175,6 +185,8 @@ impl FontPicker {
             .map(|r| r.families())
             .unwrap_or_default();
         self.search.clear();
+        self.cursor = None;
+        self.scrolled = (0.0, 0.0);
         self.focus_search = true;
         self.open = true;
     }
@@ -202,6 +214,17 @@ impl ViewerUi {
         if !exists {
             ui.colored_label(ui.visuals().warn_fg_color, self.t("app-font-missing"));
         }
+    }
+
+    /// The families the picker lists, in its order (bundled, then installed), for tests.
+    #[doc(hidden)]
+    pub fn font_picker_names(&self) -> Vec<String> {
+        let f = &self.font_picker.families;
+        [true, false]
+            .into_iter()
+            .flat_map(|b| f.iter().filter(move |x| x.bundled == b))
+            .map(|x| x.name.clone())
+            .collect()
     }
 
     /// The picker window, while it is open and a text box is picked.
@@ -281,11 +304,64 @@ impl ViewerUi {
                         rows.extend(section.map(|f| Row::Family(f)));
                     }
                 }
-                // The preview: the family under the pointer, else the one in use.
+                // The arrow keys walk the families (never the headers), Enter picks the one they stand on, or the
+                // first match of what is typed (rung 17, D7). They work with the search field focused.
+                let names: Vec<&str> = rows
+                    .iter()
+                    .filter_map(|r| match r {
+                        Row::Family(f) => Some(f.name.as_str()),
+                        Row::Header(_) => None,
+                    })
+                    .collect();
+                let (down, up, enter) = crate::keys::picker_keys(ctx);
+                let mut want_offset: Option<f32> = None;
+                if !names.is_empty() && (down > 0 || up > 0) {
+                    let at = self
+                        .font_picker
+                        .cursor
+                        .as_deref()
+                        .and_then(|c| names.iter().position(|n| *n == c));
+                    let mut i = at;
+                    for _ in 0..down {
+                        i = Some(i.map_or(0, |i| (i + 1).min(names.len() - 1)));
+                    }
+                    for _ in 0..up {
+                        i = Some(i.map_or(0, |i| i.saturating_sub(1)));
+                    }
+                    let name = names[i.unwrap_or(0)].to_string();
+                    // Scroll just far enough to show the row.
+                    let at_row = rows
+                        .iter()
+                        .position(|r| matches!(r, Row::Family(f) if f.name == name))
+                        .unwrap_or(0);
+                    let row_h = ROW_HEIGHT + ui.spacing().item_spacing.y;
+                    let (offset, view) = self.font_picker.scrolled;
+                    let (top, bottom) = (at_row as f32 * row_h, (at_row + 1) as f32 * row_h);
+                    if top < offset {
+                        want_offset = Some(top);
+                    } else if view > 0.0 && bottom > offset + view {
+                        want_offset = Some(bottom - view);
+                    }
+                    self.font_picker.cursor = Some(name);
+                }
+                if enter > 0 {
+                    picked = self
+                        .font_picker
+                        .cursor
+                        .clone()
+                        .filter(|c| names.contains(&c.as_str()))
+                        .or_else(|| {
+                            (!needle.is_empty())
+                                .then(|| names.first().map(|n| (*n).to_string()))
+                                .flatten()
+                        });
+                }
+                // The preview: the family under the pointer, else the one the keys stand on, else the one in use.
                 let preview_family: String = self
                     .font_picker
                     .hovered
                     .clone()
+                    .or_else(|| self.font_picker.cursor.clone())
                     .filter(|f| families.iter().any(|x| &x.name == f))
                     .unwrap_or_else(|| tb.family.clone());
                 ui.add_space(4.0);
@@ -333,100 +409,115 @@ impl ViewerUi {
                     ui.label(self.strings.get("app-font-none-found"));
                 }
                 let mut hovered: Option<String> = None;
-                ScrollArea::vertical()
-                    .auto_shrink([false, false])
-                    .show_rows(ui, ROW_HEIGHT, rows.len(), |ui, range| {
-                        // Open the installed families on show once, not one by one.
-                        let visible: Vec<&str> = rows[range.clone()]
-                            .iter()
-                            .filter_map(|r| match r {
-                                Row::Family(f) => Some(f.name.as_str()),
-                                Row::Header(_) => None,
-                            })
-                            .collect();
-                        if let Some(reg) = self.font_picker.pictures.reg.as_mut() {
-                            reg.ensure_open(visible);
-                        }
-                        for row in &rows[range] {
-                            match row {
-                                Row::Header(id) => {
-                                    ui.add_sized(
-                                        [ui.available_width(), ROW_HEIGHT],
-                                        egui::Label::new(
-                                            egui::RichText::new(self.strings.get(id)).strong(),
-                                        )
-                                        .selectable(false),
+                let mut list = ScrollArea::vertical().auto_shrink([false, false]);
+                if let Some(o) = want_offset {
+                    list = list.vertical_scroll_offset(o);
+                }
+                let list_out = list.show_rows(ui, ROW_HEIGHT, rows.len(), |ui, range| {
+                    // Open the installed families on show once, not one by one.
+                    let visible: Vec<&str> = rows[range.clone()]
+                        .iter()
+                        .filter_map(|r| match r {
+                            Row::Family(f) => Some(f.name.as_str()),
+                            Row::Header(_) => None,
+                        })
+                        .collect();
+                    if let Some(reg) = self.font_picker.pictures.reg.as_mut() {
+                        reg.ensure_open(visible);
+                    }
+                    for row in &rows[range] {
+                        match row {
+                            Row::Header(id) => {
+                                ui.add_sized(
+                                    [ui.available_width(), ROW_HEIGHT],
+                                    egui::Label::new(
+                                        egui::RichText::new(self.strings.get(id)).strong(),
+                                    )
+                                    .selectable(false),
+                                );
+                            }
+                            Row::Family(f) => {
+                                let (rect, resp) = ui.allocate_exact_size(
+                                    egui::vec2(ui.available_width(), ROW_HEIGHT),
+                                    Sense::click(),
+                                );
+                                let current = f.name == tb.family;
+                                let keyed = self.font_picker.cursor.as_deref() == Some(&f.name);
+                                resp.widget_info(|| {
+                                    WidgetInfo::selected(Role::Button, true, current, &f.name)
+                                });
+                                if keyed {
+                                    ui.painter().rect_stroke(
+                                        rect,
+                                        3.0,
+                                        egui::Stroke::new(1.5, ui.visuals().selection.stroke.color),
+                                        egui::StrokeKind::Inside,
                                     );
                                 }
-                                Row::Family(f) => {
-                                    let (rect, resp) = ui.allocate_exact_size(
-                                        egui::vec2(ui.available_width(), ROW_HEIGHT),
-                                        Sense::click(),
-                                    );
-                                    let current = f.name == tb.family;
-                                    resp.widget_info(|| {
-                                        WidgetInfo::selected(Role::Button, true, current, &f.name)
-                                    });
-                                    if current || resp.hovered() {
-                                        let fill = if current {
-                                            ui.visuals().selection.bg_fill
+                                if current || resp.hovered() {
+                                    let fill = if current {
+                                        ui.visuals().selection.bg_fill
+                                    } else {
+                                        ui.visuals().widgets.hovered.bg_fill
+                                    };
+                                    ui.painter().rect_filled(rect, 3.0, fill);
+                                }
+                                let name_box = sample_box(&f.name, &f.name, NAME_PT, None);
+                                let key = format!("n|{}|{name_px_per_mm}", f.name);
+                                let pic = self.font_picker.pictures.picture(
+                                    ctx,
+                                    key,
+                                    &name_box,
+                                    name_px_per_mm,
+                                    true,
+                                );
+                                let ink = ui.visuals().text_color();
+                                let pos = rect.left_center() + egui::vec2(6.0, 0.0);
+                                match pic {
+                                    Some((id, size)) => {
+                                        let size = if size.y > ROW_HEIGHT - 4.0 {
+                                            size * ((ROW_HEIGHT - 4.0) / size.y)
                                         } else {
-                                            ui.visuals().widgets.hovered.bg_fill
+                                            size
                                         };
-                                        ui.painter().rect_filled(rect, 3.0, fill);
+                                        let r = egui::Rect::from_min_size(
+                                            pos - egui::vec2(0.0, size.y / 2.0),
+                                            size,
+                                        );
+                                        ui.painter().image(
+                                            id,
+                                            r,
+                                            egui::Rect::from_min_max(
+                                                egui::pos2(0.0, 0.0),
+                                                egui::pos2(1.0, 1.0),
+                                            ),
+                                            ink,
+                                        );
                                     }
-                                    let name_box = sample_box(&f.name, &f.name, NAME_PT, None);
-                                    let key = format!("n|{}|{name_px_per_mm}", f.name);
-                                    let pic = self.font_picker.pictures.picture(
-                                        ctx,
-                                        key,
-                                        &name_box,
-                                        name_px_per_mm,
-                                        true,
-                                    );
-                                    let ink = ui.visuals().text_color();
-                                    let pos = rect.left_center() + egui::vec2(6.0, 0.0);
-                                    match pic {
-                                        Some((id, size)) => {
-                                            let size = if size.y > ROW_HEIGHT - 4.0 {
-                                                size * ((ROW_HEIGHT - 4.0) / size.y)
-                                            } else {
-                                                size
-                                            };
-                                            let r = egui::Rect::from_min_size(
-                                                pos - egui::vec2(0.0, size.y / 2.0),
-                                                size,
-                                            );
-                                            ui.painter().image(
-                                                id,
-                                                r,
-                                                egui::Rect::from_min_max(
-                                                    egui::pos2(0.0, 0.0),
-                                                    egui::pos2(1.0, 1.0),
-                                                ),
-                                                ink,
-                                            );
-                                        }
-                                        None => {
-                                            ui.painter().text(
-                                                pos,
-                                                egui::Align2::LEFT_CENTER,
-                                                &f.name,
-                                                egui::FontId::proportional(14.0),
-                                                ink,
-                                            );
-                                        }
+                                    None => {
+                                        ui.painter().text(
+                                            pos,
+                                            egui::Align2::LEFT_CENTER,
+                                            &f.name,
+                                            egui::FontId::proportional(14.0),
+                                            ink,
+                                        );
                                     }
-                                    if resp.hovered() {
-                                        hovered = Some(f.name.clone());
-                                    }
-                                    if resp.clicked() {
-                                        picked = Some(f.name.clone());
-                                    }
+                                }
+                                if resp.hovered() {
+                                    hovered = Some(f.name.clone());
+                                }
+                                if resp.clicked() {
+                                    picked = Some(f.name.clone());
                                 }
                             }
                         }
-                    });
+                    }
+                });
+                self.font_picker.scrolled = (
+                    list_out.state.clamped_offset().y,
+                    list_out.inner_rect.height(),
+                );
                 self.font_picker.hovered = hovered;
                 self.font_picker.families = families;
             });

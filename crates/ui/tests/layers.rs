@@ -181,8 +181,11 @@ fn new_layer_goes_just_above_the_picked_layer_or_the_picked_objects_layer() {
     h.get_by_label("Grid").click_secondary();
     h.run();
     h.run();
-    let menu_new = h.get_all_by_label("New layer").count() == 2;
-    h.get_all_by_label("New layer").last().unwrap().click();
+    let menu_new = h.get_all_by_label_contains("New layer").count() == 2;
+    h.get_all_by_label_contains("New layer")
+        .last()
+        .unwrap()
+        .click();
     h.run();
     h.run();
     let from_menu = names(&h) == ["Grid", "Layer 3", "Layer 1", "Header", "Layer 2"]
@@ -382,7 +385,7 @@ fn delete_layer_is_greyed_with_a_note_for_no_pick_the_last_layer_and_a_locked_la
     hl.run();
     hl.run();
     let menu_greyed = hl
-        .get_all_by_role_and_label(Role::Button, "Delete layer")
+        .get_all_by_label_contains("Delete layer")
         .last()
         .unwrap()
         .accesskit_node()
@@ -411,11 +414,9 @@ fn a_layer_row_menu_deletes_its_own_row_and_a_picked_object_deletes_its_layer() 
     h.run();
     h.run();
     let picked_header = h.state().ui.picked_layer() == Some(1);
-    let menu_delete = h
-        .get_all_by_role_and_label(Role::Button, "Delete layer")
-        .count()
-        == 2;
-    h.get_all_by_role_and_label(Role::Button, "Delete layer")
+    // The menu's item names its layer after its words (`Delete layer Header`, rung 17); the panel's icon has the words.
+    let menu_delete = h.get_all_by_label_contains("Delete layer").count() == 2;
+    h.get_all_by_label_contains("Delete layer")
         .last()
         .unwrap()
         .click();

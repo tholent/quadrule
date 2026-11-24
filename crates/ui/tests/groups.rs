@@ -671,8 +671,9 @@ fn the_inspector_for_a_group_and_the_new_controls_are_named() {
     h.run();
     h.run();
     let rotation = h.query_by_label("Rotation").is_some();
-    let buttons =
-        h.query_all_by_label("Group").count() >= 2 && h.query_all_by_label("Ungroup").count() >= 2;
+    // The layers panel's icons and the Arrange tab's buttons (named for what they act on, rung 17).
+    let buttons = h.query_all_by_label_contains("Group").count() >= 2
+        && h.query_all_by_label_contains("Ungroup").count() >= 2;
     // A group has no Constraints tab; its child has the normal one, against the page, with no note
     // about the group (groups are see-through to constraints).
     let no_tab = h

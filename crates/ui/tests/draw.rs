@@ -171,8 +171,8 @@ fn a_line_is_drawn_in_all_four_directions() {
         ok &= good;
         parts.push(format!("{name}={good}"));
     }
-    // Shift still holds a line to its axis.
-    let id = draw(&mut v, Tool::Line, (500.0, 800.0), (700.0, 760.0), SHIFT);
+    // Shift still holds a line to its axis (a pointer within 7.5 degrees of one).
+    let id = draw(&mut v, Tool::Line, (500.0, 800.0), (700.0, 795.0), SHIFT);
     let (_, y0, _, y1) = px(&v, id);
     let shift_axis = near(y0, y1);
     ok &= shift_axis;
@@ -180,6 +180,42 @@ fn a_line_is_drawn_in_all_four_directions() {
         "\nCHECK crate=ui name=draw_line_four_directions result={} {} shift_holds_axis={shift_axis}",
         pass(ok),
         parts.join(" ")
+    );
+    assert!(ok);
+}
+
+#[test]
+fn shift_turns_a_line_in_fifteen_degree_steps() {
+    // Rung 17, D6: with Shift the end goes to the nearest 15 degree step from the start, at the pointer's distance
+    // along it, snapped along that line. Pointers a few degrees off each step land exactly on it.
+    let mut v = page();
+    let mut parts = Vec::new();
+    let mut ok = true;
+    for (step, off) in [
+        (15.0_f64, 4.0_f64),
+        (30.0, -5.0),
+        (45.0, 3.0),
+        (60.0, -4.0),
+        (75.0, 5.0),
+        (90.0, 3.0),
+        (0.0, 5.0),
+    ] {
+        let len = 240.0;
+        let a = (step + off).to_radians();
+        let from = (500.0, 900.0);
+        // The pointer goes up and to the right, `step` degrees (plus `off`) above the level.
+        let to = (from.0 + len * a.cos(), from.1 - len * a.sin());
+        let id = draw(&mut v, Tool::Line, from, to, SHIFT);
+        let (x0, y0, x1, y1) = px(&v, id);
+        let angle = (y1 - y0).atan2(x1 - x0).to_degrees();
+        let good = (angle - step).abs() < 1.0;
+        ok &= good;
+        parts.push(format!("{step}={angle:.2}"));
+    }
+    println!(
+        "\nCHECK crate=ui name=draw_line_shift_15_degrees result={} angles={}",
+        pass(ok),
+        parts.join(",")
     );
     assert!(ok);
 }

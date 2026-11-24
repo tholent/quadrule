@@ -24,7 +24,7 @@
 
 use crate::CanvasMode;
 use crate::view::{After, Request, ViewerUi};
-use egui::{Event, Key, KeyboardShortcut, Modifiers, ThemePreference};
+use egui::{Event, Key, KeyboardShortcut, Modifiers};
 
 /// Where the project lives; the Help menu opens it and the About sheet shows it.
 pub const PROJECT_URL: &str = "https://github.com/tholent/quadrule";
@@ -135,21 +135,51 @@ pub enum Cmd {
     Snap(Snap),
     /// View > Show safe zones.
     SafeZones,
-    /// View > Theme > one choice.
-    Theme(ThemePreference),
     /// View > Canvas > one choice.
     Canvas(CanvasMode),
     /// Help > About quadrule (on the Mac, in the Quadrule menu).
     About,
+    /// Help > Keyboard shortcuts.
+    ShortcutsSheet,
+    /// Help > Developer > Export as readable JSON…
+    ExportJson,
     /// Help > the project page.
     ProjectPage,
-    /// Quadrule > Settings… (the Mac only): the Profiles window.
-    Settings,
+    /// File > Preferences… (the Mac: Quadrule > Preferences…): the Preferences window.
+    Preferences,
     /// Quadrule > Quit (the Mac only).
     Quit,
 }
 
 impl Cmd {
+    /// The row of [`crate::keys::table`] whose key does this, if a key does.
+    pub fn act(self) -> Option<crate::keys::Act> {
+        use crate::keys::Act;
+        Some(match self {
+            Cmd::New => Act::New,
+            Cmd::Open => Act::Open,
+            Cmd::Save => Act::Save,
+            Cmd::SaveAs => Act::SaveAs,
+            Cmd::Export => Act::Export,
+            Cmd::Close => Act::Close,
+            Cmd::Preferences => Act::Preferences,
+            Cmd::Quit => Act::Quit,
+            Cmd::Undo => Act::Undo,
+            Cmd::Redo => Act::Redo,
+            Cmd::Cut => Act::Cut,
+            Cmd::Copy => Act::Copy,
+            Cmd::Paste => Act::Paste,
+            Cmd::Duplicate => Act::Duplicate,
+            Cmd::SelectAll => Act::SelectAll,
+            Cmd::ZoomIn => Act::ZoomIn,
+            Cmd::ZoomOut => Act::ZoomOut,
+            Cmd::ZoomFit => Act::ZoomFit,
+            Cmd::ZoomActual => Act::ZoomActual,
+            Cmd::ShortcutsSheet => Act::ShortcutsSheet,
+            _ => return None,
+        })
+    }
+
     /// A name for the command that survives a trip through the Mac's menu: [`Cmd::from_id`] reads it back.
     pub fn id(self) -> String {
         let s = |t: &str| t.to_string();
@@ -177,14 +207,13 @@ impl Cmd {
             Cmd::Strip => s("strip"),
             Cmd::Snap(k) => format!("snap-{}", k.key()),
             Cmd::SafeZones => s("safe-zones"),
-            Cmd::Theme(ThemePreference::System) => s("theme-system"),
-            Cmd::Theme(ThemePreference::Light) => s("theme-light"),
-            Cmd::Theme(ThemePreference::Dark) => s("theme-dark"),
             Cmd::Canvas(CanvasMode::ExportPixels) => s("canvas-export"),
             Cmd::Canvas(CanvasMode::Chip) => s("canvas-chip"),
             Cmd::About => s("about"),
+            Cmd::ShortcutsSheet => s("shortcuts"),
+            Cmd::ExportJson => s("export-json"),
             Cmd::ProjectPage => s("project-page"),
-            Cmd::Settings => s("settings"),
+            Cmd::Preferences => s("preferences"),
             Cmd::Quit => s("quit"),
         }
     }
@@ -219,14 +248,13 @@ impl Cmd {
             "real-size" => Cmd::RealSizeCheck,
             "strip" => Cmd::Strip,
             "safe-zones" => Cmd::SafeZones,
-            "theme-system" => Cmd::Theme(ThemePreference::System),
-            "theme-light" => Cmd::Theme(ThemePreference::Light),
-            "theme-dark" => Cmd::Theme(ThemePreference::Dark),
             "canvas-export" => Cmd::Canvas(CanvasMode::ExportPixels),
             "canvas-chip" => Cmd::Canvas(CanvasMode::Chip),
             "about" => Cmd::About,
+            "shortcuts" => Cmd::ShortcutsSheet,
+            "export-json" => Cmd::ExportJson,
             "project-page" => Cmd::ProjectPage,
-            "settings" => Cmd::Settings,
+            "preferences" => Cmd::Preferences,
             "quit" => Cmd::Quit,
             _ => return None,
         })
@@ -316,11 +344,13 @@ impl Platform {
     }
 }
 
-fn item(cmd: Cmd, label: &'static str, shortcut: Option<(Modifiers, Key)>) -> Entry {
+/// An action item; its key is the one `keys::table` has for the command (so a menu never shows a key the window does
+/// not answer, and never leaves out one it does).
+fn item(cmd: Cmd, label: &'static str) -> Entry {
     Entry::Item(Item {
         cmd,
         label,
-        shortcut: shortcut.map(|(m, k)| KeyboardShortcut::new(m, k)),
+        shortcut: cmd.act().and_then(crate::keys::shortcut),
         kind: Kind::Action,
     })
 }
@@ -343,46 +373,58 @@ fn choice(cmd: Cmd, label: &'static str) -> Entry {
     })
 }
 
-fn file_menu(_p: Platform) -> Menu {
-    let cmd = Modifiers::COMMAND;
-    let shift_cmd = Modifiers::COMMAND | Modifiers::SHIFT;
-    Menu {
+fn file_menu(p: Platform) -> Menu {
+    let mut menu = Menu {
         label: "app-file",
         entries: vec![
-            item(Cmd::New, "app-new", Some((cmd, Key::N))),
-            item(Cmd::Open, "app-open", Some((cmd, Key::O))),
+            item(Cmd::New, "app-new"),
+            item(Cmd::Open, "app-open"),
             Entry::Recent,
             Entry::Separator,
-            item(Cmd::Save, "app-save", Some((cmd, Key::S))),
-            item(Cmd::SaveAs, "app-save-as", Some((shift_cmd, Key::S))),
-            item(Cmd::SaveTemplate, "app-file-save-template", None),
+            item(Cmd::Save, "app-save"),
+            item(Cmd::SaveAs, "app-save-as"),
+            item(Cmd::SaveTemplate, "app-file-save-template"),
             Entry::Separator,
-            item(Cmd::Export, "app-export-sheet", Some((cmd, Key::E))),
+            item(Cmd::Export, "app-export-sheet"),
             Entry::Separator,
-            item(Cmd::Close, "app-file-close", Some((cmd, Key::W))),
+            item(Cmd::Close, "app-file-close"),
         ],
+    };
+    // Preferences… sits above Close; on the Mac it is in the Quadrule menu.
+    if p == Platform::Other {
+        let at = menu.entries.len() - 1;
+        menu.entries.splice(
+            at..at,
+            [item(Cmd::Preferences, "menu-preferences"), Entry::Separator],
+        );
     }
+    menu
 }
 
 fn edit_menu(p: Platform) -> Menu {
-    let cmd = Modifiers::COMMAND;
-    // Both Redo keys work everywhere (`shortcuts`); the menu shows the one the system's own programs show.
+    // Both Redo keys are in the table and work everywhere; the menu shows the one the system's own programs show.
+    let redo = &crate::keys::row(crate::keys::Act::Redo).keys;
     let redo = match p {
-        Platform::Mac => (Modifiers::COMMAND | Modifiers::SHIFT, Key::Z),
-        Platform::Other => (cmd, Key::Y),
+        Platform::Mac => redo[0],
+        Platform::Other => redo[1],
     };
     Menu {
         label: "menu-edit",
         entries: vec![
-            item(Cmd::Undo, "app-undo", Some((cmd, Key::Z))),
-            item(Cmd::Redo, "app-redo", Some(redo)),
+            item(Cmd::Undo, "app-undo"),
+            Entry::Item(Item {
+                cmd: Cmd::Redo,
+                label: "app-redo",
+                shortcut: Some(KeyboardShortcut::new(redo.0, redo.1)),
+                kind: Kind::Action,
+            }),
             Entry::Separator,
-            item(Cmd::Cut, "menu-cut", Some((cmd, Key::X))),
-            item(Cmd::Copy, "menu-copy", Some((cmd, Key::C))),
-            item(Cmd::Paste, "menu-paste", Some((cmd, Key::V))),
+            item(Cmd::Cut, "menu-cut"),
+            item(Cmd::Copy, "menu-copy"),
+            item(Cmd::Paste, "menu-paste"),
             Entry::Separator,
-            item(Cmd::Duplicate, "menu-duplicate", Some((cmd, Key::D))),
-            item(Cmd::SelectAll, "menu-select-all", None),
+            item(Cmd::Duplicate, "menu-duplicate"),
+            item(Cmd::SelectAll, "menu-select-all"),
         ],
     }
 }
@@ -391,11 +433,11 @@ fn view_menu(_p: Platform) -> Menu {
     Menu {
         label: "app-view",
         entries: vec![
-            item(Cmd::ZoomIn, "app-zoom-in", None),
-            item(Cmd::ZoomOut, "app-zoom-out", None),
-            item(Cmd::ZoomFit, "app-zoom-fit", None),
-            item(Cmd::ZoomActual, "menu-zoom-actual", None),
-            item(Cmd::RealSizeCheck, "app-ruler-open", None),
+            item(Cmd::ZoomIn, "app-zoom-in"),
+            item(Cmd::ZoomOut, "app-zoom-out"),
+            item(Cmd::ZoomFit, "app-zoom-fit"),
+            item(Cmd::ZoomActual, "menu-zoom-actual"),
+            item(Cmd::RealSizeCheck, "app-ruler-open"),
             Entry::Separator,
             switch(Cmd::Strip, "menu-strip"),
             Entry::Sub(Menu {
@@ -407,14 +449,6 @@ fn view_menu(_p: Platform) -> Menu {
             }),
             Entry::Separator,
             switch(Cmd::SafeZones, "app-safe-zones"),
-            Entry::Sub(Menu {
-                label: "app-theme",
-                entries: vec![
-                    choice(Cmd::Theme(ThemePreference::System), "app-theme-system"),
-                    choice(Cmd::Theme(ThemePreference::Light), "app-theme-light"),
-                    choice(Cmd::Theme(ThemePreference::Dark), "app-theme-dark"),
-                ],
-            }),
             Entry::Sub(Menu {
                 label: "app-canvas",
                 entries: vec![
@@ -430,9 +464,15 @@ fn help_menu(p: Platform) -> Menu {
     let mut entries = Vec::new();
     // On the Mac, About is in the Quadrule menu.
     if p == Platform::Other {
-        entries.push(item(Cmd::About, "menu-about", None));
+        entries.push(item(Cmd::About, "menu-about"));
     }
-    entries.push(item(Cmd::ProjectPage, "menu-project-page", None));
+    entries.push(item(Cmd::ShortcutsSheet, "menu-shortcuts"));
+    entries.push(item(Cmd::ProjectPage, "menu-project-page"));
+    entries.push(Entry::Separator);
+    entries.push(Entry::Sub(Menu {
+        label: "menu-developer",
+        entries: vec![item(Cmd::ExportJson, "menu-export-json")],
+    }));
     Menu {
         label: "menu-help",
         entries,
@@ -461,21 +501,20 @@ pub fn bar_menus() -> Vec<Menu> {
     menus(Platform::Other)
 }
 
-/// The Quadrule menu on the Mac (Q7): About, Settings…, Hide, Hide Others, Show All and Quit.
+/// The Quadrule menu on the Mac (Q7): About, Preferences…, Hide, Hide Others, Show All and Quit.
 pub fn app_menu() -> Menu {
-    let cmd = Modifiers::COMMAND;
     Menu {
         label: "menu-app",
         entries: vec![
-            item(Cmd::About, "menu-about-mac", None),
+            item(Cmd::About, "menu-about-mac"),
             Entry::Separator,
-            item(Cmd::Settings, "menu-settings", Some((cmd, Key::Comma))),
+            item(Cmd::Preferences, "menu-preferences"),
             Entry::Separator,
             Entry::Native(Native::Hide, "menu-hide"),
             Entry::Native(Native::HideOthers, "menu-hide-others"),
             Entry::Native(Native::ShowAll, "menu-show-all"),
             Entry::Separator,
-            item(Cmd::Quit, "menu-quit", Some((cmd, Key::Q))),
+            item(Cmd::Quit, "menu-quit"),
         ],
     }
 }
@@ -535,13 +574,17 @@ impl ViewerUi {
             checked: None,
         };
         match cmd {
-            Cmd::New | Cmd::Open | Cmd::About | Cmd::ProjectPage | Cmd::Settings | Cmd::Quit => {
-                plain(true)
-            }
+            Cmd::New
+            | Cmd::Open
+            | Cmd::About
+            | Cmd::ShortcutsSheet
+            | Cmd::ProjectPage
+            | Cmd::Preferences
+            | Cmd::Quit => plain(true),
             Cmd::OpenRecent(i) => {
                 plain(self.viewer.recent_files().get(i).is_some_and(|r| r.exists))
             }
-            Cmd::Save | Cmd::SaveAs => plain(doc),
+            Cmd::Save | Cmd::SaveAs | Cmd::ExportJson => plain(doc),
             Cmd::SaveTemplate => plain(doc && self.viewer.templates_dir.is_some()),
             Cmd::Export => plain(doc && !typing && !self.export_sheets_open()),
             // Typing on the page takes the keyboard: its keys do not close the page or open the sheet, nor do these.
@@ -570,7 +613,6 @@ impl ViewerUi {
                 Snap::Overlay => self.viewer.show_rhythm,
             }),
             Cmd::SafeZones => on(self.viewer.show_safe_zones),
-            Cmd::Theme(p) => on(self.theme == p),
             Cmd::Canvas(m) => on(self.canvas_mode == m),
         }
     }
@@ -667,7 +709,7 @@ impl ViewerUi {
     /// Does the menu item `cmd`: what its key does, or what its old button did. Returns what the app must do.
     pub fn run_cmd(&mut self, ctx: &egui::Context, cmd: Cmd) -> Vec<Request> {
         let mut requests = Vec::new();
-        let help = matches!(cmd, Cmd::About | Cmd::ProjectPage);
+        let help = matches!(cmd, Cmd::About | Cmd::ShortcutsSheet | Cmd::ProjectPage);
         let edit = matches!(
             cmd,
             Cmd::Undo | Cmd::Redo | Cmd::Cut | Cmd::Copy | Cmd::Paste | Cmd::SelectAll
@@ -704,6 +746,14 @@ impl ViewerUi {
                 self.ask(Request::SaveAsDialog(None), &mut requests);
             }
             Cmd::SaveTemplate => self.save_as_template(),
+            Cmd::ExportJson => {
+                self.viewer.end_typing();
+                let name = format!(
+                    "{}.json",
+                    crate::viewer::slug(self.viewer.title().unwrap_or("untitled"))
+                );
+                requests.push(Request::ExportJsonDialog(name));
+            }
             Cmd::Export => self.open_export_sheet(),
             Cmd::Close => requests.extend(self.ask_close_document()),
             Cmd::Undo | Cmd::Redo | Cmd::Cut | Cmd::Copy | Cmd::Paste | Cmd::SelectAll => {
@@ -761,17 +811,14 @@ impl ViewerUi {
                 *flag = !*flag;
             }
             Cmd::SafeZones => self.viewer.show_safe_zones = !self.viewer.show_safe_zones,
-            Cmd::Theme(p) => {
-                self.theme = p;
-                ctx.set_theme(p);
-            }
             Cmd::Canvas(m) => {
                 self.canvas_mode = m;
                 self.drop_vector();
             }
             Cmd::About => self.about_open = true,
+            Cmd::ShortcutsSheet => self.shortcuts_open = !self.shortcuts_open,
             Cmd::ProjectPage => ctx.open_url(egui::OpenUrl::new_tab(PROJECT_URL)),
-            Cmd::Settings => self.open_profiles_window(),
+            Cmd::Preferences => self.open_preferences(),
             Cmd::Quit => requests.extend(self.guard(After::Close)),
         }
         requests

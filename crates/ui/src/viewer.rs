@@ -646,10 +646,21 @@ impl Viewer {
     /// Opens a `.quad` file from disk. On failure the open document stays as it was and the
     /// notice says why.
     pub fn open_path(&mut self, path: &Path) -> Result<(), String> {
+        // A `.json` is the readable form (napkin §12.1): it opens as an unsaved document, so Save asks for a
+        // `.quad` name and never writes JSON over the file (rung 17, Defaulted 6).
+        let json = path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("json"));
         let result = std::fs::read(path)
             .map_err(|e| e.to_string())
-            .and_then(|b| self.open_bytes(Source::File(path.to_path_buf()), &b));
-        if result.is_ok() {
+            .and_then(|b| {
+                if json {
+                    self.open_json_bytes(&b)
+                } else {
+                    self.open_bytes(Source::File(path.to_path_buf()), &b)
+                }
+            });
+        if result.is_ok() && !json {
             self.note_recent(path);
         }
         if let Err(e) = &result {
@@ -663,9 +674,46 @@ impl Viewer {
         result
     }
 
+    /// Opens the readable JSON form of a document (from [`quadrule_format::to_debug_json`]) as an unsaved one.
+    pub fn open_json_bytes(&mut self, bytes: &[u8]) -> Result<(), String> {
+        let text = std::str::from_utf8(bytes).map_err(|e| e.to_string())?;
+        let doc = quadrule_format::from_debug_json(text).map_err(|e| e.to_string())?;
+        // Through the same door as a file, so the profiles it names are met the same way. It carries no saved
+        // outlines, no profiles and no fonts: text is laid out afresh.
+        self.open_file_struct(Source::Untitled, QuadFile::new(doc, Vec::new(), Vec::new()))
+    }
+
+    /// Writes the open document as readable JSON ([`quadrule_format::to_debug_json`]) to `path`, and says so in the
+    /// notice. Nothing about the document changes (Help > Developer > Export as readable JSON…).
+    pub fn export_json(&mut self, path: &Path) -> Result<(), String> {
+        let result = match self.doc() {
+            Some(doc) => quadrule_format::to_debug_json(doc)
+                .map_err(|e| e.to_string())
+                .and_then(|json| std::fs::write(path, json).map_err(|e| e.to_string())),
+            None => Err("no document is open".to_string()),
+        };
+        self.notice = Some(match &result {
+            Ok(()) => Notice {
+                message: Message::new("notice-json-exported")
+                    .text("path", path.display().to_string()),
+                error: false,
+            },
+            Err(e) => Notice {
+                message: Message::new("notice-json-failed").text("error", e.clone()),
+                error: true,
+            },
+        });
+        result
+    }
+
     /// Opens a `.quad` file's bytes.
     pub fn open_bytes(&mut self, source: Source, bytes: &[u8]) -> Result<(), String> {
-        let mut file = QuadFile::from_bytes(bytes).map_err(|e| e.to_string())?;
+        let file = QuadFile::from_bytes(bytes).map_err(|e| e.to_string())?;
+        self.open_file_struct(source, file)
+    }
+
+    /// Opens a read `.quad` (or the readable JSON's page as one).
+    fn open_file_struct(&mut self, source: Source, mut file: QuadFile) -> Result<(), String> {
         // The profiles the page uses: here, or carried in the file (rung 13a). A secondary device that
         // is neither is left out; the primary missing refuses the file.
         let uses = self.meet_profiles(&mut file)?;

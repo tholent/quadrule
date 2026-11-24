@@ -161,3 +161,6 @@ notice-profiles-damaged =
         [one] A profile file in the config folder is damaged and was skipped. The Profiles window lists it.
        *[other] { $count } profile files in the config folder are damaged and were skipped. The Profiles window lists them.
     }
+
+# The Page tab's button (the toolbar's has the same shown words; rung 17 bbq, Q5).
+profiles-open-devices = Profiles… for the devices of this page

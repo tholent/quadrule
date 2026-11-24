@@ -381,18 +381,16 @@ fn view_holds_zoom_the_strip_and_what_the_toolbars_view_menu_held() {
     h.run();
     let hidden =
         strip_was && !h.state().ui.viewer.show_strip && h.query_by_label("Show Manta").is_none();
-    // What the toolbar's View menu held lives here now: Theme, Canvas, Show safe zones, the real size check.
+    // The theme moved to the Preferences window (rung 17): it is not in View any more.
     open_menu(&mut h, "View");
-    h.get_by_label("Theme").hover();
+    let theme_gone = h.query_by_label("Theme").is_none();
+    h.key_press(egui::Key::Escape);
     h.run();
-    h.run();
-    in_menu(&h, "Dark")[0].click();
-    h.run();
-    let dark = h.state().ui.theme == egui::ThemePreference::Dark;
+    let dark = theme_gone;
     let no_toolbar_view = h.query_all_by_label("View").count() == 1;
     let ok = by_menu && one && two && ticked && hidden && dark && no_toolbar_view;
     println!(
-        "\nCHECK crate=ui name=menu_view_zoom_and_strip result={} zoom_items={by_menu} toolbar_buttons_agree={} strip_ticked={ticked} strip_hides={hidden} theme_moved_here={dark} one_view={no_toolbar_view}",
+        "\nCHECK crate=ui name=menu_view_zoom_and_strip result={} zoom_items={by_menu} toolbar_buttons_agree={} strip_ticked={ticked} strip_hides={hidden} theme_left_view={dark} one_view={no_toolbar_view}",
         pass(ok),
         one && two
     );
@@ -465,8 +463,10 @@ fn the_status_bar_no_longer_holds_the_seven_switches() {
 fn fingerprint(h: &Harness<'static, Window>, asked: &[Request]) -> String {
     let u = &h.state().ui;
     format!(
-        "{:?}|dirty={}|picked={}|kept_pick={}|welcome={}|export={}|new={}|prompt={}|zoom={:?}|doc={:?}",
+        "{:?}|prefs={}|keys={}|dirty={}|picked={}|kept_pick={}|welcome={}|export={}|new={}|prompt={}|zoom={:?}|doc={:?}",
         asked,
+        u.preferences_showing(),
+        u.shortcuts_showing(),
         u.viewer.is_dirty(),
         // How many, and whether the rule is still among them: a paste or a duplicate picks new objects, whose ids
         // differ from window to window.
@@ -612,7 +612,7 @@ fn the_macs_menus_come_from_the_same_table() {
             "menu-help",
         ];
     let other_order = titles(&other) == ["app-file", "menu-edit", "app-view", "menu-help"];
-    // The Quadrule menu: About, Settings… (⌘,), Hide, Hide Others, Show All, Quit (⌘Q); Window: Minimize and Zoom.
+    // The Quadrule menu: About, Preferences… (⌘,), Hide, Hide Others, Show All, Quit (⌘Q); Window: Minimize and Zoom.
     let app = app_menu();
     let cmds: Vec<Cmd> = items_of(std::slice::from_ref(&app))
         .iter()
@@ -627,7 +627,7 @@ fn the_macs_menus_come_from_the_same_table() {
             _ => None,
         })
         .collect();
-    let app_ok = cmds == [Cmd::About, Cmd::Settings, Cmd::Quit]
+    let app_ok = cmds == [Cmd::About, Cmd::Preferences, Cmd::Quit]
         && natives
             == [
                 Native::Hide,
@@ -643,11 +643,26 @@ fn the_macs_menus_come_from_the_same_table() {
             .map(|i| i.cmd)
             .collect()
     };
-    let same = ["app-file", "menu-edit", "app-view"]
-        .iter()
-        .all(|l| cmds_of(&mac, l) == cmds_of(&other, l));
-    let help_ok = cmds_of(&mac, "menu-help") == [Cmd::ProjectPage]
-        && cmds_of(&other, "menu-help") == [Cmd::About, Cmd::ProjectPage];
+    // File differs by Preferences… (the Mac has it in the Quadrule menu).
+    let file_mac = cmds_of(&mac, "app-file");
+    let file_bar: Vec<Cmd> = cmds_of(&other, "app-file")
+        .into_iter()
+        .filter(|c| *c != Cmd::Preferences)
+        .collect();
+    let same = file_mac == file_bar
+        && cmds_of(&other, "app-file").contains(&Cmd::Preferences)
+        && ["menu-edit", "app-view"]
+            .iter()
+            .all(|l| cmds_of(&mac, l) == cmds_of(&other, l));
+    let help_ok = cmds_of(&mac, "menu-help")
+        == [Cmd::ShortcutsSheet, Cmd::ProjectPage, Cmd::ExportJson]
+        && cmds_of(&other, "menu-help")
+            == [
+                Cmd::About,
+                Cmd::ShortcutsSheet,
+                Cmd::ProjectPage,
+                Cmd::ExportJson,
+            ];
     let all: Vec<_> = [&mac[..], &other[..]]
         .into_iter()
         .flat_map(items_of)
@@ -672,11 +687,11 @@ fn the_macs_menus_come_from_the_same_table() {
     let redo_ok = redo(&mac).map(|s| (s.modifiers, s.logical_key))
         == Some((Modifiers::COMMAND | Modifiers::SHIFT, Key::Z))
         && redo(&other).map(|s| (s.modifiers, s.logical_key)) == Some((Modifiers::COMMAND, Key::Y));
-    // The Mac's items with keys are the other systems' plus Settings… and Quit, so testing the keys once covers both.
+    // The Mac's items with keys are the other systems' plus Preferences… and Quit, so testing the keys once covers both.
     let keyed = |m: &[quadrule_ui::menus::Menu]| {
         items_of(m)
             .iter()
-            .filter(|i| i.shortcut.is_some() && !matches!(i.cmd, Cmd::Settings | Cmd::Quit))
+            .filter(|i| i.shortcut.is_some() && !matches!(i.cmd, Cmd::Preferences | Cmd::Quit))
             .map(|i| i.cmd)
             .collect::<Vec<_>>()
     };
@@ -699,7 +714,7 @@ fn the_macs_menus_come_from_the_same_table() {
 }
 
 #[test]
-fn quit_goes_through_the_unsaved_changes_prompt_and_settings_opens_profiles() {
+fn quit_goes_through_the_unsaved_changes_prompt_and_preferences_opens() {
     // Quit with unsaved work asks first, exactly as closing the window does; clean, it closes.
     let mut h = picked("menus-quit");
     let ctx = h.ctx.clone();
@@ -709,17 +724,17 @@ fn quit_goes_through_the_unsaved_changes_prompt_and_settings_opens_profiles() {
     let mut c = sample_window("menus-quit-clean");
     let ctx = c.ctx.clone();
     let closes = c.state_mut().ui.run_cmd(&ctx, Cmd::Quit) == vec![Request::Close];
-    // Settings… is the Profiles window until a real settings window exists (chris, 2026-11-20).
+    // Preferences… opens the Preferences window (it was the Profiles window until there was one, chris, 2026-11-20).
     let ctx = c.ctx.clone();
-    let _ = c.state_mut().ui.run_cmd(&ctx, Cmd::Settings);
+    let _ = c.state_mut().ui.run_cmd(&ctx, Cmd::Preferences);
     c.run();
-    let profiles = c.state().ui.profiles_window_open();
+    let profiles = c.state().ui.preferences_showing() && !c.state().ui.profiles_window_open();
     // While the question shows, the other commands wait, as the keys do.
     let ctx = h.ctx.clone();
     let held = h.state_mut().ui.run_cmd(&ctx, Cmd::Open).is_empty();
     let ok = prompt && closes && profiles && held;
     println!(
-        "\nCHECK crate=ui name=menu_quit_and_settings result={} quit_asks_first={prompt} quit_clean_closes={closes} settings_opens_profiles={profiles} commands_wait_for_the_prompt={held}",
+        "\nCHECK crate=ui name=menu_quit_and_settings result={} quit_asks_first={prompt} quit_clean_closes={closes} preferences_opens={profiles} commands_wait_for_the_prompt={held}",
         pass(ok)
     );
     assert!(ok);

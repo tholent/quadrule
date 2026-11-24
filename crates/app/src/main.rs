@@ -58,7 +58,7 @@ use std::sync::Arc;
 
 /// Preference keys in eframe's storage.
 /// What `--look` takes: a part of the window to start with, for a screenshot (rungs 14b, 15 and 16).
-const LOOKS: [&str; 24] = [
+const LOOKS: [&str; 31] = [
     "lint",
     "style",
     "preflight",
@@ -83,8 +83,17 @@ const LOOKS: [&str; 24] = [
     "menu-view",
     "menu-help",
     "about",
+    "menu-file",
+    "preferences",
+    "preferences-200",
+    "lint-click",
+    "tabs",
+    "shortcuts",
+    "menu-developer",
 ];
 const KEY_THEME: &str = "theme";
+/// Interface size (Preferences, rung 17): `follow` or a percentage.
+const KEY_UI_SIZE: &str = "interface_size";
 const KEY_RULER: &str = "screen_px_per_mm";
 /// The snap helpers and the rhythm overlay (rung 4 bbq, Defaulted "Toggles"): app settings.
 const KEY_SNAP_PIXEL: &str = "snap_pixel_grid";
@@ -161,6 +170,11 @@ impl App {
                     "dark" => egui::ThemePreference::Dark,
                     _ => egui::ThemePreference::System,
                 };
+            }
+            if let Some(size) = eframe::get_value::<String>(storage, KEY_UI_SIZE)
+                .and_then(|k| quadrule_ui::InterfaceSize::from_key(&k))
+            {
+                ui.interface_size = size;
             }
             ui.viewer.screen_px_per_mm = eframe::get_value(storage, KEY_RULER);
             let snap = &mut ui.viewer.snap;
@@ -358,7 +372,7 @@ impl App {
         match req {
             Request::OpenDialog => {
                 let picked = rfd::FileDialog::new()
-                    .add_filter("quadrule", &["quad"])
+                    .add_filter("quadrule", &["quad", "json"])
                     .pick_file();
                 if let Some(path) = picked {
                     self.ui.open_file(&path);
@@ -381,6 +395,18 @@ impl App {
                     for next in self.ui.save_as(&path, then) {
                         self.answer(next);
                     }
+                }
+            }
+            Request::ExportJsonDialog(name) => {
+                let picked = rfd::FileDialog::new()
+                    .add_filter("readable JSON", &["json"])
+                    .set_file_name(name)
+                    .save_file();
+                if let Some(mut path) = picked {
+                    if path.extension().is_none() {
+                        path.set_extension("json");
+                    }
+                    self.ui.export_json_to(&path);
                 }
             }
             Request::Close => {
@@ -483,6 +509,7 @@ impl eframe::App for App {
             egui::ThemePreference::System => "system",
         };
         eframe::set_value(storage, KEY_THEME, &theme.to_string());
+        eframe::set_value(storage, KEY_UI_SIZE, &self.ui.interface_size.key());
         eframe::set_value(storage, KEY_RULER, &self.ui.viewer.screen_px_per_mm);
         let v = &self.ui.viewer;
         eframe::set_value(storage, KEY_SNAP_PIXEL, &v.snap.pixel_grid);

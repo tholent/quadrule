@@ -78,6 +78,22 @@ impl ViewerUi {
         format!("{icon} {}  {}", f.rule, self.strings.format(&f.message))
     }
 
+    /// What a finding is called to a screen reader beside others of the same words: its rule, the object it is
+    /// about, and the device it is on (`L05, L03 line, Manta`).
+    pub(crate) fn finding_tag(&self, f: &Finding) -> String {
+        let object = f
+            .object
+            .and_then(|id| self.viewer.doc().and_then(|d| d.object(id)))
+            .map(|o| o.name.clone());
+        let device = self.device_name(&f.profile);
+        let m = match object {
+            Some(o) => Message::new("app-finding-tag").text("object", o),
+            None => Message::new("app-finding-tag-page"),
+        };
+        self.strings
+            .format(&m.text("rule", f.rule).text("device", device))
+    }
+
     /// A quick fix's button words.
     pub(crate) fn fix_label(&self, f: &Finding, fix: Fix) -> String {
         let Some(doc) = self.viewer.doc() else {
@@ -99,22 +115,29 @@ impl ViewerUi {
         l16_count: usize,
     ) -> Option<Action> {
         let mut action = None;
+        let tag = self.finding_tag(f);
         let fixes = self.viewer.fixes_for(f);
         ui.horizontal_wrapped(|ui| {
             if style.show_device {
                 let name = self.device_name(&f.profile);
                 ui.label(RichText::new(name).small().strong());
             }
-            if style.jump && f.object.is_some() && ui.small_button(self.t("app-pre-jump")).clicked()
-            {
-                action = Some(Action::Jump(f.clone()));
+            if style.jump && f.object.is_some() {
+                let words = self.t("app-pre-jump");
+                let r = ui.small_button(&words);
+                crate::a11y::name_button(&r, true, &format!("{words}: {tag}"));
+                if r.clicked() {
+                    action = Some(Action::Jump(f.clone()));
+                }
             }
             for fix in fixes {
                 if fix == Fix::SnapAllToRhythm && l16_count < 2 {
                     continue;
                 }
                 let label = self.fix_label(f, fix);
-                if ui.small_button(label).clicked() {
+                let r = ui.small_button(&label);
+                crate::a11y::name_button(&r, true, &format!("{label}: {tag}"));
+                if r.clicked() {
                     action = Some(Action::Fix(f.clone(), fix));
                 }
             }
@@ -123,7 +146,8 @@ impl ViewerUi {
             } else {
                 (self.t("lint-ignore"), None)
             };
-            let mut b = ui.small_button(words);
+            let mut b = ui.small_button(&words);
+            crate::a11y::name_button(&b, true, &format!("{words}: {tag}"));
             if let Some(tip) = tip {
                 b = b.on_hover_text(tip);
             } else {
@@ -254,7 +278,13 @@ impl ViewerUi {
             for (i, f) in findings.iter().enumerate() {
                 let text = self.finding_text(f);
                 let selected = self.viewer.profile_id == *dev && self.viewer.selected == Some(i);
-                let r = ui.add(egui::Button::selectable(selected, text).wrap());
+                let r = ui.add(egui::Button::selectable(selected, &text).wrap());
+                // The same finding is listed once for each device when all are shown.
+                crate::a11y::name_button(
+                    &r,
+                    true,
+                    &format!("{text} ({})", self.device_name(&f.profile)),
+                );
                 if r.clicked() {
                     action = Some(Action::Select(dev.clone(), i, f.clone()));
                 }

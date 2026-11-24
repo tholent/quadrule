@@ -234,7 +234,7 @@ impl ViewerUi {
                     .spacing([12.0, 6.0])
                     .show(ui, |ui| {
                         for (i, row) in dialog.rows.iter_mut().enumerate() {
-                            ui.label(
+                            let row_label = ui.label(
                                 self.strings.format(
                                     &Message::new("app-missing-row")
                                         .text("font", row.family.clone())
@@ -270,7 +270,10 @@ impl ViewerUi {
                                     if ui.button(self.t("app-missing-other")).clicked() {
                                         other = Some(row.family.clone());
                                     }
-                                });
+                                })
+                                // The choice is named by the font it is for.
+                                .response
+                                .labelled_by(row_label.id);
                             ui.end_row();
                         }
                     });

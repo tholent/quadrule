@@ -133,7 +133,11 @@ impl ViewerUi {
             _ => {
                 let mut button = Button::new(label);
                 if let Some(keys) = item.shortcut {
-                    button = button.shortcut_text(ui.ctx().format_shortcut(&keys));
+                    button = button.shortcut_text(crate::keys::key_text(
+                        ui.ctx(),
+                        keys.modifiers,
+                        keys.logical_key,
+                    ));
                 }
                 ui.add_enabled(state.enabled, button).clicked()
             }

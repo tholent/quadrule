@@ -378,8 +378,9 @@ fn the_layers_tree_shows_the_source_under_the_repeat_and_the_repeat_tab_edits() 
     h.run();
     h.run();
     let tab = h.query_by_label("Expand").is_some() && h.query_by_label("Add a rule").is_some();
-    // The Repeat button is beside Group and Ungroup.
-    let button = h.query_all_by_label("Repeat").count() >= 2;
+    // The Repeat buttons are beside Group and Ungroup: the layers panel's icon and the Arrange tab's (named for what
+    // they act on, rung 17), and the tab itself is Repeat settings.
+    let button = h.query_all_by_label_contains("Repeat").count() >= 2;
     let ok = tree && arrow && picked && tab && button;
     println!(
         "\nCHECK crate=ui name=repeat_layers_and_tab result={} source_under_repeat={tree} fold_arrow_named={arrow} row_picks={picked} tab_has_expand_and_rules={tab} button={button}",

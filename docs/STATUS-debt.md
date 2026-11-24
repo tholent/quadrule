@@ -30,8 +30,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   right for English in a terminal, wrong for right-to-left languages. Switch them on per language with the first
   right-to-left translation.
 - Rung 2 viewer, owed (`crates/ui/src/view.rs`, `crates/app/src/main.rs`): the controls' font on macOS is looked up as
-  `.AppleSystemUIFont`, unverified (no Mac here); if fontdb cannot find it, egui's own font shows. Ctrl + scroll
-  keeps the point under the pointer still since 8a, untested headless (`egui_kittest` cannot make a scroll-zoom).
+  `.AppleSystemUIFont`, unverified (no Mac here); if fontdb cannot find it, egui's own font shows.
 - The graphics-chip canvas (built in rung 3, `crates/app/src/chip.rs`) is measured only on the Pi at Fit zoom (40 ms
   a frame, release build); still to measure zoomed in, while scrolling, and on a desktop graphics card (rung 3 bbq
   Q7). It redraws the visible area on every scroll step.
@@ -51,8 +50,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   pixel and otherwise the nearest catch wins (chris, 2026-11-10); equal gaps may be half a
   pixel (not rounded to the pixel grid); two open windows holding the same file count as "the same document" for the
   paste offset; a paste goes to the first selected object's layer, not the layer picked in the layers panel; copy and
-  paste are tested with egui's events, not the real system clipboard; the status bar is full at 1280 px with seven switches
-  (a "Snap" menu would fit narrower windows).
+  paste are tested with egui's events, not the real system clipboard.
 
 - Rung 5, owed (`crates/ui/src/draw.rs`, `crates/ui/src/tools.rs`, `crates/ui/src/view.rs`, `crates/layout/src/newpage.rs`):
   Double-click to keep a tool is tested through `Viewer::keep_tool`,
@@ -90,8 +88,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   turned about its centre, which may sit a pixel off the frame's own centre used for picking; a turned shape is picked by its box
   (as unturned ones are), not by its outline; the rotate handle's name for screen readers (`app-rotate-handle`) is in the strings
   but the canvas is not exposed to a screen reader, so only the inspector's Rotation and Opacity fields are named; an opacity group
-  on the chip canvas is one vello layer per object (not measured with many such objects); Shift while drawing a line holds an axis,
-  not 15° steps; `--bench-rotate` is timed on one turned rectangle only; the transforms page's chip timing was taken only in the
+  on the chip canvas is one vello layer per object (not measured with many such objects); `--bench-rotate` is timed on one turned rectangle only; the transforms page's chip timing was taken only in the
   window on the Pi, and chip against export pixels for opacity was compared by eye, not by a pixel test.
 - Rung 7a, owed (`crates/model/src/edit.rs`, `crates/layout/src/tree.rs`, `crates/ui/src/editor.rs`, `crates/ui/src/drag.rs`,
   `crates/ui/src/panels.rs`, `crates/ui/src/view.rs`): a double-click into a group is tested through `Viewer::enter_at`
@@ -115,7 +112,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   distribute by centres rounds each place, with no leftover-pixel spreading (spacing has it). Distribute by spacing
   takes the object with the leftmost (topmost) edge and the one with the rightmost (bottommost) edge as the ends, and
   puts them on the pixel grid too (up to half a pixel). A pick of Selection with one object picked does nothing. The align
-  buttons' icons are drawn by hand and not yet seen by chris; no keyboard shortcuts (rung 17); the dragging and drawing
+  buttons' icons are drawn by hand and not yet seen by chris; the dragging and drawing
   speed is unchanged and was not re-measured for 7b; the Align-to choice is tested through
   `Viewer::align_to` and `Viewer::set_align_to`, not by opening the dropdown in the window.
 - Rung 8a, owed (`crates/ui/src/drag.rs`, `crates/ui/src/editor.rs`, `crates/layout/src/device.rs`, `crates/lint/src/lib.rs`,
@@ -125,7 +122,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   group turns about its box's middle); Ungroup's bake is exact for unturned groups only. A rotation or line-direction
   change made by a drag on a secondary changes the shared design without the status-bar note (only field edits say it).
   Override keys for a device no longer
-  targeted stay only when they came from a file. The strip's pictures and the Ctrl + scroll anchor have no pointer test.
+  targeted stay only when they came from a file. The strip's pictures have no pointer test.
   The overrides dot is the accent colour (kept, chris 2026-11-13; clicking it to open the Overrides tab is v1.1).
 - Rung 8b, owed (`crates/layout/src/device.rs`, `crates/ui/src/strip.rs`, `crates/ui/tests/landscape.rs`): landscape is
   tested on the Nomad only; the Manta is ruled the same, not tried on the device. Turning a page maps every override
@@ -159,12 +156,10 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   costs about 1 MB per font file in memory. A cosmic-text or skrifa upgrade that stops mapping every same-tagged axis breaks it; the test
   `a_copy_at_an_optical_size_gives_the_coordinates_the_font_gives_when_asked_by_name` is the guard. `unicode-script` is now a direct
   dependency (only to name `Script` in cosmic-text's `Fallback` trait; not one of ADR-002 item 1's three crates).
-- Rung 11a, owed (font picker, `crates/ui/src/fonts.rs`): no keyboard arrows in the list; a family's name is drawn at one fixed size, not
-  the device's; hidden system fonts (names that start with a dot) are left out; the picker has no dark-theme or screen-reader pass beyond
-  a label on each row.
+- Rung 11a, owed (font picker, `crates/ui/src/fonts.rs`): a family's name is drawn at one fixed size, not
+  the device's; hidden system fonts (names that start with a dot) are left out; the picker has no dark-theme pass.
 - Rung 11a, owed (emoji picker, `crates/ui/src/emoji.rs`): no skin tone choice (the default tone stands for each); the list is the emoji Noto
-  Emoji draws as one glyph (1,899 of 1,923 without tone variants), the other 24 are left out; the picker has no keyboard arrows through the
-  grid; the Emoji button does not remember the group between openings of the window.
+  Emoji draws as one glyph (1,899 of 1,923 without tone variants), the other 24 are left out; the Emoji button does not remember the group between openings of the window.
 - Rung 11a, owed (`crates/app/src/chip.rs`): a whole page of text costs the chip about 82 ms of GPU time on the Pi, and a frame that makes
   the kept lower part (82 ms) and then the rest (15 ms) takes about 99 ms, a visible hiccup at the start of each drag and every 100 frames
   when the timing choice is redone. The fall-back no longer fires on it (a two-draw frame has twice the line), but the hiccup is there.
@@ -201,7 +196,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   (font missing) is a new box with no saved outlines, so it draws nothing ("needs the font") until a font is chosen; the best match for a
   file saved before 0.13 uses the family name only (not the saved outlines' letter widths); L20 is said on the primary device only, so it
   does not show in the findings list while a secondary device is on screen; a box whose font is here but has a letter no font has is laid out
-  live (notdef box) rather than from saved outlines; the Missing fonts dialog and the sheet have no screen-reader or keyboard pass; Locate
+  live (notdef box) rather than from saved outlines; the Missing fonts dialog and the sheet have no keyboard pass; Locate
   fonts opens the folder with `xdg-open`/`open`/`cmd start` and is untested here (no desktop in the test run); embedding is untested on
   macOS and Windows installed fonts (the `fsType` values were measured on this Pi only); fuzz target `crates/format/fuzz/fuzz_targets/open_quad.rs`
   is unchanged and covers the reader but was not run (needs nightly); `.ttc` faces are never embedded.
@@ -279,7 +274,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   tab renders every device's page the first time All devices is shown (the strip already does). The preflight sheet lists the devices
   the Export sheet (or Export again) is exporting (this device, or all; rung 15 paid the "from the Export sheet's choice" part), puts L20 under Document whichever device is shown, and hides the L20 row when the document
   says "Don't warn again" (rung 12's tick); its list scrolls when long. The Info "N notes" fold is not remembered between sheets.
-  Several buttons share one accessible name (every row's "Ignore this rule for this document"). The sheet's controls need a pointer
+  The sheet's controls need a pointer
   that has moved onto them first in a headless test (the sheet fades in over a few frames). `--look lint|style|preflight` is a
   screenshot flag the record did not ask for. The speed numbers are in the 14b log entry (none over 50 ms).
 
@@ -443,3 +438,17 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   whichever tablet the app remembers, so the Nomad was not timed for the starters; a flag to pick the tablet (or opening a
   benchmarked file on its primary) is owed. (2) The Pi was not measured; isometric drag on the Manta was 45.0 ms at the
   90th percentile on the desktop, so it is the one to watch there. (3) The speed of the Basic tab itself was not timed.
+
+- Rung 17 leg 1, owed (`crates/ui/`): the Preferences words, the Keyboard shortcuts sheet's words and group names, the tab
+  icons' drawings and the accessible names added for screen readers (`Show in Basic: Title`, `Group the picked objects`,
+  `Profiles… for the devices of this page`, a finding's `L05, <object>, <device>`, the Repeat tab renamed `Repeat settings`)
+  are the builder's proposals for chris's look. Interface size is applied through egui's zoom factor, so **Follow system**
+  and **100 %** draw the same size; they differ only in what is kept. Align and distribute have keys for the two by-spacing
+  distribute buttons only (the by-centres ones have none). The Mac menu bar items added this leg (Preferences… moved into
+  the Quadrule menu, Help ▸ Keyboard shortcuts, Help ▸ Developer) come from the one menu table but have no test on a Mac
+  (as D24). The Save sheet for installed fonts is in the screen-reader test only where this computer has an installed font
+  besides the bundled ones. The AccessKit test names every control; it does not check reading order, focus order or a real
+  reader (Orca, VoiceOver: chris's try at the look). A pixel-exact press of Ctrl + scroll through a real wheel and a real
+  window is untested (the test drives the same input events); the zoom fix was checked in a headless frame loop only, not
+  timed on the Pi. The keyboard sheet lists keys, not mouse-and-key gestures (Alt-drag copies, Ctrl turns snapping off,
+  Shift while drawing).

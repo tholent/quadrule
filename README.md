@@ -73,9 +73,18 @@ and error.
   a `.quad` in Finder to open it. Everything for files is in the **File** menu: New…, Open…, Open Recent, Save, Save
   As…, Save as template…, Export… and Close.
 - The menus: **File**, **Edit** (Undo, Redo, Cut, Copy, Paste, Duplicate, Select all), **View** (zoom, the device
-  previews, **Snapping** with its seven switches, safe zones, theme, canvas) and **Help** (About quadrule, quadrule on
-  GitHub). On Windows and Linux they sit along the top of the window; on the Mac they are in the menu bar at the top of
-  the screen, after a **Quadrule** menu (About, Settings… which opens Profiles, Hide, Quit) and with a **Window** menu.
+  previews, **Snapping** with its seven switches, safe zones, canvas) and **Help** (About quadrule, Keyboard shortcuts,
+  quadrule on GitHub, and **Developer** ▸ Export as readable JSON…). On Windows and Linux they sit along the top of the
+  window; on the Mac they are in the menu bar at the top of the screen, after a **Quadrule** menu (About, Preferences…,
+  Hide, Quit) and with a **Window** menu. Each item shows its key.
+- **Preferences** (File ▸ Preferences…, Ctrl+, ; on the Mac the Quadrule menu): **Interface size** (Follow system, or
+  75 to 200 % on top of the system's own scale) and the **theme**, both kept for this computer and never saved in a page.
+- **Keyboard shortcuts** are listed under Help (Ctrl+/), made from the same table the window answers: align with Alt+A
+  (left), D (right), W (top), S (bottom), H (horizontal centres) and V (vertical centres); distribute with Alt+Shift+H and
+  V; zoom with Ctrl+= and Ctrl+-, Shift+1 for Fit and Shift+0 for 1:1; Ctrl+A selects all. No key works while a text
+  field has the keyboard. Shift while drawing a line turns it in 15-degree steps; arrow keys walk the font and emoji lists.
+- **Readable JSON**: Help ▸ Developer ▸ Export as readable JSON… writes the page as pretty JSON, and File ▸ Open reads a
+  `.json` back as an unsaved page (Save asks for a `.quad` name).
 - Draw with the tools bar on the left: a line (L), a text box (T), a pattern region (P), a rectangle (R), an ellipse
   (E) or a polygon (Y); V goes back to Select. Drag to draw (sizes snap to whole rhythm units), or click for a default
   size; Shift draws a square, a circle or a regular polygon; double-click a tool to keep it on.

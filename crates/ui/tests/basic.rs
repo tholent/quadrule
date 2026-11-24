@@ -101,7 +101,21 @@ fn steps(h: &Harness<'static, Window>) -> usize {
 }
 
 fn count(h: &Harness<'static, Window>, role: Role, label: &str) -> usize {
+    if label == SHOW {
+        return shows(h).len();
+    }
     h.query_all_by_role_and_label(role, label).count()
+}
+
+/// The Show in Basic ticks: the Arrange tab's is just that; the Page and Basic tabs' say what each is for after it
+/// (`Show in Basic: Margins`, rung 17), so three in one tab are told apart by screen readers.
+fn shows<'a>(h: &'a Harness<'static, Window>) -> Vec<egui_kittest::Node<'a>> {
+    h.query_all_by(|n| {
+        n.role() == Role::CheckBox
+            && n.label()
+                .is_some_and(|l| l == SHOW || l.starts_with("Show in Basic: "))
+    })
+    .collect()
 }
 
 fn has(h: &Harness<'static, Window>, label: &str) -> bool {
@@ -161,7 +175,7 @@ fn the_switches_mark_and_unmark_in_one_undo_step_each() {
     h.run();
     h.run();
     let n0 = steps(&h);
-    h.get_by_role_and_label(Role::CheckBox, SHOW).click();
+    shows(&h).remove(0).click();
     h.run();
     h.run();
     let marked = object(&h, ids::RULE).show_in_basic && steps(&h) == n0 + 1;
@@ -177,10 +191,7 @@ fn the_switches_mark_and_unmark_in_one_undo_step_each() {
     let n1 = steps(&h);
     let mut seen = Vec::new();
     for i in 0..3 {
-        h.query_all_by_role_and_label(Role::CheckBox, SHOW)
-            .nth(i)
-            .unwrap()
-            .click();
+        shows(&h).remove(i).click();
         h.run();
         h.run();
         let b = h.state().ui.viewer.doc().unwrap().page.basic;
@@ -280,7 +291,7 @@ fn an_edit_in_the_basic_tab_is_the_same_edit_and_leaves_the_selection() {
     h.run();
     h.run();
     let n1 = steps(&h);
-    h.get_by_role_and_label(Role::CheckBox, SHOW).click();
+    shows(&h).remove(0).click();
     h.run();
     h.run();
     let unmarked = !object(&h, ids::LINES).show_in_basic && steps(&h) == n1 + 1;

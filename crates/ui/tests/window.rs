@@ -164,11 +164,15 @@ fn findings_zoom_and_theme() {
     h.run();
     // The list now stands under a device picker and each row has its buttons (rung 14b), so the row is scrolled
     // into view first, and the pointer arrives on it as a hand's does.
-    h.get_by_label_contains("L16").scroll_to_me();
+    // (The row's buttons name their rule too, so the first node with it is the finding's own line.)
+    h.get_all_by_label_contains("L16")
+        .next()
+        .unwrap()
+        .scroll_to_me();
     h.run();
-    h.get_by_label_contains("L16").hover();
+    h.get_all_by_label_contains("L16").next().unwrap().hover();
     h.run();
-    h.get_by_label_contains("L16").click();
+    h.get_all_by_label_contains("L16").next().unwrap().click();
     h.run();
     let selected = h.state().ui.viewer.selected.is_some();
     // Zoom (Q10).
@@ -188,9 +192,11 @@ fn findings_zoom_and_theme() {
     let real = h.state().ui.viewer.zoom == Zoom::RealSize
         && h.state().ui.viewer.screen_px_per_mm.is_some();
     // Theme (Q11).
-    h.get_by_label("View").click();
-    h.run();
-    h.get_by_label("Theme").hover();
+    let ctx = h.ctx.clone();
+    let _ = h
+        .state_mut()
+        .ui
+        .run_cmd(&ctx, quadrule_ui::Cmd::Preferences);
     h.run();
     h.run();
     h.get_by_label("Dark").click();

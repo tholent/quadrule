@@ -34,9 +34,8 @@ use crate::viewer::{
     halve, ruler_px_per_mm, shrink, tiles,
 };
 use egui::{
-    Color32, ColorImage, CornerRadius, CursorIcon, Key, KeyboardShortcut, Modifiers, PointerButton,
-    Rect, ScrollArea, Sense, Stroke, StrokeKind, TextureHandle, TextureOptions, ThemePreference,
-    pos2, vec2,
+    Color32, ColorImage, CornerRadius, CursorIcon, Key, PointerButton, Rect, ScrollArea, Sense,
+    Stroke, StrokeKind, TextureHandle, TextureOptions, ThemePreference, pos2, vec2,
 };
 use quadrule_i18n::{Message, Strings};
 use quadrule_layout::newpage::NewPage;
@@ -68,6 +67,9 @@ pub enum Request {
     /// Show the system dialog to pick where to write the selected profile, with this suggested file
     /// name, then call [\`ViewerUi::profiles_export_to\`].
     ProfileExportDialog(String),
+    /// Show the system dialog to pick where to write the readable JSON, with this suggested file name, then call
+    /// [`ViewerUi::export_json_to`] with the pick (Help > Developer, rung 17).
+    ExportJsonDialog(String),
     /// Close the window: the user chose Save or Don't save at the unsaved-changes prompt.
     Close,
 }
@@ -190,8 +192,14 @@ pub struct ViewerUi {
     pub viewer: Viewer,
     /// The words on screen.
     pub strings: Strings,
-    /// Light, dark or follow the system (rung 2 bbq, Q11).
+    /// Light, dark or follow the system (rung 2 bbq, Q11); chosen in Preferences.
     pub theme: ThemePreference,
+    /// How big the interface is drawn, on top of the system's scale; chosen in Preferences (rung 17).
+    pub interface_size: crate::preferences::InterfaceSize,
+    /// The Preferences window shows.
+    pub(crate) preferences_open: bool,
+    /// The Keyboard shortcuts sheet shows (Help, Ctrl+/).
+    pub(crate) shortcuts_open: bool,
     /// Whether the right panel (inspector and lint) shows.
     pub show_lint: bool,
     /// Scroll the Style tab to its Border section once (`--look style` on the pattern-borders page, for a screenshot).
@@ -390,6 +398,9 @@ impl ViewerUi {
             menu_bar: true,
             look_menu: None,
             about_open: false,
+            interface_size: crate::preferences::InterfaceSize::Follow,
+            preferences_open: false,
+            shortcuts_open: false,
             queued_events: Vec::new(),
             pending: None,
             new_dialog: None,
@@ -449,6 +460,7 @@ impl ViewerUi {
         if idle {
             self.viewer.seal();
         }
+        self.apply_interface_size(&ctx);
         self.inject_queued(&ctx);
         self.take_dropped_files(&ctx, &mut requests);
         self.drive_bench(&ctx);
@@ -531,6 +543,8 @@ impl ViewerUi {
         }
         self.ruler_window(&ctx);
         self.about_window(&ctx);
+        self.preferences_window(&ctx);
+        self.shortcuts_window(&ctx);
         self.font_picker_window(&ctx);
         self.missing_dialog_window(&ctx);
         self.clash_dialog_window(&ctx);
@@ -573,36 +587,41 @@ impl ViewerUi {
 
     /// Keys (rung 3 bbq Q9, Defaulted "Commands and undo", "Delete and Duplicate", "Save"). Ctrl
     /// is Cmd on macOS. While a text field has focus, only Save and Save As are taken; the field
-    /// keeps its own undo, arrows and Delete.
+    /// keeps its own undo, arrows and Delete. Every key is a row of [`crate::keys::table`], read through
+    /// [`crate::keys::consume`], so the menus and the Keyboard shortcuts sheet say what is bound.
     fn shortcuts(&mut self, ctx: &egui::Context, requests: &mut Vec<Request>) {
+        use crate::keys::{Act, consume};
         if self.pending.is_some() || self.new_dialog.is_some() || self.welcome_question_open() {
             return;
         }
         let exporting = self.export_sheets_open();
-        let cmd = Modifiers::COMMAND;
-        let shift_cmd = Modifiers::COMMAND | Modifiers::SHIFT;
-        let key = |m: Modifiers, k: Key| {
-            ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(m, k)))
-        };
+        let key = |act: Act| consume(ctx, act);
+        let text_has_keys = ctx.egui_wants_keyboard_input();
         // New, Open and Close (rung 16, Q6). New shows the welcome screen, which has its own Blank page; with it
         // showing already, Ctrl+N goes on to the Blank page dialog. None of them in the middle of a drag.
         if !self.viewer.dragging() {
-            if key(cmd, Key::N) {
+            if key(Act::New) {
                 self.ask_new();
                 return;
             }
-            if key(cmd, Key::O) {
+            if key(Act::Open) {
                 requests.extend(self.guard(After::OpenDialog));
+                return;
+            }
+            // Preferences and the Keyboard shortcuts sheet (rung 17): from anywhere but a text field.
+            if !text_has_keys && key(Act::Preferences) {
+                self.open_preferences();
+                return;
+            }
+            if !text_has_keys && key(Act::ShortcutsSheet) {
+                self.shortcuts_open = !self.shortcuts_open;
                 return;
             }
         }
         if self.welcome_showing() {
             // Esc goes back to the document the welcome screen is over.
             // An open menu takes its own Esc (fixes batch 2: closing it does nothing else).
-            if self.welcome_over_document()
-                && !egui::Popup::is_any_open(ctx)
-                && key(Modifiers::NONE, Key::Escape)
-            {
+            if self.welcome_over_document() && !egui::Popup::is_any_open(ctx) && key(Act::Escape) {
                 self.close_welcome();
             }
             return;
@@ -614,7 +633,7 @@ impl ViewerUi {
         if self.delete_layer_ask.is_some() {
             return;
         }
-        if !self.viewer.dragging() && !self.viewer.is_typing() && key(cmd, Key::W) {
+        if !self.viewer.dragging() && !self.viewer.is_typing() && key(Act::Close) {
             requests.extend(self.ask_close_document());
             return;
         }
@@ -626,38 +645,65 @@ impl ViewerUi {
         // While an object is being dragged, only Escape counts: it drops the drag (rung 4 bbq,
         // Defaulted "One drag, one undo step").
         if self.viewer.dragging() {
-            if key(Modifiers::NONE, Key::Escape) {
+            if key(Act::Escape) {
                 self.viewer.drag_cancel();
             }
             return;
         }
-        // Most specific first: Ctrl+Shift+S before Ctrl+S.
-        if key(shift_cmd, Key::S) {
+        // Keys match exactly, so Ctrl+Shift+S and Ctrl+S are told apart whatever the order.
+        if key(Act::SaveAs) {
             self.ask(Request::SaveAsDialog(None), requests);
-        } else if key(cmd, Key::S) {
+        } else if key(Act::Save) {
             requests.extend(self.save());
         }
-        if ctx.egui_wants_keyboard_input() {
+        if text_has_keys {
             return;
         }
         // Export… (rung 16 bbq, Q9): one item; the sheet opens with the last choices and Export in focus.
-        // Ctrl+Shift+E is free again: egui matches a Ctrl shortcut with Shift held too, so Shift must be up.
-        if !exporting && !ctx.input(|i| i.modifiers.shift) && key(cmd, Key::E) {
+        if !exporting && key(Act::Export) {
             self.open_export_sheet();
         }
-        if key(shift_cmd, Key::Z) || key(cmd, Key::Y) {
+        if key(Act::Redo) {
             self.viewer.redo();
-        } else if key(cmd, Key::Z) {
+        } else if key(Act::Undo) {
             self.viewer.undo();
         }
-        if key(cmd, Key::D) {
+        if key(Act::Duplicate) {
             let _ = self.viewer.duplicate_selection();
         }
-        // Group and ungroup (rung 7a bbq, "Making and breaking"); the more specific first.
-        if key(shift_cmd, Key::G) {
+        if key(Act::SelectAll) {
+            self.viewer.select_all();
+        }
+        // Group and ungroup (rung 7a bbq, "Making and breaking").
+        if key(Act::Ungroup) {
             let _ = self.viewer.ungroup_selection();
-        } else if key(cmd, Key::G) {
+        } else if key(Act::Group) {
             let _ = self.viewer.group_selection();
+        }
+        // Zoom (rung 17): in and out by a step, Fit and 1:1.
+        if key(Act::ZoomIn) {
+            let now = self.shown_scale_ctx(ctx);
+            self.viewer.zoom_step(now, 1);
+        }
+        if key(Act::ZoomOut) {
+            let now = self.shown_scale_ctx(ctx);
+            self.viewer.zoom_step(now, -1);
+        }
+        if key(Act::ZoomFit) {
+            self.viewer.zoom = Zoom::Fit;
+        }
+        if key(Act::ZoomActual) {
+            self.viewer.zoom = Zoom::Scale(1.0);
+        }
+        // Align and distribute (rung 17): the same one undo step as the Arrange tab's buttons, and nothing when the
+        // button would be greyed.
+        for row in crate::keys::table() {
+            if let Act::Arrange(op) = row.act
+                && key(row.act)
+                && self.viewer.arrange_enabled(op)
+            {
+                let _ = self.viewer.arrange(op);
+            }
         }
         // Copy, cut and paste arrive as events (egui turns Ctrl+C, Ctrl+X and Ctrl+V, Cmd on
         // macOS, into them), and paste brings the clipboard's text (rung 4b).
@@ -689,12 +735,12 @@ impl ViewerUi {
         if let Some(text) = pasted {
             let _ = self.viewer.paste_text(&text);
         }
-        if key(Modifiers::NONE, Key::Delete) || key(Modifiers::NONE, Key::Backspace) {
+        if key(Act::Delete) {
             let _ = self.viewer.delete_selection();
         }
-        if key(cmd, Key::CloseBracket) {
+        if key(Act::Front) {
             self.move_selected(Toward::Front);
-        } else if key(cmd, Key::OpenBracket) {
+        } else if key(Act::Back) {
             self.move_selected(Toward::Back);
         }
         // Escape ends a tool that is on first; with Select on, it clears the selection.
@@ -704,7 +750,7 @@ impl ViewerUi {
         // An open menu, list or right-click menu takes its own Esc too: closing it keeps the selection (fixes batch 2).
         if self.renaming.is_none()
             && !egui::Popup::is_any_open(ctx)
-            && key(Modifiers::NONE, Key::Escape)
+            && key(Act::Escape)
             && !self.viewer.end_tool()
             && !self.viewer.leave_group()
         {
@@ -713,20 +759,21 @@ impl ViewerUi {
         }
         // V, L, T and P pick a tool (a text field with focus never gets here).
         for tool in Tool::ALL {
-            if key(Modifiers::NONE, tool.key()) {
+            if key(Act::Tool(tool)) {
                 self.viewer.set_tool(tool);
             }
         }
-        if !self.viewer.selection.is_empty() {
-            for (k, dx, dy) in [
-                (Key::ArrowLeft, -1.0, 0.0),
-                (Key::ArrowRight, 1.0, 0.0),
-                (Key::ArrowUp, 0.0, -1.0),
-                (Key::ArrowDown, 0.0, 1.0),
-            ] {
-                // Shift first: the plain key would also match Shift+key.
-                let n_shift = ctx.input_mut(|i| i.count_and_consume_key(Modifiers::SHIFT, k));
-                let n = ctx.input_mut(|i| i.count_and_consume_key(Modifiers::NONE, k));
+        // An open picker (fonts, emoji) keeps the arrow keys for its list.
+        let picker_open = self.font_picker.open || self.emoji_picker.open;
+        if !self.viewer.selection.is_empty() && !picker_open {
+            let nudge = crate::keys::row(Act::Nudge);
+            let big = crate::keys::row(Act::NudgeRhythm);
+            for (i, (dx, dy)) in [(-1.0, 0.0), (1.0, 0.0), (0.0, -1.0), (0.0, 1.0)]
+                .into_iter()
+                .enumerate()
+            {
+                let n_shift = crate::keys::count_and_consume(ctx, big.keys[i].0, big.keys[i].1);
+                let n = crate::keys::count_and_consume(ctx, nudge.keys[i].0, nudge.keys[i].1);
                 for _ in 0..n_shift {
                     let _ = self.viewer.nudge(dx, dy, true);
                 }
@@ -742,15 +789,14 @@ impl ViewerUi {
     /// Ctrl+X and Ctrl+V as plain text, Ctrl+Z back through typed words, Escape to end. Input method
     /// events pass through. Only Save and Save As act on the document; both end the typing first.
     fn type_keys(&mut self, ctx: &egui::Context, requests: &mut Vec<Request>) {
+        use crate::keys::{Act, consume};
         use quadrule_text::edit::{Go, Op};
-        let cmd = Modifiers::COMMAND;
-        let shift_cmd = Modifiers::COMMAND | Modifiers::SHIFT;
-        if ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(shift_cmd, Key::S))) {
+        if consume(ctx, Act::SaveAs) {
             self.viewer.end_typing();
             self.ask(Request::SaveAsDialog(None), requests);
             return;
         }
-        if ctx.input_mut(|i| i.consume_shortcut(&KeyboardShortcut::new(cmd, Key::S))) {
+        if consume(ctx, Act::Save) {
             self.viewer.end_typing();
             requests.extend(self.save());
             return;
@@ -959,6 +1005,11 @@ impl ViewerUi {
                 vec![Request::Close]
             }
         }
+    }
+
+    /// Writes the readable JSON to the path the Export as readable JSON dialog picked.
+    pub fn export_json_to(&mut self, path: &Path) {
+        let _ = self.viewer.export_json(path);
     }
 
     /// Opens a file picked in the Open dialog.
@@ -1298,7 +1349,7 @@ impl ViewerUi {
                 self.viewer.redo();
             }
             ui.separator();
-            self.emoji_button(ui);
+            self.emoji_button(ui, None);
             ui.separator();
 
             // Device (the welcome screen has its own filter).
@@ -2825,10 +2876,15 @@ impl ViewerUi {
                         .text(self.t("app-ruler-bar")),
                 );
                 ui.horizontal(|ui| {
-                    if ui.small_button("−").clicked() {
+                    // The toolbar's zoom buttons are + and − too, so these say what they change.
+                    let shorter = ui.small_button("−");
+                    crate::a11y::name_button(&shorter, true, &self.t("app-ruler-shorter"));
+                    if shorter.clicked() {
                         ruler.bar -= 1.0 / ppp;
                     }
-                    if ui.small_button("+").clicked() {
+                    let longer = ui.small_button("+");
+                    crate::a11y::name_button(&longer, true, &self.t("app-ruler-longer"));
+                    if longer.clicked() {
                         ruler.bar += 1.0 / ppp;
                     }
                 });

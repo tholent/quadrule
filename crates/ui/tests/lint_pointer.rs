@@ -184,10 +184,21 @@ fn press(h: &mut Harness<'static, Window>, label: &str) {
     for _ in 0..6 {
         h.step();
     }
-    h.get_by_label(label).hover();
+    q_all(h, label).remove(0).hover();
     h.run();
-    h.get_by_label(label).click();
+    q_all(h, label).remove(0).click();
     h.run();
+}
+
+/// The buttons called `label`: a finding's buttons carry what they are about after their words (`Ignore this rule for
+/// this document: L05, L03 line, Manta`, rung 17), so each is told by the words and then a colon.
+fn q_all<'a>(h: &'a Harness<'static, Window>, label: &'a str) -> Vec<egui_kittest::Node<'a>> {
+    h.query_all_by(move |n| {
+        n.label().is_some_and(|l| {
+            l == label || l.strip_prefix(label).is_some_and(|r| r.starts_with(": "))
+        })
+    })
+    .collect()
 }
 
 /// [`press`] on the first button of that name.
@@ -195,9 +206,9 @@ fn press_first(h: &mut Harness<'static, Window>, label: &str) {
     for _ in 0..6 {
         h.step();
     }
-    h.get_all_by_label(label).next().unwrap().hover();
+    q_all(h, label).remove(0).hover();
     h.run();
-    h.get_all_by_label(label).next().unwrap().click();
+    q_all(h, label).remove(0).click();
     h.run();
 }
 
@@ -287,9 +298,8 @@ fn ignore_turns_a_rule_off_and_the_list_at_the_end_turns_it_back_on() {
     let n0 = steps(&h);
     // The first row is L03 (the page's first finding): its Ignore button is the first one.
     let first_rule = all_before[0].1[0].rule;
-    h.get_all_by_label("Ignore this rule for this document")
-        .next()
-        .unwrap()
+    q_all(&h, "Ignore this rule for this document")
+        .remove(0)
         .click();
     h.run();
     let ignored = h.state().ui.viewer.ignored_rules() == vec![first_rule.to_string()];
@@ -329,11 +339,11 @@ fn fix_by_pointer(doc: Document, rule: &str, button: &str) -> (bool, bool, bool,
     let before = doc_of(&h);
     let n0 = steps(&h);
     let had = findings(&mut h, rule) > 0;
-    let there = h.query_all_by_label(button).count() > 0;
+    let there = !q_all(&h, button).is_empty();
     if !there {
         return (had, false, false, false);
     }
-    h.get_all_by_label(button).next().unwrap().click();
+    q_all(&h, button).remove(0).click();
     h.run();
     let cleared = findings(&mut h, rule) == 0;
     let one_step = steps(&h) == n0 + 1 && doc_of(&h) != before;
@@ -478,8 +488,8 @@ fn snap_all_hides_with_one_off_rhythm_object_and_a_fix_on_a_secondary_device_is_
     )]);
     let mut h = window(one);
     open_lint_tab(&mut h);
-    let only_one = h.query_by_label("Snap all to rhythm").is_none()
-        && h.query_by_label("Snap to rhythm").is_some();
+    let only_one =
+        q_all(&h, "Snap all to rhythm").is_empty() && !q_all(&h, "Snap to rhythm").is_empty();
     // A text 4 pt and a box under the toolbar, with the Nomad picked: the fix goes through the Nomad's overrides.
     let mut doc = page(vec![
         text(1, "fine print", 4.0),
@@ -506,7 +516,7 @@ fn snap_all_hides_with_one_off_rhythm_object_and_a_fix_on_a_secondary_device_is_
         .findings
         .iter()
         .any(|f| f.rule == "L07");
-    h.get_by_label("Use 6 pt").click();
+    q_all(&h, "Use 6 pt").remove(0).click();
     h.run();
     let d = doc_of(&h);
     let t = d.object(Uuid::from_u128(1)).unwrap();
@@ -540,9 +550,9 @@ fn snap_all_hides_with_one_off_rhythm_object_and_a_fix_on_a_secondary_device_is_
         .findings
         .iter()
         .any(|f| f.rule == "L06");
-    let had_button = h.query_by_label("Move inside safe area").is_some();
+    let had_button = !q_all(&h, "Move inside safe area").is_empty();
     if had_button {
-        h.get_by_label("Move inside safe area").click();
+        q_all(&h, "Move inside safe area").remove(0).click();
         h.run();
     }
     let d2 = doc_of(&h);
@@ -747,8 +757,8 @@ fn export_opens_one_sheet_for_warnings_and_goes_straight_on_without() {
     let sheet = h.state().ui.preflight_open() && h.query_by_label("Before you export").is_some();
     let held_back = h.state().requests.is_empty();
     // Rows: Warn findings by device, with Jump, Ignore and a fix; Info folded under "N notes".
-    let rows = h.query_all_by_label("Jump to object").count();
-    let jump_ignore = rows > 0 && h.query_all_by_label("Ignore").count() == rows;
+    let rows = q_all(&h, "Jump to object").len();
+    let jump_ignore = rows > 0 && q_all(&h, "Ignore").len() == rows;
     let notes = h.query_by_label_contains(" notes").is_some()
         || h.query_by_label_contains("1 note").is_some();
     // Cancel: nothing goes on, the sheet is gone.
@@ -804,11 +814,11 @@ fn a_preflight_row_jumps_to_its_object_ignores_its_rule_and_fixes_itself() {
     h.state_mut().ui.viewer.settings.devices = DevicesChoice::All;
     open_export_sheet(&mut h);
     export_from_sheet(&mut h);
-    let rows0 = h.query_all_by_label("Jump to object").count();
+    let rows0 = q_all(&h, "Jump to object").len();
     // The pale line's quick fix (a role) is on the sheet; Use 6 pt too: fix L07 from the sheet.
-    let fixes_on_sheet = h.query_all_by_label("Use 6 pt").count() > 0;
+    let fixes_on_sheet = !q_all(&h, "Use 6 pt").is_empty();
     press_first(&mut h, "Use 6 pt");
-    let after_fix = h.query_all_by_label("Jump to object").count();
+    let after_fix = q_all(&h, "Jump to object").len();
     let fixed_one = after_fix < rows0 && h.state().ui.preflight_open();
     // Ignore the L03 rule from the sheet: its rows disappear (every device).
     let l03_rows = h.query_all_by_label_contains("⚠ L03").count();
@@ -817,7 +827,7 @@ fn a_preflight_row_jumps_to_its_object_ignores_its_rule_and_fixes_itself() {
     let rows_gone = h.query_all_by_label_contains("⚠ L03").count() < l03_rows.max(1)
         || h.query_all_by_label_contains("L07").count() < 2;
     // Jump to object: closes the sheet, selects the object, shows its device, outlines the finding.
-    let remaining = h.query_all_by_label("Jump to object").count();
+    let remaining = q_all(&h, "Jump to object").len();
     let mut jumped = false;
     if remaining > 0 {
         press_first(&mut h, "Jump to object");
@@ -884,14 +894,14 @@ fn the_sheet_has_a_document_row_for_installed_fonts_and_save_keeps_its_own_sheet
     export_from_sheet(&mut h);
     let sheet = h.state().ui.preflight_open() && !h.state().ui.font_sheet_open();
     let document =
-        h.query_by_label("Document").is_some() && h.query_by_label_contains("L20").is_some();
-    let no_jump = h.query_all_by_label("Jump to object").count() == 0;
+        h.query_by_label("Document").is_some() && h.query_all_by_label_contains("L20").count() > 0;
+    let no_jump = q_all(&h, "Jump to object").is_empty();
     // Ignore removes the row; the sheet says nothing is left, and Export anyway still goes on.
-    h.get_by_label("Ignore").hover();
+    q_all(&h, "Ignore").remove(0).hover();
     h.run();
-    h.get_by_label("Ignore").click();
+    q_all(&h, "Ignore").remove(0).click();
     h.run();
-    let gone = h.query_by_label_contains("L20").is_none()
+    let gone = h.query_all_by_label_contains("L20").count() == 0
         && h.query_by_label("Nothing is left to warn about.").is_some()
         && h.state().ui.viewer.ignored_rules() == vec!["L20".to_string()];
     press(&mut h, "Export anyway");
@@ -981,7 +991,7 @@ fn a_paper_page_says_why_it_has_fewer_checks_and_this_device_lists_only_its_own_
     s.state_mut().ui.viewer.settings.devices = DevicesChoice::This;
     open_export_sheet(&mut s);
     export_from_sheet(&mut s);
-    let nomad_rows = s.query_all_by_label("Jump to object").count();
+    let nomad_rows = q_all(&s, "Jump to object").len();
     let nomad_warns = s
         .state_mut()
         .ui
