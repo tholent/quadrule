@@ -111,6 +111,21 @@ pub struct DragBench {
 }
 
 impl DragBench {
+    /// The name on its `CHECK` line.
+    pub fn name(&self) -> &'static str {
+        if self.zoom {
+            "zoom_bench"
+        } else if self.typing {
+            "type_bench"
+        } else if self.rotate {
+            "rotate_bench"
+        } else if self.draw {
+            "draw_bench"
+        } else {
+            "drag_bench"
+        }
+    }
+
     /// A benchmark of `frames` steps.
     pub fn new(frames: u32) -> Self {
         DragBench {

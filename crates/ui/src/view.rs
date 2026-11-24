@@ -1604,11 +1604,24 @@ impl ViewerUi {
                 } else {
                     quadrule_model::sample::ids::DOTS
                 };
+                let from_file = self.bench_file().is_some();
                 let at = self.viewer.page().and_then(|p| {
                     p.placed
                         .iter()
                         .find(|s| s.id == target)
                         .map(|s| s.shape.bounds())
+                        // A page opened from a file has none of the sample pages' objects: the press takes its
+                        // largest (rung 16b: the starters' speed run).
+                        .or_else(|| {
+                            if !from_file {
+                                return None;
+                            }
+                            p.placed.iter().map(|s| s.shape.bounds()).max_by(|a, b| {
+                                let area =
+                                    |(x0, y0, x1, y1): (f64, f64, f64, f64)| (x1 - x0) * (y1 - y0);
+                                area(*a).total_cmp(&area(*b))
+                            })
+                        })
                 });
                 b.phase = match at {
                     Some((x0, y0, x1, y1)) => {
@@ -1639,7 +1652,15 @@ impl ViewerUi {
                         };
                         if began { Phase::Run(0) } else { Phase::Done }
                     }
-                    None => Phase::Done,
+                    None => {
+                        // Nothing to press on: say so, rather than end with no line at all.
+                        println!(
+                            "\nCHECK crate=ui name={} result=fail reason=no_target page={}",
+                            b.name(),
+                            self.bench_file().unwrap_or("sample")
+                        );
+                        Phase::Done
+                    }
                 };
             }
             Phase::Run(i) if i < b.frames => {
@@ -1714,23 +1735,16 @@ impl ViewerUi {
                 };
                 println!(
                     "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} device={} strip={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
-                    if b.zoom {
-                        "zoom_bench"
-                    } else if b.typing {
-                        "type_bench"
-                    } else if b.rotate {
-                        "rotate_bench"
-                    } else if b.draw {
-                        "draw_bench"
-                    } else {
-                        "drag_bench"
-                    },
+                    b.name(),
                     if cfg!(debug_assertions) {
                         "debug"
                     } else {
                         "release"
                     },
-                    if b.missing_fonts {
+                    // A page opened from a file is named by its file (rung 16b: the starters' speed run).
+                    if let Some(file) = self.bench_file() {
+                        file
+                    } else if b.missing_fonts {
                         "missing_fonts"
                     } else if b.textbox {
                         "textbox"
@@ -1805,6 +1819,14 @@ impl ViewerUi {
     pub fn screen_point(&self, x: f64, y: f64) -> Option<egui::Pos2> {
         let (min, scale) = self.geom?;
         Some(pos2(min.x + x as f32 * scale, min.y + y as f32 * scale))
+    }
+
+    /// The name of the `.quad` file open, for a benchmark's `CHECK` line; `None` for a built-in page.
+    fn bench_file(&self) -> Option<&str> {
+        match &self.viewer.open.as_ref()?.source {
+            crate::viewer::Source::File(path) => path.file_stem()?.to_str(),
+            _ => None,
+        }
     }
 
     /// Whether the benchmark has run to the end.

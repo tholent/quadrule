@@ -435,3 +435,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   Hyperlegible Next, weight 600, Label role (gray 153): light on e-ink. (9) The look on a screen and the gallery tile of the
   landscape habit tracker (drawn for the welcome screen) were not seen: this computer has no screen. (10) The speed run on the
   heaviest starter (ADR-009) is still not done; `author` and `license` are empty as before.
+
+- Rung 16b speed run, owed (`crates/ui/src/view.rs`, `crates/app/src/main.rs`; 2026-11-24): (1) a bench over a file runs on
+  whichever tablet the app remembers, so the Nomad was not timed for the starters; a flag to pick the tablet (or opening a
+  benchmarked file on its primary) is owed. (2) The Pi was not measured; isometric drag on the Manta was 45.0 ms at the
+  90th percentile on the desktop, so it is the one to watch there. (3) The speed of the Basic tab itself was not timed.

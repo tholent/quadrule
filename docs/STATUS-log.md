@@ -3266,3 +3266,11 @@ VM cannot build the macOS parts.
   failed=0 status=ok`); leg 3 `2b40ef6` (`checks=873 ... passed=779 failed=0 status=ok`, the builder's run on its final
   commit).
 - Not run: the ADR-009 speed run; this machine has no display (`DISPLAY` and `WAYLAND_DISPLAY` empty, 2026-11-24).
+- Speed run (ADR-009), 2026-11-24, on chris's desktop (x86_64, Xeon E5-2470 v2, 12 threads; display `:0`), release
+  build, strip on: before it, a bench over a file found none of the sample pages' objects and ended with no line, and
+  a file it could not open fell back to the sample page with `page=sample` (chris's first runs). Fixed
+  (`crates/ui/src/view.rs`, `crates/ui/src/bench.rs`): a file's largest object is pressed, the line names the file,
+  and a bench with nothing to press prints `result=fail reason=no_target`. Results, 90th percentile (ms), every run on
+  the Manta (`device=secondary`: the app opened the files on its remembered tablet): habit tracker drag 28.3 and 35.7,
+  draw 29.2 and 32.3; isometric drag 32.0 and 45.0, draw 40.2 and 41.4. All under 50; isometric drag is the closest.
+  The Pi was not measured.
