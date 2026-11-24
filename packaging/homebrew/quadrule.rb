@@ -20,6 +20,8 @@ cask "quadrule" do
     strategy :github_releases
   end
 
+  depends_on :macos
+
   app "Quadrule.app"
 
   zap trash: [

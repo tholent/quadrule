@@ -3076,3 +3076,8 @@ VM cannot build the macOS parts.
   `tholent/homebrew-quadrule` had been made (empty, no deploy key: `gh api`, 2026-11-23); renaming it is chris's.
 - chris: "ratify 025". ADR-025 accepted; its old status and note moved to its History word for word; built stays
   `partial` (the tap and the deploy key secret are still owed).
+- The tap's first check (run 45324202031 on `tholent/homebrew-tap`) failed: `brew style` wants `depends_on :macos`
+  (Homebrew/OSDependsOn), and Homebrew 6's tap trust (docs.brew.sh/Tap-Trust) left the tap untrusted in CI. Added
+  `depends_on :macos` to `packaging/homebrew/quadrule.rb`; the tap's check gains a `brew trust tholent/tap` step
+  (committed in the scratch copy for chris to push). Installing by full name trusts that cask, so the README's
+  command stands.
