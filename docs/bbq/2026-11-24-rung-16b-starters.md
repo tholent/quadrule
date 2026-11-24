@@ -113,3 +113,10 @@ the log, the debt and the calibration row.
 ## Amendments
 
 (Rulings made after the bbq, at the look or later, go here word for word, dated.)
+
+- **2026-11-24, the 16b look** (meter 34 % at chris's last reading): asked (1) the look, (2) the seven points (Manta
+  overrides replaced by constraints, the square grid's edge strips, the form pages' 7.28 mm step and margins, the
+  landscape habit tracker, the light Label gray, keeping `--basic-section` until the look, the Basic tab showing on
+  deselect), (3) ratifying ADR-026. chris, word for word: "1. looks good 2. all good, for now 3. ratified". Rung 16b
+  is approved as built; the seven stand as built ("for now": each stays open in `docs/STATUS-debt.md`); ADR-026 is
+  ratified; the `--basic-section` flag comes out (ADR-007; ADR-026's owed line). Ships as `v0.16.7`.

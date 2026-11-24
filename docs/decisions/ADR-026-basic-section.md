@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: "drafted 2026-11-24 by the leg 1 builder from chris's ruling (rung 16b bbq, Q5, \"Switch per element\") and the lead's Defaulted 6 and 7; awaiting chris's look and ratification"
+status: accepted
+status-note: "ratified by chris 2026-11-24 after the rung 16b look: \"3. ratified\""
+ratified-by: chris
+ratified-on: "2026-11-24"
 owner: chris
 kind: design
 built: partial
@@ -101,3 +103,5 @@ Drivers:
 
 - 2026-11-24: drafted by the rung 16b leg 1 builder (Sonnet 5.5, high) from the bbq's Q5 and Defaulted 6 and 7;
   built behind `--basic-section` on `main`, awaiting chris's look.
+- 2026-11-24: ratified by chris after the rung 16b look, word for word: "1. looks good 2. all good, for now 3. ratified".
+  Before: `status: proposed`; `status-note: "drafted 2026-11-24 by the leg 1 builder from chris's ruling (rung 16b bbq, Q5, \"Switch per element\") and the lead's Defaulted 6 and 7; awaiting chris's look and ratification"`.
