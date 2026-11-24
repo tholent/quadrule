@@ -3297,3 +3297,12 @@ VM cannot build the macOS parts.
   values. README, DEVELOPMENT.md, the Fluent comment and `docs/STATUS-debt.md` (item marked DONE) say the section
   always shows.
 - No golden line and no fixture changed.
+
+## 2026-11-24 — Rung 16b approved; v0.16.7 prepared (lead)
+
+- chris at the look, word for word: "1. looks good 2. all good, for now 3. ratified". ADR-026 ratified
+  (`74038e0`); the `--basic-section` flag removed by a Sonnet 5.5 high builder (`a10154d`, its `make check-all`:
+  `TESTS ... checks=873 ... failed=0 status=ok`).
+- Version 0.16.7: `Cargo.toml`, notes `docs/arcs/v1/release-notes/v0.16.7.md`, board row 16 done with a re-plan entry,
+  next lead's prompt `docs/arcs/v1/rung-17-PROMPT-2026-11-24.md` (chris added four polish points to it). Starters record
+  their saver as `quadrule starters`, so the version bump moves no starter file.
