@@ -376,7 +376,7 @@ fn square_grid() -> Starter {
 /// Margins 10 mm, unit 6 mm (71 px): a hexagon is 71 px tall, and its horizontal edges fall every 35.5 px (the
 /// two columns of hexagons are half a hexagon apart). Edges are at y 155 + 35.5 m on the Nomad and 179 + 35.5 m on
 /// the Manta. The frame runs from y 120 to 119 px above the bottom: on the Nomad both edges are on an edge of the
-/// odd columns, on the Manta each leaves a 23 or 25 px strip, so no horizontal edge sits a few pixels from the border.
+/// odd columns, on the Manta each leaves a 24 px strip (measured from the goldens), so no horizontal edge sits a few pixels from the border.
 fn hex_grid() -> Starter {
     const N: u16 = 4;
     Starter {

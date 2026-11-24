@@ -395,3 +395,21 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   option, the `basic` look). The layers panel has no sign for a marked object; the Basic tab has no way to reorder its
   list (it follows the page); a marked group or repeat lists its name and says the rest is in the other tabs. Legs 2 and 3 (the starters) save each
   starter with its marks.
+- Rung 16b leg 2, owed (`crates/xtask/src/starters.rs`, `docs/arcs/v1/starters-from-chris/2026-11-24/`): (1) chris's look at the
+  seven starters, every fix being the builder's proposal: the slugs, titles, descriptions, tags, layer name "Paper" and
+  object names ("Lines", "Margin", "Grid", "Hex grid", "Isometric grid", "Cornell", "Dots", "Header"), and what each marks
+  Show in Basic. (2) Rulings on the Manta (`supernote.a5x2`) look, which constraints change from chris's hand-set
+  overrides (numbers in the log, "Rung 16b leg 2"): the margin lines (Scale: 0.65 mm and 0.76 mm from chris's Manta
+  columns), the Cornell frame (whole rows on the Nomad, 44 px part rows top and bottom on the Manta, where chris began on
+  a row but left a 33 px sliver), the grid, hex and isometric frames (inset from the page edges: top and bottom, and the
+  isometric left and right by 14 and 15 px, where chris's reached the edges). No override was kept; one is a one-line
+  addition to a starter's function if chris prefers a Manta look the constraints cannot give. (3) The header line of the
+  rapid log ends 2 px past the last dot on the Nomad and 3 to 4 px short of the end dots on the Manta (a constraint keeps
+  the same distances, the Manta's columns are 4 px off the Nomad's); chris may prefer an override there. (4) Every starter
+  is Full bleed, as chris made them (their lines and dots run under the toolbars and footers); the rapid log's dots now
+  clear the docked toolbars on both tablets and could drop the mark. (5) `author` and `license` are empty in every
+  starter, as chris's were: the project's licence for shipped starters is chris's to rule. (6) Leg 3 adds 13 starters to the same
+  generator and then updates the two gallery tests again (Planning and Creative stop saying "coming soon":
+  `crates/ui/tests/gallery.rs`, `crates/ui/tests/welcome.rs`) and `crates/ui/starters/.gitkeep` can go. (7) The speed run
+  on the heaviest starter (ADR-009, 50 ms at the 90th percentile) is not done; it follows leg 3. (8) A third tablet gets
+  the same constraints and whatever part rows fall out: chosen only for the Nomad and the Manta.

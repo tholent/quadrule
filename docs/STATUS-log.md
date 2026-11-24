@@ -3148,3 +3148,56 @@ VM cannot build the macOS parts.
   before `v0.20/` (`git diff 1ce8f25 --stat -- crates/render/tests/fixtures/` shows only `v0.20/`).
 - `make check-all`: `TESTS scope=workspace checks=826 check_fail=0 passed=772 failed=0 status=ok runner=nextest`.
 - The look was not seen on a screen (this computer has no display); the headless tests read the widgets and the data.
+
+## 2026-11-24 — Rung 16b leg 2: chris's seven starters (builder)
+
+- Builder (Sonnet 5.5, high) for leg 2 of rung 16b (`docs/bbq/2026-11-24-rung-16b-starters.md`: Q2, Q3, Q6 and Defaulted
+  4, 5, 7, 8, 9), on `main`, not pushed: the lead pushes after review. chris's rulings: "Builder all, you look" (Q2),
+  "Constraints now" (Q3), "Rapid-log page" (Q6).
+- **The generator** (`crates/xtask/src/starters.rs`, `cargo xtask starters [--check]`, `make starters`): every starter is
+  one function that returns a `Starter` (category, slug, document); the file bytes are the same every run (fixed dates
+  and ids, the Nomad's preview picture as Save writes it). `shrink` moved from `quadrule-ui` to `quadrule-render` (re-exported
+  from `viewer.rs`, so nothing else changed) so the generator can write the previews; the lint run moved into
+  `crates/xtask/src/lintrun.rs`, shared by `cargo xtask lint` and the new test. Tests (`crates/xtask/tests/starters.rs`): the
+  generator writes the same bytes twice; every checked-in file is what it writes now (a format change fails it until
+  `cargo xtask starters` is run again); every starter lints with no finding on both tablets (ADR-021, item 1, paid);
+  names, descriptions, tags, marks and no device overrides.
+- **The seven** (slug, title): `paper/narrow-ruled` "Narrow ruled"; `paper/narrow-ruled-rtl` "Narrow ruled,
+  right-to-left"; `paper/square-grid` "Square grid" (chris's `grid`); `paper/hex` "Hex grid"; `paper/isometric` "Isometric
+  grid"; `notes/cornell` "Cornell notes"; `bullet-journal/rapid-log` "Rapid log" (chris's `bullet-journal`; Q6). One layer,
+  "Paper"; objects "Lines" and "Margin"; "Grid"; "Hex grid"; "Isometric grid"; "Cornell"; "Dots" and "Header". Each marks
+  the page's margins, rhythm and title and its defining objects (Lines and Margin; Grid; Hex grid; Isometric grid; Cornell;
+  Dots and Header) Show in Basic. Descriptions and tags are the builder's proposals (in the functions).
+- **Why chris set each Manta override** (measured, not guessed): the rhythm is centred in the margin box, so the first
+  row is at y 223 on the Nomad and 192 on the Manta (cornell, narrow ruled, rapid log: 6.35 mm = 75 px) and at 155 and
+  179 (grid and hex: 6 mm = 71 px); chris moved each Manta frame so its top edge sat on that tablet's first row (cornell
+  16.256 mm = 192 px, grid 15.155 mm = 179 px), and the two margin lines to a Manta column. No constraint holds a
+  distance to a rhythm line that sits 31 or 24 px apart on two tablets, so the same edge is on a row on one tablet and
+  between two on the other. Each edge is set instead so that on both tablets it is on a row, or leaves a clearly part
+  cell (at least 24 px, 2 mm), never a sliver: the grid's frame runs from y 108 to 109 px above the bottom (whole cells
+  on the Manta, 47 and 46 px part cells on the Nomad); cornell from 148 to 149 above the bottom (21 rows exactly on the
+  Nomad, 44 px part rows top and bottom on the Manta); hex from 120 to 119 (24 px strips on the Manta (measured)); isometric
+  inset 14 px left, 15 right, 148 top and bottom (whole columns on the Manta, 47 px part columns on the Nomad).
+  The sums are in each function's comment. No override was kept (the test says so).
+- **Looks fixed** (the lead and chris look): the square grid's 13 px sliver row at the bottom of the Nomad is gone (last row
+  whole or a 46 px part row); the Manta's Cornell 33 px and grid 38 px slivers are gone; the isometric Manta's 14 and 15 px
+  slivers beside its border are gone and it has a bottom border now; the rapid log's dots fill the margin box across
+  (14 columns, 214 and 215 px clear each side on the Nomad; 21 columns, 210 each side on the Manta; clear of the docked
+  toolbars) and its header line spans the first to last dot column.
+- **Differences from chris's Manta pages**, measured (`python3` on the goldens, and the sums above): the margin lines Scale
+  and sit at 292.6 px (chris 285; 7.6 px, 0.65 mm) and 1626 px for the right-to-left page (chris 1635; 9 px, 0.76 mm); the
+  Cornell Manta frame begins 44 px above its first row (chris 0) and the grid's Manta first row is a whole cell below the
+  border; the rapid log's Manta header runs 214 to 1707 px against dots at 210 to 1710 (the same constraint on both
+  tablets, the Manta's columns are 4 px off the Nomad's).
+- **Goldens:** `crates/render/tests/starters.rs` reads the checked-in starter files and draws each on both tablets:
+  fourteen new pages `starter-<slug>_<profile>_<size>.png`, fourteen lines appended to `SHA256SUMS` after the forty,
+  which are byte for byte as they were (the test hashes them). A starter with no golden fails the test. Fixtures `v0.21/`:
+  narrow ruled and the rapid log as saved, with the sums of their exports, and `migrate_v021.rs` (open as 0.21.0, marks
+  read, same export bytes, a resave writes the marks again and the same exports). No earlier fixture folder changed.
+- **Gallery tests** (`gallery.rs`, `welcome.rs`) now say what ships: the seven titles in tab order, Paper, Notes and
+  Bullet journal listing theirs, Planning and Creative still "coming soon" (leg 3).
+- Docs: `DEVELOPMENT.md` gains "Starter pages" and the Makefile's `starters` row; the debt file gains "Rung 16b leg 2,
+  owed".
+- `make check-all`: `TESTS scope=workspace checks=847 check_fail=0 passed=779 failed=0 status=ok runner=nextest`.
+- Not done: the look on a screen (this computer has none; the goldens were read as images); the speed run on the
+  heaviest starter (after leg 3).

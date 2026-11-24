@@ -51,9 +51,11 @@ CHECK ?= check-all
 TARGET_CAP_GB ?= 50
 # For `prune`: DRY=1 lists what would go and deletes nothing.
 DRY ?=
+# For `starters`: STARTERS_CHECK=1 writes nothing and fails when a checked-in starter differs from the generator.
+STARTERS_CHECK ?=
 
 .PHONY: help build build-all fmt fmt-check clippy clippy-all test test-all test-v check check-all \
-        run run-release bench-drag bench-draw bench-type bench-rotate bench-zoom calibration-sheet safe-zones lint fuzz build-proof review prune check-github
+        run run-release bench-drag bench-draw bench-type bench-rotate bench-zoom calibration-sheet safe-zones starters lint fuzz build-proof review prune check-github
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  make %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -161,6 +163,9 @@ calibration-sheet: ## Write the calibration pages (PROFILE=all, OUT=calib)
 
 safe-zones: ## Print the safe zones measured from the device screenshots (PROFILE=all)
 	cargo xtask safe-zones --profile $(PROFILE)
+
+starters: ## Write the starter pages to crates/ui/starters/ from code (STARTERS_CHECK=1 only compares them)
+	cargo xtask starters $(if $(STARTERS_CHECK),--check)
 
 lint: ## Lint a document (FILE=page.quad, or the sample page)
 	cargo xtask lint $(FILE)
