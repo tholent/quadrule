@@ -3327,7 +3327,8 @@ What landed, by commit (`git log --oneline`; the first three are on `main` befor
 - Clicking a lint finding, `a2bf393`: picks its object, keeps the Lint tab, scrolls the canvas to it.
 - Preferences (Q3), Keyboard shortcuts (Q4) with D6 and D7, screen readers (Q5) with D8, readable JSON (Q6): committed
   together at the end of the leg (one commit; the four share `view.rs`, `menus.rs`, `main.rs` and `app.ftl`, so they
-  could not be cut apart without hand-picking hunks). The commit is named in the leg's report.
+  could not be cut apart without hand-picking hunks): `9a54aa3`; `make check-all` before it: `TESTS scope=workspace
+  checks=897 check_fail=0 passed=803 failed=0 status=ok runner=nextest`.
   - Preferences: `crates/ui/src/preferences.rs`; Ctrl+, , File ▸ Preferences…, the Mac's Quadrule menu (it was
     Settings…, which opened Profiles; Profiles stays on the Page tab and has a button in Preferences). Interface size
     through egui's zoom factor (kept in eframe storage as `interface_size`; the theme keeps its `theme` key, read as
@@ -3362,4 +3363,4 @@ What landed, by commit (`git log --oneline`; the first three are on `main` befor
   AGENTS.md forbids; every git command since is its own call.
 - Screenshots (taken on this machine's 1024 × 768 screen at `DISPLAY=:0`, a scratch profile under `/tmp/claude-1000/xdg`):
   `/tmp/claude-1000/shots/tabs.png`, `lint-click.png`, `prefs-100.png`, `prefs-200.png`, `shortcuts.png`,
-  `menu-view.png`, `menu-developer.png`, `menu-file.png`.
+  `menu-view.png` (Snapping open), `menu-developer.png`, `menu-file.png`.
