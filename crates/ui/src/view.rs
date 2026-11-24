@@ -233,11 +233,10 @@ pub struct ViewerUi {
     /// A device whose removal from the page waits on the user's answer (it has changes that would
     /// be lost; rung 8a).
     pub(crate) take_out: Option<String>,
-    /// Ctrl + scroll just zoomed: the screen point of the pointer and the device pixel under it, so
-    /// the next frame can scroll that pixel back under the pointer (rung 2 debt, paid in 8a).
+    /// A Ctrl + scroll or pinch gesture's anchor: the screen point of the pointer and the device pixel
+    /// under it. The frame that zooms also scrolls that pixel under the pointer, before it is drawn
+    /// (rung 2 debt, paid in 8a; one frame late until rung 17, D9: that frame was the jump).
     zoom_anchor: Option<(egui::Pos2, f32, f32)>,
-    /// The anchor is to be applied on the next frame: the zoom just changed (fixes batch 1, Q1).
-    zoom_anchor_due: bool,
     /// A zoom the speed bench feeds the canvas in place of the input's: the factor and the pointer.
     pub(crate) bench_zoom_step: Option<(f32, egui::Pos2)>,
     /// The previews strip's pictures, by device (rung 8a).
@@ -371,7 +370,6 @@ impl ViewerUi {
             selected_layer: None,
             take_out: None,
             zoom_anchor: None,
-            zoom_anchor_due: false,
             bench_zoom_step: None,
             strip_pics: HashMap::new(),
             strip_overflows: HashMap::new(),
@@ -1864,9 +1862,15 @@ impl ViewerUi {
         let ppp = ctx.pixels_per_point();
         let avail = ui.available_size();
         self.canvas_size = Some(avail);
-        let Some(scale) = self.viewer.scale((avail.x, avail.y), ppp) else {
+        let Some(mut scale) = self.viewer.scale((avail.x, avail.y), ppp) else {
             return;
         };
+        // A Ctrl + scroll or a pinch zooms before the page is laid out, so this very frame draws the new
+        // scale with the pixel under the pointer still under it (rung 17, D9).
+        let zoomed = self.take_zoom_input(ui, scale, avail);
+        if zoomed && let Some(s) = self.viewer.scale((avail.x, avail.y), ppp) {
+            scale = s;
+        }
         // The rotate handle's stalk keeps one length on screen at any zoom (rung 6b).
         self.viewer.rotate_stalk_px = ROTATE_STALK_POINTS / f64::from(scale);
         let generation = self.viewer.generation;
@@ -2027,11 +2031,24 @@ impl ViewerUi {
             vec2(w as f32 * scale, h as f32 * scale)
         };
         let margin = 16.0;
-        ScrollArea::both().auto_shrink(false).show(ui, |ui| {
-            let total = vec2(
-                (size.x + 2.0 * margin).max(avail.x),
-                (size.y + 2.0 * margin).max(avail.y),
+        let total = vec2(
+            (size.x + 2.0 * margin).max(avail.x),
+            (size.y + 2.0 * margin).max(avail.y),
+        );
+        let mut scroller = ScrollArea::both().auto_shrink(false);
+        if zoomed && let Some((p, x, y)) = self.zoom_anchor {
+            // Where the scroll must stand for device pixel (x, y) to sit under the pointer at this scale:
+            // the page is centred in `total`, whose corner is the view's corner less the offset.
+            let view_min = ui.available_rect_before_wrap().min;
+            let want = vec2(
+                view_min.x + (total.x - size.x) / 2.0 + x * scale - p.x,
+                view_min.y + (total.y - size.y) / 2.0 + y * scale - p.y,
             );
+            let room = (total - avail).max(egui::Vec2::ZERO);
+            scroller =
+                scroller.scroll_offset(vec2(want.x.clamp(0.0, room.x), want.y.clamp(0.0, room.y)));
+        }
+        scroller.show(ui, |ui| {
             let (rect, response) = ui.allocate_exact_size(total, Sense::click_and_drag());
             self.canvas_id = Some(response.id);
             // A typing session has the keyboard: arrows, Tab and Escape go to it and not to the
@@ -2067,18 +2084,6 @@ impl ViewerUi {
             let painter = ui.painter_at(rect);
             let to_screen =
                 |x: f64, y: f64| pos2(min.x + x as f32 * scale, min.y + y as f32 * scale);
-            // A Ctrl + scroll zoom a frame ago: scroll the page so the pixel that was under the
-            // pointer is under it again.
-            if std::mem::take(&mut self.zoom_anchor_due)
-                && let Some((p, x, y)) = self.zoom_anchor
-            {
-                let d = p - to_screen(f64::from(x), f64::from(y));
-                if d.length() >= 0.5 {
-                    ui.scroll_with_delta_animation(d, egui::style::ScrollAnimation::none());
-                    ctx.request_repaint();
-                }
-            }
-
             painter.rect_stroke(
                 page_rect.expand(1.0),
                 CornerRadius::ZERO,
@@ -2617,41 +2622,55 @@ impl ViewerUi {
                 let y = (p.y - min.y) / scale;
                 (x >= 0.0 && y >= 0.0 && x < w as f32 && y < h as f32).then_some((x, y))
             });
-
-            // Ctrl + scroll (or a pinch) zooms by the gesture's own factor, anchored at the pointer
-            // (fixes batch 1, Q1); a bench run feeds its own factor in place of the input's.
-            let bench_zoom = self.bench_zoom_step.take();
-            if response.hovered() || bench_zoom.is_some() {
-                let (z, pointer) = match bench_zoom {
-                    Some((z, p)) => (z, Some(p)),
-                    None => (
-                        ui.input(|i| i.zoom_delta()),
-                        ui.input(|i| i.pointer.hover_pos()),
-                    ),
-                };
-                if z != 1.0 {
-                    let fit = self
-                        .viewer
-                        .scale_for(Zoom::Fit, (avail.x, avail.y), ppp)
-                        .map_or(f32::NAN, |s| s * ppp);
-                    let time = ui.input(|i| i.time);
-                    let carried = self.viewer.zoom_by(z, scale * ppp, fit, time);
-                    if let Some(p) = pointer {
-                        // The device pixel under the pointer stays under it all through the gesture.
-                        let keep = carried
-                            && self
-                                .zoom_anchor
-                                .is_some_and(|(a, _, _)| (a - p).length() < 1.0);
-                        if !keep {
-                            self.zoom_anchor =
-                                Some((p, (p.x - min.x) / scale, (p.y - min.y) / scale));
-                        }
-                    }
-                    self.zoom_anchor_due = true;
-                    ctx.request_repaint();
-                }
-            }
         });
+    }
+
+    /// The screen point a zoom gesture keeps its pixel under (the pointer when it began), for tests.
+    #[doc(hidden)]
+    pub fn zoom_anchor_point(&self) -> Option<egui::Pos2> {
+        self.zoom_anchor.map(|(p, _, _)| p)
+    }
+
+    /// Ctrl + scroll (or a pinch) zooms by the gesture's own factor, anchored at the pointer (fixes batch 1,
+    /// Q1); a bench run feeds its own factor in place of the input's. `scale` is the scale showing, in
+    /// screen points per device pixel. Returns whether the zoom changed, with [`Self::zoom_anchor`] set to
+    /// the pixel to keep under the pointer. Called before the page is laid out, so the same frame draws it.
+    fn take_zoom_input(&mut self, ui: &egui::Ui, scale: f32, avail: egui::Vec2) -> bool {
+        let ctx = ui.ctx();
+        let ppp = ctx.pixels_per_point();
+        let bench_zoom = self.bench_zoom_step.take();
+        let over = ui.rect_contains_pointer(ui.available_rect_before_wrap());
+        if !(over || bench_zoom.is_some()) {
+            return false;
+        }
+        let (z, pointer) = match bench_zoom {
+            Some((z, p)) => (z, Some(p)),
+            None => (
+                ui.input(|i| i.zoom_delta()),
+                ui.input(|i| i.pointer.hover_pos()),
+            ),
+        };
+        if z == 1.0 {
+            return false;
+        }
+        let fit = self
+            .viewer
+            .scale_for(Zoom::Fit, (avail.x, avail.y), ppp)
+            .map_or(f32::NAN, |s| s * ppp);
+        let time = ui.input(|i| i.time);
+        let carried = self.viewer.zoom_by(z, scale * ppp, fit, time);
+        if let Some(p) = pointer {
+            // The device pixel under the pointer stays under it all through the gesture.
+            let keep = carried
+                && self
+                    .zoom_anchor
+                    .is_some_and(|(a, _, _)| (a - p).length() < 1.0);
+            if !keep && let Some((min, drawn)) = self.geom {
+                self.zoom_anchor = Some((p, (p.x - min.x) / drawn, (p.y - min.y) / drawn));
+            }
+        }
+        ctx.request_repaint();
+        true
     }
 
     /// The graphics-chip canvas: the visible part of the page at screen resolution, by vello on

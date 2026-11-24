@@ -368,3 +368,86 @@ fn the_half_size_copies_average_two_by_two_and_a_zoomed_out_pinch_draws() {
     );
     assert!(ok);
 }
+
+/// One Ctrl + wheel notch (a line), `dir` up (in) or down (out).
+fn ctrl_notch(h: &Harness<'static, Window>, dir: f32) {
+    let ctrl = Modifiers::CTRL;
+    h.event_modifiers(
+        Event::MouseWheel {
+            unit: MouseWheelUnit::Line,
+            delta: egui::vec2(0.0, dir),
+            phase: TouchPhase::Move,
+            modifiers: ctrl,
+            source: egui::MouseWheelSource::Unknown,
+        },
+        ctrl,
+    );
+}
+
+/// Drives `notches` Ctrl + scroll notches, one per frame, `dir` in or out, with the pointer on device
+/// pixel (`px`, `py`), and returns how far the pixel is from the pointer on screen after each frame, as
+/// drawn (rung 17, D9: a frame that showed the new scale before the scroll caught up was the jump).
+fn drift_while_scrolling(
+    h: &mut Harness<'static, Window>,
+    (px, py): (f64, f64),
+    dir: f32,
+    notches: usize,
+) -> Vec<f32> {
+    let p = h.state().ui.screen_point(px, py).unwrap();
+    h.hover_at(p);
+    h.run();
+    let mut drift = Vec::new();
+    for _ in 0..notches {
+        ctrl_notch(h, dir);
+        h.step();
+        let q = h.state().ui.screen_point(px, py).unwrap();
+        drift.push((q - p).length());
+    }
+    // And the frame after the last notch, with no event.
+    h.step();
+    let q = h.state().ui.screen_point(px, py).unwrap();
+    drift.push((q - p).length());
+    drift
+}
+
+#[test]
+fn scroll_zooming_keeps_the_pixel_under_the_pointer_on_every_frame_drawn() {
+    // Where the page is smaller than the window it stays centred, so a pixel can only hold where the page
+    // can scroll: the cases take one in the page's middle from Fit, and zoom out only as far as in.
+    let mut parts = Vec::new();
+    let mut ok = true;
+    for (name, start, px, py) in [
+        ("in_from_1_to_1", Zoom::Scale(1.0), 500.0, 400.0),
+        ("in_from_fit", Zoom::Fit, 0.0, 700.0),
+        ("in_then_out", Zoom::Scale(1.0), 400.0, 300.0),
+    ] {
+        let mut h = sample();
+        h.state_mut().ui.viewer.zoom = start;
+        h.run();
+        let w = f64::from(h.state_mut().ui.viewer.page().unwrap().profile.width_px);
+        let px = if px == 0.0 { w / 2.0 } else { px };
+        let before = shown(&h);
+        let mut drift = drift_while_scrolling(&mut h, (px, py), 1.0, 6);
+        let zoomed = (shown(&h) / before - 1.0).abs() > 0.2;
+        if name == "in_then_out" {
+            // The same pixel, the same pointer, out again (one gesture: no pause between).
+            for _ in 0..4 {
+                ctrl_notch(&h, -1.0);
+                h.step();
+                let q = h.state().ui.screen_point(px, py).unwrap();
+                let p = h.state().ui.zoom_anchor_point().unwrap();
+                drift.push((q - p).length());
+            }
+        }
+        let worst = drift.iter().copied().fold(0.0_f32, f32::max);
+        let good = worst < 1.5 && zoomed;
+        ok &= good;
+        parts.push(format!("{name}:worst_px={worst:.2}:zoomed={zoomed}"));
+    }
+    println!(
+        "\nCHECK crate=ui name=zoom_scroll_anchor_every_frame result={} {}",
+        pass(ok),
+        parts.join(" ")
+    );
+    assert!(ok);
+}
