@@ -212,10 +212,10 @@ fn v0_18_to_v0_19(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 
-/// 0.20 adds an optional `major_from` on a pattern region (ADR-023: Top, Centre or RhythmOrigin). A region without
-/// it counts its major lines from the rhythm origin, as every region did, so a 0.19 scene needs no rewriting and
-/// draws and exports as it did. A 0.19 build keeps `major_from` as an unknown field on a save and counts from the
-/// rhythm origin.
+/// 0.20 adds an optional `major_rows_from` and `major_columns_from` on a pattern region (ADR-023 as amended
+/// 2026-11-23: Top, Centre or RhythmOrigin, each axis its own). A region without them counts its major lines from the
+/// rhythm origin, as every region did, so a 0.19 scene needs no rewriting and draws and exports as it did. A 0.19
+/// build keeps them as unknown fields on a save and counts from the rhythm origin.
 fn v0_19_to_v0_20(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }

@@ -181,10 +181,12 @@ and error.
   side length, which snaps, nudges (Shift+arrow) and sizes drawn shapes on one column across and half a side down, and
   whose overlay draws the triangles. The rhythm also has **Major every N** (off by default): the pattern regions that
   follow the rhythm draw every Nth line, row or dot in a stronger role (Structure unless you change it; a major dot is also one pixel bigger than an ordinary one), a region can turn
-  them off or use its own N, and the overlay draws them stronger. **Major lines from** says where a region's majors
-  start: **Top** (its first line, down and across; a new region starts here), **Centre** (the lines left over split
-  evenly, an odd one below or right) or **Rhythm origin** (lined up across the page, as pages made before 0.20 keep;
-  isometric offers Centre and Rhythm origin). A region can be **unbound** from the rhythm to have
+  them off or use its own N, and the overlay draws them stronger. **Major rows from** and **Major columns from** say
+  where a region's majors start, each axis on its own: **Top** (its first line, the top one for rows and the left one
+  for columns; a new region starts here), **Centre** (the lines left over split evenly, an odd one below or right) or
+  **Rhythm origin** (lined up with the page's rhythm, as pages made before 0.20 keep), so a region's rows can follow the
+  rhythm while its columns are centred. Lines and Cornell have major rows only; isometric offers Centre and Rhythm
+  origin. A region can be **unbound** from the rhythm to have
   spacing of its own (the linter's L17 says when that spacing is not a whole multiple or fraction of the rhythm). The
   pattern page opens from the command line with `--patterns-page`.
 - A **calendar**. A pattern region can be a **Calendar**: a month of day cells under a row of weekday names, seven
@@ -236,7 +238,7 @@ cargo run --release -p quadrule-app
 ```
 
 That starts on the welcome screen (Blank page or "Open sample page" begin). To see every shape, fill, dash and cap at once, add
-`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --bordered-page` for borders round pattern regions, or `-- --grand-staff-page` for grand staves (`-- --look grand-staff` shows the inspector on the first), or `-- --calendar-page` for calendar patterns and mini calendars (`-- --look calendar` or `-- --look mini-calendar` shows the inspector on one), or `-- --majors-page` for major lines counted from a region's top, its centre or the rhythm origin (`-- --look major-lines-from` shows the inspector on the first), or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
+`-- --shapes-page` (or `-- --transforms-page` for turned shapes, lines every way and opacity, or `-- --patterns-page` for every pattern in the pattern library, or `-- --pattern-angle-page` for the ruling turned inside its frame, or `-- --bordered-page` for borders round pattern regions, or `-- --grand-staff-page` for grand staves (`-- --look grand-staff` shows the inspector on the first), or `-- --calendar-page` for calendar patterns and mini calendars (`-- --look calendar` or `-- --look mini-calendar` shows the inspector on one), or `-- --majors-page` for major lines counted from a region's top, its centre or the rhythm origin, rows and columns alike (`-- --look major-lines-from` shows the inspector on the first), or `-- --lint-page` for objects that make each of the gray, text-size, handwriting, dark-fill and thin-line lint rules fire beside ones that pass, or `-- --paper-page` for ISO A4 at 300 PPI and ISO A5 at 600 (`-- --paper-landscape-page` for US Letter held sideways), or `-- --turned-patterns-page` for pattern regions turned whole, one in a group and one in a repeat, or `-- --repeats-page` for rows, grids and a Fill repeat, or `-- --fonts-page` for every bundled font, or `-- --textbox-page` for fixed boxes, vertical alignment, baselines on a ruled region and turned text). To open a file: `cargo run --release -p quadrule-app -- path/to/page.quad`. Quadrule is
 built and tested on Linux, macOS and Windows. Setup details, tests and the code layout are in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## Putting a template on your Supernote

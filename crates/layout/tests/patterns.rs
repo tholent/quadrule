@@ -514,7 +514,8 @@ fn a_grand_staff_pairs_the_staves_with_a_brace() {
 fn major_lines_use_the_major_role_on_the_nth_line_from_the_origin() {
     // Counted from the rhythm origin, as every region did before ADR-023 (a page made before format 0.20).
     let from_origin = |p: Pattern| PatternRegion {
-        major_from: MajorFrom::RhythmOrigin,
+        major_rows_from: MajorFrom::RhythmOrigin,
+        major_columns_from: MajorFrom::RhythmOrigin,
         ..PatternRegion::new(p)
     };
     let m = manta();

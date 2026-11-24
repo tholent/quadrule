@@ -1301,15 +1301,23 @@ pub struct PatternRegion {
     /// The role major lines are drawn in (Structure unless changed).
     #[serde(default = "structure_role", skip_serializing_if = "is_structure_role")]
     pub major_role: LineRole,
-    /// Where the major lines are counted from: the region's top, its centre or the rhythm origin (ADR-023;
-    /// format 0.20). A file without it reads as the rhythm origin, as every region counted before, so it is
-    /// left out of a file when it is that; a new region starts at the top. Read it with
-    /// [`PatternRegion::major_origin`].
+    /// Where the major rows (the horizontal lines, down the vertical rhythm) are counted from: the region's
+    /// top, its centre or the rhythm origin (ADR-023 as amended 2026-11-23; format 0.20). A file without it
+    /// reads as the rhythm origin, as every region counted before, so it is left out of a file when it is
+    /// that; a new region starts at the top. Read it with [`PatternRegion::major_rows_origin`].
     #[serde(
         default = "rhythm_origin",
         skip_serializing_if = "MajorFrom::is_rhythm_origin"
     )]
-    pub major_from: MajorFrom,
+    pub major_rows_from: MajorFrom,
+    /// Where the major columns (the vertical lines, across the horizontal rhythm) are counted from: the
+    /// region's left edge (Top), its centre or the rhythm origin, as `major_rows_from`. Read it with
+    /// [`PatternRegion::major_columns_origin`].
+    #[serde(
+        default = "rhythm_origin",
+        skip_serializing_if = "MajorFrom::is_rhythm_origin"
+    )]
+    pub major_columns_from: MajorFrom,
     /// The ruling's own angle in degrees, clockwise, about the frame's centre: the pattern turns inside
     /// the frame and is cut at it, on top of the frame's own `rotation_deg` (rung 12b bbq, Q8 as amended and
     /// Q10). Format 0.13 (not yet released); a file without it reads as 0. Read it with
@@ -1449,7 +1457,8 @@ impl PatternRegion {
     /// from its top (an isometric region, which has no top, from the rhythm origin; ADR-023).
     pub fn new(pattern: Pattern) -> Self {
         PatternRegion {
-            major_from: MajorFrom::new_for(&pattern),
+            major_rows_from: MajorFrom::new_for(&pattern),
+            major_columns_from: MajorFrom::new_for(&pattern),
             pattern,
             bound: true,
             h_spacing_mm: None,
@@ -1481,14 +1490,15 @@ impl PatternRegion {
         }
     }
 
-    /// Where this region's major lines count from as drawn: `major_from`, except that an isometric
+    /// Where this region's major rows count from as drawn: `major_rows_from`, except that an isometric
     /// region set to Top counts from the rhythm origin (its slanted lines have no top; ADR-023, item 3).
-    pub fn major_origin(&self) -> MajorFrom {
-        if self.major_from == MajorFrom::Top && !self.pattern.offers_major_top() {
-            MajorFrom::RhythmOrigin
-        } else {
-            self.major_from
-        }
+    pub fn major_rows_origin(&self) -> MajorFrom {
+        self.pattern.drawn_major_from(self.major_rows_from)
+    }
+
+    /// Where this region's major columns count from as drawn, as [`PatternRegion::major_rows_origin`].
+    pub fn major_columns_origin(&self) -> MajorFrom {
+        self.pattern.drawn_major_from(self.major_columns_from)
     }
 }
 
@@ -1501,9 +1511,8 @@ impl Object {
         if let ObjectKind::Pattern(pr) = &mut self.kind {
             pr.pattern = kind.default_pattern();
             // Isometric offers no Top: a region switched to it while at Top counts from the rhythm origin.
-            if pr.major_from == MajorFrom::Top && !pr.pattern.offers_major_top() {
-                pr.major_from = MajorFrom::RhythmOrigin;
-            }
+            pr.major_rows_from = pr.pattern.drawn_major_from(pr.major_rows_from);
+            pr.major_columns_from = pr.pattern.drawn_major_from(pr.major_columns_from);
             self.settle_pattern_role();
         }
     }
@@ -1553,12 +1562,12 @@ impl MajorLines {
     }
 }
 
-/// Where a region's major lines are counted from (ADR-023; format 0.20). Along each axis: rows down,
-/// columns across.
+/// Where a region's major rows, or its major columns, are counted from (ADR-023 as amended 2026-11-23;
+/// format 0.20): each axis has its own.
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MajorFrom {
-    /// The line on the region's top edge is major, then every Nth line down; across, the line on its
-    /// left edge, then every Nth line right. The first line at or inside the edge counts, whether or not
+    /// The row on the region's top edge is major, then every Nth row down; for columns, the one on its
+    /// left edge, then every Nth one right. The first line at or inside the edge counts, whether or not
     /// a border hides it.
     Top,
     /// The majors are placed so the ordinary lines left before the first and after the last differ by at
@@ -1730,6 +1739,25 @@ impl Pattern {
     /// whose slanted lines have no top of their own (ADR-023, item 3).
     pub fn offers_major_top(&self) -> bool {
         !matches!(self, Pattern::Isometric { .. })
+    }
+
+    /// Whether the pattern has major columns to count (Grid, Dots and Isometric); Lines and Cornell have
+    /// major rows only.
+    pub fn has_major_columns(&self) -> bool {
+        matches!(
+            self,
+            Pattern::Grid | Pattern::Dots | Pattern::Isometric { .. }
+        )
+    }
+
+    /// Where a setting of `from` counts from on this pattern: Top on one with no top (isometric) counts
+    /// from the rhythm origin.
+    pub fn drawn_major_from(&self, from: MajorFrom) -> MajorFrom {
+        if from == MajorFrom::Top && !self.offers_major_top() {
+            MajorFrom::RhythmOrigin
+        } else {
+            from
+        }
     }
 
     /// For a calendar: the shape of its month, from its date when it has one, else from its own two settings

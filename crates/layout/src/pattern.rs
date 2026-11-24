@@ -233,9 +233,9 @@ struct Ctx<'a> {
     divider: Pen,
     /// Every Nth line is major.
     major: Option<u8>,
-    /// Where the majors count from (ADR-023), and the box they count in: the frame, in the axes the
-    /// ruling is laid out in.
-    from: MajorFrom,
+    /// Where the major columns and the major rows count from (ADR-023 as amended 2026-11-23), and the box
+    /// they count in: the frame, in the axes the ruling is laid out in.
+    from: (MajorFrom, MajorFrom),
     count: (f64, f64, f64, f64),
     /// The index of a major column and of a major row, counted from the grid's origin.
     base: (i64, i64),
@@ -453,10 +453,10 @@ fn layout_in(
     // A major dot is a Dot grid dot one device pixel bigger (rung 9, chris's look).
     let (dot_w, _) = stroke(Style::Role(LineRole::DotGrid), env.target);
     let major = pr.major_every(env.rhythm);
-    let from = pr.major_origin();
+    let from = (pr.major_columns_origin(), pr.major_rows_origin());
     let base = (
-        major_base(from, major, index_span(g.ox, g.ux, count.0, count.2)),
-        major_base(from, major, index_span(g.oy, g.uy, count.1, count.3)),
+        major_base(from.0, major, index_span(g.ox, g.ux, count.0, count.2)),
+        major_base(from.1, major, index_span(g.oy, g.uy, count.1, count.3)),
     );
     let mut c = Ctx {
         items,
@@ -1111,27 +1111,31 @@ fn isometric_lines(c: &mut Ctx, g: &Grid, half: f64) {
 }
 
 /// The index of a major line in each slanted family ("/" then "\") of an isometric grid (ADR-023): 0
-/// from the rhythm origin. Centred, the majors of the three families still meet: the major crossing is
-/// on the centred major column, centred down it among the crossings the frame holds (a family's line `i`
-/// meets column `k` at `oy + half * m` where `m = 2i + dir * k`, and the majors meet every Nth side
-/// down a major column), so each family's majors sit centred across the frame too.
+/// from the rhythm origin. The majors of the three families meet at one crossing: on the major column
+/// the columns setting picks, at the place down it the rows setting picks, the rhythm origin's or the
+/// centre of the crossings the frame holds (a family's line `i` meets column `k` at `oy + half * m`
+/// where `m = 2i + dir * k`, and the majors meet every Nth side down a major column). Centred both
+/// ways, each family's majors sit centred across the frame too.
 fn iso_slant_bases(c: &Ctx, g: &Grid, half: f64) -> (i64, i64) {
     let Some(n) = c.major else {
         return (0, 0);
     };
-    if c.from != MajorFrom::Centre {
-        return (0, 0);
-    }
     let k = c.base.0;
     let parity = k.rem_euclid(2);
-    // The crossings on column `k` inside the frame, `m = 2p + parity`, as a span of `p`.
-    let Some((m_lo, m_hi)) = index_span(g.oy, half, c.count.1, c.count.3) else {
-        return (0, 0);
+    let p = match (c.from.1, index_span(g.oy, half, c.count.1, c.count.3)) {
+        // The crossings on column `k` inside the frame, `m = 2p + parity`, as a span of `p`.
+        (MajorFrom::Centre, Some((m_lo, m_hi))) => {
+            let p_lo = (m_lo - parity + 1).div_euclid(2);
+            let p_hi = (m_hi - parity).div_euclid(2);
+            if p_lo <= p_hi {
+                major_base(MajorFrom::Centre, Some(n), Some((p_lo, p_hi)))
+            } else {
+                0
+            }
+        }
+        _ => 0,
     };
-    let p_lo = (m_lo - parity + 1).div_euclid(2);
-    let p_hi = (m_hi - parity).div_euclid(2);
-    let p = major_base(MajorFrom::Centre, Some(n), Some((p_lo, p_hi)));
-    let m = if p_lo <= p_hi { 2 * p + parity } else { parity };
+    let m = 2 * p + parity;
     ((m + k).div_euclid(2), (m - k).div_euclid(2))
 }
 
@@ -1150,9 +1154,11 @@ fn isometric_dots(c: &mut Ctx, g: &Grid, half: f64) {
     }
     // Where the pairs of steps down a column count their majors from (ADR-023), over those in the frame.
     let pair_base = match index_span(g.oy, half, c.count.1, c.count.3) {
-        Some((lo, hi)) if c.from != MajorFrom::RhythmOrigin => {
-            major_base(c.from, c.major, Some((lo.div_euclid(2), hi.div_euclid(2))))
-        }
+        Some((lo, hi)) if c.from.1 != MajorFrom::RhythmOrigin => major_base(
+            c.from.1,
+            c.major,
+            Some((lo.div_euclid(2), hi.div_euclid(2))),
+        ),
         _ => 0,
     };
     for (k, x) in cols {

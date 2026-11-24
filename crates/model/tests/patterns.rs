@@ -82,7 +82,8 @@ fn a_region_missing_the_new_fields_reads_with_their_defaults() {
     // Its majors count from the rhythm origin, as they did (ADR-023); a new region starts at Top.
     let defaults = r
         == PatternRegion {
-            major_from: MajorFrom::RhythmOrigin,
+            major_rows_from: MajorFrom::RhythmOrigin,
+            major_columns_from: MajorFrom::RhythmOrigin,
             ..PatternRegion::new(Pattern::Grid)
         };
     // An isometric pattern with no settings reads as lines; a hex one as flat top, one unit high.

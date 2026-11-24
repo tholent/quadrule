@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Where a region's major lines count from (ADR-023; docs/bbq/2026-11-23-major-lines-from-top.md): Top, Centre and
-//! Rhythm origin on lines, the grid, dots and Cornell; Centre's odd line after the last major; a border that does not
-//! move the majors; isometric, which has no Top, centred so its three families' majors still meet; a ruling turned a
-//! quarter turn inside its frame, counted in its own axes. Each test prints one structured `CHECK` line (run with
+//! Where a region's major lines count from (ADR-023 as amended 2026-11-23; docs/bbq/2026-11-23-major-lines-from-top.md):
+//! Top, Centre and Rhythm origin on lines, the grid, dots and Cornell, the rows and the columns each set on their own;
+//! Centre's odd line after the last major; a border that does not move the majors; isometric, which has no Top, its
+//! three families' majors meeting on a major column however its rows and columns are set; a ruling turned a quarter
+//! turn inside its frame, counted in its own axes. Each test prints one structured `CHECK` line (run with
 //! `-- --nocapture`).
 //!
 //! The region is columns 2 to 10 and rows 2 to 10 of a 5 mm rhythm starting at the page's corner (59 px on the
@@ -57,12 +58,19 @@ fn major_gray() -> u8 {
     stroke(Style::Role(LineRole::Emphasis), &builtin(MANTA_ID).unwrap()).1
 }
 
-fn region_of(p: Pattern, from: MajorFrom) -> PatternRegion {
+/// A region of `p` with its rows counted from `rows` and its columns from `cols`.
+fn region_axes(p: Pattern, rows: MajorFrom, cols: MajorFrom) -> PatternRegion {
     PatternRegion {
-        major_from: from,
+        major_rows_from: rows,
+        major_columns_from: cols,
         major_role: LineRole::Emphasis,
         ..PatternRegion::new(p)
     }
+}
+
+/// A region of `p` with its rows and columns both counted from `from`.
+fn region_of(p: Pattern, from: MajorFrom) -> PatternRegion {
+    region_axes(p, from, from)
 }
 
 /// The items of `pr` on the region, its frame turned by `deg`.
@@ -143,18 +151,22 @@ fn each_choice_places_the_majors_on_lines_grid_dots_and_cornell() {
         ("dots", Pattern::Dots),
         ("cornell", cornell),
     ] {
-        for from in FROMS {
-            let (rows, cols) = majors(&draw(&region_of(p, from), 0.0));
-            let want = expected(from);
-            let good = match name {
-                "lines" => rows == want && cols.is_empty(),
-                "grid" | "dots" => rows == want && cols == want,
-                // Cornell's summary divider takes row 6 (two rows above the last), drawn as a divider.
-                _ => rows == &want - &set(&[6]) && cols.is_empty(),
-            };
-            ok &= good;
-            parts.push(format!("{name}_{from:?}={good}"));
+        // Each of the nine ways to set the rows and the columns.
+        let mut good = true;
+        for row_from in FROMS {
+            for col_from in FROMS {
+                let (rows, cols) = majors(&draw(&region_axes(p, row_from, col_from), 0.0));
+                let (want_rows, want_cols) = (expected(row_from), expected(col_from));
+                good &= match name {
+                    "lines" => rows == want_rows && cols.is_empty(),
+                    "grid" | "dots" => rows == want_rows && cols == want_cols,
+                    // Cornell's summary divider takes row 6 (two rows above the last), drawn as a divider.
+                    _ => rows == &want_rows - &set(&[6]) && cols.is_empty(),
+                };
+            }
         }
+        ok &= good;
+        parts.push(format!("{name}_nine_ways={good}"));
     }
     println!(
         "\nCHECK crate=layout name=major_from_choices result={} {}",
@@ -250,27 +262,38 @@ fn isometric_has_no_top_and_its_centred_majors_still_meet() {
     };
     let top = draw(&region_of(iso, MajorFrom::Top), 0.0);
     let origin = draw(&region_of(iso, MajorFrom::RhythmOrigin), 0.0);
-    let centre = draw(&region_of(iso, MajorFrom::Centre), 0.0);
     // Set to Top it draws as Rhythm origin.
     let top_is_origin = top == origin;
-    // Centred: the vertical majors are columns 1 and 6 of nine, and every crossing of a "/" major with a "\" major
-    // is on a major column (the three families' majors meet).
-    let (_, cols) = majors(&centre);
-    let cols_centred = cols == set(&[1, 6]);
-    let slants = major_slants(&centre);
-    let (down, up): (Vec<_>, Vec<_>) = slants.iter().partition(|(_, s)| *s > 0.0);
-    let mut crossings = 0;
-    let mut on_major = true;
-    for &(a1, s1) in &down {
-        for &(a2, s2) in &up {
-            let x = (a2 - a1) / (s1 - s2);
-            let k = (x - FIRST) / UNIT;
-            crossings += 1;
-            on_major &= (k - k.round()).abs() < 0.02 && (k.round() as i64 - 1).rem_euclid(5) == 0;
+    // Each of the four ways to set rows and columns from Centre and Rhythm origin: the vertical majors are the
+    // columns' choice (1 and 6 of nine centred, 3 and 8 from the origin), every crossing of a "/" major with a "\"
+    // major is on a major column (the three families' majors meet), and the four drawings all differ.
+    let two = [MajorFrom::Centre, MajorFrom::RhythmOrigin];
+    let (mut cols_right, mut crossings, mut on_major) = (true, 0, true);
+    let mut drawings = Vec::new();
+    for row_from in two {
+        for col_from in two {
+            let items = draw(&region_axes(iso, row_from, col_from), 0.0);
+            let (_, cols) = majors(&items);
+            let want = expected(col_from);
+            cols_right &= cols == want;
+            let first = *want.first().unwrap();
+            let slants = major_slants(&items);
+            let (down, up): (Vec<_>, Vec<_>) = slants.iter().partition(|(_, s)| *s > 0.0);
+            for &(a1, s1) in &down {
+                for &(a2, s2) in &up {
+                    let x = (a2 - a1) / (s1 - s2);
+                    let k = (x - FIRST) / UNIT;
+                    crossings += 1;
+                    on_major &= (k - k.round()).abs() < 0.02
+                        && (k.round() as i64 - first).rem_euclid(5) == 0;
+                }
+            }
+            drawings.push(items);
         }
     }
     let meet = crossings > 0 && on_major;
-    let moved = centre != origin;
+    let all_differ =
+        (0..drawings.len()).all(|i| (i + 1..drawings.len()).all(|j| drawings[i] != drawings[j]));
     // Isometric dots, centred: a major dot on a major column only.
     let dots = draw(
         &region_of(
@@ -283,9 +306,9 @@ fn isometric_has_no_top_and_its_centred_majors_still_meet() {
     );
     let (_, dot_cols) = majors(&dots);
     let dots_ok = !dot_cols.is_empty() && dot_cols.is_subset(&set(&[1, 6]));
-    let ok = top_is_origin && cols_centred && meet && moved && dots_ok;
+    let ok = top_is_origin && cols_right && meet && all_differ && dots_ok;
     println!(
-        "\nCHECK crate=layout name=major_from_isometric result={} top_draws_as_origin={top_is_origin} cols_centred={cols_centred} major_crossings={crossings} all_on_major_columns={on_major} centre_differs={moved} dots_on_major_columns={dots_ok}",
+        "\nCHECK crate=layout name=major_from_isometric result={} top_draws_as_origin={top_is_origin} cols_per_setting={cols_right} major_crossings={crossings} all_on_major_columns={on_major} four_ways_differ={all_differ} dots_on_major_columns={dots_ok}",
         pass(ok)
     );
     assert!(ok);

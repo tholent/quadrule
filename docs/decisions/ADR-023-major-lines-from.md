@@ -6,7 +6,7 @@ ratified-on: "2026-11-23"
 owner: chris
 kind: design
 built: landed
-proof: "`crates/layout/tests/major_from.rs::each_choice_places_the_majors_on_lines_grid_dots_and_cornell`, `crates/layout/tests/major_from.rs::centre_leaves_the_odd_line_after_the_last_major`, `crates/layout/tests/major_from.rs::a_border_does_not_move_the_majors`, `crates/layout/tests/major_from.rs::isometric_has_no_top_and_its_centred_majors_still_meet`, `crates/layout/tests/major_from.rs::a_ruling_turned_a_quarter_turn_counts_in_its_own_axes`, `crates/model/tests/major_from.rs::a_file_without_the_field_reads_as_the_rhythm_origin_and_only_others_are_written`, `crates/ui/tests/major_from.rs::isometric_greys_top_and_shows_what_it_draws`, `crates/render/tests/migrate_v019.rs::v019_files_open_migrate_and_export_the_same_bytes`, `crates/render/tests/major_lines_from.rs::major_lines_from_page_goldens`"
+proof: "`crates/layout/tests/major_from.rs::each_choice_places_the_majors_on_lines_grid_dots_and_cornell`, `crates/layout/tests/major_from.rs::centre_leaves_the_odd_line_after_the_last_major`, `crates/layout/tests/major_from.rs::a_border_does_not_move_the_majors`, `crates/layout/tests/major_from.rs::isometric_has_no_top_and_its_centred_majors_still_meet`, `crates/layout/tests/major_from.rs::a_ruling_turned_a_quarter_turn_counts_in_its_own_axes`, `crates/model/tests/major_from.rs::a_file_without_the_field_reads_as_the_rhythm_origin_and_only_others_are_written`, `crates/ui/tests/major_from.rs::isometric_greys_top_and_shows_what_it_draws`, `crates/render/tests/migrate_v019.rs::v019_files_open_migrate_and_export_the_same_bytes`, `crates/render/tests/major_lines_from.rs::major_lines_from_page_goldens`, `crates/render/tests/major_lines_from.rs::major_lines_per_axis_page_goldens`"
 supersedes: nothing
 amends: "docs/bbq/2026-11-13-rung-9-pattern-library.md, Defaulted \"Which patterns have major lines\" (counting starts at the rhythm origin)"
 ---
@@ -83,3 +83,34 @@ Drivers:
   chris's look. Earlier values, word for word: `built: not started`; `proof: "queued for a fresh session:
   docs/bbq/2026-11-23-major-lines-from-top.md, Kickoff"`. What the build chose where the record left room is in the
   record's Built section.
+- 2026-11-23: amended by chris at his look: one choice per axis (see Amendment — 2026-11-23, chris, below).
+- 2026-11-23: the amendment built in the same session; `proof` gains the per-axis golden page. Earlier value, word for
+  word: `proof: "`crates/layout/tests/major_from.rs::each_choice_places_the_majors_on_lines_grid_dots_and_cornell`,
+  `crates/layout/tests/major_from.rs::centre_leaves_the_odd_line_after_the_last_major`,
+  `crates/layout/tests/major_from.rs::a_border_does_not_move_the_majors`,
+  `crates/layout/tests/major_from.rs::isometric_has_no_top_and_its_centred_majors_still_meet`,
+  `crates/layout/tests/major_from.rs::a_ruling_turned_a_quarter_turn_counts_in_its_own_axes`,
+  `crates/model/tests/major_from.rs::a_file_without_the_field_reads_as_the_rhythm_origin_and_only_others_are_written`,
+  `crates/ui/tests/major_from.rs::isometric_greys_top_and_shows_what_it_draws`,
+  `crates/render/tests/migrate_v019.rs::v019_files_open_migrate_and_export_the_same_bytes`,
+  `crates/render/tests/major_lines_from.rs::major_lines_from_page_goldens`"`.
+
+## Amendment — 2026-11-23, chris
+
+**What changed.** At his look at the build, chris said, word for word: "The major lines need to be alignable to the
+vertical and horizontal rhythms". Asked which he meant, he picked "A choice per axis": split the one row into "Major
+rows from" and "Major columns from", each Top / Centre / Rhythm origin.
+
+**Sections it touches.** Decision item 1 and Q2: the one **Major lines from** setting, applied to both axes, becomes
+two settings, **Major rows from** (the horizontal lines, stepping down by the vertical rhythm) and **Major columns
+from** (the vertical lines, stepping across by the horizontal rhythm), each with Top, Centre and Rhythm origin. Top
+means the top edge for rows and the left edge for columns, as item 1 already said. So a region can keep its rows on
+the page's rhythm while its columns are centred, or the other way round. Items 2 to 4 hold for each setting on its
+own: older pages read both as Rhythm origin, new regions start both at Top, isometric offers Rhythm origin and
+Centre on both, and a border moves neither. Consequences: the one field `major_from` becomes two; format 0.20.0 has
+not gone out in a release (the last is `v0.16.5`, format 0.19.0), so it stays 0.20.0.
+
+**Why.** One setting for both axes could not line one axis up with the rhythm while the other starts at the top or
+centre.
+
+**Who agreed.** chris, in the build session (his words and his pick above).

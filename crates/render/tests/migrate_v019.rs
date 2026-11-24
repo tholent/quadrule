@@ -17,7 +17,7 @@
 //! the format changed (their regions start off the rhythm's major rows, so counting from their top would move the
 //! majors), together with the sha256 of the PNG each device's export gave (`tests/fixtures/v0.19/SHA256SUMS`, the
 //! same as those pages' goldens). They must open, migrate and export the same bytes now: the 0.19 to 0.20 step rewrites
-//! nothing, every region reads as Rhythm origin, and a resave writes no `major_from` field. Each test prints one
+//! nothing, every region reads as Rhythm origin, and a resave writes no `major_rows_from` or `major_columns_from` field. Each test prints one
 //! structured `CHECK` line (run with `-- --nocapture`).
 
 use quadrule_format::{FORMAT_VERSION, QuadFile, migrate, sha256_hex};
@@ -79,14 +79,17 @@ fn v019_files_open_migrate_and_export_the_same_bytes() {
         let was_019 = file.migrated_from == Some(Version::parse("0.19.0").unwrap())
             && file.manifest.format_version == "0.19.0";
         let editable = file.read_only.is_none();
-        // Every region counts from the rhythm origin, and writes no `major_from` field when saved.
+        // Every region counts from the rhythm origin, and writes no `major_rows_from` or `major_columns_from` field
+        // when saved.
         let mut origin = true;
         for o in file.doc.objects() {
             if let ObjectKind::Pattern(pr) = &o.kind {
                 regions += 1;
                 let v = ciborium::Value::serialized(pr).unwrap();
-                let key = matches!(&v, ciborium::Value::Map(m) if m.iter().any(|(k, _)| k.as_text() == Some("major_from")));
-                origin &= pr.major_from == MajorFrom::RhythmOrigin && !key;
+                let key = matches!(&v, ciborium::Value::Map(m) if m.iter().any(|(k, _)| k.as_text().is_some_and(|k| k.starts_with("major_") && k.ends_with("_from"))));
+                origin &= pr.major_rows_from == MajorFrom::RhythmOrigin
+                    && pr.major_columns_from == MajorFrom::RhythmOrigin
+                    && !key;
             }
         }
         ok &= was_019 && editable && origin;

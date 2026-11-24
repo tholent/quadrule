@@ -3016,3 +3016,20 @@ VM cannot build the macOS parts.
   inspector row was checked headless (`crates/ui/tests/major_from.rs`).
 - STATUS.md is 330 lines, over its 300 cap (324 before this session); not trimmed here.
 - Waits for chris's look; ships in the next release.
+
+## 2026-11-23 — ADR-023 amended at chris's look: major rows and major columns each their own
+
+- chris at his look, word for word: "The major lines need to be alignable to the vertical and horizontal rhythms".
+  Asked what he meant, he picked "A choice per axis". Recorded as ADR-023's Amendment — 2026-11-23, chris, and in the
+  record's Look section (`docs/bbq/2026-11-23-major-lines-from-top.md`).
+- Built in the same session: `major_rows_from` and `major_columns_from` on the pattern region (format stays 0.20.0,
+  never released); the layout counts each axis from its own setting; the inspector has **Major rows from** and **Major
+  columns from** (columns greyed for Lines and Cornell); a new golden page `major-lines-per-axis_*` on both tablets.
+  `major-lines-from_*` and the 36 sums before it are unchanged.
+- Tests: with columns put back on the rows' setting, `cargo nextest run -p quadrule-layout --test major_from` →
+  `5 tests run: 3 passed, 2 failed`; restored, all pass. `make check` → `TESTS scope=workspace checks=815 check_fail=0
+  passed=761 failed=0 status=ok runner=nextest`. `adr-check`: 24 ADRs, 0 failures.
+- Four calls up for veto (record, Look): "Top" for the left edge in the columns row; the columns row greyed, not hidden,
+  for Lines and Cornell; a turned ruling's rows and columns are its own; a file from the first 0.20 build reads its
+  old `major_from` as unknown.
+- Waits for chris's look again.

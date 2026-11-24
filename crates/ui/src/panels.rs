@@ -2157,39 +2157,61 @@ impl ViewerUi {
                     }
                     ui.end_row();
                 }
-                // Where the majors count from (ADR-023): Top, Centre or the rhythm origin. Isometric has no
-                // Top, so it is greyed there, and a region a file sets to Top reads as what it draws: Rhythm origin.
-                let label = ui.label(self.t("app-pattern-major-from"));
-                let shown = pr.major_origin();
-                let mut want = shown;
-                let top_ok = pr.pattern.offers_major_top();
+                // Where the major rows and the major columns count from, each on its own (ADR-023 as amended
+                // 2026-11-23): Top, Centre or the rhythm origin. Isometric has no Top, so it is greyed there, and a
+                // region a file sets to Top reads as what it draws: Rhythm origin. Lines and Cornell have no major
+                // columns, so that row is greyed for them.
                 let options = [
                     (MajorFrom::Top, "app-major-from-top"),
                     (MajorFrom::Centre, "app-major-from-centre"),
                     (MajorFrom::RhythmOrigin, "app-major-from-origin"),
                 ];
-                ui.add_enabled_ui(on, |ui| {
-                    egui::ComboBox::from_id_salt("pattern-major-from")
-                        .selected_text(
-                            self.t(options
-                                .iter()
-                                .find(|(v, _)| *v == shown)
-                                .map_or("app-major-from-origin", |(_, id)| id)),
-                        )
-                        .show_ui(ui, |ui| {
-                            for (v, id) in options {
-                                ui.add_enabled_ui(v != MajorFrom::Top || top_ok, |ui| {
-                                    ui.selectable_value(&mut want, v, self.t(id));
-                                });
-                            }
-                        })
-                        .response
-                        .labelled_by(label.id);
-                });
-                if want != shown {
-                    set!(None, |p| p.major_from = want);
+                let top_ok = pr.pattern.offers_major_top();
+                for (rows, label_id, salt, shown, axis_on) in [
+                    (
+                        true,
+                        "app-pattern-major-rows-from",
+                        "pattern-major-rows-from",
+                        pr.major_rows_origin(),
+                        on,
+                    ),
+                    (
+                        false,
+                        "app-pattern-major-columns-from",
+                        "pattern-major-columns-from",
+                        pr.major_columns_origin(),
+                        on && pr.pattern.has_major_columns(),
+                    ),
+                ] {
+                    let label = ui.label(self.t(label_id));
+                    let mut want = shown;
+                    ui.add_enabled_ui(axis_on, |ui| {
+                        egui::ComboBox::from_id_salt(salt)
+                            .selected_text(
+                                self.t(options
+                                    .iter()
+                                    .find(|(v, _)| *v == shown)
+                                    .map_or("app-major-from-origin", |(_, id)| id)),
+                            )
+                            .show_ui(ui, |ui| {
+                                for (v, id) in options {
+                                    ui.add_enabled_ui(v != MajorFrom::Top || top_ok, |ui| {
+                                        ui.selectable_value(&mut want, v, self.t(id));
+                                    });
+                                }
+                            })
+                            .response
+                            .labelled_by(label.id);
+                    });
+                    if want != shown {
+                        set!(None, |p| if rows {
+                            p.major_rows_from = want;
+                        } else {
+                            p.major_columns_from = want;
+                        });
+                    }
+                    ui.end_row();
                 }
-                ui.end_row();
                 let label = ui.label(self.t("app-pattern-major-role"));
                 let mut role = pr.major_role;
                 ui.add_enabled_ui(on, |ui| {

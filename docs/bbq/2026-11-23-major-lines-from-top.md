@@ -107,3 +107,34 @@ Waits for chris's look.
 
 Not seen: the inspector in the real window. The screen was locked (`mate-screensaver-command -q` → active, lock on), so
 no screenshot; the row was checked headless instead (`crates/ui/tests/major_from.rs`).
+
+## Look (2026-11-23)
+
+chris, at his look, word for word: "The major lines need to be alignable to the vertical and horizontal rhythms".
+Asked which he meant (a choice per axis; one row with mixed choices; or a fault where Rhythm origin does not line up),
+he picked **"A choice per axis"**: split the one row into "Major rows from" and "Major columns from", each Top / Centre /
+Rhythm origin. This changes Q2 (one setting for both axes); recorded as ADR-023's Amendment — 2026-11-23, chris.
+
+Built in the same session:
+
+- **Model:** `PatternRegion::major_from` became `major_rows_from` and `major_columns_from`, each read as Rhythm origin
+  when absent and written only when not that; `major_rows_origin()` and `major_columns_origin()` are what draw;
+  `Pattern::has_major_columns` (Grid, Dots, Isometric). Format 0.20.0 has not been released, so it stays 0.20.0.
+- **Layout:** columns count from the columns setting, rows from the rows setting. Isometric: the three families' majors
+  still meet at one crossing, on the major column the columns setting picks, at the place down it the rows setting picks.
+- **Inspector:** two rows, **Major rows from** and **Major columns from**; the columns row is greyed for Lines and Cornell;
+  Top greyed in both on isometric.
+- **Golden pages:** `major-lines-from_*` unchanged byte for byte (each cell sets both axes alike); a new
+  `major-lines-per-axis_*` page on both tablets: a grid, dots and isometric lines with rows and columns mixed three ways.
+- **Tests:** the layout choices test runs all nine row/column pairs on lines, grid, dots and Cornell; the isometric test
+  the four Centre/Rhythm origin pairs. With the columns put back on the rows' setting, both fail (`5 tests run: 3
+  passed, 2 failed`).
+
+### Calls the amendment's build made (each can be vetoed)
+
+| Call | Why | veto: |
+|---|---|---|
+| Columns say **Top** for the left edge, as chris's pick reads ("each Top / Centre / Rhythm origin") | his words; ADR-023 item 1 already calls the left edge Top for columns | veto: call it **Left** in the columns row |
+| The columns row is shown but greyed for Lines and Cornell, which have no major columns | the inspector greys Top on isometric the same way, and the rows stay in one place for every pattern | veto: hide the row instead |
+| A turned ruling's rows and columns are its own (a Lines ruling turned a quarter turn still uses Major rows from) | the turned ruling already counts in its own axes (Built, second call) | veto: rows and columns of the page |
+| A file saved by this unreleased build's first version (a `major_from` field) reads that field as unknown and both axes as Rhythm origin | 0.20.0 never went out; no reader needs it | veto: read `major_from` into both |

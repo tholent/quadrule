@@ -53,7 +53,8 @@ pub const TITLE_TEXT: &str = "Today’s Notes — Wave Your Arrows: a slice of t
 /// ([`PatternRegion::new`]).
 fn region_0_19(pattern: Pattern) -> PatternRegion {
     PatternRegion {
-        major_from: MajorFrom::RhythmOrigin,
+        major_rows_from: MajorFrom::RhythmOrigin,
+        major_columns_from: MajorFrom::RhythmOrigin,
         ..PatternRegion::new(pattern)
     }
 }
@@ -2522,33 +2523,26 @@ pub mod majors_ids {
     pub const FIRST: Uuid = nth(1);
 }
 
+/// Fixed ids for the major-lines-per-axis page's objects.
+pub mod majors_axes_ids {
+    use crate::Uuid;
+    /// The `n`th object of the major-lines-per-axis page (1-based: row by row).
+    pub const fn nth(n: u128) -> Uuid {
+        Uuid::from_u128(0x5155_4144_0018_4000_8000_0000_0000_0000 + n)
+    }
+    /// The page's title.
+    pub const TITLE: Uuid = nth(200);
+}
+
 /// The major-lines-from page (ADR-023; docs/bbq/2026-11-23-major-lines-from-top.md): three columns, Top, Centre and
-/// Rhythm origin, of six labelled cells each: ruled lines, a grid, dots, Cornell, isometric lines (which has no Top:
-/// its Top cell is set to Top and draws as Rhythm origin) and a grid with a border on all four sides (the border stands
-/// on the first major line). The rhythm is 3 mm, physically locked, with a major line every 7; each region holds 11
-/// lines across and 5 down and starts one rhythm row past a major, so the three choices put their majors in three
-/// different places, and Centre leaves 1 line before its first major column and 2 after its last. Every object keeps
-/// its millimetres on the Nomad (Left and Top), so the page is the same on both screens. Designed on the Manta, also
-/// targeting the Nomad.
+/// Rhythm origin, rows and columns alike, of six labelled cells each: ruled lines, a grid, dots, Cornell, isometric
+/// lines (which has no Top: its Top cell is set to Top and draws as Rhythm origin) and a grid with a border on all four
+/// sides (the border stands on the first major line). The rhythm is 3 mm, physically locked, with a major line every 7;
+/// each region holds 11 lines across and 5 down and starts one rhythm row past a major, so the three choices put their
+/// majors in three different places, and Centre leaves 1 line before its first major column and 2 after its last.
+/// Every object keeps its millimetres on the Nomad (Left and Top), so the page is the same on both screens. Designed on
+/// the Manta, also targeting the Nomad.
 pub fn majors_document() -> Document {
-    let mut doc = slice_document();
-    doc.metadata.title = "Major lines from".into();
-    doc.metadata.description =
-        "Major lines counted from a region's top, its centre or the rhythm origin, on five patterns and a border."
-            .into();
-    let margin = 8.0;
-    doc.page.margins_mm = Margins::all(margin);
-    doc.rhythm.resolution = RhythmResolution::PhysicalLocked;
-    doc.rhythm.h_unit_mm = 3.0;
-    doc.rhythm.v_unit_mm = 3.0;
-    doc.rhythm.major_every = Some(7);
-    let title = doc.layers[1].objects[0].clone();
-    let keep = Constraints {
-        h: HConstraint::Left,
-        v: VConstraint::Top,
-    };
-    // A cell is 10 units wide and 4 down, a unit apart across; a row is the label (2 units), the cell and a unit's gap.
-    let (unit, cell_w, cell_h, gap, title_units) = (3.0, 10.0, 4.0, 1.0, 4.0);
     let froms = [
         (MajorFrom::Top, "Top"),
         (MajorFrom::Centre, "Centre"),
@@ -2577,46 +2571,148 @@ pub fn majors_document() -> Document {
         ),
         ("Grid, border", bordered, LineRole::Guide),
     ];
+    let cells = rows
+        .iter()
+        .map(|(name, region, role)| {
+            froms
+                .iter()
+                .map(|&(from, from_name)| {
+                    let label = if from == MajorFrom::Top && !region.pattern.offers_major_top() {
+                        format!("{name}, Top: from origin")
+                    } else {
+                        format!("{name}, {from_name}")
+                    };
+                    let pr = PatternRegion {
+                        major_rows_from: from,
+                        major_columns_from: from,
+                        ..region.clone()
+                    };
+                    (label, pr, *role)
+                })
+                .collect()
+        })
+        .collect();
+    majors_page(
+        "Major lines from",
+        "Major lines counted from a region's top, its centre or the rhythm origin, on five patterns and a border.",
+        "Major lines from: Top, Centre, Rhythm origin",
+        7.0,
+        majors_ids::nth,
+        cells,
+    )
+}
+
+/// The major-lines-per-axis page (ADR-023 as amended 2026-11-23): the rows and the columns of one region counted from
+/// different places, on a grid, dots and isometric lines (Lines and Cornell have rows only). Each row of the page mixes
+/// two of Top, Centre and Rhythm origin a different way; isometric, which has no Top, takes Rhythm origin where the
+/// others take Top. Same rhythm, cells and constraints as [`majors_document`].
+pub fn majors_axes_document() -> Document {
+    use MajorFrom::{Centre, RhythmOrigin as Origin, Top};
+    let name = |f: MajorFrom| match f {
+        Top => "Top",
+        Centre => "Centre",
+        Origin => "Origin",
+    };
+    let mixes = [(Top, Centre), (Centre, Origin), (Origin, Top)];
+    let patterns = [
+        ("Grid", Pattern::Grid, LineRole::Guide),
+        ("Dots", Pattern::Dots, LineRole::DotGrid),
+        (
+            "Iso",
+            Pattern::Isometric {
+                style: IsoStyle::Lines,
+            },
+            LineRole::Guide,
+        ),
+    ];
+    let cells = mixes
+        .iter()
+        .map(|&mix| {
+            patterns
+                .iter()
+                .map(|&(pname, pattern, role)| {
+                    let region = PatternRegion::new(pattern);
+                    let rows = pattern.drawn_major_from(mix.0);
+                    let cols = pattern.drawn_major_from(mix.1);
+                    let label = format!("{pname}: rows {}, cols {}", name(rows), name(cols));
+                    let pr = PatternRegion {
+                        major_rows_from: rows,
+                        major_columns_from: cols,
+                        ..region
+                    };
+                    (label, pr, role)
+                })
+                .collect()
+        })
+        .collect();
+    majors_page(
+        "Major lines per axis",
+        "A region's major rows and major columns counted from different places: top, centre or the rhythm origin.",
+        "Major rows and columns, each their own",
+        6.0,
+        majors_axes_ids::nth,
+        cells,
+    )
+}
+
+/// A page of labelled pattern cells in rows, for [`majors_document`] and [`majors_axes_document`]: the rhythm is 3 mm,
+/// physically locked, with a major line every 7; a cell is 10 units wide and 4 down, a unit apart across; a row is the
+/// label (2 units), the cell and a unit's gap. Cell `i` (row by row, from 0) is object `nth(1 + i)` and its label
+/// `nth(100 + i)`; the title is `nth(200)`.
+fn majors_page(
+    title_text: &str,
+    description: &str,
+    heading: &str,
+    label_pt: f64,
+    nth: fn(u128) -> Uuid,
+    cells: Vec<Vec<(String, PatternRegion, LineRole)>>,
+) -> Document {
+    let mut doc = slice_document();
+    doc.metadata.title = title_text.into();
+    doc.metadata.description = description.into();
+    let margin = 8.0;
+    doc.page.margins_mm = Margins::all(margin);
+    doc.rhythm.resolution = RhythmResolution::PhysicalLocked;
+    doc.rhythm.h_unit_mm = 3.0;
+    doc.rhythm.v_unit_mm = 3.0;
+    doc.rhythm.major_every = Some(7);
+    let title = doc.layers[1].objects[0].clone();
+    let keep = Constraints {
+        h: HConstraint::Left,
+        v: VConstraint::Top,
+    };
+    let (unit, cell_w, cell_h, gap, title_units) = (3.0, 10.0, 4.0, 1.0, 4.0);
     let mut head = title.clone();
-    head.id = majors_ids::TITLE;
+    head.id = nth(200);
     head.name = "Title".into();
     head.frame = Frame::new(margin, margin, MANTA_W_MM - 2.0 * margin, 8.0);
     if let ObjectKind::Text(t) = &mut head.kind {
-        t.content = "Major lines from: Top, Centre, Rhythm origin".into();
+        t.content = heading.into();
         t.size_pt = 12.0;
     }
     head.constraints = Constraints::default();
     let mut objs: Vec<Object> = vec![head];
-    for (r, (name, region, role)) in rows.into_iter().enumerate() {
-        for (c, (from, from_name)) in froms.into_iter().enumerate() {
-            let i = r * froms.len() + c;
+    let mut i = 0;
+    for (r, row) in cells.into_iter().enumerate() {
+        for (c, (label, pr, role)) in row.into_iter().enumerate() {
             let x = margin + c as f64 * (cell_w + gap) * unit;
             let y = margin + (title_units + r as f64 * (cell_h + 3.0)) * unit;
-            let label = if from == MajorFrom::Top && !region.pattern.offers_major_top() {
-                format!("{name}, Top: from origin")
-            } else {
-                format!("{name}, {from_name}")
-            };
             let mut text = title.clone();
-            text.id = majors_ids::nth(100 + i as u128);
+            text.id = nth(100 + i as u128);
             text.name = format!("Label {}", i + 1);
             text.frame = Frame::new(x, y, cell_w * unit, 5.0);
             if let ObjectKind::Text(t) = &mut text.kind {
                 t.content = label.clone();
-                t.size_pt = 7.0;
+                t.size_pt = label_pt;
                 t.weight = 400;
             }
             text.constraints = keep;
             objs.push(text);
-            let pr = PatternRegion {
-                major_from: from,
-                ..region.clone()
-            };
             // A millimetre past the rhythm lines at each edge, so the edge lines are in whatever a pixel of
             // rounding says; a bordered frame sits on them, so its border stands on the edge lines (Q7).
             let past = if pr.border.is_some() { 0.0 } else { 1.0 };
             objs.push(object(
-                majors_ids::nth(1 + i as u128),
+                nth(1 + i as u128),
                 &label,
                 Frame::new(
                     x - past,
@@ -2628,10 +2724,11 @@ pub fn majors_document() -> Document {
                 Style::Role(role),
                 ObjectKind::Pattern(pr),
             ));
+            i += 1;
         }
     }
     doc.layers = vec![Layer {
-        name: "Major lines from".into(),
+        name: title_text.into(),
         visible: true,
         locked: false,
         objects: objs,
