@@ -3100,3 +3100,14 @@ VM cannot build the macOS parts.
   published 2026-11-24T09:45:19Z as a pre-release with 7 files (`gh release view v0.16.6`). The tap step printed
   `TAP tag=v0.16.6 status=skip reason=no-deploy-key`: the secret `HOMEBREW_TAP_DEPLOY_KEY` is not set on
   tholent/quadrule, though the tap has its deploy key, so `brew install` still fails (`docs/STATUS-debt.md`).
+- chris added the `HOMEBREW_TAP_DEPLOY_KEY` secret; the "Homebrew tap" job rerun pushed `quadrule 0.16.6` to the tap
+  (tholent/homebrew-tap `7f48e86`). The tap's check (run 45369006172) then failed its audit twice over: livecheck's
+  `:github_releases` strategy skips pre-releases (it found ''), and `brew audit` refuses a GitHub pre-release unless
+  the tap's `audit_exceptions/github_prerelease_allowlist.json` names the cask (Homebrew source,
+  `livecheck/strategy/github_releases.rb` and `utils/shared_audits.rb`, read 2026-11-24). chris: "the tap check has
+  failed (again) and doesn't use caching. let's fix that".
+- Fix: the cask's livecheck keeps pre-releases (`packaging/homebrew/quadrule.rb`); the tap gains the allowlist
+  (`"quadrule": "any"`, which also passes once releases stop being pre-releases) and a check that uses
+  `Homebrew/actions/setup-homebrew` (checkout, tap, trust) with caches for Homebrew's gems and downloads, pinned as
+  `brew tap-new`'s template pins them. The tap commit is made but not pushed: the token lacks the `workflow` scope
+  GitHub needs to change a workflow file, so chris pushes it.

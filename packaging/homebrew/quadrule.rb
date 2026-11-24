@@ -14,10 +14,17 @@ cask "quadrule" do
   desc "Vector design tool for Supernote page templates and wallpapers"
   homepage "https://github.com/tholent/quadrule"
 
-  # Every release before 1.0.0 is a GitHub pre-release, which the default strategy skips.
+  # Every release before 1.0.0 is a GitHub pre-release, which the plain :github_releases strategy
+  # skips too, so this block keeps pre-releases and drops only drafts.
   livecheck do
     url :url
-    strategy :github_releases
+    strategy :github_releases do |json, regex|
+      json.filter_map do |release|
+        next if release["draft"]
+
+        release["tag_name"]&.[](regex, 1)
+      end
+    end
   end
 
   depends_on :macos
