@@ -48,6 +48,11 @@ None yet. The owner sets one; agents do not invent it.
 - When a worker refuses or fails a brief, check the brief before blaming the worker.
 - Start long jobs detached, and judge them by their log, never by what the launcher returned.
 - Give every scheduled task one home account, written in `docs/rules/task-homes.md`; check that list before making or moving one.
+- Run each git command as a shell call of its own: never join it to another command with `&&`, `;`, `||` or a pipe.
+  - Added 2026-11-24 by chris, word for word: "put an amendment somewhere that states that you cannot use compound
+    git commands". Why: Claude Code's permission rules and its auto-mode check judge a shell call as a whole, so a
+    git command joined to others can be refused even when each part is allowed on its own (the `v0.16.6` tag push,
+    `docs/STATUS-log.md`). See ADR-024's amendment of 2026-11-24.
 
 ### Check and review
 - Report a number as the command that produces it; for "not found", name every file searched.

@@ -3115,3 +3115,7 @@ VM cannot build the macOS parts.
   Tap check run 45370416264 passed: style, audit, `CASK name=quadrule install=ok uninstall=ok`; caches saved
   (`macOS-rubygems-…` 37.71 MiB, `macOS-downloads-…` 63.19 MiB; `gh cache list -R tholent/homebrew-tap`). ADR-025 is
   landed; its debt item is paid and removed.
+- chris asked what the tag-push refusal was, then: "let's do the amendment, but also put an amendment somewhere that
+  states that you cannot use compound git commands". ADR-024 amended (the local tag-push rule until v1.0, reviewed at
+  the v1.0 switch); `AGENTS.md` gains, under Run and delegate, "Run each git command as a shell call of its own"
+  with chris's words. adr-check: 25 ADRs, 0 failures.

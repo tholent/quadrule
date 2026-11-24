@@ -84,3 +84,34 @@ Q1 accepted).
   ADR-022 item 3 applies.
 - 2026-11-23: ratified by chris ("Ratify", asked "Ratify ADR-024 … as written?"). Earlier values, word for word:
   `status: proposed`; `status-note: drafted 2026-11-23 from chris's answers (docs/bbq/2026-11-23-adr-leaving-main.md); awaiting ratification`.
+- 2026-11-24: amended by chris (see Amendment — 2026-11-24, chris, below): until v1.0, an agent pushes a release tag
+  through a local Claude Code permission rule, and runs each git command on its own.
+
+## Amendment — 2026-11-24, chris
+
+**What changed.** Item 1 ("Until v1.0, nothing changes") also covers how an agent gets a release tag past Claude Code
+on the computer it runs on, not only past GitHub. On 2026-11-23 the `v0.16.6` tag push was refused by Claude Code's
+auto-mode check, though ADR-022 item 2 leaves creating tags open and item 1 here lets agents push. chris asked how
+agents were to have access until v1.0, then chose a local permission rule ("yes, please add rule #1"), and then said,
+word for word: "let's do the amendment, but also put an amendment somewhere that states that you cannot use compound
+git commands".
+
+1. **Until v1.0, a release tag goes out through a local permission rule.** `.claude/settings.local.json` allows
+   `Bash(git tag -a v*)` and `Bash(git push origin v*)`. The file is git-ignored (`.gitignore`, `/.claude/`), so it
+   holds only on the computer that has it; a session on another computer or account that is refused the same way
+   adds the same two lines there, on chris's word. An agent still asks chris before each release, as the release
+   checklist says (setfree); the rule removes only the auto-mode refusal, not the question.
+2. **Each git command runs as a shell call of its own**, never joined to another command with `&&`, `;`, `||` or a
+   pipe (`AGENTS.md`, Run and delegate). The refused push was one call joining `git tag`, `git push`, `sleep` and
+   `gh run list`.
+3. **At v1.0** the switch of item 2 also reviews the rule of point 1: kept as it is, narrowed, or removed.
+
+**Sections it touches.** Decision item 1, and Consequences ("Until v1.0: no change on GitHub, in AGENTS.md or in how
+sessions land work"): AGENTS.md gains the rule of point 2, and how a release tag is pushed now depends on a file on
+each computer.
+
+**Why.** The ADRs covered GitHub's rules but not the check on the computer itself, so a release they allowed was
+refused, and the reason was found only in the log.
+
+**Who agreed.** chris, in the release session of 2026-11-23 and 2026-11-24 (his words above). Reading "compound git
+commands" as any shell call that joins a git command to another one is the lead's, and can be vetoed.
