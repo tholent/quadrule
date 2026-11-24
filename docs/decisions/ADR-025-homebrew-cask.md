@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: "drafted 2026-11-23 from chris's answers (\"Mac app cask\", \"New repo tholent/homebrew-quadrule\", \"Leave it, print steps\"), the tap renamed by his \"tholent/homebrew-tap\"; awaiting ratification"
+status: accepted
+status-note: "ratified by chris 2026-11-23 (\"ratify 025\")"
+ratified-by: chris
+ratified-on: "2026-11-23"
 owner: chris
 kind: process
 built: partial
@@ -112,3 +114,5 @@ tholent/tap/quadrule` opening the app on chris's Mac.
 - 2026-11-23 (still proposed): the tap moved from `tholent/homebrew-quadrule` to the shared `tholent/homebrew-tap`, at
   chris's word ("I would like there to be a tholent/homebrew repository that holds all my casks/formulas"; asked the
   name, he chose "tholent/homebrew-tap (Recommended)"). The quadrule-only tap is kept as an overruled alternative.
+- 2026-11-23: ratified by chris ("ratify 025"). Earlier values, word for word: `status: proposed`;
+  `status-note: drafted 2026-11-23 from chris's answers (\"Mac app cask\", \"New repo tholent/homebrew-quadrule\", \"Leave it, print steps\"), the tap renamed by his \"tholent/homebrew-tap\"; awaiting ratification`.

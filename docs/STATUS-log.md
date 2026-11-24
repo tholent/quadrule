@@ -3074,3 +3074,5 @@ VM cannot build the macOS parts.
   cask template, README, DEVELOPMENT.md, STATUS.md and the debt now name `tholent/homebrew-tap`
   (`brew install --cask tholent/tap/quadrule`); the job replays its push once if the shared tap moved meanwhile.
   `tholent/homebrew-quadrule` had been made (empty, no deploy key: `gh api`, 2026-11-23); renaming it is chris's.
+- chris: "ratify 025". ADR-025 accepted; its old status and note moved to its History word for word; built stays
+  `partial` (the tap and the deploy key secret are still owed).

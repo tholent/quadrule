@@ -29,4 +29,4 @@ change the ADR and run the script again. An ADR's own header outranks this table
 | [ADR-022](ADR-022-github-branch-and-tag-rules.md) | GitHub guards `main` and the release tags now, and adds pull requests and required checks only when work leaves `main` | process | accepted | landed |
 | [ADR-023](ADR-023-major-lines-from.md) | A pattern region's major lines count from its top, its centre or the rhythm origin, Top for new regions | design | accepted | landed |
 | [ADR-024](ADR-024-leave-main-at-v1.md) | Work goes straight to `main` until v1.0; from then on it lands by pull request, merged by the agent on green | process | accepted | not started |
-| [ADR-025](ADR-025-homebrew-cask.md) | Quadrule installs on macOS with Homebrew, as a cask in tholent's shared tap that follows each release | process | proposed | partial |
+| [ADR-025](ADR-025-homebrew-cask.md) | Quadrule installs on macOS with Homebrew, as a cask in tholent's shared tap that follows each release | process | accepted | partial |
