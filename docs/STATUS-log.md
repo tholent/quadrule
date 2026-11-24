@@ -3081,3 +3081,14 @@ VM cannot build the macOS parts.
   `depends_on :macos` to `packaging/homebrew/quadrule.rb`; the tap's check gains a `brew trust tholent/tap` step
   (committed in the scratch copy for chris to push). Installing by full name trusts that cask, so the README's
   command stands.
+
+## 2026-11-23 — v0.16.6
+
+- chris, word for word: "ok, let's bundle all these changes into a release, pre-16b", then "ok, let's do it". Build
+  proof at start: `BUILD head=096248c dirty=no rebuilt=0 target_gb=38.0`.
+- setfree: no public ADR copies pending (`docs/decisions/public/pending/` does not exist). `make check-all`:
+  `TESTS scope=workspace checks=815 check_fail=0 passed=761 failed=0 status=ok runner=nextest`.
+- `v0.16.6` holds major lines from (ADR-023 with both amendments, format 0.20.0), L16's right-aligned rule (ADR-019
+  amended) and the Homebrew cask (ADR-025); notes `docs/arcs/v1/release-notes/v0.16.6.md`. 16b becomes `v0.16.7`.
+- The tap `tholent/homebrew-tap` has a write deploy key (`gh api repos/tholent/homebrew-tap/keys`, 2026-11-23); whether
+  this repository holds the `HOMEBREW_TAP_DEPLOY_KEY` secret could not be read (HTTP 403 for the token).

@@ -216,7 +216,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/layout/src/calendar.rs`, `crates/model/src/calendar.rs`, `crates/render/tests/calendar.rs`). Try it:
   `cargo run --release -p quadrule-app -- --calendar-page`.
 - **Major lines from** (ADR-023, amended twice 2026-11-23 at chris's look: a choice per axis; Centre on the middle line) is built;
-  look approved by chris 2026-11-23 ("ok, let's approve these changes"); not yet in a release (record
+  look approved by chris 2026-11-23 ("ok, let's approve these changes"); shipped as `v0.16.6` (notes
+  `docs/arcs/v1/release-notes/v0.16.6.md`; record
   `docs/bbq/2026-11-23-major-lines-from-top.md`, Built, Look and Look, second; no calls vetoed): a pattern
   region counts its major rows and its major columns, each on its own, from its Top (new regions), its Centre or the
   Rhythm origin (older files and every old golden page); isometric offers Centre and Rhythm origin; format 0.20.0, a 0.19 fixture exports the same bytes (`crates/layout/src/pattern.rs`,
@@ -289,11 +290,11 @@ The project's live state. Update it when work lands. Every claim cites at least 
   Next: chris's seven fixes before 16b, in three batches (bbq, 8 questions, `docs/bbq/2026-11-18-fixes-before-16b.md`).
   **Batch 1 is done** (`v0.16.3`, approved by chris 2026-11-20: smooth zoom, the grand staff space with file format
   0.18.0, the layers panel's icons). **Batch 2 is done** (`v0.16.4`, approved by chris 2026-11-23: menus for each
-  system, the status bar's toggles into View, the macOS double-click). Batch 3, Quick Look, moved to v1.1 (chris 2026-11-23, no signing yet). Next: rung 16b, the starters, `v0.16.6`, once chris's starters are ready. chris's first starters are being stepped
+  system, the status bar's toggles into View, the macOS double-click). Batch 3, Quick Look, moved to v1.1 (chris 2026-11-23, no signing yet). Next: rung 16b, the starters, `v0.16.7`, once chris's starters are ready. chris's first starters are being stepped
   through the linter (`docs/bbq/2026-11-23-adr-starter-lint.md`): ADR-019 (Full bleed, page edges on the rhythm) and
   ADR-020 (a Margin role) are ratified (2026-11-23); ADR-021 (starters show no findings; L14 and L09 leave drawing
-  grids alone) is ratified too; all three are built (format 0.19.0) and wait for chris's look; the calendar pattern and the mini calendar are built and approved, the Full bleed tick's look too (chris 2026-11-23); shipped as `v0.16.5` 2026-11-23 (notes `docs/arcs/v1/release-notes/v0.16.5.md`; chris: "let's cut this release"). Next: 16b, `v0.16.6`, once chris's starters are ready. They ship with chris's new features (asked before the
-  planning starters) as `v0.16.5`; 16b becomes `v0.16.6`; its lead's prompt is
+  grids alone) is ratified too; all three are built (format 0.19.0) and wait for chris's look; the calendar pattern and the mini calendar are built and approved, the Full bleed tick's look too (chris 2026-11-23); shipped as `v0.16.5` 2026-11-23 (notes `docs/arcs/v1/release-notes/v0.16.5.md`; chris: "let's cut this release"). Major lines from, the L16 right-aligned rule (ADR-019 amended) and the Homebrew cask (ADR-025) shipped as `v0.16.6` 2026-11-23 (notes `docs/arcs/v1/release-notes/v0.16.6.md`; chris: "let's bundle all these changes into a release, pre-16b"). Next: 16b, `v0.16.7`, once chris's starters are ready. They ship with chris's new features (asked before the
+  planning starters) as `v0.16.5`; 16b becomes `v0.16.7`; its lead's prompt is
   `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md` (`docs/arcs/v1/README.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
