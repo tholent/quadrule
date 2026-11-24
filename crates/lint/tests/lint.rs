@@ -63,6 +63,7 @@ fn line(id: u128, frame: Frame, style: Style) -> Object {
         overrides: Default::default(),
         free_placement: false,
         full_bleed: false,
+        show_in_basic: false,
         kind: ObjectKind::Line(Line::default()),
         extra: Extra::new(),
     }

@@ -79,6 +79,7 @@ fn obj(id: u128, frame: Frame, style: Style, kind: ObjectKind) -> Object {
         overrides: Default::default(),
         free_placement: false,
         full_bleed: false,
+        show_in_basic: false,
         kind,
         extra: Extra::new(),
     }

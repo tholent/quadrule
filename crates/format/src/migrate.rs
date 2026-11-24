@@ -44,6 +44,7 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.17.0", "0.18.0", v0_17_to_v0_18),
     ("0.18.0", "0.19.0", v0_18_to_v0_19),
     ("0.19.0", "0.20.0", v0_19_to_v0_20),
+    ("0.20.0", "0.21.0", v0_20_to_v0_21),
 ];
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
@@ -217,6 +218,13 @@ fn v0_18_to_v0_19(_scene: &mut Value) -> Result<(), FormatError> {
 /// rhythm origin, as every region did, so a 0.19 scene needs no rewriting and draws and exports as it did. A 0.19
 /// build keeps them as unknown fields on a save and counts from the rhythm origin.
 fn v0_19_to_v0_20(_scene: &mut Value) -> Result<(), FormatError> {
+    Ok(())
+}
+
+/// 0.21 adds an optional `show_in_basic` on an object and an optional `basic` (margins, rhythm, title) on the page
+/// (ADR-026: what the Basic tab lists). Both are off when missing and left out of a file when off, so a 0.20 scene
+/// needs no rewriting and draws and exports as it did. A 0.20 build keeps them as unknown fields on a save.
+fn v0_20_to_v0_21(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
 }
 

@@ -83,6 +83,7 @@ fn object(
         overrides: Default::default(),
         free_placement: false,
         full_bleed: false,
+        show_in_basic: false,
         kind,
         extra: Extra::new(),
     }
@@ -166,6 +167,7 @@ pub fn slice_document() -> Document {
             margins_mm: Margins::all(margin),
             orientation: Default::default(),
             fonts: Default::default(),
+            basic: Default::default(),
             extra: Extra::new(),
         },
         rhythm: Rhythm {

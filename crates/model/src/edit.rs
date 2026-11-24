@@ -1765,6 +1765,7 @@ pub fn group(doc: &Document, ids: &[Uuid], new_id: Uuid, name: &str) -> Result<C
         overrides: Default::default(),
         free_placement: false,
         full_bleed: false,
+        show_in_basic: false,
         kind: ObjectKind::Group(GroupShape::default()),
         extra: crate::Extra::new(),
     };
@@ -1797,6 +1798,7 @@ fn container_object(id: Uuid, name: &str, frame: Frame, kind: ObjectKind) -> Obj
         overrides: Default::default(),
         free_placement: false,
         full_bleed: false,
+        show_in_basic: false,
         kind,
         extra: crate::Extra::new(),
     }

@@ -231,9 +231,40 @@ pub struct PageSettings {
     /// saved outlines (format 0.13; rung 12a). Left out of a file when it holds the defaults.
     #[serde(default, skip_serializing_if = "FontSettings::is_default")]
     pub fonts: FontSettings,
+    /// Which of the page's own settings the Basic tab lists (format 0.21, ADR-026). Left out of a file when none is.
+    #[serde(default, skip_serializing_if = "BasicPage::is_default")]
+    pub basic: BasicPage,
     /// Fields from newer versions.
     #[serde(flatten)]
     pub extra: Extra,
+}
+
+/// The page's own settings that are marked **Show in Basic** (format 0.21, ADR-026; rung 16b, Q5): the Basic tab lists
+/// each marked one with its main settings, and every setting stays in the Page tab too. Nothing changes on any
+/// device: a mark is only about what the inspector shows first. Each mark is left out of a file when off.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct BasicPage {
+    /// The page's margins.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub margins: bool,
+    /// The page's rhythm: its spacing.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub rhythm: bool,
+    /// The page's title.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub title: bool,
+}
+
+impl BasicPage {
+    /// Whether nothing is marked; used to leave the field out of a file when so.
+    pub fn is_default(&self) -> bool {
+        !(self.margins || self.rhythm || self.title)
+    }
+
+    /// Whether anything on the page is marked.
+    pub fn any(&self) -> bool {
+        !self.is_default()
+    }
 }
 
 /// Which way the page is held (format 0.8).
@@ -475,6 +506,11 @@ pub struct Object {
     /// changes. A file without it reads as off.
     #[serde(default, skip_serializing_if = "is_false")]
     pub full_bleed: bool,
+    /// Marked **Show in Basic** (format 0.21, ADR-026; rung 16b, Q5): the Basic tab lists the object, with its main
+    /// settings. Nothing else changes, and the object's settings stay in the other tabs too. A file without it
+    /// reads as off, and a file writes it only when on.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub show_in_basic: bool,
     /// What the object is.
     pub kind: ObjectKind,
     /// Fields from newer versions.

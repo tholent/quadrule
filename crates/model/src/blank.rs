@@ -132,6 +132,7 @@ pub fn blank_document(
             margins_mm: margins,
             orientation: Default::default(),
             fonts: Default::default(),
+            basic: Default::default(),
             extra: Extra::new(),
         },
         rhythm: Rhythm {
