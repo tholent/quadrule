@@ -195,6 +195,10 @@ edits them by hand: `cargo xtask starters` (or `make starters`) writes every one
 - **Adding or changing a starter:** write or edit its function there, run `cargo xtask starters`, look at the two pages it
   draws (the goldens below), and commit the files. Frames are written in Nomad pixels through constraints, so a page
   adapts to any tablet; the comments on each function say where its frame edges fall on the rhythm of both tablets.
+- **The form pages** (meeting and lecture notes, daily planner, to-do list, habit tracker, index, storyboard,
+  handwriting practice) share one lattice: a rhythm step of 86 px counted from the margin box's corner, and margins that
+  make the margin box a whole number of steps on both tablets, so every edge kept from the top, bottom, left or right
+  falls on a rhythm line on both. The comment above `meeting_notes` in the generator works it out.
 - **A format change** re-makes them all: `crates/xtask/tests/starters.rs` fails while any checked-in starter differs from
   what the generator writes now, and `cargo xtask starters --check` says which.
 - **The same test file** lints every starter on both tablets and finds nothing (ADR-021, item 1), and checks the names,

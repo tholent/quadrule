@@ -413,3 +413,25 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   `crates/ui/tests/gallery.rs`, `crates/ui/tests/welcome.rs`) and `crates/ui/starters/.gitkeep` can go. (7) The speed run
   on the heaviest starter (ADR-009, 50 ms at the 90th percentile) is not done; it follows leg 3. (8) A third tablet gets
   the same constraints and whatever part rows fall out: chosen only for the Nomad and the Manta.
+
+- Rung 16b leg 3, owed (`crates/xtask/src/starters.rs`): (1) chris's look at the thirteen new starters; every word, spacing,
+  size and layout is the builder's proposal (titles, descriptions, tags, labels and marks are in the log's leg 3 entry): paper
+  (`college-ruled`, `wide-ruled`, `dot-grid`, `blank-with-margins`), notes (`meeting-notes`, `lecture-notes`), planning
+  (`daily-planner`, `to-do-list`), bullet journal (`habit-tracker`, `index`), creative (`storyboard`, `music-staff`,
+  `handwriting-practice`). (2) The eight form pages (everything but the paper four and the staff) use a rhythm step of 86 px
+  (7.28 mm) from the margin box's corner and margins of 13.7 mm top and bottom and 12.1 mm at the sides, not chris's 6.35 mm and
+  12.7 mm: it is the one step that puts every edge on a rhythm line on both tablets (the Manta is 8 steps taller and 6 wider).
+  chris may prefer his step and accept part rows at a border on one tablet. (3) The habit tracker is a landscape page (a
+  portrait Nomad cannot hold 31 columns a writable width wide beside the names): its cells are 38 px (3.2 mm), its day grid
+  has its own spacing and is kept from the right edge, so the Manta's extra width goes to the names column (about 90 mm
+  there) and the rhythm's spacing in Basic does not move the grid; the day numbers (6.5 pt, Label gray) are Free placement.
+  (4) The tick boxes of the meeting notes, daily planner and to-do list are one-column Grid regions on the rhythm; the
+  meeting notes' action items and the planner's hour labels are fixed in count (the Manta shows its extra rows empty
+  under 22:00 and its taller notes area). (5) `blank-with-margins`: the box is a Rect 12.7 mm in from each edge, Free
+  placement; it does not follow the page's margins if they are changed. (6) `handwriting-practice` is a repeat of an 86 px
+  piece of four lines (the app's ruled pattern cannot draw a dashed line), so it has no rhythm lines of its own; the dash
+  is 22 px and gap 21 so it runs on across the joins. (7) `storyboard` is a repeat of a 516 by 290 px frame (16:9 to
+  0.1 %) over two ruled rows, 2 by 3 on the Nomad and 2 by 4 on the Manta, centred. (8) Labels are 9 pt in Atkinson
+  Hyperlegible Next, weight 600, Label role (gray 153): light on e-ink. (9) The look on a screen and the gallery tile of the
+  landscape habit tracker (drawn for the welcome screen) were not seen: this computer has no screen. (10) The speed run on the
+  heaviest starter (ADR-009) is still not done; `author` and `license` are empty as before.

@@ -65,7 +65,7 @@ and error.
   (the last ten opened or saved; one that has gone from the disk is greyed "Not found") and a small "Open sample page"
   link. On its right: tabs (All, Paper, Notes, Planning, Bullet journal, Creative, My templates), a Device filter and a
   Search box, over tiles drawn live for the chosen device (a page that does not target that device is drawn on its own
-  main device, and its tile says so). The starter pages are coming; until then the tabs say so. Dropping a `.quad` on it opens it.
+  main device, and its tile says so). Twenty starter pages ship (ruled and dotted papers, grids, notes, planners, a to-do list, bullet-journal pages, a storyboard, staff paper and handwriting practice); the calendars are still to come. Dropping a `.quad` on it opens it.
 - **My templates**: File ▸ Save as template… keeps a copy of the page under My templates (a `templates` folder beside
   the autosave recovery folder in the app's data folder). Picking one opens an untitled copy on the Device filter's
   device; right-click a template to Remove it (it asks first, and removing cannot be undone) or Show in folder.
@@ -217,7 +217,7 @@ and error.
   A repeat draws at most 5,000 copies. The linter judges every copy for the safe areas and the page edge (one finding
   per repeat) and the pitch for the rhythm. The repeat page opens from the command line with `--repeats-page`.
 
-Not yet: the starter gallery and wallpapers. The plan is in the design spec,
+Not yet: the calendar starters and wallpapers. The plan is in the design spec,
 `napkins/quadrule-spec.md` §16. Day-to-day progress is in [STATUS.md](STATUS.md).
 
 ## Download

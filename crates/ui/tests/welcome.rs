@@ -145,16 +145,16 @@ fn the_welcome_screen_has_its_frame_and_every_tab_says_what_is_in_it() {
         .iter()
         .all(|l| has(&h, l));
     let recent_none = has_part(&h, "Files you open or save are listed here");
-    // Starters ship now (rung 16b leg 2): All and the tabs that have some list them; a tab with none (Planning and
-    // Creative, until leg 3) says they are coming (Q5); My templates says how to fill it.
+    // Starters ship now (rung 16b legs 2 and 3): All and every tab list theirs, so none says "coming soon" (Q5);
+    // My templates says how to fill it.
     let soon_all = !has_part(&h, "Starter pages are coming soon") && has_part(&h, "Rapid log");
     let mut soon = true;
     for (tab, shows) in [
         ("Paper", Some("Square grid")),
         ("Notes", Some("Cornell notes")),
-        ("Planning", None),
+        ("Planning", Some("Daily planner")),
         ("Bullet journal", Some("Rapid log")),
-        ("Creative", None),
+        ("Creative", Some("Storyboard")),
     ] {
         h.get_by_label(tab).click();
         h.run();
@@ -190,7 +190,7 @@ fn the_welcome_screen_has_its_frame_and_every_tab_says_what_is_in_it() {
         && !h.state().ui.welcome_showing();
     let ok = left && right && recent_none && soon_all && soon && mine && bar && asked && sample;
     println!(
-        "CHECK crate=ui name=welcome_frame result={} left_column={left} right_side={right} recent_empty_line={recent_none} all_lists_starters={soon_all} tabs_with_starters_list_them_and_empty_tabs_say_soon={soon} my_templates_line={mine} bar_has_file_only={bar} open_asks_dialog={asked} sample_link={sample}",
+        "CHECK crate=ui name=welcome_frame result={} left_column={left} right_side={right} recent_empty_line={recent_none} all_lists_starters={soon_all} every_tab_lists_its_starters_none_says_soon={soon} my_templates_line={mine} bar_has_file_only={bar} open_asks_dialog={asked} sample_link={sample}",
         pass(ok)
     );
     assert!(ok);
@@ -545,7 +545,7 @@ fn a_template_is_removed_after_a_confirm_that_says_so_and_search_looks_through_e
     let t = dir.join("templates");
     let mut v = Viewer::default();
     v.templates_dir = Some(t.clone());
-    for title in ["Dot grid", "Weekly planner"] {
+    for title in ["Pocket dots", "Weekly planner"] {
         v.open_new(&NewPage {
             title: title.into(),
             device_id: MANTA_ID.into(),
@@ -558,14 +558,14 @@ fn a_template_is_removed_after_a_confirm_that_says_so_and_search_looks_through_e
     v.close_document();
     let mut h = harness(v);
     // All lists the templates too; search narrows by name, ignoring case, and looks through every tab.
-    let both = has(&h, "Dot grid") && has(&h, "Weekly planner");
+    let both = has(&h, "Pocket dots") && has(&h, "Weekly planner");
     h.get_by_label("Paper").click();
     h.run();
-    let paper_empty = !has(&h, "Dot grid");
+    let paper_empty = !has(&h, "Pocket dots");
     h.get_by_label("Search").click();
     h.get_by_label("Search").type_text("PLANNER");
     h.run();
-    let found = has(&h, "Weekly planner") && !has(&h, "Dot grid");
+    let found = has(&h, "Weekly planner") && !has(&h, "Pocket dots");
     h.get_by_label("Search").type_text("zzz");
     h.run();
     let none = has_part(&h, "Nothing matches");
@@ -574,7 +574,7 @@ fn a_template_is_removed_after_a_confirm_that_says_so_and_search_looks_through_e
     h.get_by_label("My templates").click();
     h.run();
     // Right-click: Remove asks first, in words that say it cannot be undone; Cancel keeps the file.
-    h.get_by_label("Dot grid").click_secondary();
+    h.get_by_label("Pocket dots").click_secondary();
     h.run();
     let menu = has(&h, "Remove") && has(&h, "Show in folder");
     h.get_by_label("Show in folder").click();
@@ -583,14 +583,14 @@ fn a_template_is_removed_after_a_confirm_that_says_so_and_search_looks_through_e
         .state()
         .requests
         .contains(&Request::RevealFolder(t.clone()));
-    h.get_by_label("Dot grid").click_secondary();
+    h.get_by_label("Pocket dots").click_secondary();
     h.run();
     h.get_by_label("Remove").click();
     h.run();
     let confirm = h.state().ui.welcome_question_open() && has_part(&h, "cannot be undone");
     press(&mut h, "Cancel");
-    let kept = t.join("dot-grid.quad").is_file() && has(&h, "Dot grid");
-    h.get_by_label("Dot grid").click_secondary();
+    let kept = t.join("pocket-dots.quad").is_file() && has(&h, "Pocket dots");
+    h.get_by_label("Pocket dots").click_secondary();
     h.run();
     h.get_by_label("Remove").click();
     h.run();
@@ -598,8 +598,9 @@ fn a_template_is_removed_after_a_confirm_that_says_so_and_search_looks_through_e
     h.run();
     h.get_all_by_label("Remove").last().unwrap().click();
     h.run();
-    let gone =
-        !t.join("dot-grid.quad").exists() && !has(&h, "Dot grid") && has(&h, "Weekly planner");
+    let gone = !t.join("pocket-dots.quad").exists()
+        && !has(&h, "Pocket dots")
+        && has(&h, "Weekly planner");
     let ok = both && paper_empty && found && none && menu && reveal && confirm && kept && gone;
     println!(
         "CHECK crate=ui name=my_templates_remove_and_search result={} all_lists_templates={both} paper_tab_empty={paper_empty} search_by_name={found} search_none_says_so={none} right_click_menu={menu} show_in_folder_asks_app={reveal} confirm_says_cannot_undo={confirm} cancel_keeps={kept} remove_deletes={gone}",

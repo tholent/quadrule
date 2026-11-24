@@ -3201,3 +3201,51 @@ VM cannot build the macOS parts.
 - `make check-all`: `TESTS scope=workspace checks=847 check_fail=0 passed=779 failed=0 status=ok runner=nextest`.
 - Not done: the look on a screen (this computer has none; the goldens were read as images); the speed run on the
   heaviest starter (after leg 3).
+
+## 2026-11-24 — Rung 16b leg 3: thirteen starters (builder)
+
+- Builder (Sonnet 5.5, high) for leg 3 of rung 16b (`docs/bbq/2026-11-24-rung-16b-starters.md`: Q1, Q4 and Defaulted 1, 2, 4,
+  7, 8, 9), on `main`, not pushed. chris's rulings: "Non-calendar ones now" (Q1), "Builder, from yours" (Q4). Everything below
+  (spacings, words, sizes, layouts) is the builder's proposal for chris's look.
+- **The thirteen** (slug, title, rhythm, what is on the page, Show in Basic; the page's margins, spacing and title are marked on all):
+  - `paper/college-ruled` "College ruled": 9/32 in (84 px), lines and a Margin line at the first column; marks Lines, Margin.
+  - `paper/wide-ruled` "Wide ruled": 11/32 in (103 px), the same; marks Lines, Margin.
+  - `paper/dot-grid` "Dot grid": 5 mm (59 px) dots across the margin box from y 100 down; marks Dots.
+  - `paper/blank-with-margins` "Blank with margins": a Whisper Rect on the margin box (Free placement); marks Margin box.
+  - `notes/meeting-notes` "Meeting notes": header of four ruled rows (Meeting, Date, Attendees), Notes area, Action items box
+    (tick boxes, Owner column); marks Notes, Action items.
+  - `notes/lecture-notes` "Lecture notes": header (Course, Date, Topic), ruled lines, Margin line at column 5, labels Keywords and
+    Notes; marks Lines, Margin.
+  - `planning/daily-planner` "Daily planner": Schedule column (6:00 to 22:00) beside To do (nine tick boxes) over Notes; marks
+    Schedule, To do.
+  - `planning/to-do-list` "To-do list": header row "To do", ruled rows, a column of tick boxes; marks Rows, Tick boxes.
+  - `bullet-journal/habit-tracker` "Habit tracker": landscape, Habit column and 31 day columns numbered 1 to 31; marks Habits, Days.
+  - `bullet-journal/index` "Index": Topic and Page columns, ruled, header rule; marks Rows, Page divider.
+  - `creative/storyboard` "Storyboard": repeat of a 516 by 290 px frame over two ruled rows (2 by 3 Nomad, 2 by 4 Manta); marks Frames.
+  - `creative/music-staff` "Music staff": the MusicStaff pattern, a staff every 3 units (0.25 in); marks Staves.
+  - `creative/handwriting-practice` "Handwriting practice": a repeat of four lines (ascender, dashed midline, baseline, descender)
+    in pieces one step wide; marks Rows.
+- **Words:** descriptions and tags are in each function in `crates/xtask/src/starters.rs`; labels are Meeting, Date, Attendees, Notes,
+  Action items, Owner, Course, Topic, Keywords, Schedule, 6:00 to 22:00, To do, Habit, 1 to 31, Topic, Page. No dates, weekday or month names.
+- **The form lattice** (the eight pages with objects on rows): rhythm step 86 px (7.28 mm) from the margin box's corner (not centred),
+  margins 162 px top and bottom and 143 at the sides. The Manta is 688 px taller and 516 px wider than the Nomad, both whole steps, so a
+  frame kept from any edge falls on a rhythm line on both tablets (no part row at a border, text baselines on the same rows as the
+  ruling) and L18 is quiet. The sum is in the generator's comment above `meeting_notes`. The three paper pages and the staff keep
+  chris's centred rhythm and his habit of a page-wide ruling and a Scale margin line.
+- **What the app cannot draw, and what was built instead:** a dashed line in a pattern (handwriting practice): a repeat of
+  one-step pieces of four lines with a Custom dash of 22 px and a gap of 21 (two periods a piece, so it runs on across the joins).
+  31 columns on a portrait Nomad: the habit tracker is landscape (it is exported turned a quarter turn, as any landscape page).
+  The tick boxes are one-column Grid regions on the rhythm. No new drawing feature and no format change.
+- **Judgement calls:** the labels are 9 pt Atkinson Hyperlegible Next, weight 600, Label role, standing a small gap above the rhythm line
+  (the Baselines setting); the day numbers are 6.5 pt (the linter's smallest is 6) and Free placement; the header and action boxes have
+  Structure borders on their top and bottom only (open ends) so labels sit at the margin; the blank page's box is Free placement.
+- **Tests and goldens:** `crates/xtask/tests/starters.rs` covers the new files unchanged (twenty starters lint with no finding on both
+  tablets, are named, marked, constrained and match the generator). `crates/render/tests/starters.rs`: twenty-six lines appended to
+  `SHA256SUMS` (80 in all; the first 54 are byte for byte as they were). Each golden was read as an image. `gallery.rs` and
+  `welcome.rs` now list the twenty titles and no tab says "coming soon"; `crates/ui/starters/.gitkeep` is removed.
+- Docs: `README.md` (starters ship), `DEVELOPMENT.md` (the form pages), the debt file's "Rung 16b leg 3, owed".
+- `welcome.rs`'s My templates test used a template titled "Dot grid", which now collides with the starter of that name; its two
+  templates are now "Pocket dots" and "Weekly planner".
+- `make check-all`: `TESTS scope=workspace checks=873 check_fail=0 passed=779 failed=0 status=ok runner=nextest`.
+- Not done: the look on a screen (this computer has none; the goldens were read as images, and the landscape habit tracker was
+  read turned a quarter turn, as it is exported); the speed run on the heaviest starter.
