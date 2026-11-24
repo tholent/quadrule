@@ -57,6 +57,7 @@ pub mod settings;
 pub mod starters;
 pub mod strip;
 pub mod swatches;
+pub mod tab_icons;
 pub mod templates;
 pub mod test_starters;
 pub mod thumbs;

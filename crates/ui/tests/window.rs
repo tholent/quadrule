@@ -88,7 +88,9 @@ fn empty_start_then_sample() {
     // checked (left, right and top; chris, 2026-11-10: the floating one "isn't desired"); it had seven with the floating
     // toolbar's two notes too.
     let count = h.query_all_by_label("⚠ 5").count() == 2;
-    let panel = h.query_by_label("Lint (5)").is_some();
+    let panel = h
+        .query_by_role_and_label(egui::Role::Button, "Lint (5)")
+        .is_some();
     let gone = !h.state().ui.welcome_showing() && h.query_by_label("+ Blank page").is_none();
     let ok = empty && opened && count && panel && gone;
     println!(
@@ -157,7 +159,8 @@ fn findings_zoom_and_theme() {
     h.run();
     // Clicking a finding selects it, for the outline on the page (Q6). Findings are on the
     // inspector's Lint tab (rung 3 bbq Q8).
-    h.get_by_label("Lint (5)").click();
+    h.get_by_role_and_label(egui::Role::Button, "Lint (5)")
+        .click();
     h.run();
     // The list now stands under a device picker and each row has its buttons (rung 14b), so the row is scrolled
     // into view first, and the pointer arrives on it as a hand's does.
@@ -265,7 +268,8 @@ fn select_in_layers_and_edit_in_the_inspector() {
     // The Basic tab is first in the inspector (ADR-026), so the Page tab, which a selection hides, falls back to it;
     // the Arrange tab is one press away.
     let falls_back_to_basic = h.state().ui.tab == Tab::Basic;
-    h.get_by_label("Arrange").click();
+    h.get_by_role_and_label(egui::Role::Button, "Arrange")
+        .click();
     h.run();
     let arrange = falls_back_to_basic && h.state().ui.tab == Tab::Arrange;
     let x0 = x_of(&h, ids::RULE);
@@ -464,7 +468,7 @@ fn layers_sit_under_the_inspector_on_the_right() {
     h.get_by_label("Open sample page").click();
     h.run();
     let layers = h.get_by_label("Layers").rect();
-    let page_tab = h.get_by_label("Page").rect();
+    let page_tab = h.get_by_role_and_label(egui::Role::Button, "Page").rect();
     let canvas_mid = 1280.0 / 2.0;
     let right = layers.min.x > canvas_mid && page_tab.min.x > canvas_mid;
     let below = layers.min.y > page_tab.max.y;

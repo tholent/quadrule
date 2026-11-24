@@ -479,11 +479,16 @@ fn the_overrides_tab_and_the_devices_list_are_named_controls() {
     // With the Manta on screen an object has no Overrides tab.
     h.state_mut().viewer.selection = vec![device_ids::SIZED];
     h.run();
-    let none_on_primary = h.query_by_label("Overrides").is_none();
+    let none_on_primary = h
+        .query_by_role_and_label(egui::Role::Button, "Overrides")
+        .is_none();
     h.get_by_label("Show Nomad").click();
     h.run();
-    let tab = h.query_by_label("Overrides").is_some();
-    h.get_by_label("Overrides").click();
+    let tab = h
+        .query_by_role_and_label(egui::Role::Button, "Overrides")
+        .is_some();
+    h.get_by_role_and_label(egui::Role::Button, "Overrides")
+        .click();
     h.run();
     let rows = h.query_by_label("Reset Position on Nomad").is_some()
         && h.query_by_label("Reset Size on Nomad").is_some();
@@ -513,7 +518,8 @@ fn the_overrides_tab_and_the_devices_list_are_named_controls() {
     // The Arrange tab's fields carry the dot, named "Changed on Nomad", for an overridden value.
     h.state_mut().viewer.selection = vec![device_ids::MOVED];
     h.run();
-    h.get_by_label("Arrange").click();
+    h.get_by_role_and_label(egui::Role::Button, "Arrange")
+        .click();
     h.run();
     // The layers row and both position fields carry one.
     let dot = h.query_all_by_label("Changed on Nomad").count() >= 3;

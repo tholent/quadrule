@@ -559,8 +559,8 @@ impl ViewerUi {
             .is_some_and(|o| matches!(o.kind, ObjectKind::Text(_)));
         let mut tabs = if has_selection {
             vec![
-                (Tab::Arrange, self.t("app-tab-arrange")),
                 (Tab::Style, self.t("app-tab-style")),
+                (Tab::Arrange, self.t("app-tab-arrange")),
             ]
         } else {
             vec![(Tab::Page, self.t("app-tab-page"))]
@@ -592,16 +592,22 @@ impl ViewerUi {
         if !tabs.iter().any(|(t, _)| *t == self.tab) {
             self.tab = tabs[0].0;
         }
+        // One row of line icons, each named on hover and to screen readers; Lint keeps its count beside its
+        // icon, and the open tab's name stands under the row (rung 17 bbq, Q8 and Defaulted 3).
+        let open_name = tabs
+            .iter()
+            .find(|(t, _)| *t == self.tab)
+            .map(|(_, n)| n.clone())
+            .unwrap_or_default();
         ui.horizontal_wrapped(|ui| {
             for (t, label) in &tabs {
-                if ui
-                    .add(egui::Button::selectable(self.tab == *t, label))
-                    .clicked()
-                {
+                let count = (*t == Tab::Lint).then_some(count);
+                if self.tab_icon_button(ui, *t, label, self.tab == *t, count) {
                     self.tab = *t;
                 }
             }
         });
+        ui.label(RichText::new(open_name).small().strong());
         ui.separator();
         if self.tab != Tab::Lint && self.viewer.profile_id != self.primary_id() {
             let device = self.device_name(&self.viewer.profile_id.clone());

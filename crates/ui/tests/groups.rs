@@ -675,7 +675,9 @@ fn the_inspector_for_a_group_and_the_new_controls_are_named() {
         h.query_all_by_label("Group").count() >= 2 && h.query_all_by_label("Ungroup").count() >= 2;
     // A group has no Constraints tab; its child has the normal one, against the page, with no note
     // about the group (groups are see-through to constraints).
-    let no_tab = h.query_by_label("Constraints").is_none();
+    let no_tab = h
+        .query_by_role_and_label(egui::Role::Button, "Constraints")
+        .is_none();
     {
         let v = &mut h.state_mut().ui.viewer;
         v.selection = vec![group_ids::PINNED_CHILD];
@@ -683,8 +685,10 @@ fn the_inspector_for_a_group_and_the_new_controls_are_named() {
     h.state_mut().ui.tab = Tab::Constraints;
     h.run();
     h.run();
-    let child_tab =
-        h.query_by_label("Constraints").is_some() && h.query_by_label("Horizontal").is_some();
+    let child_tab = h
+        .query_by_role_and_label(egui::Role::Button, "Constraints")
+        .is_some()
+        && h.query_by_label("Horizontal").is_some();
     let no_note = h.query_by_label_contains("work against").is_none();
     let ok = opacity_only && rotation && buttons && no_tab && child_tab && no_note;
     println!(
