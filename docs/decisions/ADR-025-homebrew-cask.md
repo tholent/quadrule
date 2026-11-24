@@ -5,9 +5,8 @@ ratified-by: chris
 ratified-on: "2026-11-23"
 owner: chris
 kind: process
-built: partial
-proof: ".github/workflows/release.yml"
-owed: "the tap repository tholent/homebrew-tap with quadrule's cask, and the HOMEBREW_TAP_DEPLOY_KEY secret (docs/STATUS-debt.md, ADR-025)"
+built: landed
+proof: "`.github/workflows/release.yml` (job \"Homebrew tap\"), and tholent/homebrew-tap run 45370416264: style, audit and install of quadrule 0.16.6 passed"
 supersedes: nothing
 amends: nothing
 ---
@@ -116,3 +115,9 @@ tholent/tap/quadrule` opening the app on chris's Mac.
   name, he chose "tholent/homebrew-tap (Recommended)"). The quadrule-only tap is kept as an overruled alternative.
 - 2026-11-23: ratified by chris ("ratify 025"). Earlier values, word for word: `status: proposed`;
   `status-note: drafted 2026-11-23 from chris's answers (\"Mac app cask\", \"New repo tholent/homebrew-quadrule\", \"Leave it, print steps\"), the tap renamed by his \"tholent/homebrew-tap\"; awaiting ratification`.
+- 2026-11-24: landed. chris added the `HOMEBREW_TAP_DEPLOY_KEY` secret; the release job's tap step pushed quadrule
+  0.16.6 to the tap. The tap's audit then needed two fixes (livecheck keeping pre-releases in
+  `packaging/homebrew/quadrule.rb`; the tap's `audit_exceptions/github_prerelease_allowlist.json`), and its check now
+  caches Homebrew's gems and downloads; tholent/homebrew-tap run 45370416264 passed style, audit, install and
+  uninstall (`docs/STATUS-log.md`). Earlier values, word for word: `built: partial`; `proof: ".github/workflows/release.yml"`;
+  `owed: "the tap repository tholent/homebrew-tap with quadrule's cask, and the HOMEBREW_TAP_DEPLOY_KEY secret (docs/STATUS-debt.md, ADR-025)"`.

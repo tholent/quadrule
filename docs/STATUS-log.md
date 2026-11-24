@@ -3111,3 +3111,7 @@ VM cannot build the macOS parts.
   `Homebrew/actions/setup-homebrew` (checkout, tap, trust) with caches for Homebrew's gems and downloads, pinned as
   `brew tap-new`'s template pins them. The tap commit is made but not pushed: the token lacks the `workflow` scope
   GitHub needs to change a workflow file, so chris pushes it.
+- chris gave the token the Workflows permission on the tap ("permissions updated"); the tap commit `92f02b7` pushed.
+  Tap check run 45370416264 passed: style, audit, `CASK name=quadrule install=ok uninstall=ok`; caches saved
+  (`macOS-rubygems-…` 37.71 MiB, `macOS-downloads-…` 63.19 MiB; `gh cache list -R tholent/homebrew-tap`). ADR-025 is
+  landed; its debt item is paid and removed.
