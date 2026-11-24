@@ -1,6 +1,6 @@
 # STATUS — quadrule
 
-_Last updated: 2026-11-23_
+_Last updated: 2026-11-24_
 
 The project's live state. Update it when work lands. Every claim cites at least one file that exists.
 
@@ -297,6 +297,14 @@ The project's live state. Update it when work lands. Every claim cites at least 
   grids alone) is ratified too; all three are built (format 0.19.0) and wait for chris's look; the calendar pattern and the mini calendar are built and approved, the Full bleed tick's look too (chris 2026-11-23); shipped as `v0.16.5` 2026-11-23 (notes `docs/arcs/v1/release-notes/v0.16.5.md`; chris: "let's cut this release"). Major lines from, the L16 right-aligned rule (ADR-019 amended) and the Homebrew cask (ADR-025) shipped as `v0.16.6` 2026-11-23 (notes `docs/arcs/v1/release-notes/v0.16.6.md`; chris: "let's bundle all these changes into a release, pre-16b"). Next: 16b, `v0.16.7`, once chris's starters are ready. They ship with chris's new features (asked before the
   planning starters) as `v0.16.5`; 16b becomes `v0.16.7`; its lead's prompt is
   `docs/arcs/v1/rung-16b-PROMPT-2026-11-18.md` (`docs/arcs/v1/README.md`).
+  **Rung 16b is built and waits for chris's look** (2026-11-24; bbq `docs/bbq/2026-11-24-rung-16b-starters.md`, 8
+  questions). Calendars are on hold (chris: "Calendar starters are proving more difficult than anticipated, so let's put
+  them on hold for now"), so the weekly spreads, monthly calendar and future log wait. Leg 1: the Basic section behind
+  `--basic-section`, file format 0.21.0, ADR-026 proposed. Leg 2: `cargo xtask starters` writes every starter; chris's
+  seven made with constraints in place of his Manta overrides. Leg 3: thirteen more. 20 starters in
+  `crates/ui/starters/`, each lint clean on both tablets and golden-tested (80 golden lines, the first 40 unchanged;
+  `crates/xtask/tests/starters.rs`, `crates/render/tests/starters.rs`). Not done: the speed run (needs a window; judged
+  on the Pi, ADR-009). After the look: `v0.16.7`.
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1

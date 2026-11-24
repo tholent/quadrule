@@ -3249,3 +3249,20 @@ VM cannot build the macOS parts.
 - `make check-all`: `TESTS scope=workspace checks=873 check_fail=0 passed=779 failed=0 status=ok runner=nextest`.
 - Not done: the look on a screen (this computer has none; the goldens were read as images, and the landscape habit tracker was
   read turned a quarter turn, as it is exported); the speed run on the heaviest starter.
+
+## 2026-11-24 — Rung 16b: kickoff, three legs, waits for chris's look (lead)
+
+- chris, word for word: "I have updated the starters and they all pass lint checks. Calendar starters are proving more
+  difficult than anticipated, so let's put them on hold for now. Please check `~/starters-draft` for the updated quad
+  files. Check them out and ensure they conform and then kick off rung 16b". Build proof at start:
+  `BUILD head=5c1f3cb dirty=no rebuilt=0 target_gb=38.5`.
+- Review of chris's seven (`docs/bbq/2026-11-24-rung-16b-starters.md`): all lint clean (`xtask lint` → `0 finding(s) on
+  2 profile(s)` each); gaps were layer and object names, hand-set Manta overrides, file names and looks. Originals kept
+  in `docs/arcs/v1/starters-from-chris/2026-11-24/`.
+- Budget: 20 points, alone on the Saturday meter, from 27 %; readings 32 % (11:52 UTC) and 34 % (12:19 UTC), chris's.
+- bbq, 8 questions, all on the recommended option (record above). Builders: Sonnet 5.5 high, one per leg, each checked
+  by the lead (diff, golden pictures, a fresh `make check-all`) before the push. Leg 1 `11ad235`
+  (`TESTS ... checks=826 check_fail=0 passed=772 failed=0 status=ok`); leg 2 `37920c2` (`checks=847 ... passed=779
+  failed=0 status=ok`); leg 3 `2b40ef6` (`checks=873 ... passed=779 failed=0 status=ok`, the builder's run on its final
+  commit).
+- Not run: the ADR-009 speed run; this machine has no display (`DISPLAY` and `WAYLAND_DISPLAY` empty, 2026-11-24).
