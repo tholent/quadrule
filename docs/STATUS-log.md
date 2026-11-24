@@ -3119,3 +3119,32 @@ VM cannot build the macOS parts.
   states that you cannot use compound git commands". ADR-024 amended (the local tag-push rule until v1.0, reviewed at
   the v1.0 switch); `AGENTS.md` gains, under Run and delegate, "Run each git command as a shell call of its own"
   with chris's words. adr-check: 25 ADRs, 0 failures.
+
+## 2026-11-24 — Rung 16b leg 1: the Basic section (builder)
+
+- Builder (Sonnet 5.5, high) for leg 1 of rung 16b (`docs/bbq/2026-11-24-rung-16b-starters.md`, Q5 and Defaulted 6, 7
+  and 9), on `main`, not pushed: the lead pushes after review. chris's rule (Q5, "Switch per element"): each object, and
+  the page's margins, rhythm and title, gets a **Show in Basic** switch; a **Basic** tab, first in the inspector, lists
+  what is marked with its main settings; every setting stays in the other tabs too.
+- **Fixtures first** (`4ecbe66`): `crates/render/tests/fixtures/v0.20/` holds the major-lines-from, major-lines-per-axis
+  and calendar pages saved by the 0.20.0 build before any change, with the sha256 of each device's export, equal to
+  those pages' golden lines.
+- **Format 0.21.0** (`3c3ad0a`): `Object::show_in_basic` and `PageSettings::basic` (`BasicPage`: margins, rhythm,
+  title), each off by default and left out of a file when off. The 0.20 to 0.21 step rewrites nothing. The 0.20
+  fixtures open and export the same bytes (`crates/render/tests/migrate_v020.rs`), a resave writes no mark, and a file
+  with marks round-trips (`crates/format/tests/basic_marks.rs`). Every `migrate_v*.rs` test that names the current
+  version now says 0.21.0, and `newer_minor_file_keeps_its_version` uses 0.22.0 as the "newer" one.
+- **The section** behind `--basic-section` (`crates/ui/src/basic.rs`, `crates/ui/tests/basic.rs`): the Basic tab is
+  first in the inspector and shows with nothing selected; each marked item is listed by name with the other tabs' own
+  widgets, which were pulled out of `panels.rs` into helpers (`title_row`, `margins_rows`, `rhythm_link`,
+  `rhythm_unit_rows`, `pattern_kind_rows`, `pattern_spacing_rows`, `pattern_major_rows`, `stroke_rows`,
+  `text_content_field`) and called by both tabs, so nothing was copied. The Style and Page tabs read and edit as
+  before. The object's own widgets act on the selection, so the Basic tab stands the object in as the selection while
+  they draw and puts the real one back after. The switches: Arrange tab (first row), Page tab (title, Margins heading,
+  Rhythm heading), and a tick on each listed item. `--look basic` marks a sample page and shows the tab;
+  `--basic-section` combines with every other flag (a command-line test has the `--look welcome` case).
+- ADR-026 (proposed) drafted; `docs/decisions/INDEX.md` gains its row; `adr-check`: 26 ADRs, 0 failures.
+- Not touched: the 40 golden lines (`git diff 1ce8f25 -- crates/render/tests/golden/` is empty) and every fixture folder
+  before `v0.20/` (`git diff 1ce8f25 --stat -- crates/render/tests/fixtures/` shows only `v0.20/`).
+- `make check-all`: `TESTS scope=workspace checks=826 check_fail=0 passed=772 failed=0 status=ok runner=nextest`.
+- The look was not seen on a screen (this computer has no display); the headless tests read the widgets and the data.

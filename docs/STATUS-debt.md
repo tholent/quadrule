@@ -389,3 +389,9 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   required on `main`, chris on the bypass list), a CI job that reports the required checks for documents-only pull
   requests, the AGENTS.md amendment closing work on `main`, and `.github/scripts/check-github-rules.sh` checking the
   new rules (`docs/decisions/ADR-024-leave-main-at-v1.md`, `docs/arcs/v1/README.md`, release bar).
+- Rung 16b leg 1, owed (`crates/ui/src/basic.rs`, `docs/decisions/ADR-026-basic-section.md`): chris's look at the Basic
+  tab and the Show in Basic switches, behind `--basic-section` (every word and the places are proposals); then ratify
+  ADR-026 and remove the flag (one field in `ViewerUi`, the `show_switches()` checks in `inspector`, `arrange_tab` and `page_tab`, the `Args` field and
+  option, the `basic` look). The layers panel has no sign for a marked object; the Basic tab has no way to reorder its
+  list (it follows the page); a marked group or repeat lists its name and says the rest is in the other tabs. Legs 2 and 3 (the starters) save each
+  starter with its marks.
