@@ -138,3 +138,20 @@ Built in the same session:
 | The columns row is shown but greyed for Lines and Cornell, which have no major columns | the inspector greys Top on isometric the same way, and the rows stay in one place for every pattern | veto: hide the row instead |
 | A turned ruling's rows and columns are its own (a Lines ruling turned a quarter turn still uses Major rows from) | the turned ruling already counts in its own axes (Built, second call) | veto: rows and columns of the page |
 | A file saved by this unreleased build's first version (a `major_from` field) reads that field as unknown and both axes as Rhythm origin | 0.20.0 never went out; no reader needs it | veto: read `major_from` into both |
+
+## Look, second (2026-11-23)
+
+chris, word for word: "for major lines centered on the column the major line should be right in the middle of the block
+and each set of lines should go off in either direction". Recorded as ADR-023's Amendment — 2026-11-23, chris (second).
+
+Built in the same session: Centre makes the middle line major, the others every Nth line either way from it
+(`major_base`, `crates/layout/src/pattern.rs`), rows and columns alike; isometric's three families meet at the middle
+crossing of the middle major column. Both golden pages re-blessed after a look on both tablets (their Centre cells
+changed; the 36 sums before them unchanged). Tests: `centre_puts_a_major_on_the_middle_line` (9, 13 and 12 lines); with
+the old Centre rule put back, `5 tests run: 1 passed, 4 failed`.
+
+| Call | Why | veto: |
+|---|---|---|
+| Applied to rows as well as columns, though chris said "on the column" | Centre is one word for both settings; a centred row that worked differently from a centred column would be two meanings for one word | veto: rows keep the old Centre |
+| An even number of lines puts the major on the upper (or left) of the two middle lines, the extra line below (or right) | Q4's odd line goes below and right | veto: the lower (or right) one |
+| The isometric test uses a twelve-line region: on nine or eleven, the middle crossing happens to fall on one of the rhythm origin's, so rows from Centre and from Rhythm origin draw alike there | that is right for those sizes, not a fault; the test needs a size where they differ | none |

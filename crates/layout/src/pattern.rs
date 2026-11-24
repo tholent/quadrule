@@ -206,13 +206,14 @@ fn is_major(k: i64, n: Option<u8>) -> bool {
 
 /// The index of a major line among the lines `first..=last` (counted from the grid's origin) of one
 /// axis, with a major every `n` (ADR-023): 0 counts from the rhythm origin; Top makes the first line
-/// major; Centre leaves as many ordinary lines before the first major as after the last, or one more
-/// after when they cannot be equal.
+/// major; Centre makes the middle line major, the others going off every Nth line either way from it,
+/// and with an even number of lines the upper (or left) of the two middle ones, so the extra line is
+/// below (or right) (ADR-023, second amendment of 2026-11-23).
 fn major_base(from: MajorFrom, n: Option<u8>, span: Option<(i64, i64)>) -> i64 {
     match (from, n, span) {
         (MajorFrom::Top, Some(_), Some((first, last))) if first <= last => first,
-        (MajorFrom::Centre, Some(n), Some((first, last))) if first <= last => {
-            first + (last - first).rem_euclid(i64::from(n)) / 2
+        (MajorFrom::Centre, Some(_), Some((first, last))) if first <= last => {
+            first + (last - first) / 2
         }
         _ => 0,
     }
@@ -1113,7 +1114,7 @@ fn isometric_lines(c: &mut Ctx, g: &Grid, half: f64) {
 /// The index of a major line in each slanted family ("/" then "\") of an isometric grid (ADR-023): 0
 /// from the rhythm origin. The majors of the three families meet at one crossing: on the major column
 /// the columns setting picks, at the place down it the rows setting picks, the rhythm origin's or the
-/// centre of the crossings the frame holds (a family's line `i` meets column `k` at `oy + half * m`
+/// middle of the crossings the frame holds (a family's line `i` meets column `k` at `oy + half * m`
 /// where `m = 2i + dir * k`, and the majors meet every Nth side down a major column). Centred both
 /// ways, each family's majors sit centred across the frame too.
 fn iso_slant_bases(c: &Ctx, g: &Grid, half: f64) -> (i64, i64) {

@@ -1570,8 +1570,9 @@ pub enum MajorFrom {
     /// left edge, then every Nth one right. The first line at or inside the edge counts, whether or not
     /// a border hides it.
     Top,
-    /// The majors are placed so the ordinary lines left before the first and after the last differ by at
-    /// most one, the extra one after (below, or right).
+    /// The middle line is major, and every Nth line either way from it; with an even number of lines,
+    /// the upper (or left) of the two middle ones, so the extra line is below (or right) (ADR-023,
+    /// second amendment of 2026-11-23).
     Centre,
     /// Every Nth line counted from the page's rhythm origin (as every region did before format 0.20).
     RhythmOrigin,

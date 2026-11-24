@@ -215,7 +215,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   and a Mini calendar tool (M); words laid out as saved text, L07 when they would be too small; format 0.19.0
   (`crates/layout/src/calendar.rs`, `crates/model/src/calendar.rs`, `crates/render/tests/calendar.rs`). Try it:
   `cargo run --release -p quadrule-app -- --calendar-page`.
-- **Major lines from** (ADR-023, amended 2026-11-23 at chris's look: a choice per axis) is built and waits for chris's
+- **Major lines from** (ADR-023, amended twice 2026-11-23 at chris's look: a choice per axis; Centre on the middle line) is built and waits for chris's
   look again (record `docs/bbq/2026-11-23-major-lines-from-top.md`, Built and Look, with calls to veto): a pattern
   region counts its major rows and its major columns, each on its own, from its Top (new regions), its Centre or the
   Rhythm origin (older files and every old golden page); isometric offers Centre and Rhythm origin; format 0.20.0, a 0.19 fixture exports the same bytes (`crates/layout/src/pattern.rs`,

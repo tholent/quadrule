@@ -14,14 +14,14 @@
 
 //! Where a region's major lines count from (ADR-023 as amended 2026-11-23; docs/bbq/2026-11-23-major-lines-from-top.md):
 //! Top, Centre and Rhythm origin on lines, the grid, dots and Cornell, the rows and the columns each set on their own;
-//! Centre's odd line after the last major; a border that does not move the majors; isometric, which has no Top, its
+//! Centre's major on the middle line, the others going off either way, and below the middle with an even number; a border that does not move the majors; isometric, which has no Top, its
 //! three families' majors meeting on a major column however its rows and columns are set; a ruling turned a quarter
 //! turn inside its frame, counted in its own axes. Each test prints one structured `CHECK` line (run with
 //! `-- --nocapture`).
 //!
 //! The region is columns 2 to 10 and rows 2 to 10 of a 5 mm rhythm starting at the page's corner (59 px on the
-//! Manta), with a major every 5: nine lines each way. Top makes lines 0 and 5 major; Centre lines 1 and 6 (1 line
-//! before, 2 after); Rhythm origin lines 3 and 8 (rows 5 and 10 from the origin).
+//! Manta), with a major every 5: nine lines each way. Top makes lines 0 and 5 major; Centre line 4, the middle one;
+//! Rhythm origin lines 3 and 8 (rows 5 and 10 from the origin).
 
 use quadrule_layout::pattern::{Env, Pen, pattern_items_turned};
 use quadrule_layout::*;
@@ -50,7 +50,13 @@ fn doc() -> Document {
 }
 
 fn region() -> (f64, f64, f64, f64) {
-    (FIRST, FIRST, FIRST + 8.0 * UNIT, FIRST + 8.0 * UNIT)
+    square(LINES)
+}
+
+/// A region `lines` lines each way, from the same corner.
+fn square(lines: i64) -> (f64, f64, f64, f64) {
+    let side = (lines - 1) as f64 * UNIT;
+    (FIRST, FIRST, FIRST + side, FIRST + side)
 }
 
 /// The Emphasis role's gray on the Manta: what the test's majors are drawn in.
@@ -75,6 +81,11 @@ fn region_of(p: Pattern, from: MajorFrom) -> PatternRegion {
 
 /// The items of `pr` on the region, its frame turned by `deg`.
 fn draw(pr: &PatternRegion, deg: f64) -> Vec<Item> {
+    draw_in(pr, deg, region())
+}
+
+/// The items of `pr` on `reg`, its frame turned by `deg`.
+fn draw_in(pr: &PatternRegion, deg: f64, reg: (f64, f64, f64, f64)) -> Vec<Item> {
     let doc = doc();
     let manta = builtin(MANTA_ID).unwrap();
     let env = Env {
@@ -85,7 +96,7 @@ fn draw(pr: &PatternRegion, deg: f64) -> Vec<Item> {
     };
     assert_eq!((env.rhythm_px.origin_x, env.rhythm_px.unit_x), (0.0, UNIT));
     let mut items = Vec::new();
-    pattern_items_turned(pr, PEN, region(), deg, &env, &mut items);
+    pattern_items_turned(pr, PEN, reg, deg, &env, &mut items);
     items
 }
 
@@ -130,7 +141,7 @@ fn set(v: &[i64]) -> BTreeSet<i64> {
 fn expected(from: MajorFrom) -> BTreeSet<i64> {
     match from {
         MajorFrom::Top => set(&[0, 5]),
-        MajorFrom::Centre => set(&[1, 6]),
+        MajorFrom::Centre => set(&[4]),
         MajorFrom::RhythmOrigin => set(&[3, 8]),
     }
 }
@@ -177,19 +188,36 @@ fn each_choice_places_the_majors_on_lines_grid_dots_and_cornell() {
 }
 
 #[test]
-fn centre_leaves_the_odd_line_after_the_last_major() {
-    // Nine lines, a major every 5: 8 = 5 + 3 lines over, split 1 before and 2 after, down and across.
-    let (rows, cols) = majors(&draw(&region_of(Pattern::Grid, MajorFrom::Centre), 0.0));
-    let before = |s: &BTreeSet<i64>| s.first().copied().unwrap_or(-1);
-    let after = |s: &BTreeSet<i64>| LINES - 1 - s.last().copied().unwrap_or(LINES);
-    let ok = (before(&rows), after(&rows), before(&cols), after(&cols)) == (1, 2, 1, 2);
+fn centre_puts_a_major_on_the_middle_line() {
+    // Down and across, a major every 5: nine lines have line 4 major, the middle; thirteen have line 6 and the
+    // majors going off 5 either way from it (1 and 11); twelve have no middle line, so the upper and left of the
+    // two middle ones (5, with 0 and 10), the extra line below and right (Q4).
+    let mut ok = true;
+    let mut parts = Vec::new();
+    for (lines, want) in [
+        (9, set(&[4])),
+        (13, set(&[1, 6, 11])),
+        (12, set(&[0, 5, 10])),
+    ] {
+        let (rows, cols) = majors(&draw_in(
+            &region_of(Pattern::Grid, MajorFrom::Centre),
+            0.0,
+            square(lines),
+        ));
+        let good = rows == want && cols == want;
+        ok &= good;
+        parts.push(format!(
+            "lines_{lines}={good}:majors={}",
+            rows.iter()
+                .map(|k| k.to_string())
+                .collect::<Vec<_>>()
+                .join("+")
+        ));
+    }
     println!(
-        "\nCHECK crate=layout name=major_from_centre_odd_line result={} rows_before={} rows_after={} cols_before={} cols_after={}",
+        "\nCHECK crate=layout name=major_from_centre_middle result={} {}",
         pass(ok),
-        before(&rows),
-        after(&rows),
-        before(&cols),
-        after(&cols)
+        parts.join(" ")
     );
     assert!(ok);
 }
@@ -264,17 +292,22 @@ fn isometric_has_no_top_and_its_centred_majors_still_meet() {
     let origin = draw(&region_of(iso, MajorFrom::RhythmOrigin), 0.0);
     // Set to Top it draws as Rhythm origin.
     let top_is_origin = top == origin;
-    // Each of the four ways to set rows and columns from Centre and Rhythm origin: the vertical majors are the
-    // columns' choice (1 and 6 of nine centred, 3 and 8 from the origin), every crossing of a "/" major with a "\"
-    // major is on a major column (the three families' majors meet), and the four drawings all differ.
+    // Each of the four ways to set rows and columns from Centre and Rhythm origin, on twelve lines each way (on nine
+    // or eleven, the middle crossing down a centred column happens to be one of the rhythm origin's, so rows from
+    // either draw alike): the vertical majors are the columns' choice (5, the upper-left of the two middle ones, and
+    // 0 and 10 either way from it, centred; 3 and 8 from the origin), every crossing of a "/" major with a "\" major
+    // is on a major column (the three families' majors meet), and the four drawings all differ.
     let two = [MajorFrom::Centre, MajorFrom::RhythmOrigin];
     let (mut cols_right, mut crossings, mut on_major) = (true, 0, true);
     let mut drawings = Vec::new();
     for row_from in two {
         for col_from in two {
-            let items = draw(&region_axes(iso, row_from, col_from), 0.0);
+            let items = draw_in(&region_axes(iso, row_from, col_from), 0.0, square(12));
             let (_, cols) = majors(&items);
-            let want = expected(col_from);
+            let want = match col_from {
+                MajorFrom::Centre => set(&[0, 5, 10]),
+                _ => set(&[3, 8]),
+            };
             cols_right &= cols == want;
             let first = *want.first().unwrap();
             let slants = major_slants(&items);
@@ -305,7 +338,7 @@ fn isometric_has_no_top_and_its_centred_majors_still_meet() {
         0.0,
     );
     let (_, dot_cols) = majors(&dots);
-    let dots_ok = !dot_cols.is_empty() && dot_cols.is_subset(&set(&[1, 6]));
+    let dots_ok = !dot_cols.is_empty() && dot_cols.is_subset(&set(&[4]));
     let ok = top_is_origin && cols_right && meet && all_differ && dots_ok;
     println!(
         "\nCHECK crate=layout name=major_from_isometric result={} top_draws_as_origin={top_is_origin} cols_per_setting={cols_right} major_crossings={crossings} all_on_major_columns={on_major} four_ways_differ={all_differ} dots_on_major_columns={dots_ok}",
@@ -317,13 +350,12 @@ fn isometric_has_no_top_and_its_centred_majors_still_meet() {
 #[test]
 fn a_ruling_turned_a_quarter_turn_counts_in_its_own_axes() {
     // Turned a quarter turn clockwise inside its frame, the ruling's own top is the frame's right side: with Top its
-    // rows 0 and 5 are the screen's columns 8 and 3; Centre's 1 and 6 are 7 and 2; the rhythm origin's 3 and 8 are 5
-    // and 0.
+    // rows 0 and 5 are the screen's columns 8 and 3; Centre's 4 is 4; the rhythm origin's 3 and 8 are 5 and 0.
     let mut ok = true;
     let mut parts = Vec::new();
     for (from, want) in [
         (MajorFrom::Top, set(&[3, 8])),
-        (MajorFrom::Centre, set(&[2, 7])),
+        (MajorFrom::Centre, set(&[4])),
         (MajorFrom::RhythmOrigin, set(&[0, 5])),
     ] {
         let pr = PatternRegion {

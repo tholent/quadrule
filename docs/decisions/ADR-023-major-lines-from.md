@@ -6,7 +6,7 @@ ratified-on: "2026-11-23"
 owner: chris
 kind: design
 built: landed
-proof: "`crates/layout/tests/major_from.rs::each_choice_places_the_majors_on_lines_grid_dots_and_cornell`, `crates/layout/tests/major_from.rs::centre_leaves_the_odd_line_after_the_last_major`, `crates/layout/tests/major_from.rs::a_border_does_not_move_the_majors`, `crates/layout/tests/major_from.rs::isometric_has_no_top_and_its_centred_majors_still_meet`, `crates/layout/tests/major_from.rs::a_ruling_turned_a_quarter_turn_counts_in_its_own_axes`, `crates/model/tests/major_from.rs::a_file_without_the_field_reads_as_the_rhythm_origin_and_only_others_are_written`, `crates/ui/tests/major_from.rs::isometric_greys_top_and_shows_what_it_draws`, `crates/render/tests/migrate_v019.rs::v019_files_open_migrate_and_export_the_same_bytes`, `crates/render/tests/major_lines_from.rs::major_lines_from_page_goldens`, `crates/render/tests/major_lines_from.rs::major_lines_per_axis_page_goldens`"
+proof: "`crates/layout/tests/major_from.rs::each_choice_places_the_majors_on_lines_grid_dots_and_cornell`, `crates/layout/tests/major_from.rs::centre_puts_a_major_on_the_middle_line`, `crates/layout/tests/major_from.rs::a_border_does_not_move_the_majors`, `crates/layout/tests/major_from.rs::isometric_has_no_top_and_its_centred_majors_still_meet`, `crates/layout/tests/major_from.rs::a_ruling_turned_a_quarter_turn_counts_in_its_own_axes`, `crates/model/tests/major_from.rs::a_file_without_the_field_reads_as_the_rhythm_origin_and_only_others_are_written`, `crates/ui/tests/major_from.rs::isometric_greys_top_and_shows_what_it_draws`, `crates/render/tests/migrate_v019.rs::v019_files_open_migrate_and_export_the_same_bytes`, `crates/render/tests/major_lines_from.rs::major_lines_from_page_goldens`, `crates/render/tests/major_lines_from.rs::major_lines_per_axis_page_goldens`"
 supersedes: nothing
 amends: "docs/bbq/2026-11-13-rung-9-pattern-library.md, Defaulted \"Which patterns have major lines\" (counting starts at the rhythm origin)"
 ---
@@ -94,6 +94,9 @@ Drivers:
   `crates/ui/tests/major_from.rs::isometric_greys_top_and_shows_what_it_draws`,
   `crates/render/tests/migrate_v019.rs::v019_files_open_migrate_and_export_the_same_bytes`,
   `crates/render/tests/major_lines_from.rs::major_lines_from_page_goldens`"`.
+- 2026-11-23: amended again by chris at his look: Centre puts a major on the middle line (see Amendment — 2026-11-23,
+  chris, second, below). Built in the same session; the proof's Centre test is renamed. Earlier value, word for word:
+  `proof: "`crates/layout/tests/major_from.rs::each_choice_places_the_majors_on_lines_grid_dots_and_cornell`, `crates/layout/tests/major_from.rs::centre_leaves_the_odd_line_after_the_last_major`, `crates/layout/tests/major_from.rs::a_border_does_not_move_the_majors`, `crates/layout/tests/major_from.rs::isometric_has_no_top_and_its_centred_majors_still_meet`, `crates/layout/tests/major_from.rs::a_ruling_turned_a_quarter_turn_counts_in_its_own_axes`, `crates/model/tests/major_from.rs::a_file_without_the_field_reads_as_the_rhythm_origin_and_only_others_are_written`, `crates/ui/tests/major_from.rs::isometric_greys_top_and_shows_what_it_draws`, `crates/render/tests/migrate_v019.rs::v019_files_open_migrate_and_export_the_same_bytes`, `crates/render/tests/major_lines_from.rs::major_lines_from_page_goldens`, `crates/render/tests/major_lines_from.rs::major_lines_per_axis_page_goldens`"`.
 
 ## Amendment — 2026-11-23, chris
 
@@ -114,3 +117,21 @@ not gone out in a release (the last is `v0.16.5`, format 0.19.0), so it stays 0.
 centre.
 
 **Who agreed.** chris, in the build session (his words and his pick above).
+
+## Amendment — 2026-11-23, chris (second)
+
+**What changed.** At his look at the per-axis build, chris said, word for word: "for major lines centered on the column
+the major line should be right in the middle of the block and each set of lines should go off in either direction".
+
+**Sections it touches.** Decision item 1, **Centre**, and Q1's "the ordinary lines left over above the first major and
+below the last are equal": Centre now makes the middle line of the region major, and the other majors go off every Nth
+line either way from it, for rows and for columns alike (the first amendment's two settings). With an odd number of lines
+the leftover lines before the first major and after the last are then equal. With an even number there is no middle
+line: the upper (or left) of the two middle lines is major, so the extra line is below (or right), as Q4 rules for the
+odd line. On isometric, the three families' majors meet on the middle major column, at the middle crossing down it.
+
+**Why.** The first rule spread the leftover lines evenly but did not put a major in the middle of the block; chris wants
+the middle line to be the major one.
+
+**Who agreed.** chris, in the build session (his words above). The even-number case is the lead's reading of Q4, and can
+be vetoed.

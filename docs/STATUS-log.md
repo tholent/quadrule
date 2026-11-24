@@ -3033,3 +3033,18 @@ VM cannot build the macOS parts.
   for Lines and Cornell; a turned ruling's rows and columns are its own; a file from the first 0.20 build reads its
   old `major_from` as unknown.
 - Waits for chris's look again.
+
+## 2026-11-23 — ADR-023 amended again at chris's look: Centre puts a major on the middle line
+
+- chris, word for word: "for major lines centered on the column the major line should be right in the middle of the
+  block and each set of lines should go off in either direction". Recorded as ADR-023's second amendment and in the
+  record's "Look, second" section.
+- Built: Centre makes the middle line major, the others every Nth line either way, rows and columns alike; an even number
+  of lines takes the upper or left of the two middle ones (Q4). Both golden pages re-blessed after a look on both
+  tablets; the 36 sums before them unchanged (`head -36 crates/render/tests/golden/SHA256SUMS | sha256sum` →
+  `2b37c042…`, the test's constant).
+- Tests: with the old Centre rule put back, `cargo nextest run -p quadrule-layout --test major_from` → `5 tests run: 1
+  passed, 4 failed`; restored, all pass. `make check` → `TESTS scope=workspace checks=815 check_fail=0 passed=761
+  failed=0 status=ok runner=nextest`. `adr-check`: 24 ADRs, 0 failures.
+- Calls up for veto (record, "Look, second"): rows follow the same rule as columns; even counts take the upper or left
+  middle line.

@@ -2539,7 +2539,7 @@ pub mod majors_axes_ids {
 /// lines (which has no Top: its Top cell is set to Top and draws as Rhythm origin) and a grid with a border on all four
 /// sides (the border stands on the first major line). The rhythm is 3 mm, physically locked, with a major line every 7;
 /// each region holds 11 lines across and 5 down and starts one rhythm row past a major, so the three choices put their
-/// majors in three different places, and Centre leaves 1 line before its first major column and 2 after its last.
+/// majors in three different places, and Centre puts one on the middle line (column 5 of 0 to 10, row 2 of 0 to 4).
 /// Every object keeps its millimetres on the Nomad (Left and Top), so the page is the same on both screens. Designed on
 /// the Manta, also targeting the Nomad.
 pub fn majors_document() -> Document {

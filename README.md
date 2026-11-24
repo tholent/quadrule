@@ -183,7 +183,8 @@ and error.
   follow the rhythm draw every Nth line, row or dot in a stronger role (Structure unless you change it; a major dot is also one pixel bigger than an ordinary one), a region can turn
   them off or use its own N, and the overlay draws them stronger. **Major rows from** and **Major columns from** say
   where a region's majors start, each axis on its own: **Top** (its first line, the top one for rows and the left one
-  for columns; a new region starts here), **Centre** (the lines left over split evenly, an odd one below or right) or
+  for columns; a new region starts here), **Centre** (the middle line is major and the others go off every Nth line either way; with an even number of lines,
+  the upper or left of the two middle ones) or
   **Rhythm origin** (lined up with the page's rhythm, as pages made before 0.20 keep), so a region's rows can follow the
   rhythm while its columns are centred. Lines and Cornell have major rows only; isometric offers Centre and Rhythm
   origin. A region can be **unbound** from the rhythm to have
