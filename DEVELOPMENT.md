@@ -142,11 +142,11 @@ The installers are built by `.github/workflows/release.yml` on GitHub's machines
 config is in `packaging/`: `packager.json` (read by [cargo-packager](https://crates.io/crates/cargo-packager) 0.11.8),
 the icons, and `prepare.py`, which takes the version from the tag.
 
-Homebrew (ADR-025): Mac users install the `.dmg`'s app with `brew install --cask tholent/quadrule/quadrule`, from
-the tap [tholent/homebrew-quadrule](https://github.com/tholent/homebrew-quadrule). The cask's source is
+Homebrew (ADR-025): Mac users install the `.dmg`'s app with `brew install --cask tholent/tap/quadrule`, from
+tholent's shared tap [tholent/homebrew-tap](https://github.com/tholent/homebrew-tap). The cask's source is
 `packaging/homebrew/quadrule.rb`; edit it there, never in the tap. Once a release is published, the workflow's
 "Homebrew tap" job fills in the version and the `.dmg`'s sha256 and pushes the cask to the tap, using the secret
-`HOMEBREW_TAP_DEPLOY_KEY` (the private half of a deploy key with write access on the tap only). Without that secret
+`HOMEBREW_TAP_DEPLOY_KEY` (the private half of a deploy key with write access on that tap only). Without that secret
 the job prints `TAP … status=skip reason=no-deploy-key` and the release still succeeds. The tap's own CI audits the
 cask and installs it on a Mac after every push.
 

@@ -3,7 +3,7 @@
 # The Homebrew cask for Quadrule.app (quadrule ADR-025). Its source is packaging/homebrew/quadrule.rb
 # in github.com/tholent/quadrule; on each release, that repository's release workflow (job "Homebrew
 # tap") fills in the version and the .dmg's sha256 and pushes it to Casks/quadrule.rb in
-# github.com/tholent/homebrew-quadrule. Edit the source, never the tap's copy: the next release
+# github.com/tholent/homebrew-tap. Edit the source, never the tap's copy: the next release
 # overwrites it.
 cask "quadrule" do
   version "@VERSION@"

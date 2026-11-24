@@ -224,7 +224,7 @@ for Windows, and an AppImage or a `.deb` for Linux on x86-64 or ARM. Every relea
 On a Mac with [Homebrew](https://brew.sh), you can install it instead with
 
 ```
-brew install --cask tholent/quadrule/quadrule
+brew install --cask tholent/tap/quadrule
 ```
 
 and `brew upgrade --cask quadrule` moves to each new release. It is the same app as the `.dmg`, so the warning below

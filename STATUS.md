@@ -272,7 +272,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   `badges` branch for shields.io to read. Its first run on GitHub, 42868546083 on 2026-11-10, passed (`docs/STATUS-log.md`).
 - Homebrew (ADR-025, proposed 2026-11-23, awaiting chris's ratification): the cask's source is
   `packaging/homebrew/quadrule.rb`, and the release workflow's "Homebrew tap" job pushes it, filled in, to the tap
-  `tholent/homebrew-quadrule` after each published release (`.github/workflows/release.yml`; README Download,
+  `tholent/homebrew-tap` (tholent's shared tap) after each published release (`.github/workflows/release.yml`; README Download,
   DEVELOPMENT.md "Releases and packages"). The tap repository and its deploy key are chris's to make
   (`docs/STATUS-debt.md`); until then `brew install` fails and the job warns and skips.
 

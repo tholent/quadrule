@@ -3068,3 +3068,9 @@ VM cannot build the macOS parts.
   `brew style` and `brew audit` were not run here; the tap's CI runs both and installs the cask on a Mac.
 - Asked to make the tap repository and deploy key with `gh`, chris chose "Give me the commands"; the tap's first
   commit was made locally in the session's scratchpad for chris to push.
+- Same day, chris: "I would like there to be a tholent/homebrew repository that holds all my casks/formulas". A repo
+  named exactly `homebrew` cannot be tapped by its short name, so the name was asked; chris chose
+  "tholent/homebrew-tap (Recommended)". ADR-025 (still proposed) redrafted with a History line; the release job, the
+  cask template, README, DEVELOPMENT.md, STATUS.md and the debt now name `tholent/homebrew-tap`
+  (`brew install --cask tholent/tap/quadrule`); the job replays its push once if the shared tap moved meanwhile.
+  `tholent/homebrew-quadrule` had been made (empty, no deploy key: `gh api`, 2026-11-23); renaming it is chris's.

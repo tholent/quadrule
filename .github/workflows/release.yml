@@ -3,7 +3,7 @@
 #
 #   Linux x86-64 and ARM64: .AppImage and .deb   macOS: universal .dmg (unsigned)
 #   Windows x86-64: .msi (an NSIS .exe for pre-release versions, which an .msi cannot hold)
-#   Homebrew: the cask in github.com/tholent/homebrew-quadrule moves to the new .dmg (ADR-025)
+#   Homebrew: quadrule's cask in github.com/tholent/homebrew-tap moves to the new .dmg (ADR-025)
 #
 # The packaging config lives in packaging/ (packager.json, icons, prepare.py). A tag made before
 # that folder existed (v0.5.0) is built with main's copy laid over it; a later tag uses its own.
@@ -259,11 +259,12 @@ jobs:
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
           echo "PUBLISH tag=$TAG files=$(ls out | wc -l) status=ok" | tee -a "$GITHUB_STEP_SUMMARY"
 
-  # ADR-025: once a release is published, the Homebrew cask in github.com/tholent/homebrew-quadrule
-  # moves to it. The cask is packaging/homebrew/quadrule.rb from this workflow's commit, with the
-  # version and the .dmg's sha256 filled in. Pushing needs the secret HOMEBREW_TAP_DEPLOY_KEY, the
-  # private half of a deploy key with write access on the tap; without it the job warns and changes
-  # nothing. A "-test" tag never moves the tap.
+  # ADR-025: once a release is published, quadrule's Homebrew cask in github.com/tholent/homebrew-tap
+  # (tholent's shared tap) moves to it. The cask is packaging/homebrew/quadrule.rb from this
+  # workflow's commit, with the version and the .dmg's sha256 filled in; no other file in the tap is
+  # touched. Pushing needs the secret HOMEBREW_TAP_DEPLOY_KEY, the private half of a deploy key with
+  # write access on the tap; without it the job warns and changes nothing. A "-test" tag never moves
+  # the tap.
   homebrew:
     name: Homebrew tap
     needs: publish
@@ -298,7 +299,7 @@ jobs:
         if: ${{ steps.key.outputs.present == 'yes' }}
         uses: actions/checkout@v7
         with:
-          repository: tholent/homebrew-quadrule
+          repository: tholent/homebrew-tap
           ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
           path: tap
 
@@ -323,5 +324,6 @@ jobs:
             exit 0
           fi
           git commit -m "quadrule $v" -m "From $GITHUB_REPOSITORY release $TAG (run $GITHUB_RUN_ID)."
-          git push origin HEAD
+          # Another repository may have pushed to the shared tap meanwhile: replay on top once.
+          git push origin HEAD || { git pull --rebase origin HEAD && git push origin HEAD; }
           echo "TAP tag=$TAG version=$v sha256=$sum status=ok changed=yes" | tee -a "$GITHUB_STEP_SUMMARY"

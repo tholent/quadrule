@@ -389,8 +389,8 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   required on `main`, chris on the bypass list), a CI job that reports the required checks for documents-only pull
   requests, the AGENTS.md amendment closing work on `main`, and `.github/scripts/check-github-rules.sh` checking the
   new rules (`docs/decisions/ADR-024-leave-main-at-v1.md`, `docs/arcs/v1/README.md`, release bar).
-- ADR-025 (proposed 2026-11-23, awaiting chris's ratification), owed: the tap repository `tholent/homebrew-quadrule`
-  with its first cask (drafted from `packaging/homebrew/quadrule.rb`), and the `HOMEBREW_TAP_DEPLOY_KEY` secret on
+- ADR-025 (proposed 2026-11-23, awaiting chris's ratification), owed: the shared tap repository `tholent/homebrew-tap`
+  with quadrule's cask (drafted from `packaging/homebrew/quadrule.rb`), and the `HOMEBREW_TAP_DEPLOY_KEY` secret on
   this repository with its public half as a write deploy key on the tap. Not checked by any test here: the cask was
   never run through `brew style` or `brew audit` on this machine (no Homebrew on it); the tap's CI does both and
   installs it on a Mac (`docs/decisions/ADR-025-homebrew-cask.md`).
