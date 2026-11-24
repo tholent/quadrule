@@ -3,6 +3,7 @@
 #
 #   Linux x86-64 and ARM64: .AppImage and .deb   macOS: universal .dmg (unsigned)
 #   Windows x86-64: .msi (an NSIS .exe for pre-release versions, which an .msi cannot hold)
+#   Homebrew: the cask in github.com/tholent/homebrew-quadrule moves to the new .dmg (ADR-025)
 #
 # The packaging config lives in packaging/ (packager.json, icons, prepare.py). A tag made before
 # that folder existed (v0.5.0) is built with main's copy laid over it; a later tag uses its own.
@@ -257,3 +258,70 @@ jobs:
         run: |
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
           echo "PUBLISH tag=$TAG files=$(ls out | wc -l) status=ok" | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # ADR-025: once a release is published, the Homebrew cask in github.com/tholent/homebrew-quadrule
+  # moves to it. The cask is packaging/homebrew/quadrule.rb from this workflow's commit, with the
+  # version and the .dmg's sha256 filled in. Pushing needs the secret HOMEBREW_TAP_DEPLOY_KEY, the
+  # private half of a deploy key with write access on the tap; without it the job warns and changes
+  # nothing. A "-test" tag never moves the tap.
+  homebrew:
+    name: Homebrew tap
+    needs: publish
+    if: ${{ (github.event_name == 'push' || inputs.publish == 'yes') && !contains(inputs.tag || github.ref_name, '-test') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cask template (this workflow's commit)
+        uses: actions/checkout@v7
+        with:
+          path: tools
+          sparse-checkout: packaging
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages-macos-universal
+          path: out
+
+      - name: Deploy key
+        id: key
+        env:
+          KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "present=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=no" >> "$GITHUB_OUTPUT"
+            echo "::warning::TAP tag=$TAG status=skip reason=no-deploy-key (ADR-025)"
+            echo "TAP tag=$TAG status=skip reason=no-deploy-key" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Tap
+        if: ${{ steps.key.outputs.present == 'yes' }}
+        uses: actions/checkout@v7
+        with:
+          repository: tholent/homebrew-quadrule
+          ssh-key: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+          path: tap
+
+      - name: Write the cask and push it
+        if: ${{ steps.key.outputs.present == 'yes' }}
+        run: |
+          v="${TAG#v}"
+          dmg="out/quadrule-$v-macos-universal.dmg"
+          [ -f "$dmg" ] || { echo "TAP tag=$TAG status=fail reason=no-dmg file=$dmg"; exit 1; }
+          sum=$(sha256sum "$dmg" | cut -d' ' -f1)
+          mkdir -p tap/Casks
+          sed -e "s/@VERSION@/$v/" -e "s/@SHA256@/$sum/" tools/packaging/homebrew/quadrule.rb > tap/Casks/quadrule.rb
+          if grep -q -e '@VERSION@' -e '@SHA256@' tap/Casks/quadrule.rb; then
+            echo "TAP tag=$TAG status=fail reason=placeholder-left"; exit 1
+          fi
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/quadrule.rb
+          if git diff --cached --quiet; then
+            echo "TAP tag=$TAG version=$v status=ok changed=no" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git commit -m "quadrule $v" -m "From $GITHUB_REPOSITORY release $TAG (run $GITHUB_RUN_ID)."
+          git push origin HEAD
+          echo "TAP tag=$TAG version=$v sha256=$sum status=ok changed=yes" | tee -a "$GITHUB_STEP_SUMMARY"

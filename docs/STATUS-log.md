@@ -3055,3 +3055,16 @@ VM cannot build the macOS parts.
   Centre on the middle line), is approved as it stands at `8fa0da4`; no calls vetoed. Recorded in the record's
   Approved section, ADR-023's History and STATUS.md. Not yet in a release.
 - STATUS.md is 331 lines, still over its 300 cap; not trimmed here.
+
+## 2026-11-23 — Homebrew cask (ADR-025)
+
+- chris: "let's setup this repo to allow installation from homebrew". Build proof at start: `BUILD head=17b1dc8
+  dirty=no rebuilt=7`.
+- Three answers, word for word: "Mac app cask (Recommended)", "New repo tholent/homebrew-quadrule (Recommended)",
+  "Leave it, print steps (Recommended)". Recorded as ADR-025, proposed (light route); adr-check: 25 ADRs, 0 failures.
+- Built: `packaging/homebrew/quadrule.rb` (the cask template) and the "Homebrew tap" job in
+  `.github/workflows/release.yml` (YAML parses; the job has not run on GitHub yet). README and DEVELOPMENT.md updated.
+  The cask's v0.16.5 download address answers HTTP 200 (`curl -sIL`, 2026-11-23). No Homebrew on this machine, so
+  `brew style` and `brew audit` were not run here; the tap's CI runs both and installs the cask on a Mac.
+- Asked to make the tap repository and deploy key with `gh`, chris chose "Give me the commands"; the tap's first
+  commit was made locally in the session's scratchpad for chris to push.

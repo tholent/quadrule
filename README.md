@@ -221,6 +221,15 @@ Installers for macOS, Windows and Linux are attached to each release on the
 [releases page](https://github.com/tholent/quadrule/releases): a `.dmg` for macOS (Apple chip or Intel), an `.msi`
 for Windows, and an AppImage or a `.deb` for Linux on x86-64 or ARM. Every release so far is a pre-release.
 
+On a Mac with [Homebrew](https://brew.sh), you can install it instead with
+
+```
+brew install --cask tholent/quadrule/quadrule
+```
+
+and `brew upgrade --cask quadrule` moves to each new release. It is the same app as the `.dmg`, so the warning below
+still applies.
+
 The macOS and Windows packages are not signed yet, so the system warns the first time you open one:
 
 - **macOS:** open the app once and close the warning, then go to System Settings → Privacy & Security and click
