@@ -83,6 +83,11 @@ v1.0 ships only when all of these hold: every rung look-approved; every starter 
 both devices; drawing and dragging under 50 ms at the 90th percentile on the Pi on the heaviest starter; a blind
 tastetest says READY; the release candidate has had testers on macOS and Windows (Q14).
 
+*(2026-11-24, ADR-009 amended twice: chris retired the Pi on 2026-11-20 ("the pi has been deprecated and we don't
+need to consider it from now on"), and in the rung 17 bbq (Q2) made the desktop `gibson` the reference machine, with
+`make bench-check` also failing a bench more than 20 % slower than its recorded number. So "on the Pi" above reads "on
+`gibson`".)*
+
 *(2026-11-23, ADR-024, ratified: before the v1.0 tag, work stops going straight to `main`: the pull request and required
 CI checks of ADR-022 item 3 are switched on, with a quick job reporting the checks for documents-only pull requests.)*
 

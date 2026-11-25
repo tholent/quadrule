@@ -63,6 +63,8 @@ consulted: Claude (Opus 5.5) proposed the 100 ms fallback line in the rung 3 bbq
   rounds, chris's choice); awaiting ratification`.
 - 2026-11-20: amended by chris: the speed line is judged on any machine, the Pi being deprecated. See "Amendment —
   2026-11-20, chris" below.
+- 2026-11-24: amended by chris in the rung 17 bbq (Q2): `gibson` is the reference machine, and a no-slower check
+  (20 % over a recorded number) joins the 50 ms line. See "Amendment — 2026-11-24, chris" below.
 
 ## Amendment — 2026-11-20, chris
 
@@ -72,5 +74,21 @@ Asked where the line is judged now, chris answered "Keep 50 ms, any machine" (th
 judged on whichever computer the benches run on, and each result names the machine). So: while dragging, in a release
 build, the 90th percentile of frames (after the first) is under 50 ms on both canvases, on the computer the bench ran
 on, which every reported number names. A miss still stops the work and goes to chris with the numbers.
+
+The other items stand.
+
+## Amendment — 2026-11-24, chris
+
+Touches §Decision item 3, the speed line, and the amendment of 2026-11-20 above. Asked in the rung 17 bbq (Q2,
+`docs/bbq/2026-11-24-rung-17-polish.md`) what replaces the Pi, chris chose "Desktop + no-slower check", the option
+worded: "This desktop (gibson) is the reference at the same 50 ms line; each bench's number is recorded and a run >20 %
+slower fails `make bench-check`. Low-end machines untested until rc testers."
+
+So: the reference machine is the desktop `gibson` (x86_64, 12 cores, a window session on `:0`). The line stays 50 ms at
+the 90th percentile of frames after the first, on both canvases, in a release build. Each bench's 90th percentile on
+`gibson` is recorded in one checked-in file, and `make bench-check` fails when a bench is over 50 ms or more than 20 %
+slower than its recorded number. A bench run on another machine still names the machine (the 2026-11-20 amendment) and
+is compared with the 50 ms line only. Machines weaker than `gibson` are not measured by the project; the release
+candidate's testers are their first check. Built in rung 17 leg 2 (the file, `make bench-check`, `make bench-record`).
 
 The other items stand.
