@@ -3364,3 +3364,100 @@ What landed, by commit (`git log --oneline`; the first three are on `main` befor
 - Screenshots (taken on this machine's 1024 × 768 screen at `DISPLAY=:0`, a scratch profile under `/tmp/claude-1000/xdg`):
   `/tmp/claude-1000/shots/tabs.png`, `lint-click.png`, `prefs-100.png`, `prefs-200.png`, `shortcuts.png`,
   `menu-view.png` (Snapping open), `menu-developer.png`, `menu-file.png`.
+
+## 2026-11-25 — Rung 17 leg 2 built (Sonnet 5.5 high builder)
+
+What landed, by commit (`git log --oneline`, all on `main`, each pushed as it landed):
+
+- Step 1, `cb482f5`: large pages (Q7, D1). The export-pixels canvas no longer draws the page's export pixels while a
+  page pixel is smaller than a screen pixel. `Page::image()` draws them on first use only (Export, and the canvas
+  zoomed in to 1:1 or past it); the canvas zoomed out, the strip's pictures and the Save preview are drawn straight
+  from the display list at their own size (`Page::image_at`, the chip canvas's `screen_list` through vello_cpu).
+  The zoom gesture's ladder of half-size copies (`halve`, `MIP_LEVELS`) is gone. The Save preview is drawn at its own
+  480 px; it differs from the shrunk export pixels by a mean of 0.05 gray levels (`crates/ui/tests/preview.rs`). The
+  80 golden lines and every fixture folder are untouched (`git status` clean on them; the goldens pass). Also here:
+  `--large-paper-page` (ISO A3 and Tabloid at 600 PPI, `quadrule_model::sample::large_paper_document`) and
+  `--device manta|nomad|<profile id>`; the bench line now names `profile=` and `timed=`.
+- Steps 3 to 5, `6628b43` (one commit: they share `view.rs` and `editor.rs`): D3, Don't save then a cancelled Open
+  dialog keeps the recovery file (it goes when a file is opened over the document, or the document is replaced or
+  closed; `crates/ui/tests/window.rs`), and Save stamps `metadata.modified` (no undo step, not dirty;
+  `crates/ui/tests/editor.rs`); D4, a paste goes to the layer picked in the layers panel, else the first selected
+  object's layer (`Viewer::paste_text_in`); D5, a drag whose selection holds a locked object says so in the status bar
+  (`notice-locked-stays`).
+- Step 6, `80df161`: D11, the Style tab reads "mixed" for fill kind and gray, dash kind and its custom lengths, cap,
+  corner radius, polygon sides, star tick and inner radius (`crates/ui/tests/shape_mixed.rs`).
+- Step 2, `fd9ba8c`: `make bench-check` and `make bench-record` (`cargo xtask bench-check [--record]`,
+  `crates/xtask/src/bench.rs`): 26 benches in a release build, best of 2 runs each, one `BENCH` line each and a
+  `BENCH-CHECK` line; fails when any 90th percentile is over 50 ms or more than 20 % (and 1 ms) over
+  `docs/bench/<hostname>.txt`; `--record` refuses while any is over 50 ms. New: `--basic-tab` (the Basic tab open and
+  the whole window frame timed, the Basic tab's own cost) and Makefile `LARGE=`, `DEVICE=`, `FILE=`, `BASICTAB=`.
+  `docs/bench/gibson.txt` holds the first numbers.
+
+Speed run (ADR-009), 2026-11-25, on `gibson` (x86_64, 12 cores, `DISPLAY=:0`), release build, strip on, the app run in a
+scratch home. Command for the table: `DISPLAY=:0 make bench-check` → `BENCH-CHECK machine=gibson mode=check benches=26
+ok=26 over_50ms=0 slower=0 unrecorded=0 failed=0 status=ok`. Each row is `target/release/quadrule --bench-<kind> 150
+<flags> --canvas <canvas>`; 90th percentile in ms, the run that made the record first, then the check run straight
+after it:
+
+| bench (name in the record) | flags | export or chip | recorded | check run |
+|---|---|---|---|---|
+| drag-starter-nomad | `--bench-drag --device nomad crates/ui/starters/paper/hex.quad` | export / chip | 4.5 / 11.3 | 4.6 / 11.7 |
+| draw-starter-nomad | `--bench-draw` (same) | export / chip | 4.7 / 11.7 | 4.9 / 11.8 |
+| drag-starter-manta | `--bench-drag --device manta …hex.quad` | export / chip | 7.0 / 14.1 | 7.1 / 15.1 |
+| draw-starter-manta | `--bench-draw` (same) | export / chip | 7.1 / 11.7 | 7.1 / 12.8 |
+| drag-paper-a4-300 | `--bench-drag --paper-page` | export / chip | 2.2 / 8.2 | 2.2 / 7.8 |
+| draw-paper-a4-300 | `--bench-draw --paper-page` | export / chip | 2.1 / 9.2 | 2.1 / 8.5 |
+| drag-paper-a3-600 | `--bench-drag --large-paper-page` | export / chip | 2.4 / 7.8 | 2.4 / 7.7 |
+| draw-paper-a3-600 | `--bench-draw --large-paper-page` | export / chip | 2.3 / 8.3 | 2.3 / 7.9 |
+| drag-paper-tabloid-600 | `--bench-drag --large-paper-page --device paper.tabloid` | export / chip | 2.3 / 7.9 | 2.4 / 7.8 |
+| type-sample | `--bench-type` | export / chip | 3.1 / 9.4 | 3.3 / 9.4 |
+| zoom-sample | `--bench-zoom` | export / chip | 9.1 / 10.1 | 7.1 / 10.0 |
+| zoom-groups | `--bench-zoom --groups-page` | export / chip | 9.1 / 10.9 | 10.1 / 10.8 |
+| basic-tab-starter-nomad | `--bench-drag --basic-tab --device nomad …hex.quad` | export | 6.6 | 6.6 |
+| basic-tab-starter-manta | `--bench-drag --basic-tab --device manta …hex.quad` | export | 9.5 | 9.3 |
+
+- **The heaviest starter is `hex`, on both tablets, on both canvases, for drag and for draw.** Found by running `target/release/quadrule
+  --bench-drag|--bench-draw 100 --device nomad|manta --canvas export|chip <each of the 20 starters>` (160 runs): the
+  next is `isometric` on the export canvas (Nomad 3.0 ms drag, Manta 3.9) and `dot-grid` and `isometric` on the chip
+  (Manta 14.2 and 10.5 against `hex` 15.1). The slowest of the 160 is `hex` drag on the Manta chip canvas, 15.1 ms.
+- Before this leg (the same machine, the same commands at `1341288`): sample page drag, export canvas, 37.8 ms; paper page
+  drag 76.5 and draw 67.4 ms (the page's 8.7 M pixels were drawn in full for every frame of a drag); A3 and Tabloid at
+  600 PPI were 410 to 440 ms (rung 13b's number). Now 1.7, 2.2, 2.1 and 2.4 ms.
+- Other numbers taken: `--bench-rotate 150` export 2.0 ms; `--bench-welcome 100` drawing p90 1.5 ms, idle 0.9 ms; `--bench-zoom
+  150 --paper-page` 16.1 ms (worst 68.7); `--bench-zoom 150 --device nomad …hex.quad` 7.8 ms.
+- **Over 50 ms, and not tuned: zooming a large page toward 1:1 on the export canvas.** `--bench-zoom 150
+  --large-paper-page --canvas export` is p90 201.4 ms (worst 689.5; 32 of 151 frames over 50) on A3 and 185.6 on Tabloid
+  (`--device paper.tabloid`); the chip canvas is 9.3. Timed before touching it (a throwaway `eprintln` round the texture
+  block, removed): the cost is the screen-size draw of the whole page at the zoom's own size, so it follows the page's
+  pixels at that zoom, 42 ms at a quarter (1754 × 2480), 119 ms at 0.42, 183 ms at 0.61, 316 ms at 0.71 and 758 ms at
+  1:1 (the full export pixels). The page is drawn whole, though a window shows a part. This is the next thing to price
+  (a window of the page with a margin, as the chip canvas's `ScreenView` does), and it was left alone as the brief says.
+  Compared with the old code it is better for every edit and for Fit, and worse for a zoom gesture on a large page
+  between about 0.4 and 1:1: the old code drew the page once (410 ms) and then pinched over cheap half-size copies.
+  `bench-check` leaves this bench out, as it would always fail.
+
+Paper cap (13b's debt), measured with a throwaway release test (removed) that made a custom paper page and timed
+`Page::image()` and the PNG write, peak memory read from `/proc/self/status` `VmHWM` (page, draw ms, PNG ms, peak): 210 ×
+297 mm at 600 PPI (35 M px) 214, 76, 178 MB; A3 (70 M) 492, 231, 346 MB; 420 × 420 (98 M) 723, 256, 483 MB; 500 × 500 (139 M)
+984, 306, 679 MB; 600 × 600 (201 M) 1,215, 389, 972 MB; 693 × 693 (268 M, the old cap) 1,545, 541, 1.29 GB. **Proposed and
+set: 10,400 px at 600 PPI, 440 mm a side** (`limits::MAX_PAPER_PX`, `PAPER_MM` now 2.8 to 440): it fits Tabloid (431.8 mm)
+and A3 and tops out near 108 M pixels (about 0.8 s to draw and 0.3 s to write, 530 MB; those three are interpolated
+between the 420 and 500 mm rows, not measured). Zoomed in past 1:1 each edit of such a page still draws all its pixels.
+
+Judgement calls for chris's look:
+
+- The Save preview and the strip's pictures are drawn at their own size (anti-aliased) and not shrunk from export
+  pixels; the mean difference is 0.05 gray levels. The xtask starters' previews are still made the old way
+  (`crates/xtask/src/starters.rs`), so no checked-in starter file moved.
+- The Style tab's mixed rows compare only among the objects that have the row (a Line among rectangles does not make
+  the corner radius mixed).
+- `bench-check`: best of 2 runs, a 1 ms floor under the 20 % rule (so a 2 ms bench cannot fail on 0.4 ms), a computer
+  with no recorded file is judged on the 50 ms line alone, and a bench on the chip canvas that fell back to the
+  processor fails. The check run above moved by up to +11 % and -22 % against the record, so 20 % has some room but
+  not much.
+- Zoom bench on a large page left out of the set (above). The Basic tab is timed on `hex` only, by the whole window frame.
+- New words (all in `app.ftl`): `notice-locked-stays`.
+- `make check-all` on the final code (`fd9ba8c`, docs only after it): `TESTS scope=workspace checks=908 check_fail=0
+  passed=814 failed=0 status=ok runner=nextest`, then `PRUNE target=target removed_files=65 removed_gb=0.3 kept_gb=52.2`.
+- Process: every git command was its own call. Screenshots (the scratch profile, `/tmp/claude-1000/xdg`):
+  `/tmp/claude-1000/shots/large-fit.png` (A3 at Fit) and `sample-fit.png` (the shapes page).

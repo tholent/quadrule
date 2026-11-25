@@ -34,14 +34,11 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - The graphics-chip canvas (built in rung 3, `crates/app/src/chip.rs`) is measured only on the Pi at Fit zoom (40 ms
   a frame, release build); still to measure zoomed in, while scrolling, and on a desktop graphics card (rung 3 bbq
   Q7). It redraws the visible area on every scroll step.
-- Rung 3 editor, owed (`crates/ui/src/editor.rs`, `crates/ui/src/panels.rs`, `crates/ui/src/view.rs`): Save does not
-  update `metadata.modified`. "Don't save" followed by
-  cancelling the Open dialog leaves the document unsaved with its recovery file deleted (the next autosave writes
-  it again). Only one recovery file is restored per start.
+- Rung 3 editor, owed (`crates/ui/src/editor.rs`, `crates/ui/src/panels.rs`, `crates/ui/src/view.rs`): only one
+  recovery file is restored per start.
 - Rung 4a, owed (`crates/ui/src/drag.rs`, `crates/layout/src/snap.rs`, `crates/ui/src/view.rs`): drag speed is measured
   only on the sample page at Fit zoom (export canvas: one 60.1 ms frame in 1,595; chip canvas: none over 34 ms); not
-  zoomed in, not on a desktop card (a text-heavy page was timed in rungs 11a and 11b). No autoscroll when a drag reaches the canvas edge. Several objects selected on
-  different layers are dragged together but a locked one among them stays put without saying so. The layers panel's
+  zoomed in, not on a desktop card (a text-heavy page was timed in rungs 11a and 11b). No autoscroll when a drag reaches the canvas edge. The layers panel's
   drag-and-drop has no pointer test. Alt-drag may be taken by the window manager on the Pi. The status bar's snap
   switches may not fit in a narrow window.
 - Rung 4b, owed (`crates/layout/src/snap.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/editor.rs`): equal spacing works for a
@@ -49,7 +46,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   guides count every visible object, including a page-sized pattern region's edges and centre; rhythm wins within half a
   pixel and otherwise the nearest catch wins (chris, 2026-11-10); equal gaps may be half a
   pixel (not rounded to the pixel grid); two open windows holding the same file count as "the same document" for the
-  paste offset; a paste goes to the first selected object's layer, not the layer picked in the layers panel; copy and
+  paste offset; copy and
   paste are tested with egui's events, not the real system clipboard.
 
 - Rung 5, owed (`crates/ui/src/draw.rs`, `crates/ui/src/tools.rs`, `crates/ui/src/view.rs`, `crates/layout/src/newpage.rs`):
@@ -78,7 +75,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   cap on Long dash at 1 mm reads solid): the inspector does not warn. A polygon is picked and snapped by its frame, not by
   its corners. L13 (large dark fills) stays in rung 14 although Block makes it likelier. The inspector edits the first
   selected object's values and applies to all, as before (the Arrange tab's X, Y, W, H and Rotation read "mixed" since 7b; the
-  Style tab's opacity, stroke kind, role, width and gray since 8a; fill, dash, cap and the shape rows do not). The Style tab shows Dash and Cap for lines
+  Style tab's opacity, stroke kind, role, width and gray since 8a; fill, dash, cap and the shape rows since 17). The Style tab shows Dash and Cap for lines
   too (a line is a stroke); a pattern region and a text box have neither. The shapes page is built in code
   (`quadrule_model::sample::shapes_document`) and opened with `--shapes-page`, not as a file.
 - Rung 6b, owed (`crates/layout/src/rotate.rs`, `crates/layout/src/shapes.rs`, `crates/ui/src/drag.rs`, `crates/ui/src/view.rs`): text
@@ -236,11 +233,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   fuzz targets ran locally 41 s each (`open_quad` 192,253 runs with the carried-profile seed, `from_ron` 114,994 runs),
   CI runs them 60 s and 30 s. Strings are English only.
 
-- Rung 13b, owed (`crates/profiles/src/lib.rs`, `crates/layout/src/device.rs`, `crates/ui/src/panels.rs`, `crates/ui/src/profiles_win_ui.rs`): on the export canvas a page of Tabloid or A3 at 600 PPI (about 67 M px)
-  draws at 410 to 440 ms a frame (p90), against the 50 ms line; the graphics-chip canvas keeps 3.5 to 4.2 ms. The lead has to rule (a lower-resolution preview, a cap on the page's pixels for the export canvas, or
-  accept that big paper is for the chip canvas). **Ruled 2026-11-17 by chris: "C", left as debt for rung 17** (rung 13 record, Amendments; the
-  lead had recommended drawing at screen resolution when zoomed out). The limits let a custom paper side reach 693 mm (16,384 px at 600 PPI, 268 M px), which is not measured and would take about four times the memory of Tabloid at 600
-  (444 MB peak measured). The paper profiles are Unverified (the Nomad's values by physical size, not measured on paper). The Executive size is stored as 184.15 mm, not the record's 184.2. The paper pixel size at
+- Rung 13b, owed (`crates/profiles/src/lib.rs`, `crates/layout/src/device.rs`, `crates/ui/src/panels.rs`, `crates/ui/src/profiles_win_ui.rs`): the paper profiles are Unverified (the Nomad's values by physical size, not measured on paper). The Executive size is stored as 184.15 mm, not the record's 184.2. The paper pixel size at
   300 PPI is kept in the profile file next to the size in mm (made consistent on reading), so a hand-edited file whose two disagree is silently corrected. A test holds the paper role values equal to the Nomad's; a
   recalibration of the Nomad fails it on purpose. The Page tab's PPI combo, the mm fields of a paper copy and the New… list's Paper group are not driven with a pointer in any test; one screenshot each of the
   Page tab and the Profiles window was taken (the Page tab's Paper list continues below the fold and scrolls). A paper page's `.quad` is not fuzz-seeded with a non-default PPI. A 13a build opening a file whose page uses
@@ -294,9 +287,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   on disk until the next change overwrites it; `chrono` (local `{date}`) and `ron` are new direct dependencies of `quadrule-ui`.
   Save with the preview costs about 23 ms more on the Pi (the log's leg 2 entry); it runs on the interface thread at Save.
 
-- Rung 15, lead's close (`crates/ui/src/viewer.rs`, `crates/ui/src/export_ui.rs`): Save renders the main device's
-  export pixels for the 480 px preview on the interface thread, about 23 ms on the Pi (41 ms on A4 paper); a 600 PPI
-  Tabloid or A3 page will take far longer, so this joins rung 17's large-page item. Open question for chris (rung 15
+- Rung 15, lead's close (`crates/ui/src/viewer.rs`, `crates/ui/src/export_ui.rs`): Open question for chris (rung 15
   look; CLOSED 2026-11-18: placed in rung 16 by chris and built in 16a, with Export again merged into Export…; word for word: "I don't _love_ this. Let's put an item into open questions for a file menu creation"): a File
   menu to hold Open, Save, Save As, Export… and Export again, in place of the toolbar's Export menu. The Manta was not
   tablet-checked with a noted PNG (chris: "the nomad check is enough").
@@ -434,11 +425,25 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   landscape habit tracker (drawn for the welcome screen) were not seen: this computer has no screen. (10) The speed run on the
   heaviest starter (ADR-009) is still not done; `author` and `license` are empty as before.
 
-- Rung 16b speed run, owed (`crates/ui/src/view.rs`, `crates/app/src/main.rs`; 2026-11-24): (1) a bench over a file runs on
-  whichever tablet the app remembers, so the Nomad was not timed for the starters; a flag to pick the tablet (or opening a
-  benchmarked file on its primary) is owed. (2) The Pi was not measured; isometric drag on the Manta was 45.0 ms at the
-  90th percentile on the desktop, so it is the one to watch there. (3) The speed of the Basic tab itself was not timed.
+- Rung 16b speed run, owed (`crates/ui/src/view.rs`, `crates/app/src/main.rs`; 2026-11-24): the Pi was not measured
+  (it has been decommissioned, 2026-11-24).
 
+- Rung 17 leg 2, owed (`crates/ui/src/view.rs`, `crates/ui/src/viewer.rs`, `crates/xtask/src/bench.rs`; 2026-11-25):
+  (1) **Over 50 ms, not tuned:** zooming a large page toward 1:1 on the export canvas. The texture is drawn for the
+  whole page at the zoom's own size, not for the part on screen, so its cost follows the page's size at that zoom: A3 at
+  600 PPI took 42 ms at a quarter, 119 ms at 0.42, 183 ms at 0.61, 316 ms at 0.71 and 758 ms at 1:1 (`QUADRULE_PARTS`
+  timing of `texture_ms` inside the canvas frame, a throwaway patch); `--bench-zoom 150 --large-paper-page` is p90 201.4
+  ms on A3 and 185.6 on Tabloid (the chip canvas: 9.3). Every edit of a large page zoomed in past about 0.4 costs the
+  same. The old code drew the whole page once (410 ms) and shrank it. The fix to price is a window: draw only the part
+  on screen, with a margin so a scroll does not redraw each frame, at export pixels from 1:1 (as the chip canvas's
+  `ScreenView` already does). `bench-check` leaves the large-page zoom out for now, as it would fail. (2) The
+  xtask starters still write their 480 px previews by shrinking the export pixels, so a new starter file's preview
+  differs by about 0.05 gray levels (mean) from the one the app writes at Save; no checked-in file moved. (3) A
+  paper profile file saved before this leg with a side over 440 mm (10,400 px at 600 PPI) is now damaged and skipped
+  (the limit moved from 693 mm). (4) The bench set times the Basic tab on `hex` only (the whole window frame, panels
+  and canvas together); other tabs are not timed. (5) `bench-check` is judged on this one
+  computer; its 1 ms noise floor and best-of-2 are the builder's, for chris's veto. (6) Words: `notice-locked-stays`
+  ("Some of the picked objects are locked, so they stay where they are.") is the builder's proposal for chris's look.
 - Rung 17 leg 1, owed (`crates/ui/`): the Preferences words, the Keyboard shortcuts sheet's words and group names, the tab
   icons' drawings and the accessible names added for screen readers (`Show in Basic: Title`, `Group the picked objects`,
   `Profiles… for the devices of this page`, a finding's `L05, <object>, <device>`, the Repeat tab renamed `Repeat settings`)
