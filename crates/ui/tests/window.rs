@@ -525,6 +525,49 @@ fn dont_save_then_close_leaves_no_recovery_file() {
 }
 
 #[test]
+fn dont_save_then_cancelling_open_keeps_the_recovery_file_until_a_file_replaces_the_document() {
+    // Rung 17, D3: Don't save followed by a cancelled Open dialog left the document unsaved with its recovery file
+    // deleted. The file now goes only when a file is opened over the document.
+    let dir =
+        std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("window_open_cancel_recovery");
+    let _ = std::fs::remove_dir_all(&dir);
+    let rec = Recovery::new(&dir);
+    let mut h = harness();
+    h.state_mut().ui.recovery = Some(rec.clone());
+    h.get_by_label("Open sample page").click();
+    h.run();
+    h.state_mut().ui.viewer.selection = vec![ids::RULE];
+    h.state_mut().ui.viewer.nudge(1.0, 0.0, false).unwrap();
+    h.run();
+    rec.write(&mut h.state_mut().ui.viewer).unwrap();
+    let written = rec.list().len();
+    h.state_mut().requests.clear();
+    file_item(&mut h, "Open…");
+    h.get_by_label("Don’t save").click();
+    h.run();
+    let dialog = h.state().requests == vec![Request::OpenDialog];
+    // The dialog is cancelled: nothing more happens. The document is still unsaved and its file is still there.
+    let kept = rec.list().len();
+    let still_dirty = h.state().ui.viewer.is_dirty();
+    let waits = h.state().ui.recovery_discard_waits();
+    // A file is picked: now the document is replaced, and its recovery file goes.
+    let other = dir.join("other.quad");
+    let mut v = Viewer::default();
+    v.open_paper();
+    v.save_to(&other).unwrap();
+    h.state_mut().ui.open_file(&other);
+    h.run();
+    let left = rec.list().len();
+    let replaced = !h.state().ui.viewer.is_dirty() && !h.state().ui.recovery_discard_waits();
+    let ok = written == 1 && dialog && kept == 1 && still_dirty && waits && left == 0 && replaced;
+    println!(
+        "CHECK crate=ui name=dont_save_cancel_open_keeps_recovery result={} written={written} dialog_asked={dialog} kept_after_cancel={kept} still_unsaved={still_dirty} waits={waits} left_after_open={left}",
+        pass(ok)
+    );
+    assert!(ok);
+}
+
+#[test]
 fn snap_toggles_and_subdivisions_are_named_controls() {
     // Rung 4a: each helper has a switch in the Page tab, named for screen readers by its label; the Page tab has a
     // Subdivisions field. Since fixes batch 2 (Q3) the status bar has none (View > Snapping holds them too).

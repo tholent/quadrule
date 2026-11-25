@@ -384,3 +384,59 @@ fn copy_cut_and_paste() {
     );
     assert!(ok);
 }
+
+#[test]
+fn save_stamps_the_modified_date_without_making_the_document_dirty() {
+    // Rung 17, D3: Save sets `metadata.modified`; it is not an edit.
+    let dir = tmp("save-modified");
+    let mut v = Viewer::default();
+    v.open_sample();
+    let before = v.doc().unwrap().metadata.modified.clone();
+    let path = dir.join("page.quad");
+    v.save_to(&path).unwrap();
+    let after = v.doc().unwrap().metadata.modified.clone();
+    let file = quadrule_format::QuadFile::from_bytes(&std::fs::read(&path).unwrap()).unwrap();
+    let in_file = file.doc.metadata.modified == after;
+    let created_kept = file.doc.metadata.created == v.doc().unwrap().metadata.created;
+    let clean = !v.is_dirty() && v.open.as_ref().unwrap().history.undo_len() == 0;
+    let ok = after != before && after.ends_with('Z') && in_file && created_kept && clean;
+    println!(
+        "CHECK crate=ui name=save_sets_modified result={} changed={} in_file={in_file} created_kept={created_kept} not_dirty={clean}",
+        pass(ok),
+        after != before
+    );
+    assert!(ok);
+}
+
+#[test]
+fn a_paste_goes_to_the_layer_picked_in_the_layers_panel() {
+    // Rung 17, D4: the picked layer wins over the layer of the first selected object; a locked or missing pick
+    // falls back to that object's layer.
+    let mut v = Viewer::default();
+    v.open_sample();
+    v.selection = vec![ids::TITLE];
+    let text = v.copy_text().expect("an object to copy");
+    let doc = v.doc().unwrap();
+    let own = doc.layer_of(ids::TITLE).unwrap();
+    let other = (0..doc.layers.len()).find(|&l| l != own).unwrap();
+    let layer_of_new = |v: &Viewer| v.doc().unwrap().layer_of(v.selection[0]).unwrap();
+    assert!(v.paste_text_in(&text, Some(other)).unwrap());
+    let to_picked = layer_of_new(&v) == other;
+    v.selection = vec![ids::TITLE];
+    assert!(v.paste_text_in(&text, None).unwrap());
+    let to_object_layer = layer_of_new(&v) == own;
+    v.selection = vec![ids::TITLE];
+    assert!(v.paste_text_in(&text, Some(99)).unwrap());
+    let missing_falls_back = layer_of_new(&v) == own;
+    // A locked picked layer is not pasted into.
+    v.set_layer(other, |l| l.locked = true).unwrap();
+    v.selection = vec![ids::TITLE];
+    assert!(v.paste_text_in(&text, Some(other)).unwrap());
+    let locked_falls_back = layer_of_new(&v) == own;
+    let ok = to_picked && to_object_layer && missing_falls_back && locked_falls_back;
+    println!(
+        "CHECK crate=ui name=paste_to_picked_layer result={} to_picked={to_picked} to_object_layer_without_pick={to_object_layer} missing_pick_falls_back={missing_falls_back} locked_pick_falls_back={locked_falls_back}",
+        pass(ok)
+    );
+    assert!(ok);
+}

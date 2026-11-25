@@ -318,6 +318,9 @@ pub struct ViewerUi {
     /// Recovery files found on start, offered one at a time.
     offers: Vec<Recovered>,
     autosave: Autosave,
+    /// The document Don't save gave up, while the Open dialog is open: its recovery file goes when a file is
+    /// opened over it, and stays if the dialog is cancelled (rung 17, D3).
+    discard_when_replaced: Option<Source>,
     was_focused: bool,
     /// Set once the window has been told to close: no more autosaves, or the focus lost while
     /// closing would write back the recovery file "Don't save" just deleted.
@@ -395,6 +398,7 @@ impl ViewerUi {
             new_device: quadrule_model::sample::MANTA_ID.to_string(),
             offers: Vec::new(),
             autosave: Autosave::default(),
+            discard_when_replaced: None,
             was_focused: true,
             font_picker: Default::default(),
             emoji_picker: Default::default(),
@@ -721,7 +725,8 @@ impl ViewerUi {
             ctx.copy_text(text);
         }
         if let Some(text) = pasted {
-            let _ = self.viewer.paste_text(&text);
+            // Into the layer picked in the layers panel, when one is (rung 17, D4).
+            let _ = self.viewer.paste_text_in(&text, self.selected_layer);
         }
         if key(Act::Delete) {
             let _ = self.viewer.delete_selection();
@@ -924,6 +929,7 @@ impl ViewerUi {
 
     /// Does `after` now, or, with unsaved changes, asks Save / Don't save / Cancel first.
     pub fn guard(&mut self, after: After) -> Vec<Request> {
+        self.discard_when_replaced = None;
         if self.viewer.is_dirty() {
             self.pending = Some(after);
             Vec::new()
@@ -1002,9 +1008,28 @@ impl ViewerUi {
 
     /// Opens a file picked in the Open dialog.
     pub fn open_file(&mut self, path: &Path) {
+        let old = self.discard_when_replaced.take();
+        let before = self.viewer.generation;
         if self.viewer.open_path(path).is_ok() {
+            if self.viewer.generation != before {
+                self.discard_recovery(old.as_ref());
+            }
             self.after_open();
         }
+    }
+
+    /// Deletes the recovery file of the document `source` named, if it had one.
+    fn discard_recovery(&self, source: Option<&Source>) {
+        if let (Some(rec), Some(s)) = (&self.recovery, source) {
+            rec.discard(s);
+        }
+    }
+
+    /// Whether the window is keeping a recovery file for deletion until the Open dialog's file replaces the
+    /// document (Don't save, then the dialog), for tests.
+    #[doc(hidden)]
+    pub fn recovery_discard_waits(&self) -> bool {
+        self.discard_when_replaced.is_some()
     }
 
     fn after_open(&mut self) {
@@ -1054,10 +1079,20 @@ impl ViewerUi {
             }
             Some(1) => {
                 self.pending = None;
-                if let (Some(rec), Some(o)) = (&self.recovery, &self.viewer.open) {
-                    rec.discard(&o.source);
-                }
+                // Don't save throws the changes away, but the recovery file goes only once the document is
+                // really replaced or closed: a cancelled Open dialog leaves the document as it was, unsaved,
+                // and its recovery file must stay (rung 17, D3).
+                let old = self.viewer.open.as_ref().map(|o| o.source.clone());
+                let generation = self.viewer.generation;
+                let closing = after == After::Close;
                 requests.extend(self.proceed(after));
+                let gone =
+                    closing || self.viewer.open.is_none() || self.viewer.generation != generation;
+                if gone {
+                    self.discard_recovery(old.as_ref());
+                } else if requests.contains(&Request::OpenDialog) {
+                    self.discard_when_replaced = old;
+                }
             }
             Some(_) => self.pending = None,
             None => {}

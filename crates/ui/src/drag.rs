@@ -827,6 +827,13 @@ impl Viewer {
             });
             return false;
         }
+        // A locked object in the selection stays where it is; the status bar says so (rung 17, D5).
+        if self.selection.iter().any(|id| !doc.editable(*id)) {
+            self.notice = Some(crate::viewer::Notice {
+                message: quadrule_i18n::Message::new("notice-locked-stays"),
+                error: false,
+            });
+        }
         let mut base_doc = doc.clone();
         let mut targets = ids.clone();
         // What the drag can line up with: everything on the page it is not moving. An Alt-drag

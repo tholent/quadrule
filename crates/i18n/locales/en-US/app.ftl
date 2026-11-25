@@ -120,6 +120,7 @@ notice-copy-device = This page could not be set up for { $device } ({ $error }),
 notice-saved = Saved { $path }.
 notice-save-failed = Could not save: { $error }
 notice-locked = The selection is locked.
+notice-locked-stays = Some of the picked objects are locked, so they stay where they are.
 notice-object-locked = "{ $name }" is locked.
 notice-layer-locked = The layer "{ $name }" is locked.
 notice-edit-failed = Could not change that: { $error }

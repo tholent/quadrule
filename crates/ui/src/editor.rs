@@ -813,21 +813,31 @@ impl Viewer {
 
     /// Pastes clipboard `text` if it is quadrule's (Ctrl+V); returns whether anything was
     /// pasted. The copies are new objects on top of the layer of the first selected object (or
-    /// the top unlocked layer), and become the selection. Into the document they came from they
+    /// the top unlocked layer; [`Viewer::paste_text_in`] takes the layers panel's pick first), and become the
+    /// selection. Into the document they came from they
     /// land one rhythm unit down and right, and each paste in a row one unit further; into
     /// another document the first lands in the same place.
     pub fn paste_text(&mut self, text: &str) -> Result<bool, EditError> {
+        self.paste_text_in(text, None)
+    }
+
+    /// [`Viewer::paste_text`] into `picked`, the layer picked in the layers panel, when there is one and it is
+    /// not locked; otherwise on the layer of the first selected object (rung 17, D4).
+    pub fn paste_text_in(&mut self, text: &str, picked: Option<usize>) -> Result<bool, EditError> {
         let Some(objects) = clipboard::from_text(text) else {
             return Ok(false);
         };
         let Some(doc) = self.doc() else {
             return Ok(false);
         };
-        let layer = self
-            .selection
-            .iter()
-            .find_map(|id| doc.layer_of(*id))
-            .filter(|&l| !doc.layers[l].locked)
+        let layer = picked
+            .filter(|&l| l < doc.layers.len() && !doc.layers[l].locked)
+            .or_else(|| {
+                self.selection
+                    .iter()
+                    .find_map(|id| doc.layer_of(*id))
+                    .filter(|&l| !doc.layers[l].locked)
+            })
             .or_else(|| doc.layers.iter().rposition(|l| !l.locked));
         let Some(layer) = layer else {
             self.notice = Some(crate::viewer::Notice {
@@ -1220,6 +1230,11 @@ impl Viewer {
     /// document's file. Writes a new file beside it, then renames it over the old one, so a
     /// failed save never leaves half a file. On failure the notice says why.
     pub fn save_to(&mut self, path: &Path) -> Result<(), String> {
+        // Save stamps the document's modified date (rung 17, D3). It is a field of the document's own, not an
+        // edit: it makes no undo step and no unsaved change.
+        if let Some(o) = &mut self.open {
+            o.doc.metadata.modified = quadrule_model::blank::now_rfc3339();
+        }
         let result = self.save_bytes().and_then(|bytes| {
             write_replacing(path, &bytes).map_err(|e| format!("{}: {e}", path.display()))
         });

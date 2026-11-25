@@ -187,7 +187,11 @@ fn escape_cancels_and_locked_objects_do_not_drag() {
     let Shape::Box { x0, y0, .. } = title_y else {
         panic!("a text box is a box")
     };
+    v.notice = None;
     grab(&mut v, x0 + 20.0, y0 + 5.0, NONE);
+    // The status bar says a locked one stays where it is (rung 17, D5).
+    let says_so = v.notice.as_ref().map(|n| n.message.clone())
+        == Some(quadrule_i18n::Message::new("notice-locked-stays"));
     v.drag_update(x0 + 20.0, y0 + 5.0 + 50.0, FREE, REACH);
     v.drag_end().unwrap();
     let rule_stayed = frame(&v, ids::RULE) == locked_frame;
@@ -198,9 +202,9 @@ fn escape_cancels_and_locked_objects_do_not_drag() {
     let refused = began && v.drag.as_ref().map(|d| d.kind) == Some(DragKind::Marquee);
     v.drag_cancel();
     let refused = refused && frame(&v, ids::RULE) == locked_frame;
-    let ok = cancelled && alt_cancelled && rule_stayed && title_moved && refused;
+    let ok = cancelled && alt_cancelled && rule_stayed && title_moved && refused && says_so;
     println!(
-        "\nCHECK crate=ui name=drag_cancel_and_locks result={} cancelled={cancelled} alt_cancelled={alt_cancelled} locked_stayed={rule_stayed} unlocked_moved={title_moved} press_on_locked_is_marquee={refused}",
+        "\nCHECK crate=ui name=drag_cancel_and_locks result={} cancelled={cancelled} alt_cancelled={alt_cancelled} locked_stayed={rule_stayed} unlocked_moved={title_moved} press_on_locked_is_marquee={refused} status_says_locked_stays={says_so}",
         pass(ok)
     );
     assert!(ok);
