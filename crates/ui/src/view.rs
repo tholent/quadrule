@@ -208,6 +208,8 @@ pub struct ViewerUi {
     pub chip_state: ChipState,
     /// How long the frames of the last drag took (rung 4 bbq, Defaulted "Pi-smooth, the number").
     pub drag_clock: DragClock,
+    /// The whole window frames of a `--basic-tab` bench run (rung 17).
+    frame_clock: DragClock,
     /// A drag is being timed.
     clock_live: bool,
     /// Set when this frame made the page again (a new texture, or a new chip frame).
@@ -355,6 +357,7 @@ impl ViewerUi {
             chip: Err("no graphics-chip renderer".into()),
             chip_state: ChipState::default(),
             drag_clock: DragClock::default(),
+            frame_clock: DragClock::default(),
             clock_live: false,
             rebuilt: false,
             pointer_drag: false,
@@ -555,6 +558,13 @@ impl ViewerUi {
         self.completion_window(&ctx, &mut requests);
         self.recovery_prompt(&ctx);
         self.welcome_bench_frame(&ctx, frame_start.elapsed());
+        // A `--basic-tab` run times the whole frame, panels and canvas, while the drag runs.
+        if self.bench.as_ref().is_some_and(|b| {
+            b.basic_tab && matches!(b.phase, crate::bench::Phase::Run(i) if i > 0 && i <= b.frames)
+        }) {
+            self.frame_clock
+                .record(frame_start.elapsed().as_secs_f64() * 1000.0);
+        }
         requests
     }
 
@@ -1586,6 +1596,10 @@ impl ViewerUi {
             return;
         };
         ctx.request_repaint();
+        if b.basic_tab {
+            // The Basic tab stays open whatever the drag selects.
+            self.tab = Tab::Basic;
+        }
         match b.phase {
             Phase::Warm(n) => {
                 if self.viewer.open.is_none() {
@@ -1627,6 +1641,7 @@ impl ViewerUi {
                 }
                 // The strip is open in a bench unless asked otherwise, whatever the settings say.
                 self.viewer.show_strip = !b.no_strip;
+
                 if n == 0 && b.secondary {
                     let ids = self.viewer.profile_ids();
                     if let Some(second) = ids.get(1) {
@@ -1788,7 +1803,11 @@ impl ViewerUi {
                     self.viewer.gesture_end();
                     self.viewer.undo();
                 }
-                let c = self.drag_clock.clone();
+                let c = if b.basic_tab {
+                    self.frame_clock.clone()
+                } else {
+                    self.drag_clock.clone()
+                };
                 let canvas = match (self.canvas_mode, &self.chip_state.fallback) {
                     (CanvasMode::ExportPixels, _) => "export",
                     (CanvasMode::Chip, None) => "chip",
@@ -1804,13 +1823,14 @@ impl ViewerUi {
                     "fail"
                 };
                 println!(
-                    "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} device={} profile={} strip={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
+                    "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} timed={} page={} device={} profile={} strip={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
                     b.name(),
                     if cfg!(debug_assertions) {
                         "debug"
                     } else {
                         "release"
                     },
+                    if b.basic_tab { "frame" } else { "canvas" },
                     // A page opened from a file is named by its file (rung 16b: the starters' speed run).
                     if let Some(file) = self.bench_file() {
                         file

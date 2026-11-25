@@ -108,6 +108,9 @@ pub struct DragBench {
     /// Runs on the document's first secondary device, not the primary one (`--bench-secondary`), so
     /// a drag writes overrides (rung 8a).
     pub secondary: bool,
+    /// Shows the Basic tab and times the whole window frame, the panels as well as the canvas
+    /// (`--basic-tab`, rung 17): the inspector's Basic tab draws the marked fields every frame.
+    pub basic_tab: bool,
     /// Folds the previews strip shut for the run (`--no-strip`); it is open otherwise, in a bench
     /// whatever the settings say (rung 8a, Defaulted "Speed").
     pub no_strip: bool,
@@ -158,6 +161,15 @@ impl DragBench {
             typing: false,
             secondary: false,
             no_strip: false,
+            basic_tab: false,
+        }
+    }
+
+    /// The same benchmark with the Basic tab showing and the whole window frame timed.
+    pub fn with_basic_tab(self) -> Self {
+        DragBench {
+            basic_tab: true,
+            ..self
         }
     }
 

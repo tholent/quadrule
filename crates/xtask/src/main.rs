@@ -20,6 +20,7 @@
 //! cargo xtask lint [--toolbars <list>] [<file.quad>]
 //! cargo xtask prune [--dry-run]
 //! cargo xtask starters [--check]
+//! cargo xtask bench-check [--record] [--runs <n>] [--only <text>] [--starter <file>] [--basic-starter <file>]
 //! ```
 
 use quadrule_render::{PngMeta, encode_png, render, sha256_hex};
@@ -28,7 +29,7 @@ use quadrule_xtask::{calib, lintrun};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]\n       cargo xtask lint [--toolbars <list>] [<file.quad>]\n       cargo xtask prune [--dry-run]\n       cargo xtask starters [--check]";
+const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]\n       cargo xtask lint [--toolbars <list>] [<file.quad>]\n       cargo xtask prune [--dry-run]\n       cargo xtask starters [--check]\n       cargo xtask bench-check [--record] [--runs <n>] [--only <text>] [--starter <file>] [--basic-starter <file>]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -61,6 +62,14 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
+        Some("bench-check") => match bench_check(&args[1..]) {
+            Ok(true) => ExitCode::SUCCESS,
+            Ok(false) => ExitCode::FAILURE,
+            Err(e) => {
+                eprintln!("error: {e}");
+                ExitCode::from(2)
+            }
+        },
         Some("safe-zones") => match safe_zones(&args[1..]) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -73,6 +82,33 @@ fn main() -> ExitCode {
             ExitCode::from(2)
         }
     }
+}
+
+/// `bench-check`: the fixed set of benches against the recorded numbers (or, with `--record`, writing them).
+/// True when it passed.
+fn bench_check(args: &[String]) -> Result<bool, String> {
+    let mut opts = quadrule_xtask::bench::Options::default();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--record" => opts.record = true,
+            "--runs" => {
+                opts.runs = it
+                    .next()
+                    .and_then(|v| v.parse().ok())
+                    .filter(|n| *n > 0)
+                    .ok_or(USAGE)?;
+            }
+            "--only" => opts.only = Some(it.next().ok_or(USAGE)?.clone()),
+            "--starter" => opts.starter = it.next().ok_or(USAGE)?.clone(),
+            "--basic-starter" => opts.basic_starter = it.next().ok_or(USAGE)?.clone(),
+            _ => return Err(format!("unknown argument {a:?}\n{USAGE}")),
+        }
+    }
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let root = root.canonicalize().unwrap_or(root);
+    let report = quadrule_xtask::bench::run(&root, &opts)?;
+    Ok(report.passed)
 }
 
 /// Writes every calibration page for the chosen profiles, plus a `codes.txt` key per profile.

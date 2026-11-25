@@ -16,6 +16,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod bench;
 pub mod calib;
 pub mod lintrun;
 pub mod prune;

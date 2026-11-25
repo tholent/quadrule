@@ -1,0 +1,29 @@
+# Recorded bench numbers for `gibson`: the 90th percentile of frame time in milliseconds (best of the runs), release
+# build, from `make bench-record` on 2026-11-25. `make bench-check` fails when a bench is over 50 ms or more than 20 %
+# (and 1 ms) slower than its number here. Record again only after a change that is meant to move them.
+basic-tab-starter-manta-export 9.5
+basic-tab-starter-nomad-export 6.6
+drag-paper-a3-600-chip 7.8
+drag-paper-a3-600-export 2.4
+drag-paper-a4-300-chip 8.2
+drag-paper-a4-300-export 2.2
+drag-paper-tabloid-600-chip 7.9
+drag-paper-tabloid-600-export 2.3
+drag-starter-manta-chip 14.1
+drag-starter-manta-export 7.0
+drag-starter-nomad-chip 11.3
+drag-starter-nomad-export 4.5
+draw-paper-a3-600-chip 8.3
+draw-paper-a3-600-export 2.3
+draw-paper-a4-300-chip 9.2
+draw-paper-a4-300-export 2.1
+draw-starter-manta-chip 11.7
+draw-starter-manta-export 7.1
+draw-starter-nomad-chip 11.7
+draw-starter-nomad-export 4.7
+type-sample-chip 9.4
+type-sample-export 3.1
+zoom-groups-chip 10.9
+zoom-groups-export 9.1
+zoom-sample-chip 10.1
+zoom-sample-export 9.1

@@ -325,6 +325,11 @@ impl App {
                 b
             };
             let b = if args.no_strip { b.without_strip() } else { b };
+            let b = if args.basic_tab {
+                b.with_basic_tab()
+            } else {
+                b
+            };
             if args.missing_fonts_page {
                 b.with_missing_fonts()
             } else if args.textbox_page {
@@ -697,6 +702,8 @@ struct Args {
     /// Run the benchmark on the first secondary device, so a drag writes overrides
     /// (`--bench-secondary`).
     bench_secondary: bool,
+    /// Show the Basic tab and time the whole window frame, not the canvas alone (`--basic-tab`, rung 17).
+    basic_tab: bool,
     /// Fold the previews strip shut for the benchmark (`--no-strip`); it is open in a bench
     /// otherwise.
     no_strip: bool,
@@ -790,6 +797,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.lint_page = true;
         } else if a == "--paper-page" {
             out.paper_page = true;
+        } else if a == "--basic-tab" {
+            out.basic_tab = true;
         } else if a == "--large-paper-page" {
             out.large_paper_page = true;
         } else if a == "--device" {
@@ -1061,6 +1070,16 @@ mod tests {
                     bench_drag: Some(30),
                     large_paper_page: true,
                     device: Some("nomad".into()),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--bench-drag", "--basic-tab", "--device", "manta", "a.quad"]),
+                Ok(Args {
+                    bench_drag: Some(150),
+                    basic_tab: true,
+                    device: Some("manta".into()),
+                    path: Some("a.quad".into()),
                     ..Args::default()
                 }),
             ),

@@ -23,7 +23,7 @@ export CARGO_BUILD_JOBS := $(JOBS)
 LOG := target/test.log
 
 # For `run`, `lint`: FILE=path/to/page.quad. For `bench-drag`: FRAMES=150; SHAPES=1 runs it over the shapes page (every
-# new kind), TRANSFORMS=1 over the transforms page (turned shapes, lines every way, opacity; `bench-rotate` always), GROUPS=1 over the groups page (the drag moves its heavy group), DEVICES=1 over the overrides page, LANDSCAPE=1 over the landscape page, PATTERNS=1 over the pattern page, REPEATS=1 over the repeat page, ANGLE=1 over the pattern-angle page, BORDERED=1 over the pattern-borders page, LINT=1 over the lint page (objects that make each gray, text-size, handwriting, dark-fill and thin-line rule fire), PAPER=1 over the paper page (ISO A4 at 300 PPI and ISO A5 at 600), TURNED=1 over the turned-patterns page (`bench-rotate` then turns its 45 degree grid), FONTS=1 over the fonts page, TEXTBOX=1 over the text-box page, MISSING=1 over the missing-fonts page (the text-box page in a font this computer lacks), NOMAD=1 on the Nomad (a drag then writes overrides), NOSTRIP=1 with the device previews strip folded shut (it is open in a bench otherwise); `bench-draw` also takes TOOL=rect|ellipse|polygon|pattern|line|text. For `calibration-sheet` and
+# new kind), TRANSFORMS=1 over the transforms page (turned shapes, lines every way, opacity; `bench-rotate` always), GROUPS=1 over the groups page (the drag moves its heavy group), DEVICES=1 over the overrides page, LANDSCAPE=1 over the landscape page, PATTERNS=1 over the pattern page, REPEATS=1 over the repeat page, ANGLE=1 over the pattern-angle page, BORDERED=1 over the pattern-borders page, LINT=1 over the lint page (objects that make each gray, text-size, handwriting, dark-fill and thin-line rule fire), PAPER=1 over the paper page (ISO A4 at 300 PPI and ISO A5 at 600), LARGE=1 over the large paper page (ISO A3 and Tabloid at 600 PPI), FILE=path/to/starter.quad over a file, DEVICE=nomad|manta|<profile id> on that tablet, BASICTAB=1 with the Basic tab open and the whole window frame timed, TURNED=1 over the turned-patterns page (`bench-rotate` then turns its 45 degree grid), FONTS=1 over the fonts page, TEXTBOX=1 over the text-box page, MISSING=1 over the missing-fonts page (the text-box page in a font this computer lacks), NOMAD=1 on the Nomad (a drag then writes overrides), NOSTRIP=1 with the device previews strip folded shut (it is open in a bench otherwise); `bench-draw` also takes TOOL=rect|ellipse|polygon|pattern|line|text. For `calibration-sheet` and
 # `safe-zones`: PROFILE=supernote.a6x2 (default all). For `fuzz`: SECS=60.
 FILE ?=
 FRAMES ?= 150
@@ -55,7 +55,7 @@ DRY ?=
 STARTERS_CHECK ?=
 
 .PHONY: help build build-all fmt fmt-check clippy clippy-all test test-all test-v check check-all \
-        run run-release bench-drag bench-draw bench-type bench-rotate bench-zoom calibration-sheet safe-zones starters lint fuzz build-proof review prune check-github
+        run run-release bench-drag bench-draw bench-type bench-rotate bench-zoom bench-check bench-record calibration-sheet safe-zones starters lint fuzz build-proof review prune check-github
 
 help: ## List the targets
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z_-]+:.*## / {printf "  make %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -142,10 +142,10 @@ run-release: ## The same, as a release build (what the speed numbers use)
 	cargo run --release -p quadrule-app -- $(FILE)
 
 bench-drag: ## Drag-speed bench on the sample page, release build (FRAMES=150, SHAPES=1 for the shapes page, TRANSFORMS=1, GROUPS=1, DEVICES=1, LANDSCAPE=1, PATTERNS=1, REPEATS=1, NOMAD=1, NOSTRIP=1); the 90th percentile is the judge
-	cargo run --release -p quadrule-app -- --bench-drag $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page) $(if $(GROUPS),--groups-page) $(if $(DEVICES),--devices-page) $(if $(LANDSCAPE),--landscape-page) $(if $(PATTERNS),--patterns-page) $(if $(REPEATS),--repeats-page) $(if $(TURNED),--turned-patterns-page) $(if $(ANGLE),--pattern-angle-page) $(if $(BORDERED),--bordered-page) $(if $(LINT),--lint-page) $(if $(PAPER),--paper-page) $(if $(FONTS),--fonts-page) $(if $(TEXTBOX),--textbox-page) $(if $(MISSING),--missing-fonts-page) $(if $(NOMAD),--bench-secondary) $(if $(NOSTRIP),--no-strip)
+	cargo run --release -p quadrule-app -- --bench-drag $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page) $(if $(GROUPS),--groups-page) $(if $(DEVICES),--devices-page) $(if $(LANDSCAPE),--landscape-page) $(if $(PATTERNS),--patterns-page) $(if $(REPEATS),--repeats-page) $(if $(TURNED),--turned-patterns-page) $(if $(ANGLE),--pattern-angle-page) $(if $(BORDERED),--bordered-page) $(if $(LINT),--lint-page) $(if $(PAPER),--paper-page) $(if $(FONTS),--fonts-page) $(if $(TEXTBOX),--textbox-page) $(if $(MISSING),--missing-fonts-page) $(if $(NOMAD),--bench-secondary) $(if $(NOSTRIP),--no-strip) $(if $(LARGE),--large-paper-page) $(if $(BASICTAB),--basic-tab) $(if $(DEVICE),--device $(DEVICE)) $(FILE)
 
 bench-draw: ## Drawing-speed bench: drags a pattern region out over the sample page, release build (FRAMES=150, SHAPES=1, TRANSFORMS=1, GROUPS=1, DEVICES=1, LANDSCAPE=1, PATTERNS=1, REPEATS=1, NOMAD=1, NOSTRIP=1, TOOL=rect|ellipse|polygon)
-	cargo run --release -p quadrule-app -- --bench-draw $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page) $(if $(GROUPS),--groups-page) $(if $(DEVICES),--devices-page) $(if $(LANDSCAPE),--landscape-page) $(if $(PATTERNS),--patterns-page) $(if $(REPEATS),--repeats-page) $(if $(TURNED),--turned-patterns-page) $(if $(ANGLE),--pattern-angle-page) $(if $(BORDERED),--bordered-page) $(if $(LINT),--lint-page) $(if $(PAPER),--paper-page) $(if $(FONTS),--fonts-page) $(if $(TEXTBOX),--textbox-page) $(if $(MISSING),--missing-fonts-page) $(if $(NOMAD),--bench-secondary) $(if $(NOSTRIP),--no-strip) $(if $(TOOL),--bench-tool $(TOOL))
+	cargo run --release -p quadrule-app -- --bench-draw $(FRAMES) $(if $(SHAPES),--shapes-page) $(if $(TRANSFORMS),--transforms-page) $(if $(GROUPS),--groups-page) $(if $(DEVICES),--devices-page) $(if $(LANDSCAPE),--landscape-page) $(if $(PATTERNS),--patterns-page) $(if $(REPEATS),--repeats-page) $(if $(TURNED),--turned-patterns-page) $(if $(ANGLE),--pattern-angle-page) $(if $(BORDERED),--bordered-page) $(if $(LINT),--lint-page) $(if $(PAPER),--paper-page) $(if $(FONTS),--fonts-page) $(if $(TEXTBOX),--textbox-page) $(if $(MISSING),--missing-fonts-page) $(if $(NOMAD),--bench-secondary) $(if $(NOSTRIP),--no-strip) $(if $(LARGE),--large-paper-page) $(if $(BASICTAB),--basic-tab) $(if $(DEVICE),--device $(DEVICE)) $(if $(TOOL),--bench-tool $(TOOL)) $(FILE)
 
 bench-type: ## Typing-speed bench: types into a long text box, release build (FRAMES=150, FONTS=1, TEXTBOX=1, NOSTRIP=1)
 	cargo run --release -p quadrule-app -- --bench-type $(FRAMES) $(if $(FONTS),--fonts-page) $(if $(TEXTBOX),--textbox-page) $(if $(NOSTRIP),--no-strip)
@@ -155,6 +155,21 @@ bench-zoom: ## Zoom-speed bench: zooms the page in and out like a pinch, release
 
 bench-rotate: ## Rotate-speed bench: turns the transforms page's big rectangle with its handle, release build (FRAMES=150, TURNED=1 turns the turned-patterns page's grid)
 	cargo run --release -p quadrule-app -- --bench-rotate $(FRAMES) $(if $(TURNED),--turned-patterns-page) $(if $(ANGLE),--pattern-angle-page) $(if $(NOSTRIP),--no-strip)
+
+# The speed reference (rung 17, Q2): a fixed set of benches in a release build, each one's 90th percentile against the
+# 50 ms line and against the numbers recorded for this computer in docs/bench/<hostname>.txt. A window session is needed
+# (DISPLAY=:0 over ssh). BENCH_RUNS=2 runs each bench that many times and keeps the best; BENCH_ONLY=zoom runs only the
+# benches with that text in their name (never with bench-record). One BENCH line per bench and a BENCH-CHECK line.
+BENCH_RUNS ?= 2
+BENCH_ONLY ?=
+
+bench-check: ## The speed reference: every bench's 90th percentile under 50 ms and within 20 % of docs/bench/<this computer>.txt (BENCH_RUNS=2, BENCH_ONLY=text); needs a window session
+	cargo build --release -p quadrule-app
+	cargo xtask bench-check --runs $(BENCH_RUNS) $(if $(BENCH_ONLY),--only $(BENCH_ONLY))
+
+bench-record: ## Run the same set and write the numbers for this computer to docs/bench/<hostname>.txt (refuses while any bench is over 50 ms)
+	cargo build --release -p quadrule-app
+	cargo xtask bench-check --record --runs $(BENCH_RUNS)
 
 # ---- maintainer tasks ----------------------------------------------------------------------------------------
 
