@@ -68,6 +68,73 @@ pub(crate) struct StrokeMixed {
     pub(crate) gray: bool,
 }
 
+/// Which of the fill, dash, cap and shape rows differ across the objects picked (they read "mixed"; rung 17, D11).
+#[derive(Clone, Copy, Debug, Default)]
+pub(crate) struct ShapeMixed {
+    pub(crate) fill: bool,
+    pub(crate) fill_gray: bool,
+    pub(crate) dash: bool,
+    pub(crate) dash_length: bool,
+    pub(crate) gap_length: bool,
+    pub(crate) cap: bool,
+    pub(crate) radius: bool,
+    pub(crate) sides: bool,
+    pub(crate) star: bool,
+    pub(crate) inner: bool,
+}
+
+impl ShapeMixed {
+    /// What differs from `o` among the `picked` objects; each row is compared only among the objects that have it.
+    fn of(picked: &[Object], o: &Object) -> Self {
+        let shapes = || picked.iter().filter(|x| x.kind.is_shape());
+        let stroked = || {
+            picked
+                .iter()
+                .filter(|x| x.kind.is_shape() || matches!(x.kind, ObjectKind::Line(_)))
+        };
+        let rects = || {
+            picked.iter().filter_map(|x| match &x.kind {
+                ObjectKind::Rect(r) => Some(r.corner_radius_mm),
+                _ => None,
+            })
+        };
+        let polygons = || {
+            picked.iter().filter_map(|x| match &x.kind {
+                ObjectKind::Polygon(p) => Some(p),
+                _ => None,
+            })
+        };
+        let first_rect = rects().next();
+        let first_poly = polygons().next();
+        ShapeMixed {
+            fill: shapes().any(|x| FillChoice::of(x.fill) != FillChoice::of(o.fill)),
+            fill_gray: shapes().any(|x| {
+                !matches!((x.fill, o.fill), (Some(Fill::Gray(a)), Some(Fill::Gray(b))) if a == b)
+            }),
+            dash: stroked().any(|x| DashChoice::of(x.dash) != DashChoice::of(o.dash)),
+            dash_length: stroked().any(|x| {
+                !matches!((x.dash, o.dash),
+                    (DashStyle::Custom { dash_mm: a, .. }, DashStyle::Custom { dash_mm: b, .. }) if (a - b).abs() < 1e-9)
+            }),
+            gap_length: stroked().any(|x| {
+                !matches!((x.dash, o.dash),
+                    (DashStyle::Custom { gap_mm: a, .. }, DashStyle::Custom { gap_mm: b, .. }) if (a - b).abs() < 1e-9)
+            }),
+            cap: stroked().any(|x| x.cap != o.cap),
+            radius: first_rect.is_some_and(|f| rects().any(|r| (r - f).abs() > 1e-9)),
+            sides: first_poly.is_some_and(|f| polygons().any(|p| p.sides_clamped() != f.sides_clamped())),
+            star: first_poly.is_some_and(|f| polygons().any(|p| p.star.is_some() != f.star.is_some())),
+            inner: first_poly.is_some_and(|f| {
+                polygons().any(|p| match (p.star_clamped(), f.star_clamped()) {
+                    (Some(a), Some(b)) => (a - b).abs() > 1e-9,
+                    (None, None) => false,
+                    _ => true,
+                })
+            }),
+        }
+    }
+}
+
 /// What a double-click in the layers panel is renaming.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Renaming {
@@ -1565,6 +1632,7 @@ impl ViewerUi {
                 (Style::Custom { gray: x, .. }, Style::Custom { gray: y, .. }) if x == y)
         });
         let opacity_mixed = any_differs(&|a, b| a.opacity() == b.opacity());
+        let shape_mixed = ShapeMixed::of(&picked, &o);
         // A group has opacity and nothing else: its stroke and fill are its children's (rung 7a).
         if o.is_group() {
             ui.add_enabled_ui(enabled, |ui| {
@@ -1593,11 +1661,11 @@ impl ViewerUi {
                 );
 
                 if shape {
-                    self.fill_rows(ui, &o, enabled);
+                    self.fill_rows(ui, &o, enabled, shape_mixed);
                 }
 
                 if stroked && o.style != Style::None {
-                    self.dash_rows(ui, &o, &cx, enabled);
+                    self.dash_rows(ui, &o, &cx, enabled, shape_mixed);
                 }
 
                 self.opacity_row(ui, &o, opacity_mixed);
@@ -1636,7 +1704,7 @@ impl ViewerUi {
             if shape {
                 ui.add_space(6.0);
                 ui.strong(self.t("app-shape"));
-                self.shape_rows(ui, &o, &cx, enabled);
+                self.shape_rows(ui, &o, &cx, enabled, shape_mixed);
             }
             if let ObjectKind::MiniCalendar(m) = &o.kind {
                 ui.add_space(6.0);
@@ -2590,7 +2658,13 @@ impl ViewerUi {
         ui.end_row();
     }
 
-    pub(crate) fn fill_rows(&mut self, ui: &mut egui::Ui, o: &Object, _enabled: bool) {
+    pub(crate) fn fill_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        o: &Object,
+        _enabled: bool,
+        mixed: ShapeMixed,
+    ) {
         let label = ui.label(self.t("app-fill"));
         let was = FillChoice::of(o.fill);
         let mut want = was;
@@ -2600,7 +2674,7 @@ impl ViewerUi {
             (FillChoice::Block, "app-fill-block"),
             (FillChoice::Custom, "app-fill-custom"),
         ];
-        self.combo(ui, "fill", label.id, &mut want, &options);
+        self.combo_mixed(ui, "fill", label.id, &mut want, &options, mixed.fill);
         if want != was {
             // A custom fill starts from the gray the role gave on the device on screen.
             let device = self.viewer.profiles().map(|(_, shown)| shown);
@@ -2627,9 +2701,15 @@ impl ViewerUi {
                 .profiles()
                 .map(|(_, shown)| shown.gray_levels)
                 .unwrap_or_default();
-            if let Some((g, drag)) =
-                self.gray_field(ui, "fill", "app-fill-gray", gray, false, &levels, true)
-            {
+            if let Some((g, drag)) = self.gray_field(
+                ui,
+                "fill",
+                "app-fill-gray",
+                gray,
+                mixed.fill_gray,
+                &levels,
+                true,
+            ) {
                 let merge = drag.then_some("fill-gray");
                 let _ = self.viewer.edit_selected(merge, |x| {
                     if x.kind.is_shape() {
@@ -2641,7 +2721,14 @@ impl ViewerUi {
     }
 
     /// The dash and the cap.
-    fn dash_rows(&mut self, ui: &mut egui::Ui, o: &Object, cx: &UnitContext, enabled: bool) {
+    fn dash_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        o: &Object,
+        cx: &UnitContext,
+        enabled: bool,
+        mixed: ShapeMixed,
+    ) {
         let label = ui.label(self.t("app-dash"));
         let was = DashChoice::of(o.dash);
         let mut want = was;
@@ -2653,7 +2740,7 @@ impl ViewerUi {
             (DashChoice::Long, "app-dash-long"),
             (DashChoice::Custom, "app-dash-custom"),
         ];
-        self.combo(ui, "dash", label.id, &mut want, &options);
+        self.combo_mixed(ui, "dash", label.id, &mut want, &options, mixed.dash);
         if want != was {
             // A custom dash starts from the preset's own lengths.
             let (dash_mm, gap_mm) = o.dash.lengths_mm().unwrap_or((1.0, 0.5));
@@ -2673,9 +2760,15 @@ impl ViewerUi {
         }
         ui.end_row();
         if let DashStyle::Custom { dash_mm, gap_mm } = o.dash {
-            if let Some(mm) =
-                self.length_row(ui, "dash-length", "app-dash-length", dash_mm, cx, enabled)
-            {
+            if let Some(mm) = self.length_row_mixed(
+                ui,
+                "dash-length",
+                "app-dash-length",
+                dash_mm,
+                cx,
+                enabled,
+                mixed.dash_length,
+            ) {
                 let _ = self.viewer.edit_selected(Some("dash-length"), |x| {
                     if let DashStyle::Custom { dash_mm, .. } = &mut x.dash {
                         *dash_mm = mm.max(0.0);
@@ -2683,9 +2776,15 @@ impl ViewerUi {
                 });
             }
             ui.end_row();
-            if let Some(mm) =
-                self.length_row(ui, "gap-length", "app-gap-length", gap_mm, cx, enabled)
-            {
+            if let Some(mm) = self.length_row_mixed(
+                ui,
+                "gap-length",
+                "app-gap-length",
+                gap_mm,
+                cx,
+                enabled,
+                mixed.gap_length,
+            ) {
                 let _ = self.viewer.edit_selected(Some("gap-length"), |x| {
                     if let DashStyle::Custom { gap_mm, .. } = &mut x.dash {
                         *gap_mm = mm.max(0.0);
@@ -2701,7 +2800,7 @@ impl ViewerUi {
             (LineCap::Round, "app-cap-round"),
             (LineCap::Square, "app-cap-square"),
         ];
-        self.combo(ui, "cap", label.id, &mut cap, &options);
+        self.combo_mixed(ui, "cap", label.id, &mut cap, &options, mixed.cap);
         if cap != o.cap {
             let _ = self.viewer.edit_selected(None, |x| {
                 if x.kind.is_shape() || matches!(x.kind, ObjectKind::Line(_)) {
@@ -2713,18 +2812,27 @@ impl ViewerUi {
     }
 
     /// The Shape section: a rectangle's corner radius; a polygon's sides, star and inner radius.
-    fn shape_rows(&mut self, ui: &mut egui::Ui, o: &Object, cx: &UnitContext, enabled: bool) {
+    fn shape_rows(
+        &mut self,
+        ui: &mut egui::Ui,
+        o: &Object,
+        cx: &UnitContext,
+        enabled: bool,
+        mixed: ShapeMixed,
+    ) {
+        let mixed_word = self.t("app-mixed");
         egui::Grid::new("shape-grid")
             .num_columns(2)
             .show(ui, |ui| match &o.kind {
                 ObjectKind::Rect(r) => {
-                    if let Some(mm) = self.length_row(
+                    if let Some(mm) = self.length_row_mixed(
                         ui,
                         "shape-radius",
                         "app-corner-radius",
                         r.corner_radius_mm,
                         cx,
                         enabled,
+                        mixed.radius,
                     ) {
                         let _ = self.viewer.edit_selected(Some("shape-radius"), |x| {
                             if let ObjectKind::Rect(r) = &mut x.kind {
@@ -2737,14 +2845,13 @@ impl ViewerUi {
                 ObjectKind::Polygon(pg) => {
                     let label = ui.label(self.t("app-sides"));
                     let mut sides = pg.sides_clamped();
-                    if ui
-                        .add(
-                            egui::DragValue::new(&mut sides)
-                                .range(POLYGON_SIDES_MIN..=POLYGON_SIDES_MAX),
-                        )
-                        .labelled_by(label.id)
-                        .changed()
-                    {
+                    let mut drag = egui::DragValue::new(&mut sides)
+                        .range(POLYGON_SIDES_MIN..=POLYGON_SIDES_MAX);
+                    if mixed.sides {
+                        let word = mixed_word.clone();
+                        drag = drag.custom_formatter(move |_, _| word.clone());
+                    }
+                    if ui.add(drag).labelled_by(label.id).changed() {
                         let _ = self.viewer.edit_selected(Some("shape-sides"), |x| {
                             if let ObjectKind::Polygon(pg) = &mut x.kind {
                                 pg.sides = sides;
@@ -2754,7 +2861,11 @@ impl ViewerUi {
                     ui.end_row();
                     let label = ui.label(self.t("app-star"));
                     let mut star = pg.star.is_some();
-                    if ui.checkbox(&mut star, "").labelled_by(label.id).changed() {
+                    if ui
+                        .add(egui::Checkbox::new(&mut star, "").indeterminate(mixed.star))
+                        .labelled_by(label.id)
+                        .changed()
+                    {
                         let _ = self.viewer.edit_selected(None, |x| {
                             if let ObjectKind::Polygon(pg) = &mut x.kind {
                                 pg.star = star.then_some(STAR_INNER_DEFAULT);
@@ -2765,16 +2876,15 @@ impl ViewerUi {
                     if let Some(inner) = pg.star_clamped() {
                         let label = ui.label(self.t("app-star-inner"));
                         let mut r = inner;
-                        if ui
-                            .add(
-                                egui::DragValue::new(&mut r)
-                                    .range(STAR_INNER_MIN..=STAR_INNER_MAX)
-                                    .speed(0.01)
-                                    .fixed_decimals(2),
-                            )
-                            .labelled_by(label.id)
-                            .changed()
-                        {
+                        let mut drag = egui::DragValue::new(&mut r)
+                            .range(STAR_INNER_MIN..=STAR_INNER_MAX)
+                            .speed(0.01)
+                            .fixed_decimals(2);
+                        if mixed.inner {
+                            let word = mixed_word.clone();
+                            drag = drag.custom_formatter(move |_, _| word.clone());
+                        }
+                        if ui.add(drag).labelled_by(label.id).changed() {
                             let _ = self.viewer.edit_selected(Some("shape-inner"), |x| {
                                 if let ObjectKind::Polygon(pg) = &mut x.kind {
                                     pg.star = Some(r);

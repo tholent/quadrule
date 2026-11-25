@@ -302,7 +302,7 @@ impl ViewerUi {
             ObjectKind::Rect(_) | ObjectKind::Ellipse(_) | ObjectKind::Polygon(_) => {
                 egui::Grid::new("basic-grid").num_columns(2).show(ui, |ui| {
                     self.stroke_rows(ui, o, &cx, enabled, StrokeMixed::default());
-                    self.fill_rows(ui, o, enabled);
+                    self.fill_rows(ui, o, enabled, crate::panels::ShapeMixed::default());
                 });
             }
             ObjectKind::MiniCalendar(m) => self.mini_calendar_rows(ui, m, enabled),
