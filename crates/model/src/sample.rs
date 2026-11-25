@@ -3819,6 +3819,10 @@ pub const PAPER_A4_ID: &str = "paper.a4";
 pub const PAPER_A5_ID: &str = "paper.a5";
 /// The id of the US Letter paper profile, which the landscape paper page is designed on.
 pub const PAPER_LETTER_ID: &str = "paper.letter";
+/// The id of the ISO A3 paper profile, the large paper page's primary.
+pub const PAPER_A3_ID: &str = "paper.a3";
+/// The id of the Tabloid paper profile, which the large paper page also targets.
+pub const PAPER_TABLOID_ID: &str = "paper.tabloid";
 
 /// A paper page (rung 13b bbq, Defaulted "13b goldens"): a band and headline, a dot grid and ruled
 /// lines between 10 mm margins, a frame on the margin box, a mark in each corner and a circle in
@@ -4028,6 +4032,23 @@ pub fn paper_document() -> Document {
         (210.0, 297.0),
         false,
     )
+}
+
+/// The large paper page (rung 17, Q7): ISO A3 portrait at 600 PPI (7,016 × 9,921 px, 70 M pixels), also targeting
+/// Tabloid at 600 PPI (6,600 × 10,200 px, 67 M). The biggest pages the paper list makes, for timing what a screen
+/// does with a page whose export pixels take a third of a second to draw. It holds a dot region with the
+/// sample's id ([`ids::DOTS`]), so the benchmarks run over it.
+pub fn large_paper_document() -> Document {
+    let mut doc = paper_page(
+        "Rung 17 large paper",
+        "Large paper: A3 and Tabloid at 600 PPI",
+        PAPER_A3_ID,
+        Some((PAPER_TABLOID_ID, 600)),
+        (297.0, 420.0),
+        false,
+    );
+    doc.profiles[0].ppi = 600;
+    doc
 }
 
 /// The same page on US Letter held sideways (rung 13b bbq, Q14): a wide PNG, 3300 × 2550 px at 300

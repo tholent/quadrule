@@ -49,7 +49,7 @@ fn shown_pixels_are_the_export() {
     let mut results = Vec::new();
     for id in v.profile_ids() {
         v.set_profile(&id);
-        let png = encode_png(&v.page().unwrap().image, None);
+        let png = encode_png(v.page().unwrap().image(), None);
         results.push((id.clone(), png == golden(&id)));
     }
     let ok = empty && results.len() == 2 && results.iter().all(|r| r.1);
@@ -120,7 +120,7 @@ fn bad_files_leave_the_page_alone() {
     )
     .unwrap();
     let opened = v.open_path(&path).is_ok() && v.generation == before + 1;
-    let png = encode_png(&v.page().unwrap().image, None);
+    let png = encode_png(v.page().unwrap().image(), None);
     let same = png == golden(&v.profile_id.clone());
     let ok = garbage && missing && notice && still && opened && same;
     println!(

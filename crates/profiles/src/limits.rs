@@ -31,11 +31,18 @@ pub const MIN_PPI: f64 = 50.0;
 pub const MAX_PPI: f64 = 1_200.0;
 /// Narrowest and widest a line role or dot may be, in pixels.
 pub const ROLE_PX: std::ops::RangeInclusive<u32> = 1..=32;
+/// Largest width or height of a paper page at the top export PPI (600), in pixels (rung 17, Q7; 13b's debt: 10,400
+/// px is 440 mm). Measured on `gibson` in a release build, a page's export pixels drawn and written as a PNG: A3
+/// (7,016 × 9,921, 70 M pixels) 0.49 s and 0.23 s, 350 MB at the peak; 420 × 420 mm (98 M) 0.72 s and 0.26 s,
+/// 480 MB; 500 × 500 mm (139 M) 0.98 s and 0.31 s, 680 MB; 693 × 693 mm (the side the form allowed before, 16,370
+/// px, 268 M) 1.5 s and 0.5 s, 1.3 GB. Zoomed in past 1:1 each edit redraws all of it, so the cap sits just over
+/// Tabloid's long side (431.8 mm, 10,200 px) and A3's (420 mm), about 108 M pixels at most.
+pub const MAX_PAPER_PX: u32 = 10_400;
 /// The shortest and longest side a custom paper size may have, in mm, as the form offers: the span in
-/// which every export PPI a page can pick (150 to 600) gives [`MIN_PX`] to [`MAX_PX`] whole pixels.
+/// which every export PPI a page can pick (150 to 600) gives [`MIN_PX`] to [`MAX_PAPER_PX`] whole pixels.
 /// [`check`] holds a paper size to the pixel limits themselves; these are those limits rounded
 /// inwards.
-pub const PAPER_MM: std::ops::RangeInclusive<f64> = 2.8..=693.0;
+pub const PAPER_MM: std::ops::RangeInclusive<f64> = 2.8..=440.0;
 /// The most safe zones a profile may hold.
 pub const MAX_ZONES: usize = 64;
 /// The longest display name, in characters.
@@ -102,13 +109,13 @@ fn check_paper(p: &Profile, size: PaperSize) -> Result<(), String> {
     }
     let (lo_w, lo_h) = size.px_at(PAPER_PPIS[0]);
     let (hi_w, hi_h) = size.px_at(PAPER_PPIS[PAPER_PPIS.len() - 1]);
-    if lo_w.min(lo_h) < MIN_PX || hi_w.max(hi_h) > MAX_PX {
+    if lo_w.min(lo_h) < MIN_PX || hi_w.max(hi_h) > MAX_PAPER_PX {
         let (lo_mm, hi_mm) = (
             f64::from(MIN_PX) * MM_PER_IN / f64::from(PAPER_PPIS[0]),
-            f64::from(MAX_PX) * MM_PER_IN / f64::from(PAPER_PPIS[PAPER_PPIS.len() - 1]),
+            f64::from(MAX_PAPER_PX) * MM_PER_IN / f64::from(PAPER_PPIS[PAPER_PPIS.len() - 1]),
         );
         return Err(format!(
-            "each side of a paper size must be {lo_mm:.1} to {hi_mm:.1} mm, so that every export PPI gives {MIN_PX} to {MAX_PX} px"
+            "each side of a paper size must be {lo_mm:.1} to {hi_mm:.1} mm, so that every export PPI gives {MIN_PX} to {MAX_PAPER_PX} px"
         ));
     }
     let mut want = p.clone();

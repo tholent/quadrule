@@ -80,6 +80,9 @@ pub struct DragBench {
     /// Opens the rung 13b paper page when nothing is open yet (`--paper-page`); the drag then moves
     /// its dot region.
     pub paper: bool,
+    /// Opens the rung 17 large paper page (A3 and Tabloid at 600 PPI) when nothing is open yet
+    /// (`--large-paper-page`); the drag then moves its dot region.
+    pub large_paper: bool,
     /// Opens the rung 14a lint page when nothing is open yet (`--lint-page`); the drag then moves its
     /// dot grid.
     pub lint: bool,
@@ -147,6 +150,7 @@ impl DragBench {
             bordered: false,
             lint: false,
             paper: false,
+            large_paper: false,
             repeats: false,
             fonts: false,
             textbox: false,
@@ -185,6 +189,14 @@ impl DragBench {
     pub fn with_paper(self) -> Self {
         DragBench {
             paper: true,
+            ..self
+        }
+    }
+
+    /// The same benchmark over the rung 17 large paper page.
+    pub fn with_large_paper(self) -> Self {
+        DragBench {
+            large_paper: true,
             ..self
         }
     }

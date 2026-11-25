@@ -59,7 +59,7 @@ fn steps(v: &Viewer) -> usize {
 
 /// The export pixels of device `id` now.
 fn pixels(v: &mut Viewer, id: &str) -> Vec<u8> {
-    v.page_for(id).unwrap().image.data.clone()
+    v.page_for(id).unwrap().image().data.clone()
 }
 
 fn centre(v: &mut Viewer, id: Uuid) -> (f64, f64) {

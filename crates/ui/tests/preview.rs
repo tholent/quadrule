@@ -50,7 +50,9 @@ fn decode(bytes: &[u8]) -> (u32, u32, png::ColorType, png::BitDepth, Vec<u8>) {
     )
 }
 
-/// What the preview should be for the open document: the main device's export pixels, shrunk.
+/// The size the preview should be for the open document, and the picture the export pixels shrunk to it make:
+/// the stored preview is drawn at its own size from what is on the page (rung 17, Q7), so it is close to this one
+/// and not the same.
 fn expected(v: &mut Viewer) -> Gray {
     let id = v.doc().unwrap().primary_profile_id.clone();
     let page = v.page_for(&id).unwrap().clone();
@@ -75,22 +77,36 @@ fn save_writes_the_main_device_thumbnail() {
     let key = preview_path(&primary);
     let got = file.previews.get(&key).map(|b| decode(b));
     let want = expected(&mut v);
+    // The mean difference, in gray levels, from the export pixels shrunk by averaging.
+    let mut mean_diff = f64::MAX;
     let (shape, same) = match &got {
-        Some((w, h, c, d, px)) => (
-            (*w, *h, *c, *d),
-            (*w, *h) == (want.width, want.height) && *px == want.data,
-        ),
+        Some((w, h, c, d, px)) => {
+            let sized = (*w, *h) == (want.width, want.height);
+            if sized {
+                let sum: u64 = px
+                    .iter()
+                    .zip(&want.data)
+                    .map(|(a, b)| u64::from(a.abs_diff(*b)))
+                    .sum();
+                mean_diff = sum as f64 / px.len() as f64;
+            }
+            ((*w, *h, *c, *d), sized && mean_diff < 3.0)
+        }
         None => ((0, 0, png::ColorType::Rgb, png::BitDepth::One), false),
     };
     let sized = shape.0.max(shape.1) == PREVIEW_SIDE;
     let gray8 = shape.2 == png::ColorType::Grayscale && shape.3 == png::BitDepth::Eight;
     // Only the main device gets one.
     let only_main = file.previews.len() == 1 && file.doc.profile_ids().len() > 1;
-    // The same bytes as encoding the expected thumbnail: nothing else is in the file.
-    let bytes_same = file.previews.get(&key) == Some(&encode_png(&want, None));
+    // The same bytes as encoding the page drawn at that size: nothing else is in the file.
+    let drawn = v
+        .page_for(&primary)
+        .unwrap()
+        .image_at(want.width, want.height);
+    let bytes_same = file.previews.get(&key) == Some(&encode_png(&drawn, None));
     let ok = got.is_some() && sized && gray8 && same && only_main && bytes_same;
     println!(
-        "CHECK crate=ui name=save_writes_preview result={} size={}x{} gray8={gray8} longest_side_480={sized} pixels_are_shrunk_export={same} only_main_device={only_main}",
+        "CHECK crate=ui name=save_writes_preview result={} size={}x{} gray8={gray8} longest_side_480={sized} close_to_shrunk_export={same} mean_diff={mean_diff:.2} only_main_device={only_main}",
         pass(ok),
         shape.0,
         shape.1

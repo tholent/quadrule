@@ -322,8 +322,8 @@ fn shapes_resolve_on_both_devices_and_export_differs_from_the_empty_page() {
     // A shape drawn on the Manta shows on the Nomad too (its frame scales), and drawing it and
     // undoing it puts both devices' pages back byte for byte.
     let mut v = page();
-    let before = v.page_for(MANTA_ID).unwrap().image.clone();
-    let before_nomad = v.page_for(NOMAD_ID).unwrap().image.clone();
+    let before = v.page_for(MANTA_ID).unwrap().image().clone();
+    let before_nomad = v.page_for(NOMAD_ID).unwrap().image().clone();
     let id = draw(
         &mut v,
         Tool::Rect,
@@ -335,8 +335,8 @@ fn shapes_resolve_on_both_devices_and_export_differs_from_the_empty_page() {
         o.fill = Some(Fill::Role(FillRole::Block));
     })
     .unwrap();
-    let manta = v.page_for(MANTA_ID).unwrap().image.clone();
-    let nomad = v.page_for(NOMAD_ID).unwrap().image.clone();
+    let manta = v.page_for(MANTA_ID).unwrap().image().clone();
+    let nomad = v.page_for(NOMAD_ID).unwrap().image().clone();
     let drew = manta != before && nomad != before_nomad;
     // The Block fill's gray (102; it was 68 until the grays sheet, 2026-11-12) is in the Manta's image.
     let has_block = manta.data.contains(&102);
@@ -347,8 +347,8 @@ fn shapes_resolve_on_both_devices_and_export_differs_from_the_empty_page() {
         .iter()
         .any(|p| p.id == id);
     while v.undo() {}
-    let same = v.page_for(MANTA_ID).unwrap().image == before
-        && v.page_for(NOMAD_ID).unwrap().image == before_nomad;
+    let same = v.page_for(MANTA_ID).unwrap().image().clone() == before
+        && v.page_for(NOMAD_ID).unwrap().image().clone() == before_nomad;
     let ok = drew && has_block && picked && same;
     println!(
         "\nCHECK crate=ui name=shapes_both_devices result={} changes_both_pages={drew} block_gray_102_drawn={has_block} pickable_on_nomad={picked} undo_restores_bytes={same}",

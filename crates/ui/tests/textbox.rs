@@ -141,7 +141,7 @@ fn a_fixed_box_that_cuts_lines_shows_the_mark_and_says_so_per_device() {
     // The mark is not in the page that is exported: the picture is the display list's, alone.
     let page = v.page_for(MANTA_ID).unwrap().clone();
     let redrawn = quadrule_render::render(&page.display_list);
-    let not_exported = redrawn.data == page.image.data;
+    let not_exported = redrawn.data == page.image().data;
     // Auto again: nothing is cut, no mark, no L08.
     v.selection = vec![ids::TITLE];
     v.set_text_sizing(TextSizing::Auto).unwrap();

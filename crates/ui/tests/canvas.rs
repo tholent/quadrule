@@ -67,7 +67,7 @@ fn screen_list_matches_the_export_at_one_to_one_and_keeps_thin_lines() {
         width: dl.width,
         height: dl.height,
     };
-    let same = render(&screen_list(dl, &whole)).data == page.image.data;
+    let same = render(&screen_list(dl, &whole)).data == page.image().data;
     // Zoomed out to a quarter, the 1 px ruled lines still show (lighter, not gone).
     let quarter = ScreenView {
         scale: 0.25,
@@ -86,7 +86,7 @@ fn screen_list_matches_the_export_at_one_to_one_and_keeps_thin_lines() {
         inked.windows(2).filter(|w| w[1] && !w[0]).count()
     };
     let from = (116.0 * 300.0 / 25.4) as u32 + 8;
-    let lines_export = runs(&page.image, from);
+    let lines_export = runs(page.image(), from);
     let lines_quarter = runs(&small, from / 4);
     let inked_rows = lines_quarter;
     let lines_show = lines_export > 10 && lines_quarter == lines_export;
@@ -101,7 +101,7 @@ fn screen_list_matches_the_export_at_one_to_one_and_keeps_thin_lines() {
     };
     let crop = render(&screen_list(dl, &part));
     let offset_ok =
-        (0..64).all(|y| (0..64).all(|x| crop.at(x, y) == page.image.at(90 + x / 2, 300 + y / 2)));
+        (0..64).all(|y| (0..64).all(|x| crop.at(x, y) == page.image().at(90 + x / 2, 300 + y / 2)));
     let dots_in_crop = crop.data.iter().any(|&p| p < 200);
     let ok = same && lines_show && offset_ok && dots_in_crop;
     println!(
@@ -169,7 +169,7 @@ fn screen_list_makes_one_path_of_a_pattern_s_lines_and_dots() {
     };
     let list = screen_list(dl, &view);
     let fewer = list.items.len() * 4 < dl.items.len();
-    let same = render(&list).data == page.image.data;
+    let same = render(&list).data == page.image().data;
     let ok = rects > 200 && fewer && same;
     println!(
         "CHECK crate=ui name=screen_list_merges_rects result={} export_items={} rects={rects} screen_items={} same_pixels_at_1_to_1={same}",

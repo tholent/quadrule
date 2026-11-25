@@ -95,7 +95,7 @@ fn steps(v: &Viewer) -> usize {
 fn a_move_shows_live_and_is_one_undo_step() {
     let mut v = sample();
     let doc0 = v.doc().unwrap().clone();
-    let img0 = v.page().unwrap().image.data.clone();
+    let img0 = v.page().unwrap().image().data.clone();
     let started = grab(&mut v, px(50.0), px(22.0), NONE);
     let picked = v.selection == vec![ids::RULE] && v.dragging();
     v.drag_update(px(50.0), px(22.0) + 100.0, FREE, REACH);
@@ -112,7 +112,7 @@ fn a_move_shows_live_and_is_one_undo_step() {
     v.undo();
     let undone = v.doc().unwrap() == &doc0;
     // Export bytes: the page after the drag and its undo is the page before.
-    let same_bytes = v.page().unwrap().image.data == img0;
+    let same_bytes = v.page().unwrap().image().data == img0;
     let ok =
         started && picked && live && untouched && still && moved && one && undone && same_bytes;
     println!(
@@ -162,7 +162,7 @@ fn a_move_snaps_to_the_rhythm_and_ctrl_turns_it_off() {
 fn escape_cancels_and_locked_objects_do_not_drag() {
     let mut v = sample();
     let doc0 = v.doc().unwrap().clone();
-    let img0 = v.page().unwrap().image.data.clone();
+    let img0 = v.page().unwrap().image().data.clone();
     grab(&mut v, px(50.0), px(22.0), NONE);
     v.drag_update(px(60.0), px(40.0), FREE, REACH);
     v.drag_cancel();
@@ -170,7 +170,7 @@ fn escape_cancels_and_locked_objects_do_not_drag() {
         && v.doc().unwrap() == &doc0
         && steps(&v) == 0
         && !v.is_dirty()
-        && v.page().unwrap().image.data == img0;
+        && v.page().unwrap().image().data == img0;
     // Cancelling an Alt-drag also takes the copy away and puts the selection back.
     v.selection = vec![ids::RULE];
     grab(&mut v, px(50.0), px(22.0), DragMods { alt: true, ..NONE });

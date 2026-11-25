@@ -235,6 +235,8 @@ impl App {
             ui.viewer.open_fonts();
         } else if args.lint_page {
             ui.viewer.open_lint();
+        } else if args.large_paper_page {
+            ui.viewer.open_large_paper();
         } else if args.paper_page {
             ui.viewer.open_paper();
         } else if args.paper_landscape_page {
@@ -306,19 +308,18 @@ impl App {
             ui.show_look(look);
         }
         if let Some(name) = &args.gallery_device {
-            // A short name (`manta`, `nomad`) or a profile id.
-            let id = quadrule_profiles::active::device_ids()
-                .into_iter()
-                .find(|id| {
-                    quadrule_profiles::active::lookup(id)
-                        .is_ok_and(|p| p.short_name.eq_ignore_ascii_case(name))
-                })
-                .unwrap_or_else(|| name.clone());
-            ui.set_welcome_device(&id);
+            ui.set_welcome_device(&device_id(name));
+        }
+        // `--device`: the tablet a timing run is on (rung 17, Q2).
+        if let Some(name) = &args.device {
+            let id = device_id(name);
+            if ui.viewer.profile_ids().contains(&id) {
+                ui.viewer.set_profile(&id);
+            }
         }
         ui.note_damaged_profiles();
         ui.bench = bench.map(|b| {
-            let b = if args.bench_secondary {
+            let b = if args.bench_secondary && args.device.is_none() {
                 b.on_secondary()
             } else {
                 b
@@ -332,6 +333,8 @@ impl App {
                 b.with_fonts()
             } else if args.lint_page {
                 b.with_lint()
+            } else if args.large_paper_page {
+                b.with_large_paper()
             } else if args.paper_page {
                 b.with_paper()
             } else if args.bordered_page {
@@ -645,6 +648,13 @@ struct Args {
     /// Open the rung 13b paper page instead of the empty start (`--paper-page`: ISO A4 at 300 PPI and ISO
     /// A5 at 600); the benchmarks then run over it.
     paper_page: bool,
+    /// Open the rung 17 large paper page instead of the empty start (`--large-paper-page`: ISO A3 and Tabloid, both
+    /// at 600 PPI, about 70 M pixels each); the benchmarks then run over it.
+    large_paper_page: bool,
+    /// Show this device (`--device manta|nomad` or a profile id), so a benchmark times that tablet, whatever file
+    /// or page it runs over (rung 17, Q2). A device the page does not target leaves it on its main one, and the
+    /// benchmark's line names the profile it ran on.
+    device: Option<String>,
     /// Open the rung 13b landscape paper page instead of the empty start (`--paper-landscape-page`: US
     /// Letter held sideways, exported wide).
     paper_landscape_page: bool,
@@ -697,6 +707,17 @@ struct Args {
     bench_zoom: Option<u32>,
     /// The tool `--bench-draw` drags out (`--bench-tool pattern|rect|ellipse|polygon|line|text`).
     bench_tool: Option<quadrule_ui::Tool>,
+}
+
+/// The profile id a device name stands for: a short name (`manta`, `nomad`) or a profile id.
+fn device_id(name: &str) -> String {
+    quadrule_profiles::active::device_ids()
+        .into_iter()
+        .find(|id| {
+            quadrule_profiles::active::lookup(id)
+                .is_ok_and(|p| p.short_name.eq_ignore_ascii_case(name))
+        })
+        .unwrap_or_else(|| name.to_string())
 }
 
 /// The `--look` error, naming every value in [`LOOKS`] so it cannot go stale.
@@ -769,6 +790,13 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.lint_page = true;
         } else if a == "--paper-page" {
             out.paper_page = true;
+        } else if a == "--large-paper-page" {
+            out.large_paper_page = true;
+        } else if a == "--device" {
+            match args.next().and_then(|v| v.into_string().ok()) {
+                Some(name) => out.device = Some(name),
+                None => return Err("--device takes manta, nomad or a profile id".into()),
+            }
         } else if a == "--paper-landscape-page" {
             out.paper_landscape_page = true;
         } else if a == "--bordered-page" {
@@ -1020,6 +1048,25 @@ mod tests {
                     paper_page: true,
                     ..Args::default()
                 }),
+            ),
+            (
+                p(&[
+                    "--large-paper-page",
+                    "--bench-drag",
+                    "30",
+                    "--device",
+                    "nomad",
+                ]),
+                Ok(Args {
+                    bench_drag: Some(30),
+                    large_paper_page: true,
+                    device: Some("nomad".into()),
+                    ..Args::default()
+                }),
+            ),
+            (
+                p(&["--device"]),
+                Err("--device takes manta, nomad or a profile id".into()),
             ),
             (
                 p(&["--bordered-page", "--bench-draw", "30"]),

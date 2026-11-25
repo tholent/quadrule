@@ -73,7 +73,7 @@ fn copy_centre(v: &mut Viewer, id: Uuid, n: usize) -> (f64, f64) {
 }
 
 fn page_bytes(v: &mut Viewer) -> Vec<u8> {
-    v.page().unwrap().image.data.clone()
+    v.page().unwrap().image().data.clone()
 }
 
 #[test]

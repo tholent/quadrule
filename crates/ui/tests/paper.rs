@@ -80,8 +80,8 @@ fn the_paper_page_exports_each_size_at_its_ppi_as_the_golden_images() {
     let lall = l.export(&ldir, ExportWhich::ThisDevice).unwrap();
     let lgot = names(&lall);
     let page = l.page_for(PAPER_LETTER_ID).unwrap();
-    let wide = !page.profile.turned && page.image.width > page.image.height;
-    let not_turned = export_pixels(page).as_ref() == &page.image;
+    let wide = !page.profile.turned && page.image().width > page.image().height;
+    let not_turned = export_pixels(page).as_ref() == page.image();
     let lbytes = std::fs::read(&lall[0]).unwrap()
         == golden("paper-landscape_paper.letter_3300x2550.png")
         && encode_png(&export_pixels(page), None) == std::fs::read(&lall[0]).unwrap();

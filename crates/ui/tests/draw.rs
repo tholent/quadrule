@@ -436,15 +436,15 @@ fn drawing_snaps_unless_ctrl_is_held() {
 #[test]
 fn export_bytes_are_unchanged_after_draw_and_undo() {
     let mut v = page();
-    let before = v.page_for(MANTA_ID).unwrap().image.clone();
-    let before_nomad = v.page_for(NOMAD_ID).unwrap().image.clone();
+    let before = v.page_for(MANTA_ID).unwrap().image().clone();
+    let before_nomad = v.page_for(NOMAD_ID).unwrap().image().clone();
     draw(&mut v, Tool::Pattern, (145.0, 144.0), (900.0, 700.0), NONE);
     draw(&mut v, Tool::Text, (145.0, 800.0), (900.0, 850.0), NONE);
     draw(&mut v, Tool::Line, (145.0, 900.0), (900.0, 900.0), SHIFT);
-    let drew = v.page_for(MANTA_ID).unwrap().image != before;
+    let drew = v.page_for(MANTA_ID).unwrap().image().clone() != before;
     while v.undo() {}
-    let same = v.page_for(MANTA_ID).unwrap().image == before
-        && v.page_for(NOMAD_ID).unwrap().image == before_nomad;
+    let same = v.page_for(MANTA_ID).unwrap().image().clone() == before
+        && v.page_for(NOMAD_ID).unwrap().image().clone() == before_nomad;
     let ok = drew && same;
     println!(
         "CHECK crate=ui name=draw_export_bytes_unchanged result={} drawing_changes_the_page={drew} undo_restores_both_devices_byte_for_byte={same}",

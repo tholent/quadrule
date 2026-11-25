@@ -31,7 +31,7 @@ use crate::recovery::{Autosave, Recovered, Recovery};
 use crate::tools::{BAR_WIDTH, Tool};
 use crate::viewer::{
     CARD_WIDTH_MM, PIXEL_GRID_FROM, Source, TOOLBARS_SHOWN, Tile, Viewer, ZOOM_GESTURE_IDLE, Zoom,
-    halve, ruler_px_per_mm, shrink, tiles,
+    ruler_px_per_mm, tiles,
 };
 use egui::{
     Color32, ColorImage, CornerRadius, CursorIcon, Key, PointerButton, Rect, ScrollArea, Sense,
@@ -121,12 +121,6 @@ struct TextureKey {
     size: (u32, u32),
 }
 
-/// Which page the half-size copies are of: the document, its revision and the device.
-type MipKey = (u64, u64, String);
-
-/// How many copies the ladder has: full size, a half, a quarter and an eighth (the zoom's floor).
-const MIP_LEVELS: usize = 4;
-
 /// Uploads `image` as textures in tiles, because a Manta page (1920 × 2560) is larger than some graphics
 /// chips take in one texture.
 fn upload_tiles(
@@ -183,9 +177,6 @@ struct Ruler {
     bar: f32,
 }
 
-/// One of the page's half-size copies for a zoom gesture: its size in pixels and its tiles.
-type MipLevel = ((u32, u32), Vec<(Tile, TextureHandle)>);
-
 /// The viewer window: state plus what only the screen needs (the page texture, the dialogs).
 pub struct ViewerUi {
     /// The viewer's state.
@@ -231,8 +222,6 @@ pub struct ViewerUi {
     pub bench: Option<crate::bench::DragBench>,
     vector: Option<(String, VectorTexture)>,
     texture: Option<(TextureKey, Vec<(Tile, TextureHandle)>)>,
-    /// The page and its half-size copies, drawn smoothed while a zoom gesture is going (fixes batch 1).
-    mips: Option<(MipKey, Vec<MipLevel>)>,
     ruler: Option<Ruler>,
     pub(crate) scroll_to_selected: bool,
     cursor_px: Option<(f32, f32)>,
@@ -370,7 +359,6 @@ impl ViewerUi {
             bench: None,
             vector: None,
             texture: None,
-            mips: None,
             ruler: None,
             scroll_to_selected: false,
             cursor_px: None,
@@ -1574,6 +1562,8 @@ impl ViewerUi {
                         self.viewer.open_fonts();
                     } else if b.lint {
                         self.viewer.open_lint();
+                    } else if b.large_paper {
+                        self.viewer.open_large_paper();
                     } else if b.paper {
                         self.viewer.open_paper();
                     } else if b.bordered {
@@ -1779,7 +1769,7 @@ impl ViewerUi {
                     "fail"
                 };
                 println!(
-                    "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} device={} strip={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
+                    "\nCHECK crate=ui name={} result={verdict} build={} canvas={canvas} page={} device={} profile={} strip={} tool={} frames={} mean_ms={:.1} p90_ms={:.1} worst_ms={:.1} first_ms={:.1} over_budget={} budget_ms={}",
                     b.name(),
                     if cfg!(debug_assertions) {
                         "debug"
@@ -1797,6 +1787,8 @@ impl ViewerUi {
                         "fonts"
                     } else if b.lint {
                         "lint"
+                    } else if b.large_paper {
+                        "large_paper"
                     } else if b.paper {
                         "paper"
                     } else if b.bordered {
@@ -1827,6 +1819,7 @@ impl ViewerUi {
                     } else {
                         "primary"
                     },
+                    self.viewer.profile_id,
                     if self.viewer.show_strip { "on" } else { "off" },
                     if b.zoom {
                         "zoom"
@@ -1942,16 +1935,11 @@ impl ViewerUi {
         };
         let (w, h) = (page.profile.width_px, page.profile.height_px);
         // Zoomed in or at 1:1, the export pixels unchanged, drawn as squares (Q3, Q10). Zoomed
-        // out, the page shrunk by averaging to exactly the screen pixels it covers (`shrink`).
+        // out, a page pixel is smaller than a screen pixel, so the page is drawn at the pixels the
+        // screen has, straight from what was drawn on it, and the full export pixels are not made
+        // at all (rung 17, Q7: a Tabloid page at 600 PPI took 410 ms to draw in full).
         let phys = scale * ppp;
-        // While a pinch or Ctrl + scroll is going, zoomed out, the page is drawn from a ladder of
-        // half-size copies (made once, drawn smoothed), not shrunk to the exact pixels every frame, which
-        // takes 40 to 80 ms on the Pi (fixes batch 1, Q1 and ADR-009). A moment after the gesture rests the
-        // exact shrink takes over.
-        let mip_level =
-            (gesture_live && phys < 1.0 && self.canvas_mode == CanvasMode::ExportPixels)
-                .then(|| ((1.0 / phys).log2().floor() as usize).min(MIP_LEVELS - 1));
-        let (tw, th) = if phys < 1.0 && mip_level.is_none() {
+        let (tw, th) = if phys < 1.0 {
             (
                 ((w as f32 * phys).round() as u32).max(1),
                 ((h as f32 * phys).round() as u32).max(1),
@@ -1966,45 +1954,22 @@ impl ViewerUi {
             size: (tw, th),
         };
         let export_canvas = self.canvas_mode == CanvasMode::ExportPixels;
-        if mip_level.is_some() {
-            let mkey = (generation, revision, page.profile.id.clone());
-            if self.mips.as_ref().is_none_or(|(k, _)| *k != mkey) {
-                let mut levels = Vec::with_capacity(MIP_LEVELS);
-                let mut img = page.image.clone();
-                for l in 0..MIP_LEVELS {
-                    if l > 0 {
-                        img = halve(&img);
-                    }
-                    levels.push((
-                        (img.width, img.height),
-                        upload_tiles(&ctx, &img, "mip", TextureOptions::LINEAR),
-                    ));
-                }
-                self.mips = Some((mkey, levels));
-                self.rebuilt = true;
-            }
-        }
-        if export_canvas
-            && mip_level.is_none()
-            && self.texture.as_ref().is_none_or(|(k, _)| *k != key)
-        {
+        if export_canvas && self.texture.as_ref().is_none_or(|(k, _)| *k != key) {
+            let small;
             let image = if (tw, th) == (w, h) {
-                page.image.clone()
+                page.image()
             } else {
-                shrink(&page.image, tw, th)
+                small = page.image_at(tw, th);
+                &small
             };
             // In tiles, because a Manta page (1920 × 2560) is larger than some graphics chips
             // take in one texture (egui's test harness: 2048).
-            let tiles = upload_tiles(&ctx, &image, "page", TextureOptions::NEAREST);
+            let tiles = upload_tiles(&ctx, image, "page", TextureOptions::NEAREST);
             self.texture = Some((key, tiles));
             self.rebuilt = true;
         }
-        let (tex_dims, tiles): ((u32, u32), Vec<_>) = match (&self.texture, &self.mips, mip_level) {
-            (_, Some((_, levels)), Some(l)) if export_canvas => {
-                let (dims, tiles) = &levels[l];
-                (*dims, tiles.iter().map(|(t, tex)| (*t, tex.id())).collect())
-            }
-            (Some((_, tiles)), _, None) if export_canvas => (
+        let (tex_dims, tiles): ((u32, u32), Vec<_>) = match &self.texture {
+            Some((_, tiles)) if export_canvas => (
                 (tw, th),
                 tiles.iter().map(|(t, tex)| (*t, tex.id())).collect(),
             ),
@@ -2076,7 +2041,7 @@ impl ViewerUi {
             .then(|| self.viewer.rhythm_overlay())
             .flatten();
 
-        let size = if phys < 1.0 && mip_level.is_none() {
+        let size = if phys < 1.0 {
             vec2(tw as f32 / ppp, th as f32 / ppp)
         } else {
             vec2(w as f32 * scale, h as f32 * scale)

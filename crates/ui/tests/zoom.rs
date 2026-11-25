@@ -338,17 +338,9 @@ fn the_zoom_benchmark_runs_both_pages_and_leaves_the_page_as_it_was() {
 }
 
 #[test]
-fn the_half_size_copies_average_two_by_two_and_a_zoomed_out_pinch_draws() {
-    use quadrule_render::Gray;
-    let img = Gray {
-        width: 3,
-        height: 3,
-        data: vec![0, 100, 200, 100, 200, 40, 255, 255, 255],
-    };
-    let half = quadrule_ui::viewer::halve(&img);
-    // (0,100,100,200)/4 = 100; the last column repeats: (200,200,40,40)/4 = 120; the last row repeats.
-    let ok_halve = half.width == 2 && half.height == 2 && half.data == vec![100, 120, 255, 255];
-    // A pinch from 0.9 down to 0.6 (zoomed out, so the page comes from the copies) sets the zoom and draws.
+fn a_zoomed_out_pinch_draws_the_page_at_screen_size_without_the_export_pixels() {
+    // A pinch from 0.9 down to 0.6 (zoomed out) sets the zoom and draws, and the page's full-size picture is never
+    // made for it: the screen shows the page drawn at its own pixels (rung 17, Q7).
     let mut h = sample();
     h.state_mut().ui.viewer.zoom = Zoom::Scale(0.9);
     h.run();
@@ -361,9 +353,15 @@ fn the_half_size_copies_average_two_by_two_and_a_zoomed_out_pinch_draws() {
     let zoomed = matches!(zoom(&h), Zoom::Scale(s) if (s - 0.6).abs() < 1e-3);
     // (The page's top left cannot scroll further, so zooming out near it cannot hold the anchor; only the zoom is checked.)
     let drawn = h.state().ui.screen_point(0.0, 0.0).is_some() && q.x.is_finite();
-    let ok = ok_halve && zoomed && drawn;
+    let no_full = !h
+        .state_mut()
+        .ui
+        .viewer
+        .page()
+        .is_some_and(|p| p.image_drawn());
+    let ok = zoomed && drawn && no_full;
     println!(
-        "\nCHECK crate=ui name=zoom_copies result={} halve_ok={ok_halve} out_to_0_6={zoomed} drawn={drawn}",
+        "\nCHECK crate=ui name=zoom_copies result={} out_to_0_6={zoomed} drawn={drawn} full_size_picture_not_made={no_full}",
         pass(ok)
     );
     assert!(ok);

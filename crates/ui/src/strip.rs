@@ -20,7 +20,6 @@
 //! drag: they show the last picture meanwhile, so a drag costs no more than it did.
 
 use crate::view::ViewerUi;
-use crate::viewer::shrink;
 use egui::{
     ColorImage, Role, Sense, Stroke, StrokeKind, TextureHandle, TextureOptions, WidgetInfo,
 };
@@ -62,16 +61,18 @@ impl ViewerUi {
                 continue;
             };
             let h_pts = STRIP_PICTURE_POINTS;
-            let k = h_pts * ppp / page.image.height as f32;
+            let (pw, ph) = (page.profile.width_px, page.profile.height_px);
+            let k = h_pts * ppp / ph as f32;
             let (tw, th) = (
-                ((page.image.width as f32 * k).round() as u32).max(1),
-                ((page.image.height as f32 * k).round() as u32).max(1),
+                ((pw as f32 * k).round() as u32).max(1),
+                ((ph as f32 * k).round() as u32).max(1),
             );
             let overflow = (
                 page.overflows.iter().map(|o| o.corner).collect::<Vec<_>>(),
-                (page.image.width, page.image.height),
+                (pw, ph),
             );
-            let small = shrink(&page.image, tw, th);
+            // Drawn at the picture's own size, never from the page's export pixels (rung 17, Q7).
+            let small = page.image_at(tw, th);
             let img = ColorImage::from_gray([tw as usize, th as usize], &small.data);
             let texture = ctx.load_texture(format!("strip-{id}"), img, TextureOptions::LINEAR);
             self.strip_overflows.insert(id.clone(), overflow);

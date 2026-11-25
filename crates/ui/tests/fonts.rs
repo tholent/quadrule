@@ -152,7 +152,7 @@ fn a_rescan_lays_pages_out_again_only_when_the_list_changed() {
     let mut v = Viewer::default();
     v.open_sample();
     v.use_system_fonts();
-    let _ = v.page().map(|p| p.image.width);
+    let _ = v.page().map(|p| p.image().width);
     let first = v.rescan_fonts();
     let second = v.rescan_fonts();
     let ok = !first.changed && !second.changed && v.last_font_scan == Some(second);

@@ -68,8 +68,11 @@ pub enum Source {
 pub struct Page {
     /// The profile.
     pub profile: Profile,
-    /// The page as vello_cpu renders it for export (ADR-003): what the PNG holds.
-    pub image: Gray,
+    /// The page as vello_cpu renders it for export (ADR-003): what the PNG holds. Made on first use by
+    /// [`Page::image`] and then kept: a big page (Tabloid at 600 PPI is 67 M pixels) costs a third of a second to
+    /// draw, so a screen that shows it zoomed out, a strip picture or the Save preview never asks for it (rung 17,
+    /// Q7).
+    image: std::sync::OnceLock<Gray>,
     /// Lint findings on this device.
     pub findings: Vec<Finding>,
     /// True when some text box was drawn from the outlines saved in the file because its font is
@@ -87,6 +90,41 @@ pub struct Page {
     /// The Fixed text boxes that left lines out on this device, for the red + tab at their
     /// bottom-right corners (rung 11b). On the canvases and the strip only, never exported.
     pub overflows: Vec<Overflow>,
+}
+
+impl Page {
+    /// The page as vello_cpu renders it for export (ADR-003): the PNG's own pixels, drawn the first time they are
+    /// asked for.
+    pub fn image(&self) -> &Gray {
+        self.image.get_or_init(|| render(&self.display_list))
+    }
+
+    /// Whether the full-size picture has been drawn yet.
+    pub fn image_drawn(&self) -> bool {
+        self.image.get().is_some()
+    }
+
+    /// The page drawn directly at `w` × `h` pixels, anti-aliased, from the display list: what a screen shows
+    /// zoomed out, a strip picture or the Save preview. Costs by what is on the page and by the small size, not
+    /// by the page's pixels; never used for export (rung 17, Q7).
+    pub fn image_at(&self, w: u32, h: u32) -> Gray {
+        let (w, h) = (w.max(1), h.max(1));
+        if let Some(full) = self.image.get()
+            && (full.width, full.height) == (w, h)
+        {
+            return full.clone();
+        }
+        let sx = f64::from(w) / f64::from(self.profile.width_px.max(1));
+        let sy = f64::from(h) / f64::from(self.profile.height_px.max(1));
+        let view = crate::canvas::ScreenView {
+            scale: (sx + sy) / 2.0,
+            x: 0.0,
+            y: 0.0,
+            width: w,
+            height: h,
+        };
+        render(&crate::canvas::screen_list(&self.display_list, &view))
+    }
 }
 
 /// A Fixed text box that leaves lines out on one device (rung 11b).
@@ -558,6 +596,13 @@ impl Viewer {
         self.set_open(Source::Sample, doc, BTreeMap::new(), None);
     }
 
+    /// Opens the rung 17 large paper page: A3 and Tabloid, both at 600 PPI (about 70 M pixels each). Like the
+    /// sample, it has no file.
+    pub fn open_large_paper(&mut self) {
+        let doc = quadrule_model::sample::large_paper_document();
+        self.set_open(Source::Sample, doc, BTreeMap::new(), None);
+    }
+
     /// Opens the rung 13b landscape paper page: US Letter held sideways, exported wide. Like the
     /// sample, it has no file.
     pub fn open_paper_landscape(&mut self) {
@@ -921,11 +966,28 @@ impl Viewer {
     pub fn preview_png(&mut self) -> Option<(String, Vec<u8>)> {
         let id = self.open.as_ref()?.doc.primary_profile_id.clone();
         let page = self.page_for(&id).ok()?;
-        let px = export_pixels(page);
-        let scale = (PREVIEW_SIDE as f64 / px.width.max(px.height) as f64).min(1.0);
-        let w = ((px.width as f64 * scale).round() as u32).max(1);
-        let h = ((px.height as f64 * scale).round() as u32).max(1);
-        Some((preview_path(&id), encode_png(&shrink(&px, w, h), None)))
+        // Drawn at its own size from the display list, not shrunk from the page's export pixels: a 600 PPI
+        // Tabloid page would take a third of a second to draw in full for a 480 px picture (rung 17, Q7).
+        let (dw, dh) = (page.profile.width_px, page.profile.height_px);
+        let (pw, ph) = if page.profile.turned {
+            (dh, dw)
+        } else {
+            (dw, dh)
+        };
+        let scale = (PREVIEW_SIDE as f64 / pw.max(ph) as f64).min(1.0);
+        let (w, h) = (
+            ((pw as f64 * scale).round() as u32).max(1),
+            ((ph as f64 * scale).round() as u32).max(1),
+        );
+        let small = if scale >= 1.0 {
+            shrink(&export_pixels(page), w, h)
+        } else if page.profile.turned {
+            // The page is drawn upright, wide, then turned a quarter like the PNG.
+            turn_clockwise(&page.image_at(h, w))
+        } else {
+            page.image_at(w, h)
+        };
+        Some((preview_path(&id), encode_png(&small, None)))
     }
 
     /// Screen points per device pixel for the current zoom. `canvas` is the canvas size in points,
@@ -989,9 +1051,9 @@ impl Viewer {
 /// quarter turn clockwise into the device's portrait size, exactly (rung 8b, Q6).
 pub fn export_pixels(page: &Page) -> std::borrow::Cow<'_, Gray> {
     if page.profile.turned {
-        std::borrow::Cow::Owned(turn_clockwise(&page.image))
+        std::borrow::Cow::Owned(turn_clockwise(page.image()))
     } else {
-        std::borrow::Cow::Borrowed(&page.image)
+        std::borrow::Cow::Borrowed(page.image())
     }
 }
 
@@ -1045,7 +1107,6 @@ fn make_page(
     let font_facts = font_facts(doc, &laid, &how, fonts, embed_cache);
     let outlines = laid.outlines;
     let dl = display_list(doc, &primary, &target, &outlines).map_err(|e| e.to_string())?;
-    let image = render(&dl);
     let opts = Options {
         toolbars: TOOLBARS_IN_USE.to_vec(),
         fonts: font_facts.clone(),
@@ -1100,7 +1161,7 @@ fn make_page(
     Ok((
         Page {
             profile: target,
-            image,
+            image: std::sync::OnceLock::new(),
             findings,
             saved_outlines,
             font_facts,
@@ -1221,30 +1282,6 @@ pub fn slug(s: &str) -> String {
         "untitled".into()
     } else {
         out
-    }
-}
-
-/// A copy of `img` at half the size (rounded up), each pixel the mean of the 2 × 2 it covers; at an odd
-/// edge the last row or column counts twice. Fast, for the ladder of copies a zoom gesture draws from.
-pub fn halve(img: &Gray) -> Gray {
-    let (w, h) = (img.width as usize, img.height as usize);
-    let (ow, oh) = (w.div_ceil(2).max(1), h.div_ceil(2).max(1));
-    let mut data = Vec::with_capacity(ow * oh);
-    for y in 0..oh {
-        let (r0, r1) = (2 * y, (2 * y + 1).min(h - 1));
-        for x in 0..ow {
-            let (c0, c1) = (2 * x, (2 * x + 1).min(w - 1));
-            let sum = u32::from(img.data[r0 * w + c0])
-                + u32::from(img.data[r0 * w + c1])
-                + u32::from(img.data[r1 * w + c0])
-                + u32::from(img.data[r1 * w + c1]);
-            data.push(((sum + 2) / 4) as u8);
-        }
-    }
-    Gray {
-        width: ow as u32,
-        height: oh as u32,
-        data,
     }
 }
 

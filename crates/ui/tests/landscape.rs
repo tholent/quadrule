@@ -205,7 +205,7 @@ fn new_in_landscape_clears_the_turned_zones_on_both_devices() {
         .unwrap();
         let wide = {
             let page = v.page_for(device).unwrap();
-            page.image.width > page.image.height
+            page.image().width > page.image().height
         };
         let bad = l06_count(&mut v, MANTA_ID) + l06_count(&mut v, NOMAD_ID);
         let this = landscape && whole && clears && wide && bad == 0;
@@ -349,7 +349,7 @@ fn the_page_tab_switch_is_one_undo_step() {
     // The pages draw wide.
     let wide = [MANTA_ID, NOMAD_ID].iter().all(|id| {
         let page = v.page_for(id).unwrap();
-        page.image.width > page.image.height
+        page.image().width > page.image().height
     });
     // One undo step puts everything back exactly; switching to the same orientation is nothing.
     v.set_orientation(Orientation::Landscape).unwrap();
@@ -396,7 +396,7 @@ fn export_writes_the_portrait_png_turned() {
     for (path, id) in all.iter().zip([MANTA_ID, NOMAD_ID]) {
         let page = v.page_for(id).unwrap();
         let size = page.profile.device_size();
-        shown_upright &= page.image.width > page.image.height;
+        shown_upright &= page.image().width > page.image().height;
         let expect = encode_png(&export_pixels(page), None);
         let written = std::fs::read(path).unwrap();
         bytes_ok &= written == expect && written == golden(id, size);
