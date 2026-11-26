@@ -114,3 +114,15 @@ the white pen's 254 left out.
 | decision | status | where it came up |
 |---|---|---|
 | **D6** confirmed: the scale ends on 255 (1 18 36 53 70 88 105 122 140 157 172 186 201 219 237 255). | agreed | chris: "yes, end on 255", answering open question 1 |
+
+## Amendment, 2026-11-26 (second)
+
+Open questions 2 to 5 answered by chris, word for word: "2. yes; 3. yes, labels; 4. manta is identical, no need to
+test; 5. yes". Every open question is now answered; the record stays open until its ADR is ratified.
+
+| decision | status | where it came up |
+|---|---|---|
+| **D8** confirmed: each role moves to the new step nearest its old gray (Label 157, Margin and Shade 201, and the rest as D8 lists). | agreed | chris: "2. yes" |
+| **D11** The gray picker labels the pen steps with the pen's name, for example "157 · dark grey pen", taken from the profile's `ink_values`; a profile with no pens shows none. | agreed | chris: "3. yes, labels" |
+| **D12** The Manta's pen grays are the Nomad's (1, 157, 201, 254); no Manta screenshot before the build. | agreed | chris: "4. manta is identical, no need to test" |
+| **D13** The paper profiles' role grays move as D8 does. | agreed | chris: "5. yes" |
