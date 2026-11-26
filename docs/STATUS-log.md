@@ -3495,3 +3495,6 @@ Judgement calls for chris's look:
 - chris, word for word: "1. let's tag and release this as v0.17.0 and then do the adr027 work as v0.17.1; 2. usage at
   70%". Calibration row written (`docs/budget-calibration.md`); the board and the rung 18 prompt say ADR-027 comes next,
   as `v0.17.1`.
+- `v0.17.0` tagged on `0255ca0` after its CI run passed (45887448928) and published: release run 45888906783, every job
+  `success` (four builds, "Draft, attach, publish", "Homebrew tap"); `gh release view v0.17.0` → pre-release, published
+  2026-11-26T20:14:29Z, six installers and `SHA256SUMS.txt`; the tap's `Casks/quadrule.rb` reads `version "0.17.0"`.
