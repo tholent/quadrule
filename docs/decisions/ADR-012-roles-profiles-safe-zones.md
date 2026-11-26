@@ -20,6 +20,8 @@ amends: nothing
 2. **Values come from calibration, never code.** Each role's width and gray per device is chosen by chris from the
    calibration sheets (`cargo xtask calibration-sheet`, napkin §8.4) and stored in `crates/profiles/data/`, with the
    readings in `docs/device-measurements/*/calibration.md`. A verified profile must have a calibration record.
+   *2026-11-26: ADR-027 (proposed) moves every role gray to a new 16-step scale built on the pen grays, by chris's
+   ruling, checked on new grays sheets.*
 3. **Dots are square.**
 4. **Safe zones are measured** from device screenshots by `cargo xtask safe-zones`, and a test keeps the profiles and
    screenshots in step.
@@ -47,6 +49,7 @@ amends: nothing
 - Changing a role's look is a data change, re-checked on hardware, not a code change.
 - Open until v1.1 (chris: "leave the label gray issue open until v1.1"): Label gray 153 sits 4 steps from the dark
   grey pen 157; lint rule L04 waits on it (`docs/STATUS-debt.md`).
+  *2026-11-26: settled by ADR-027 (proposed): Label moves to 157, and L04 is retired.*
 
 ## History
 
@@ -68,6 +71,9 @@ amends: nothing
 - 2026-11-23: two new ADRs from chris's starter lint answers, ratified the same day ("ratify 019 and 020"), amend this one: ADR-019 (a Full bleed mark
   that L06 skips; item 5) and ADR-020 (an eighth role, Margin; items 1 and 2). Header values unchanged.
 - 2026-11-23: owed gains the Margin role's measured values (ADR-020, built). Prior value, word for word: owed `"the Manta's gray levels and pen shades (ruled equal to the Nomad's, not measured); safe zones for a collapsed toolbar and other floating positions; measured values for L09, L13 and L14 (chosen, not measured)"`.
+- 2026-11-26: ADR-027 (proposed, from the Label gray talk) amends item 2 and settles the open Label gray item: the
+  role grays move to a 16-step scale built on the pen grays, and L04 is retired. Banners added at both. Header values
+  unchanged.
 
 ## Amendment — 2026-11-10, chris
 

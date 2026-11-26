@@ -3474,4 +3474,9 @@ Judgement calls for chris's look:
 - Rung 17 Q9, the Label gray, talked through: `docs/proposals/talk-2026-11-26-label-gray-and-pen-grays.md` (open, 7
   decisions agreed, 1 proposed, 5 open questions). A 16-step scale on the pen grays (1, 157, 201, then 255 as page
   white), roles to the nearest step, L04 retired, hand-picked grays migrated. An ADR to draft; built after `v0.17.0`.
+- ADR-027 drafted through makeadr (goforit, no rounds; every answer cited to the talk record): the 16 steps built on
+  the pen grays, roles to the nearest step, pen names in the picker, older files migrated, L04 retired. Proposed;
+  three asks for chris (ratify; whether an off-step gray also moves; the flag's name `--pen-grays`). ADR-012 gets
+  banners and a History note. Question record `docs/bbq/2026-11-26-adr-pen-gray-scale.md`. `adr-check.py --triggers-from
+  1` → `adr-check: 27 ADRs, 0 failure(s)`.
 - Process: every git command was its own call.

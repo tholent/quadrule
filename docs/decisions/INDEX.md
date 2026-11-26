@@ -31,3 +31,4 @@ change the ADR and run the script again. An ADR's own header outranks this table
 | [ADR-024](ADR-024-leave-main-at-v1.md) | Work goes straight to `main` until v1.0; from then on it lands by pull request, merged by the agent on green | process | accepted | not started |
 | [ADR-025](ADR-025-homebrew-cask.md) | Quadrule installs on macOS with Homebrew, as a cask in tholent's shared tap that follows each release | process | accepted | landed |
 | [ADR-026](ADR-026-basic-section.md) | A Basic tab lists what is marked "Show in Basic", so a template's few main settings sit on one pane | design | accepted | landed |
+| [ADR-027](ADR-027-pen-gray-scale.md) | The tablets' 16 grays are built on the Supernote pen grays, labels take the dark grey pen's gray, and L04 is retired | design | proposed | not started |
