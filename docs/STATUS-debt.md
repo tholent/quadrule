@@ -447,10 +447,11 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   and canvas together); other tabs are not timed. (5) `bench-check` is judged on this one
   computer; its 1 ms noise floor and best-of-2 are the builder's, for chris's veto. (6) Words: `notice-locked-stays`
   ("Some of the picked objects are locked, so they stay where they are.") is the builder's proposal for chris's look.
+  Items (5) and (6) approved as built by chris 2026-11-26 ("all approved"); item (1) stays owed.
 - Rung 17 leg 1, owed (`crates/ui/`): the Preferences words, the Keyboard shortcuts sheet's words and group names, the tab
   icons' drawings and the accessible names added for screen readers (`Show in Basic: Title`, `Group the picked objects`,
   `Profiles… for the devices of this page`, a finding's `L05, <object>, <device>`, the Repeat tab renamed `Repeat settings`)
-  are the builder's proposals for chris's look. Interface size is applied through egui's zoom factor, so **Follow system**
+  are the builder's proposals for chris's look (approved as built by chris 2026-11-26: "all approved"). Interface size is applied through egui's zoom factor, so **Follow system**
   and **100 %** draw the same size; they differ only in what is kept. Align and distribute have keys for the two by-spacing
   distribute buttons only (the by-centres ones have none). The Mac menu bar items added this leg (Preferences… moved into
   the Quadrule menu, Help ▸ Keyboard shortcuts, Help ▸ Developer) come from the one menu table but have no test on a Mac

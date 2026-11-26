@@ -3482,3 +3482,16 @@ Judgement calls for chris's look:
 - chris, word for word: "1. ratify 2. move only on-step grays 3. keep". ADR-027 revised first (only grays on the old
   steps move; the flag is `--pen-grays`), then ratified; History holds both. Talk record amended a third time.
 - Process: every git command was its own call.
+
+## 2026-11-26 — Rung 17 approved; v0.17.0 prepared (lead)
+
+- chris at the look, word for word: "all approved". Read as approving both legs and every judgement call they left; the
+  large-page zoom toward 1:1 (over 50 ms) stays debt, as it was not answered (rung 17 record, Amendments).
+- Version 0.17.0: `Cargo.toml` (and `Cargo.lock` by `cargo build --workspace`), notes
+  `docs/arcs/v1/release-notes/v0.17.0.md`, board row 17 done with a re-plan entry, next lead's prompt
+  `docs/arcs/v1/rung-18-PROMPT-2026-11-26.md`. No golden line, fixture or format changed.
+- Not done, said plainly: rung 17's Defaulted 9 (the debt file's sort) was never carried out by its lead; handed to the
+  rung 18 lead in its prompt.
+- chris, word for word: "1. let's tag and release this as v0.17.0 and then do the adr027 work as v0.17.1; 2. usage at
+  70%". Calibration row written (`docs/budget-calibration.md`); the board and the rung 18 prompt say ADR-027 comes next,
+  as `v0.17.1`.

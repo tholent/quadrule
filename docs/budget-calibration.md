@@ -130,3 +130,13 @@ builder subagents. `spend-ledger.py measure --latest --since 2026-11-24T10:00:00
 the Saturday meter; readings (chris's) 27 % (10:34 UTC), 32 % (11:52), 34 % (12:19), 43 % (17:52, before the tag): 16
 points for about $31 of measured tokens (about $1.95 a point). No stop line fired (the share line was 47 %). K not
 refitted.
+
+2026-11-24 to 2026-11-26, rung 17 (bbq, two legs, then the look, `v0.17.0`, the Label gray talk and ADR-027 in a second
+session), lead Opus 5.5 high, two Sonnet 5.5 high builder subagents. `spend-ledger.py measure --all --since
+2026-11-24T17:50:00Z` on `gibson` → three sessions: [f16221ef] 17:52–17:59 `fresh 38 · cached 4.1M · written 107k · out
+4.1k | $1.18`; [544cc347] 11-24 18:00 → 11-25 04:01 (the rung) `fresh 1.2k · cached 160.1M · written 2.7M · out 396k |
+sonnet 86% · opus 14% | $45.23`; [6eae27e0] 2026-11-26 17:38–19:54 (the look and release) `fresh 246 · cached 11.3M ·
+written 142k · out 70k | opus 100% | $4.38`. Readings (chris's): 55 % at the rung's start, 58 % after leg 1, 70 % on
+2026-11-26 (`/usage`, before the tag): 15 points for about $51 of measured tokens (about $3.40 a point), with other
+sessions on the meter (as the rung 17 record's Amendment of 2026-11-25 found), so the points overstate this work. No
+stop line fired (the hard stop was 75 %). K not refitted.
