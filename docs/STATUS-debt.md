@@ -25,7 +25,10 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
 - Open until v1.1 (chris, 2026-11-09: "let's leave the 153/157 question as open"; 2026-11-10: "leave the label
   gray issue open until v1.1"): the Label gray (153) sits 4 steps from the
   dark grey pen (157), and chris is "not sure that it's all that bad to have template lines that match the pen ink".
-  Bears on L04's severity (napkin §8.3); not built until this is settled (`docs/STATUS-log.md`).
+  Bears on L04's severity (napkin §8.3); not built until this is settled (`docs/STATUS-log.md`). Talked through
+  2026-11-26 (`docs/proposals/talk-2026-11-26-label-gray-and-pen-grays.md`, open): a match is fine (chris: "I don't
+  mind if they look similar / the same on screen compared to writing"), a 16-step scale built on the pen grays, L04
+  retired; this item closes when its ADR is ratified.
 - Fluent's Unicode direction marks around arguments are switched off (`crates/i18n/src/lib.rs`, `Strings::load`):
   right for English in a terminal, wrong for right-to-left languages. Switch them on per language with the first
   right-to-left translation.

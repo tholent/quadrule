@@ -3461,3 +3461,17 @@ Judgement calls for chris's look:
   passed=814 failed=0 status=ok runner=nextest`, then `PRUNE target=target removed_files=65 removed_gb=0.3 kept_gb=52.2`.
 - Process: every git command was its own call. Screenshots (the scratch profile, `/tmp/claude-1000/xdg`):
   `/tmp/claude-1000/shots/large-fit.png` (A3 at Fit) and `sample-fit.png` (the shapes page).
+
+## 2026-11-26 — Build folder cap; the Label gray talked through (lead)
+
+- Session start: `make build-proof` → `BUILD head=4fef2f4 dirty=no rebuilt=0 target_gb=52.3`, then `over the cap`.
+  `make prune` → `PRUNE target=target removed_files=22642 removed_gb=2.2 kept_gb=49.9 dry_run=no`, but `make build-proof`
+  still read `target_gb=50.2`: the prune adds file lengths, the check counted disk blocks (`du -sk`).
+- chris, word for word: "option 1 and 2. raise the cap to 60G". `make build-proof` counts file lengths
+  (`du --apparent-size`, `du -A` on a Mac) and `TARGET_CAP_GB` defaults to 60 (`ee2c2bc`; amendment in
+  `docs/proposals/build-pruning-2026-11-19.md`). `cargo clean` → `Removed 210922 files, 52.8GiB total`; then
+  `make build-proof` from empty → `BUILD head=ee2c2bc dirty=no rebuilt=12 target_gb=2.1` (1m 21s).
+- Rung 17 Q9, the Label gray, talked through: `docs/proposals/talk-2026-11-26-label-gray-and-pen-grays.md` (open, 7
+  decisions agreed, 1 proposed, 5 open questions). A 16-step scale on the pen grays (1, 157, 201, then 255 as page
+  white), roles to the nearest step, L04 retired, hand-picked grays migrated. An ADR to draft; built after `v0.17.0`.
+- Process: every git command was its own call.
