@@ -37,7 +37,7 @@ const PREFIX: &str = "pattern-borders";
 
 /// The sha256 of the thirty lines of `SHA256SUMS` that were there before this page (each ending in a newline),
 /// as re-made at the fallback level (ADR-018).
-const OLD_THIRTY_SHA256: &str = "70eb24a2b3c793191f24b94928f685d0c92a47cd0d7f23335125373828b6af12";
+const OLD_THIRTY_SHA256: &str = "c081d371552f7a1aa28e991e43fabb5a5c7a4a2dd1c0619ee635da5e75d967b1";
 
 fn pass(ok: bool) -> &'static str {
     if ok { "pass" } else { "fail" }

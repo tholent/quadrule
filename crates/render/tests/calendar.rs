@@ -36,7 +36,7 @@ use std::path::PathBuf;
 const PREFIX: &str = "calendar";
 
 /// The sha256 of the thirty-four lines of `SHA256SUMS` that were there before this page (each ending in a newline).
-const OLD_34_SHA256: &str = "de17f2970ebe132a473578d2ec1ab7b96eacb884d89e269c0a92f8e2ddae8d8e";
+const OLD_34_SHA256: &str = "c61970ef00829fd10ab20b84307821a5215c7191b50819f91e036ec6bfd3ecb5";
 
 fn pass(ok: bool) -> &'static str {
     if ok { "pass" } else { "fail" }

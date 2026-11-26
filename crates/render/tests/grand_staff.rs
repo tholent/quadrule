@@ -36,7 +36,7 @@ const PREFIX: &str = "grand-staff";
 
 /// The sha256 of the thirty-two lines of `SHA256SUMS` that were there before this page (each ending in a newline),
 /// as re-made at the fallback level (ADR-018).
-const OLD_32_SHA256: &str = "fc8c82f86631d43ac34ed6a7a0b50e434650e13a7bea5da32dcc76bd2ee4e95c";
+const OLD_32_SHA256: &str = "7df70a48504cfddfded8ccfad6badfefcfc7946278dc63e31a239a7813cc7148";
 
 fn pass(ok: bool) -> &'static str {
     if ok { "pass" } else { "fail" }

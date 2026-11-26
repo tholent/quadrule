@@ -103,25 +103,18 @@ pub const STRIP_DOTS: [(u32, u8); 6] = [(2, 51), (2, 102), (3, 51), (3, 102), (4
 pub const STRIP_MARGINS: [(u32, u8); 6] =
     [(3, 204), (4, 204), (5, 187), (5, 204), (5, 221), (6, 204)];
 
-/// Flat gray patches G1–G15: the even steps of 17 from 0 to 238, where a 16-level panel's own
-/// levels are expected to fall (added 2026-11-10 for rung 6's fills; arc v1 board, chris's queue).
-pub const PATCH_STEP_GRAYS: [u8; 15] = [
-    0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238,
-];
-/// Flat gray patches G16–G30: halfway between the steps, to show what an off-step gray becomes.
-pub const PATCH_BETWEEN_GRAYS: [u8; 15] = [
-    8, 25, 42, 59, 76, 93, 110, 127, 144, 161, 178, 195, 212, 229, 246,
-];
-/// With `--pen-grays` (ADR-027 item 7), patches N1–N15: the new steps but white, 1, 18 … 237, the pens' grays among
-/// them. Coded N, not G, so readings of this sheet are never mixed up with the 2026-11-12 G readings.
-pub fn pen_patch_step_grays() -> [u8; 15] {
+/// Flat gray patches N1–N15: the pen-gray scale's steps but white, 1, 18 … 237, the pens' grays among them (ADR-027).
+/// Coded N, not G, so readings of this sheet are never mixed up with the 2026-11-12 G readings of the old steps
+/// (0, 17 … 238, and 8, 25 … 246 between them).
+pub fn patch_step_grays() -> [u8; 15] {
     let mut out = [0; 15];
     out.copy_from_slice(&quadrule_model::pen_grays::NEW_STEPS[..15]);
     out
 }
 
-/// With `--pen-grays`, patches N16–N30: halfway between each new step and the next (9, 27 … 246).
-pub fn pen_patch_between_grays() -> [u8; 15] {
+/// Flat gray patches N16–N30: halfway between each step and the next (9, 27 … 246), to show what an off-step gray
+/// becomes.
+pub fn patch_between_grays() -> [u8; 15] {
     let s = quadrule_model::pen_grays::NEW_STEPS;
     std::array::from_fn(|i| ((u16::from(s[i]) + u16::from(s[i + 1])) / 2) as u8)
 }
@@ -504,30 +497,12 @@ pub fn ramp_gray(i: u32, width: u32) -> u8 {
 
 fn grays_sheet(p: &Profile, reg: &mut FontRegistry, version: &str) -> Result<Vec<Page>> {
     let mut pg = Pager::new(p, reg);
-    let pens = quadrule_model::pen_grays::on();
-    let (prefix, steps, between, intro) = if pens {
-        (
-            "N",
-            pen_patch_step_grays(),
-            pen_patch_between_grays(),
-            "Flat grays on the pen-gray scale (ADR-027). N1–N15: the new steps 1, 18, 36 … 237; N1 is the black pen's \
-             gray, N10 (157) the dark grey pen's and N13 (201) the light grey pen's. N16–N30: halfway between them \
-             (9, 27, 44 … 246). Each patch is one gray, the same in every pixel. Note which patches look flat and even \
-             (clean), and which show speckle, dots, stripes or blotches, and whether each step looks like the old \
-             step it replaced. GR: a smooth ramp from black (left) to white (right); note whether it shows steps or \
-             bands, and about how many.",
-        )
-    } else {
-        (
-            "G",
-            PATCH_STEP_GRAYS,
-            PATCH_BETWEEN_GRAYS,
-            "Flat grays. G1–G15: the even steps 0, 17, 34 … 238. G16–G30: halfway between them (8, 25, 42 … 246). \
-             Each patch is one gray, the same in every pixel. Note which patches look flat and even (clean), and which \
-             show speckle, dots, stripes or blotches. GR: a smooth ramp from black (left) to white (right); note \
-             whether it shows steps or bands, and about how many.",
-        )
-    };
+    let (prefix, steps, between) = ("N", patch_step_grays(), patch_between_grays());
+    let intro = "Flat grays on the pen-gray scale (ADR-027). N1–N15: the steps 1, 18, 36 … 237; N1 is the black pen's \
+                 gray, N10 (157) the dark grey pen's and N13 (201) the light grey pen's. N16–N30: halfway between them \
+                 (9, 27, 44 … 246). Each patch is one gray, the same in every pixel. Note which patches look flat and \
+                 even (clean), and which show speckle, dots, stripes or blotches. GR: a smooth ramp from black (left) \
+                 to white (right); note whether it shows steps or bands, and about how many.";
     pg.paragraph(intro, 8.0, 400)?;
     let cw = (pg.width() / PATCH_COLUMNS as f64).floor();
     let (pad, label_h, patch_h) = (pg.mm(1.0), pg.mm(3.5), pg.mm(14.0));

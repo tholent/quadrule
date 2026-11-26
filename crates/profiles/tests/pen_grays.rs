@@ -12,23 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! ADR-027 with `--pen-grays` on: the tablets' steps are built on the pen grays, every role and lint gray moves to the
-//! new step in its place, and paper profiles' roles move too. Every test here turns the switch on first; this file is
-//! its own test program, so no test elsewhere sees it on.
+//! ADR-027: the tablets' steps are built on the pen grays, every role and lint gray sits on the new step in place of
+//! the old one, and paper profiles' roles moved too. Each test prints one structured `CHECK` line.
 
 use quadrule_model::LineRole;
-use quadrule_model::pen_grays::{self, NEW_STEPS, OLD_STEPS, moved};
+use quadrule_model::pen_grays::{NEW_STEPS, OLD_STEPS, moved};
 use quadrule_profiles::{Registry, builtin};
 
 const TABLETS: [&str; 2] = ["supernote.a5x2", "supernote.a6x2"];
 
-fn on() {
-    pen_grays::set(true);
-}
-
 #[test]
 fn the_scale_moves_only_the_old_steps() {
-    on();
     let steps_move = OLD_STEPS.iter().zip(NEW_STEPS).all(|(&o, n)| moved(o) == n);
     let close = OLD_STEPS
         .iter()
@@ -48,7 +42,6 @@ fn the_scale_moves_only_the_old_steps() {
 
 #[test]
 fn the_tablets_steps_end_on_255_and_hold_every_pen_but_white() {
-    on();
     let mut fails = Vec::new();
     for id in TABLETS {
         let p = builtin(id).unwrap();
@@ -77,7 +70,6 @@ fn the_tablets_steps_end_on_255_and_hold_every_pen_but_white() {
 
 #[test]
 fn roles_and_lint_grays_move_to_the_new_steps() {
-    on();
     let mut fails = Vec::new();
     for id in TABLETS {
         let p = builtin(id).unwrap();
@@ -134,7 +126,6 @@ fn roles_and_lint_grays_move_to_the_new_steps() {
 
 #[test]
 fn paper_roles_move_and_the_registry_ships_the_new_values() {
-    on();
     let r = Registry::builtin_only();
     let mut fails = Vec::new();
     for id in r.paper_ids() {

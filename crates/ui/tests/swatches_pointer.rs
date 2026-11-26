@@ -13,8 +13,8 @@
 // limitations under the License.
 
 //! The Style tab's gray swatches, the "matches <Role>" badge and Use recommended driven with the pointer (rung
-//! 14b, docs/bbq/2026-11-17-rung-14-lint-and-preflight.md, Q8). Each swatch has an accessible name, "Gray 51" or
-//! "Fill gray 51". Each test prints one structured `CHECK` line (run with `-- --nocapture`).
+//! 14b, docs/bbq/2026-11-17-rung-14-lint-and-preflight.md, Q8). Each swatch has an accessible name, "Gray 53" or
+//! "Fill gray 53". Each test prints one structured `CHECK` line (run with `-- --nocapture`).
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
@@ -114,9 +114,19 @@ fn steps(h: &Harness<'static, ViewerUi>) -> usize {
     h.state().viewer.open.as_ref().unwrap().history.undo_len()
 }
 
+/// A swatch's accessible name: "Gray 53", or for a gray a Supernote pen writes, "Gray 157 · dark grey pen" (ADR-027).
+fn swatch_name(prefix: &str, g: u32) -> String {
+    match g {
+        1 => format!("{prefix} 1 · black pen"),
+        157 => format!("{prefix} 157 · dark grey pen"),
+        201 => format!("{prefix} 201 · light grey pen"),
+        _ => format!("{prefix} {g}"),
+    }
+}
+
 fn swatch_count(h: &Harness<'static, ViewerUi>, prefix: &str) -> usize {
     (0..=255u32)
-        .filter(|g| h.query_by_label(&format!("{prefix} {g}")).is_some())
+        .filter(|g| h.query_by_label(&swatch_name(prefix, *g)).is_some())
         .count()
 }
 
@@ -129,26 +139,26 @@ fn custom_gray_is_the_profiles_clean_levels_as_swatches_with_a_slider_behind_a_t
     let line = obj(
         1,
         "line",
-        custom(1.0, 51),
+        custom(1.0, 53),
         None,
         ObjectKind::Line(Line::default()),
     );
     let mut h = style_tab(doc(vec![line]), 1);
     // Sixteen swatches (the Manta lists sixteen), each named by its gray; no slider at first.
     let sixteen = swatch_count(&h, "Gray") == 16;
-    let named = [0, 51, 119, 255]
+    let named = [1, 53, 122, 255]
         .iter()
-        .all(|g| h.query_by_label(&format!("Gray {g}")).is_some());
+        .all(|g| h.query_by_label(&swatch_name("Gray", *g)).is_some());
     let no_slider = sliders(&h) == 0;
     // The chosen one is marked (toggled) and no other is.
-    let chosen = on(&h, 51);
-    let only = (0..=255u32).filter(|g| *g != 51).all(|g| !on(&h, g));
+    let chosen = on(&h, 53);
+    let only = (0..=255u32).filter(|g| *g != 53).all(|g| !on(&h, g));
     // A click on a swatch sets the gray in one undo step.
     let n0 = steps(&h);
-    h.get_by_label("Gray 119").click();
+    h.get_by_label("Gray 122").click();
     h.run();
-    let set = style_of(&h, 1) == custom(1.0, 119) && steps(&h) == n0 + 1;
-    let moved = on(&h, 119);
+    let set = style_of(&h, 1) == custom(1.0, 122) && steps(&h) == n0 + 1;
+    let moved = on(&h, 122);
     // Show all grays opens the slider; ticking again closes it.
     h.get_by_label("Show all grays").click();
     h.run();
@@ -185,7 +195,7 @@ fn custom_gray_is_the_profiles_clean_levels_as_swatches_with_a_slider_behind_a_t
 
 /// Whether the swatch for gray `g` is marked as the chosen one.
 fn on(h: &Harness<'static, ViewerUi>, g: u32) -> bool {
-    h.query_by_label(&format!("Gray {g}"))
+    h.query_by_label(&swatch_name("Gray", g))
         .is_some_and(|n| n.accesskit_node().toggled() == Some(egui::accesskit::Toggled::True))
 }
 
@@ -195,13 +205,13 @@ fn fill_and_text_grays_get_the_same_swatches_and_paper_gets_the_slider_only() {
         1,
         "box",
         Style::None,
-        Some(Fill::Gray(204)),
+        Some(Fill::Gray(201)),
         ObjectKind::Rect(RectShape::default()),
     );
     let words = obj(
         2,
         "words",
-        custom(1.0, 68),
+        custom(1.0, 70),
         None,
         ObjectKind::Text(TextBox {
             content: "words".into(),
@@ -213,16 +223,16 @@ fn fill_and_text_grays_get_the_same_swatches_and_paper_gets_the_slider_only() {
     let mut h = style_tab(doc(vec![rect, words]), 1);
     let fill_sixteen = swatch_count(&h, "Fill gray") == 16;
     let n0 = steps(&h);
-    h.get_by_label("Fill gray 85").click();
+    h.get_by_label("Fill gray 88").click();
     h.run();
-    let fill_set = fill_of(&h, 1) == Some(Fill::Gray(85)) && steps(&h) == n0 + 1;
+    let fill_set = fill_of(&h, 1) == Some(Fill::Gray(88)) && steps(&h) == n0 + 1;
     // The text box: its gray is a stroke gray field.
     h.state_mut().viewer.select_row(Uuid::from_u128(2), false);
     h.run();
     let text_sixteen = swatch_count(&h, "Gray") == 16;
-    h.get_by_label("Gray 34").click();
+    h.get_by_label("Gray 36").click();
     h.run();
-    let text_set = style_of(&h, 2) == custom(1.0, 34);
+    let text_set = style_of(&h, 2) == custom(1.0, 36);
     // Paper has no gray levels: the slider only, no swatch and no tick.
     let mut paper = paper_document();
     let id = paper
@@ -261,18 +271,18 @@ fn the_badge_names_the_role_a_stroke_matches_and_use_recommended_sets_the_neares
     let line = obj(
         1,
         "line",
-        custom(1.0, 51),
+        custom(1.0, 53),
         None,
         ObjectKind::Line(Line::default()),
     );
     let mut h = style_tab(doc(vec![line]), 1);
-    // 1 px at gray 51 is exactly Guide on the Manta.
+    // 1 px at gray 53 is exactly Guide on the Manta.
     let guide = h.query_by_label("matches Guide").is_some()
         && h.query_by_label("Use recommended").is_none();
-    // 1 px at 119 is Whisper.
+    // 1 px at 122 is Whisper.
     h.state_mut()
         .viewer
-        .edit_selected(None, |x| x.style = custom(1.0, 119))
+        .edit_selected(None, |x| x.style = custom(1.0, 122))
         .unwrap();
     h.run();
     let whisper = h.query_by_label("matches Whisper").is_some();

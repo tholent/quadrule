@@ -180,15 +180,15 @@ fn l03_fires_one_gray_past_each_threshold_on_both_devices() {
         )
     };
     let cases: Vec<(&str, u8, Maker)> = vec![
-        ("line_1px", 187, Box::new(line(1))),
-        ("line_2px", 204, Box::new(line(2))),
-        ("line_5px", 204, Box::new(line(5))),
-        ("dot_2px", 102, Box::new(dots(2))),
-        ("dot_3px", 170, Box::new(dots(3))),
-        ("dot_4px", 187, Box::new(dots(4))),
-        ("dot_6px", 187, Box::new(dots(6))),
-        ("fill", 204, Box::new(fill)),
-        ("text", 153, Box::new(text)),
+        ("line_1px", 186, Box::new(line(1))),
+        ("line_2px", 201, Box::new(line(2))),
+        ("line_5px", 201, Box::new(line(5))),
+        ("dot_2px", 105, Box::new(dots(2))),
+        ("dot_3px", 172, Box::new(dots(3))),
+        ("dot_4px", 186, Box::new(dots(4))),
+        ("dot_6px", 186, Box::new(dots(6))),
+        ("fill", 201, Box::new(fill)),
+        ("text", 157, Box::new(text)),
     ];
     let mut ok = true;
     let mut parts = Vec::new();
@@ -365,11 +365,11 @@ fn l13_fires_for_dark_fills_over_the_share_and_not_for_lighter_or_smaller() {
     };
     let (mut over, mut under, mut lighter, mut faded) = (true, true, true, true);
     for p in &d {
-        over &= has(&run(&share(12.0, 102, 100), p), "L13", 1);
-        under &= !any(&run(&share(8.0, 102, 100), p), "L13");
-        lighter &= !any(&run(&share(30.0, 103, 100), p), "L13");
-        // 102 at half opacity over white lands at 115: lighter than the dark gray.
-        faded &= !any(&run(&share(30.0, 102, 50), p), "L13");
+        over &= has(&run(&share(12.0, 105, 100), p), "L13", 1);
+        under &= !any(&run(&share(8.0, 105, 100), p), "L13");
+        lighter &= !any(&run(&share(30.0, 106, 100), p), "L13");
+        // 105 at half opacity over white is lighter than the dark gray (ADR-027 moved it from 102).
+        faded &= !any(&run(&share(30.0, 105, 50), p), "L13");
     }
     // Two 6 percent fills together are 12 percent.
     let two = {
@@ -400,7 +400,7 @@ fn l13_fires_for_dark_fills_over_the_share_and_not_for_lighter_or_smaller() {
     let wallpaper = d.iter().all(|p| !any(&run(&wall, p), "L13"));
     let ok = over && under && lighter && faded && together && roles && wallpaper;
     println!(
-        "CHECK crate=lint name=l13_dark_fills result={} over_share_fires={over} under_share_quiet={under} gray_103_quiet={lighter} faded_quiet={faded} fills_add_up={together} roles={roles} wallpaper_skips={wallpaper}",
+        "CHECK crate=lint name=l13_dark_fills result={} over_share_fires={over} under_share_quiet={under} gray_106_quiet={lighter} faded_quiet={faded} fills_add_up={together} roles={roles} wallpaper_skips={wallpaper}",
         pass(ok)
     );
     assert!(ok);

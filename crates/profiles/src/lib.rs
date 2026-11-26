@@ -169,11 +169,11 @@ pub struct LineRoles {
 }
 
 /// The Margin role before it is measured: chris's drawn 0.45 mm at 300 PPI, to whole pixels, and gray 204 (ADR-020,
-/// item 3; chosen, not measured).
+/// item 3; chosen, not measured), now 201, the light grey pen's step that replaced 204 (ADR-027).
 pub fn default_margin() -> RoleStyle {
     RoleStyle {
         width_px: 5,
-        gray: 204,
+        gray: 201,
     }
 }
 
@@ -447,57 +447,6 @@ impl Profile {
             },
         }
     }
-
-    /// The profile on the pen-gray scale (ADR-027): its gray steps, every role's gray and the lint block's grays each
-    /// moved to the new step in place of the old one ([`pen_grays::moved`]); a gray off the old steps, and the pens'
-    /// own grays, stay as they are. Widths do not change.
-    pub fn with_pen_grays(mut self) -> Profile {
-        use quadrule_model::pen_grays::moved;
-        for g in &mut self.gray_levels {
-            *g = moved(*g);
-        }
-        let r = &mut self.line_roles;
-        for s in [
-            &mut r.whisper,
-            &mut r.guide,
-            &mut r.structure,
-            &mut r.emphasis,
-            &mut r.dot_grid,
-            &mut r.margin,
-        ] {
-            s.gray = moved(s.gray);
-        }
-        r.text_gray = moved(r.text_gray);
-        r.label_gray = moved(r.label_gray);
-        self.fill_roles.shade = moved(self.fill_roles.shade);
-        self.fill_roles.block = moved(self.fill_roles.block);
-        let l = &mut self.lint;
-        for g in [
-            &mut l.lightest_gray_line_1px,
-            &mut l.lightest_gray_line_2px_up,
-            &mut l.lightest_gray_dot_2px,
-            &mut l.lightest_gray_dot_3px,
-            &mut l.lightest_gray_dot_4px_up,
-            &mut l.lightest_gray_fill,
-            &mut l.lightest_gray_text,
-            &mut l.dark_fill_gray,
-        ]
-        .into_iter()
-        .flatten()
-        {
-            *g = moved(*g);
-        }
-        self
-    }
-
-    /// The shipped values as this process sees them: on the pen-gray scale when `--pen-grays` is on.
-    fn shipped_now(self) -> Profile {
-        if quadrule_model::pen_grays::on() {
-            self.with_pen_grays()
-        } else {
-            self
-        }
-    }
 }
 
 /// The RON source of each built-in profile, by id.
@@ -641,5 +590,5 @@ pub fn builtin(id: &str) -> Result<Profile, ProfileError> {
         .iter()
         .find(|(i, _)| *i == id)
         .ok_or_else(|| ProfileError::Unknown(id.into()))?;
-    Ok(from_ron(src)?.shipped_now())
+    from_ron(src)
 }

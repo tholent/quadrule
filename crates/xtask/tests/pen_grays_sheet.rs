@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! ADR-027 item 7 with `--pen-grays` on: the grays sheet shows the new steps (N1–N15, the pens' grays among them) and
-//! the points halfway between them (N16–N30), each patch exactly its gray, and no G code. This file is its own test
-//! program, so the switch is on for it alone. Prints one structured `CHECK` line (run with `-- --nocapture`).
+//! ADR-027 item 7: the grays sheet shows the pen-gray scale's steps (N1–N15, the pens' grays among them) and the points
+//! halfway between them (N16–N30), each patch exactly its gray, and no G code. Prints one structured `CHECK` line (run
+//! with `-- --nocapture`).
 
 use quadrule_profiles::{builtin, builtin_ids};
 use quadrule_render::render;
@@ -23,10 +23,9 @@ use quadrule_xtask::calib::*;
 
 #[test]
 fn the_grays_sheet_shows_the_new_steps_and_the_points_between() {
-    quadrule_model::pen_grays::set(true);
-    let claimed: Vec<u8> = pen_patch_step_grays()
+    let claimed: Vec<u8> = patch_step_grays()
         .iter()
-        .chain(&pen_patch_between_grays())
+        .chain(&patch_between_grays())
         .copied()
         .collect();
     let pens_on_sheet = [1, 157, 201].iter().all(|g| claimed[..15].contains(g));

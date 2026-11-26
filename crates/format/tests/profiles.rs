@@ -108,7 +108,7 @@ fn a_carried_profile_round_trips_and_is_listed_in_the_manifest() {
         && back.manifest.entries.contains_key(&path)
         && names.contains(&path)
         && text.as_deref() == Some(to_ron(&p).as_bytes())
-        && back.manifest.format_version == "0.21.0"
+        && back.manifest.format_version == FORMAT_VERSION
         && again == bytes
         && back.doc == f.doc;
     println!(

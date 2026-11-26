@@ -81,7 +81,7 @@ fn has_key(v: &ciborium::Value, name: &str) -> bool {
 #[test]
 fn v020_files_open_migrate_and_export_the_same_bytes() {
     let sums = saved_sums();
-    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.21.0";
+    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.22.0";
     let mut parts = Vec::new();
     let mut matched = 0;
     let mut objects = 0;

@@ -13,7 +13,9 @@
     // RULED EQUAL to the Nomad, not measured (chris, 2026-11-12: "Same as the Nomad"): all 16 even steps clean; on a
     // flat area 0-68 look black and 238-255 white; the middle 85-221 are 9 distinct grays
     // (docs/device-measurements/supernote.a6x2/calibration.md).
-    gray_levels: [0, 17, 34, 51, 68, 85, 102, 119, 136, 153, 170, 187, 204, 221, 238, 255],
+    // ADR-027 (2026-11-26): every gray below sits on the pen-gray scale, moved from the old step in its place (0 → 1,
+    // 51 → 53, 153 → 157, 204 → 201 …); the codes in the comments are chris's readings on the old steps.
+    gray_levels: [1, 18, 36, 53, 70, 88, 105, 122, 140, 157, 172, 186, 201, 219, 237, 255],
     // ASSUMED from the Nomad (docs/device-measurements/supernote.a6x2/nomad-pen-shades.png,
     // 2026-11-09): pen colors are set by the firmware, and chris finds the two screens alike. Not
     // measured on the Manta; a Manta screenshot of the four pens would confirm it.
@@ -40,37 +42,37 @@
     // hold true for the manta" (docs/device-measurements/supernote.a5x2/calibration.md), so these
     // are the Nomad's values. Widths in device pixels, grays 0 = black .. 255 = white.
     line_roles: (
-        whisper: (width_px: 1, gray: 119),    // LA8
-        guide: (width_px: 1, gray: 51),       // LA4, W1
-        structure: (width_px: 2, gray: 51),   // LB4
-        emphasis: (width_px: 3, gray: 0),     // LC1
-        dot_grid: (width_px: 3, gray: 51),    // W15, square
-        text_gray: 51,                        // TD2, TL2
-        label_gray: 153,                      // TD4, TL4
-        margin: (width_px: 5, gray: 204),     // ADR-020: chris's drawn values, chosen, not measured
+        whisper: (width_px: 1, gray: 122),    // LA8
+        guide: (width_px: 1, gray: 53),       // LA4, W1
+        structure: (width_px: 2, gray: 53),   // LB4
+        emphasis: (width_px: 3, gray: 1),     // LC1
+        dot_grid: (width_px: 3, gray: 53),    // W15, square
+        text_gray: 53,                        // TD2, TL2
+        label_gray: 157,                      // TD4, TL4
+        margin: (width_px: 5, gray: 201),     // ADR-020: chris's drawn values, chosen, not measured
     ),
     // The gray each fill role resolves to (rung 6 bbq, Q3 and Q7), ruled equal to the Nomad (chris, 2026-11-12): Block
     // 102 ("A lighter dark gray"), Shade 204.
     fill_roles: (
-        shade: 204,
-        block: 102,
+        shade: 201,
+        block: 105,
     ),
     // What the linter judges a page against (rung 14 bbq, Q2 to Q4, 2026-11-17), from the Nomad sheets; the Manta is ruled the same (chris, 2026-11-09: "the same preferences and findings on the nomad hold true for the manta"). Grays are
     // 0 = black .. 255 = white; "lightest" is the lightest gray that still shows, so anything lighter is flagged (L03).
     // Sheet codes are in docs/device-measurements/supernote.a6x2/calibration.md. An empty (left out) value means the
     // rule is skipped on this profile.
     lint: (
-        lightest_gray_line_1px: Some(187),      // 1 px lines: LA12 is the last visible (lines sheet)
-        lightest_gray_line_2px_up: Some(204),   // 2 px and wider: LB13 to LF13 are the last visible; 221 and 238 vanish
-        lightest_gray_dot_2px: Some(102),       // square 2 px dots: PB3 (dots sheet)
-        lightest_gray_dot_3px: Some(170),       // square 3 px dots: PC5
-        lightest_gray_dot_4px_up: Some(187),    // square 4 px dots and larger: PD6
-        lightest_gray_fill: Some(204),          // fills: Shade 204 (G13, grays sheet) shows
-        lightest_gray_text: Some(153),          // text: 153 (TD4, TL4) is the lightest tested
+        lightest_gray_line_1px: Some(186),      // 1 px lines: LA12 is the last visible (lines sheet)
+        lightest_gray_line_2px_up: Some(201),   // 2 px and wider: LB13 to LF13 are the last visible; 221 and 238 vanish
+        lightest_gray_dot_2px: Some(105),       // square 2 px dots: PB3 (dots sheet)
+        lightest_gray_dot_3px: Some(172),       // square 3 px dots: PC5
+        lightest_gray_dot_4px_up: Some(186),    // square 4 px dots and larger: PD6
+        lightest_gray_fill: Some(201),          // fills: Shade 204 (G13, grays sheet) shows
+        lightest_gray_text: Some(157),          // text: 153 (TD4, TL4) is the lightest tested
         smallest_text_pt: Some(6.0),            // 6 pt is the smallest tested; every sample was legible (TA3, TI3)
         // Not measured (rung 14 bbq, Q4); retune here without code.
         smallest_handwriting_step_mm: Some(5.0), // Supernote's own grid is 5 mm
-        dark_fill_gray: Some(102),              // the Block fill role (G7)
+        dark_fill_gray: Some(105),              // the Block fill role (G7)
         dark_fill_page_share: Some(0.1),
         thin_line_px: Some(2),
     ),

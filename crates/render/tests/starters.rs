@@ -31,7 +31,7 @@ use quadrule_render::*;
 use std::path::PathBuf;
 
 /// The sha256 of the forty lines of `SHA256SUMS` that were there before the starters (each ending in a newline).
-const OLD_40_SHA256: &str = "bf8eb7a20587c929bacf1edded96395d1c5b127ecf805324110249fd039f7411";
+const OLD_40_SHA256: &str = "c4cb23ad5b965f025281726fbaac3bf6332e167f514b4d813683b1aa2dc2c9e1";
 
 fn pass(ok: bool) -> &'static str {
     if ok { "pass" } else { "fail" }

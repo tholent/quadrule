@@ -304,7 +304,7 @@ pub fn shapes_document() -> Document {
         "Ellipse, custom fill",
         cell(3.0, 32.0, 20.0, 14.0),
         structure,
-        Some(Fill::Gray(153)),
+        Some(Fill::Gray(157)),
         solid,
         butt,
         ellipse(),
@@ -360,7 +360,7 @@ pub fn shapes_document() -> Document {
         cell(3.0, 58.0, 20.0, 20.0),
         Style::Custom {
             width_mm: 0.6,
-            gray: 0,
+            gray: 1,
         },
         None,
         solid,
@@ -415,7 +415,7 @@ pub fn shapes_document() -> Document {
     // (a cap reaches half the width into the gap at each end of every dash).
     let thick = Style::Custom {
         width_mm: 1.0,
-        gray: 51,
+        gray: 53,
     };
     let spaced = DashStyle::Custom {
         dash_mm: 2.0,
@@ -4189,14 +4189,14 @@ pub fn lint_document() -> Document {
     add(
         "L14 diagonal line, 1 px",
         Frame::new(at(1.0), at(11.0), 60.0, 12.0),
-        px(1.0, 51),
+        px(1.0, 53),
         None,
         line(),
     );
     add(
         "L14 ellipse, 1 px",
         Frame::new(at(1.0), at(14.0), 30.0, 18.0),
-        px(1.0, 51),
+        px(1.0, 53),
         None,
         ObjectKind::Ellipse(EllipseShape::default()),
     );

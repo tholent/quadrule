@@ -45,7 +45,7 @@ fn pages() -> [(&'static str, Document); 2] {
 }
 
 /// The sha256 of the thirty-six lines of `SHA256SUMS` that were there before this page (each ending in a newline).
-const OLD_36_SHA256: &str = "2b37c0422f71cfe6cc1d828e7551ab3acd66578ee9cbab6895039f1417fccd63";
+const OLD_36_SHA256: &str = "6e8d15a865d0d192f196816d9ae8f2b47948f11e7646ebbf83cbdfe91d196b6a";
 
 fn pass(ok: bool) -> &'static str {
     if ok { "pass" } else { "fail" }

@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! ADR-027 item 4 with `--pen-grays` on: the Style tab's swatches a Supernote pen writes are named after the pen,
-//! "Gray 157 · dark grey pen", on hover and for screen readers, and the chosen one is named under the swatches; other
-//! swatches keep their number. A profile with no pens (paper) names none. Every test here turns the switch on first;
-//! this file is its own test program. Each test prints one structured `CHECK` line (run with `-- --nocapture`).
+//! ADR-027 item 4: the Style tab's swatches a Supernote pen writes are named after the pen, "Gray 157 · dark grey pen",
+//! on hover and for screen readers, and the chosen one is named under the swatches; other swatches keep their number.
+//! A profile with no pens (paper) names none. Each test prints one structured `CHECK` line (run with `-- --nocapture`).
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
@@ -29,7 +28,6 @@ fn pass(ok: bool) -> &'static str {
 }
 
 fn style_tab(gray: u8) -> Harness<'static, ViewerUi> {
-    pen_grays::set(true);
     let mut d = slice_document();
     let id = d.objects().next().unwrap().id;
     d.object_mut(id).unwrap().style = Style::Custom {

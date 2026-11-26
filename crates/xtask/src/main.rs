@@ -29,14 +29,10 @@ use quadrule_xtask::{calib, lintrun};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-const USAGE: &str = "usage: cargo xtask [--pen-grays] calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]\n       cargo xtask lint [--toolbars <list>] [<file.quad>]\n       cargo xtask prune [--dry-run]\n       cargo xtask starters [--check]\n       cargo xtask bench-check [--record] [--runs <n>] [--only <text>] [--starter <file>] [--basic-starter <file>]";
+const USAGE: &str = "usage: cargo xtask calibration-sheet [--profile <id>|all] [--out <dir>]\n       cargo xtask safe-zones [--profile <id>|all]\n       cargo xtask lint [--toolbars <list>] [<file.quad>]\n       cargo xtask prune [--dry-run]\n       cargo xtask starters [--check]\n       cargo xtask bench-check [--record] [--runs <n>] [--only <text>] [--starter <file>] [--basic-starter <file>]";
 
 fn main() -> ExitCode {
-    let mut args: Vec<String> = std::env::args().skip(1).collect();
-    // `--pen-grays` anywhere turns on the gray scale built on the pen grays (ADR-027), before any profile is read.
-    let pen_grays = args.len();
-    args.retain(|a| a != "--pen-grays");
-    quadrule_model::pen_grays::set(args.len() != pen_grays);
+    let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
         Some("calibration-sheet") => match calibration_sheet(&args[1..]) {
             Ok(()) => ExitCode::SUCCESS,

@@ -7,7 +7,7 @@ owner: chris
 kind: design
 built: partial
 proof: "`crates/profiles/tests/profiles.rs::every_profile_has_the_margin_role_and_older_ones_read_the_default`, `crates/profiles/tests/profiles.rs::role_grays_are_clean_levels`, `crates/xtask/tests/calib.rs::codes_are_unique_and_mean_the_same_everywhere`"
-owed: "chris's readings of the margin strips W19–W24 on both tablets, which set the role's values (item 2); until then chris's drawn 5 px, gray 204 (item 3)"
+owed: "chris's readings of the margin strips W19–W24 on both tablets, which set the role's values (item 2); until then chris's drawn 5 px, gray 201 (item 3, moved from 204 by ADR-027)"
 supersedes: nothing
 amends: "ADR-012 §Decision item 1 (the named line roles) and item 2 (values from calibration)"
 ---
@@ -71,3 +71,4 @@ Drivers:
   status-note `drafted 2026-11-23 from chris's answer (starter lint record, C); awaiting ratification`.
 - 2026-11-23: built (lead session, after the ratification). Prior header values, word for word: built `not started`, proof
   `"queued before rung 16b (`docs/bbq/2026-11-23-adr-starter-lint.md`, Owed; `docs/arcs/v1/README.md` row 16)"`.
+- 2026-11-26: owed names the Margin role's gray as 201, the step ADR-027 moved 204 to. Prior value, word for word: owed "chris's readings of the margin strips W19–W24 on both tablets, which set the role's values (item 2); until then chris's drawn 5 px, gray 204 (item 3)".

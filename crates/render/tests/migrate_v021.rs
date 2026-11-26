@@ -15,9 +15,10 @@
 //! Format 0.21.0 files (ADR-026: **Show in Basic**). The two starters in `tests/fixtures/v0.21/` (narrow ruled and the
 //! rapid log) were written by `cargo xtask starters` in format 0.21.0 and carry the marks: the page's margins, rhythm
 //! and title, and the objects that make the page what it is. Together with the sha256 of the PNG each device's export
-//! gave (`tests/fixtures/v0.21/SHA256SUMS`, the same as those starters' goldens), they must open as 0.21.0 with no
-//! migration, read the marks as they were written, export the same bytes now and after a save, and write the marks
-//! again, only where they are on, so the next format change has a 0.21 file to be tried against. Each test prints one
+//! gave (`tests/fixtures/v0.21/SHA256SUMS`, the same as those starters' goldens), they must open, read the marks as
+//! they were written, export the same bytes now and after a save, and write the marks again, only where they are on.
+//! Since format 0.22.0 (ADR-027, 2026-11-26) they open through the 0.22 step, which moves on-step hand-picked grays;
+//! their recorded exports were made again then, with every golden page. Each test prints one
 //! structured `CHECK` line (run with `-- --nocapture`).
 
 use quadrule_format::{FORMAT_VERSION, QuadFile, sha256_hex};
@@ -77,16 +78,16 @@ fn count_key(v: &ciborium::Value, name: &str) -> usize {
 #[test]
 fn v021_files_open_as_they_are_keep_their_marks_and_export_the_same_bytes() {
     let sums = saved_sums();
-    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.21.0";
+    let mut ok = !sums.is_empty() && FORMAT_VERSION == "0.22.0";
     let mut parts = Vec::new();
     let mut matched = 0;
     let (mut marked_objects, mut objects) = (0, 0);
     for name in ["narrow-ruled", "rapid-log"] {
         let bytes = std::fs::read(dir().join(format!("{name}.quad"))).unwrap();
         let file = QuadFile::from_bytes(&bytes).unwrap();
-        // Written by 0.21.0: opens as it is, editable, nothing migrated.
+        // Written by 0.21.0: opens through the 0.22 step, editable.
         let current = file.manifest.format_version == "0.21.0"
-            && file.migrated_from.is_none()
+            && file.migrated_from.as_ref().map(|v| v.to_string()) == Some("0.21.0".into())
             && file.read_only.is_none();
         // The page's three marks, and at least one object, were written as on.
         let page = file.doc.page.basic;

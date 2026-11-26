@@ -7,7 +7,7 @@ owner: chris
 kind: design
 built: partial
 proof: "`crates/profiles/tests/profiles.rs::verified_profiles_have_a_record`, `crates/profiles/tests/profiles.rs::role_grays_are_clean_levels`, `crates/xtask/tests/safezones.rs::profiles_match_their_screenshots`, `crates/lint/tests/lint.rs::every_toolbar_zone_is_known`, `crates/ui/tests/drag.rs::the_right_toolbar_zone_is_shown_and_caught_by_default`, `crates/layout/tests/snap.rs::union_outline_leaves_out_borders_inside_the_combined_area`, `crates/profiles/tests/lint_block.rs::both_supernotes_carry_the_measured_values_and_paper_only_two`, `crates/lint/tests/gray_rules.rs::a_rule_follows_an_edited_overrides_lint_block_and_an_edited_role`"
-owed: "the Manta's gray levels and pen shades (ruled equal to the Nomad's, not measured); safe zones for a collapsed toolbar and other floating positions; measured values for L09, L13 and L14 (chosen, not measured); measured values for the Margin role (ADR-020; chris's drawn 5 px, gray 204 until read)"
+owed: "the Manta's gray levels and pen shades (ruled equal to the Nomad's, not measured); safe zones for a collapsed toolbar and other floating positions; measured values for L09, L13 and L14 (chosen, not measured); measured values for the Margin role (ADR-020; chris's drawn 5 px, gray 201 until read, moved from 204 by ADR-027)"
 supersedes: nothing
 amends: nothing
 ---
@@ -74,6 +74,7 @@ amends: nothing
 - 2026-11-26: ADR-027 (proposed, from the Label gray talk) amends item 2 and settles the open Label gray item: the
   role grays move to a 16-step scale built on the pen grays, and L04 is retired. Banners added at both. Header values
   unchanged.
+- 2026-11-26: owed names the Margin role's gray as 201, the step ADR-027 moved 204 to. Prior value, word for word: owed "the Manta's gray levels and pen shades (ruled equal to the Nomad's, not measured); safe zones for a collapsed toolbar and other floating positions; measured values for L09, L13 and L14 (chosen, not measured); measured values for the Margin role (ADR-020; chris's drawn 5 px, gray 204 until read)".
 
 ## Amendment — 2026-11-10, chris
 

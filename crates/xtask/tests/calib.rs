@@ -81,8 +81,8 @@ fn codes_are_unique_and_mean_the_same_everywhere() {
         + STRIP_LINES.len()
         + STRIP_DOTS.len()
         + STRIP_MARGINS.len()
-        + PATCH_STEP_GRAYS.len()
-        + PATCH_BETWEEN_GRAYS.len()
+        + patch_step_grays().len()
+        + patch_between_grays().len()
         + 1;
     ok &= same && per_profile.iter().all(|m| m.len() == expected);
     println!(
@@ -152,9 +152,9 @@ fn line_samples_print_what_their_codes_say() {
 fn gray_patches_are_flat_and_the_ramp_climbs() {
     // Every pixel of patch Gn is exactly its claimed gray; the ramp starts at 0, ends at 255 and
     // never gets darker from left to right.
-    let claimed: Vec<u8> = PATCH_STEP_GRAYS
+    let claimed: Vec<u8> = patch_step_grays()
         .iter()
-        .chain(&PATCH_BETWEEN_GRAYS)
+        .chain(&patch_between_grays())
         .copied()
         .collect();
     let (mut patches, mut fails) = (0, Vec::new());

@@ -86,11 +86,7 @@ impl Registry {
             dir: None,
             shipped: BUILTIN_RON
                 .iter()
-                .map(|(_, src)| {
-                    from_ron(src)
-                        .expect("a shipped profile parses")
-                        .shipped_now()
-                })
+                .map(|(_, src)| from_ron(src).expect("a shipped profile parses"))
                 .collect(),
             overrides: BTreeMap::new(),
             broken: BTreeSet::new(),

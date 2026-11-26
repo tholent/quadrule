@@ -45,19 +45,8 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.18.0", "0.19.0", v0_18_to_v0_19),
     ("0.19.0", "0.20.0", v0_19_to_v0_20),
     ("0.20.0", "0.21.0", v0_20_to_v0_21),
+    ("0.21.0", "0.22.0", v0_21_to_v0_22),
 ];
-
-/// The step `--pen-grays` adds after [`CHAIN`] (ADR-027 item 5). It joins `CHAIN` when the flag comes out.
-pub const PEN_GRAYS_STEP: (&str, &str, Step) = ("0.21.0", "0.22.0", v0_21_to_v0_22);
-
-/// The chain this process upgrades with: [`CHAIN`], and [`PEN_GRAYS_STEP`] with `--pen-grays` on.
-pub fn chain() -> Vec<(&'static str, &'static str, Step)> {
-    let mut c = CHAIN.to_vec();
-    if quadrule_model::pen_grays::on() {
-        c.push(PEN_GRAYS_STEP);
-    }
-    c
-}
 
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
 /// scene is already a valid 0.2 scene: nothing to rewrite. A 0.1 build cannot read a 0.2 file

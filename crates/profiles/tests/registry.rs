@@ -54,7 +54,7 @@ fn every_damaged_shape_is_refused_without_a_panic() {
         good.replace("width_px: 1404", "width_px: \"wide\""),
     ));
     cases.push(("negative", good.replace("width_px: 1404", "width_px: -5")));
-    cases.push(("gray_over_255", good.replace("shade: 204", "shade: 300")));
+    cases.push(("gray_over_255", good.replace("shade: 201", "shade: 300")));
     cases.push(("not_ron", "just some words".to_string()));
     cases.push((
         "binary",
@@ -338,7 +338,7 @@ fn an_override_wins_and_a_broken_one_falls_back_marked() {
         && r.damaged().len() == 1;
     // builtin() itself never looks at the folder.
     let shipped_unchanged =
-        builtin(NOMAD).unwrap() == nomad() && nomad().line_roles.guide.gray == 51;
+        builtin(NOMAD).unwrap() == nomad() && nomad().line_roles.guide.gray == 53;
     println!(
         "CHECK crate=profiles name=override_and_fallback result={} edited={} broken_marked={} builtin_unchanged={shipped_unchanged}",
         pass(ok && shipped_unchanged),

@@ -266,8 +266,8 @@ fn nearest_clean_gray_and_a_role_fix_l03_and_l05() {
         && b == (true, true)
         && c == (true, true)
         && d == (true, true)
-        && n1 == 187
-        && n2 == 119
+        && n1 == 186
+        && n2 == 122
         && role == (true, true)
         && fill_role == (true, true);
     println!(

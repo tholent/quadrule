@@ -36,16 +36,16 @@ fn folder(name: &str) -> PathBuf {
 #[test]
 fn both_supernotes_carry_the_measured_values_and_paper_only_two() {
     let want = LintThresholds {
-        lightest_gray_line_1px: Some(187),
-        lightest_gray_line_2px_up: Some(204),
-        lightest_gray_dot_2px: Some(102),
-        lightest_gray_dot_3px: Some(170),
-        lightest_gray_dot_4px_up: Some(187),
-        lightest_gray_fill: Some(204),
-        lightest_gray_text: Some(153),
+        lightest_gray_line_1px: Some(186),
+        lightest_gray_line_2px_up: Some(201),
+        lightest_gray_dot_2px: Some(105),
+        lightest_gray_dot_3px: Some(172),
+        lightest_gray_dot_4px_up: Some(186),
+        lightest_gray_fill: Some(201),
+        lightest_gray_text: Some(157),
         smallest_text_pt: Some(6.0),
         smallest_handwriting_step_mm: Some(5.0),
-        dark_fill_gray: Some(102),
+        dark_fill_gray: Some(105),
         dark_fill_page_share: Some(0.1),
         thin_line_px: Some(2),
     };
@@ -61,12 +61,12 @@ fn both_supernotes_carry_the_measured_values_and_paper_only_two() {
         && papers
             .iter()
             .all(|id| builtin(id).unwrap().lint == paper_want);
-    let dots = want.lightest_gray_dot(1) == Some(102)
-        && want.lightest_gray_dot(2) == Some(102)
-        && want.lightest_gray_dot(3) == Some(170)
-        && want.lightest_gray_dot(4) == Some(187)
-        && want.lightest_gray_dot(9) == Some(187);
-    let lines = want.lightest_gray_line(1) == Some(187) && want.lightest_gray_line(5) == Some(204);
+    let dots = want.lightest_gray_dot(1) == Some(105)
+        && want.lightest_gray_dot(2) == Some(105)
+        && want.lightest_gray_dot(3) == Some(172)
+        && want.lightest_gray_dot(4) == Some(186)
+        && want.lightest_gray_dot(9) == Some(186);
+    let lines = want.lightest_gray_line(1) == Some(186) && want.lightest_gray_line(5) == Some(201);
     let ok = nomad && manta && paper && dots && lines;
     println!(
         "CHECK crate=profiles name=lint_block_shipped result={} nomad={nomad} manta={manta} paper_sizes={} paper_only_two={paper} dot_sizes={dots} line_widths={lines}",

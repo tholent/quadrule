@@ -3518,3 +3518,23 @@ Judgement calls for chris's look:
   No golden line, fixture or starter file changed; with the switch off nothing exports differently.
 - The lead's calls for chris's veto are in `docs/STATUS-debt.md`, "ADR-027, owed".
 - Process: every git command was its own call.
+
+## 2026-11-26 — ADR-027 approved, its flag removed; v0.17.1 prepared (lead)
+
+- chris, word for word: "all looks good. usage at 74%". Read as his grays-sheet readings on both tablets (every patch
+  clean, each new step like the old one; no patch-by-patch reading) and his look; the lead's three calls stand.
+  Recorded in both tablets' `calibration.md`.
+- Flag removed: the 13 profile files carry the new grays (with a note each); `FORMAT_VERSION` 0.22.0 and the step in
+  `CHAIN`; the switch, `--pen-grays` and `shipped_now` gone; the grays sheet is the N1–N30 page; `default_margin()`
+  201; the sample pages' on-step hand-picked grays moved as files do (153 → 157, 0 → 1, 51 → 53, three places and the
+  lint page's two L14 lines); `cargo xtask starters` → `STARTERS written=20`.
+- Golden lines: blessed one test at a time (`QUADRULE_BLESS=1 cargo nextest run -p quadrule-render --no-fail-fast
+  --test-threads 1`), the list put back in its order (`lines 80 missing [] extra []`); all 80 lines and images changed.
+  Fixtures' recorded exports updated as at ADR-018: 54 by the old-to-new golden map, 6 read from a test run (busy v0.4,
+  lines v0.5, the landscape repeats v0.10); the user profile's 5 unchanged (its grays are its own). The five pinned
+  older-line hashes recomputed. Tests that pinned 0.21.0 or old shipped grays moved to the new values (lint fixes and
+  gray rules, the profile tests, swatches and shapes in the UI); the v0.21 fixtures now open through the 0.22 step.
+  `cargo nextest run -p quadrule-render` → `107 tests run: 107 passed`.
+- Debt paid and removed: the 153/157 Label gray item and "ADR-027, owed". ADR-027 `built: landed`; ADR-012's and
+  ADR-020's owed lines name Margin's 201.
+- Version 0.17.1 and notes `docs/arcs/v1/release-notes/v0.17.1.md`.

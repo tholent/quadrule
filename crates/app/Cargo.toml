@@ -18,7 +18,6 @@ quadrule-layout.workspace = true
 quadrule-profiles.workspace = true
 quadrule-text.workspace = true
 quadrule-ui.workspace = true
-quadrule-model.workspace = true
 rfd.workspace = true
 vello.workspace = true
 

@@ -41,3 +41,16 @@ turn out to differ, run the grays sheet here and record it.
 Not tested on the Manta. chris: "Same as the Nomad". So a landscape design is turned a quarter turn and saved as a
 portrait PNG (1920 × 2560), and landscape mode zooms the page by 4/3 (the Manta's landscape screenshots agree: grid 79
 px against 59 px). The Nomad's test: `docs/device-measurements/supernote.a6x2/landscape-test.md`.
+
+## Pen-gray grays sheet — 2026-11-26
+
+Sheet: `cargo xtask --pen-grays calibration-sheet --profile all --out calib/pen-grays` (ADR-027, built behind the flag
+then), the grays pages only: patches N1–N15 on the new steps 1, 18, 36, 53, 70, 88, 105, 122, 140, 157, 172, 186, 201,
+219, 237 (N1, N10 and N13 the black, dark grey and light grey pens' grays), N16–N30 halfway between them (9, 27 … 246),
+and the ramp GR. The N codes are new, so they are never read as the G patches of 2026-11-12.
+
+chris's reading, with his look at the app, word for word: "all looks good". Taken as: every patch clean, and each new
+step looking like the old step it replaced, on both tablets; no patch-by-patch reading was given.
+
+In the profile: `gray_levels` is the new scale and every role, fill and lint gray sits on the new step in place of the
+old one (Shade and Margin 201, Block 105, Label 157; ADR-027).

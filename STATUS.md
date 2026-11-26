@@ -309,8 +309,9 @@ The project's live state. Update it when work lands. Every claim cites at least 
   **Rung 17 is done** (`v0.17.0`, approved by chris 2026-11-26: "all approved"; Preferences and interface size, the
   key table and shortcuts sheet, screen-reader names, readable JSON, large pages at screen size, `make bench-check`;
   notes `docs/arcs/v1/release-notes/v0.17.0.md`). Its Q9, the Label gray, was talked through 2026-11-26: a gray scale built on the pen grays (ADR-027, ratified by chris 2026-11-26), its own job after
-  `v0.17.0`, behind `--pen-grays` (`docs/decisions/ADR-027-pen-gray-scale.md`). ADR-027 is built behind `--pen-grays` (2026-11-26) and waits for
-  chris's grays-sheet readings and his look, then `v0.17.1` (chris: "do the adr027 work as v0.17.1"); then rung 18, the release (`docs/arcs/v1/rung-18-PROMPT-2026-11-26.md`).
+  `v0.17.0`, behind `--pen-grays` (`docs/decisions/ADR-027-pen-gray-scale.md`). ADR-027 is built and approved (chris 2026-11-26: "all looks good"), its
+  flag removed: format 0.22.0, every golden line made again once; it ships as `v0.17.1` (notes
+  `docs/arcs/v1/release-notes/v0.17.1.md`). Next: rung 18, the release (`docs/arcs/v1/rung-18-PROMPT-2026-11-26.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1

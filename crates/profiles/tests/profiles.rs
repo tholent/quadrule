@@ -143,7 +143,7 @@ fn short_names_are_file_safe_and_unique() {
 #[test]
 fn fill_roles_resolve_per_device() {
     // Rung 6 bbq Q3 and Q7: Shade 204 and Block 102 on both devices (grays sheet, 2026-11-12: Block
-    // moved from 68, which looked black; both on the clean levels);
+    // moved from 68, which looked black; both on the clean levels), moved to 201 and 105 by ADR-027;
     // a custom gray is itself.
     use quadrule_model::{Fill, FillRole};
     let mut parts = Vec::new();
@@ -156,7 +156,7 @@ fn fill_roles_resolve_per_device() {
         );
         let clean = p.gray_levels.contains(&shade) && p.gray_levels.contains(&block);
         let custom = p.fill_gray(Fill::Gray(119)) == 119;
-        ok &= shade == 204 && block == 102 && clean && custom && shade > block;
+        ok &= shade == 201 && block == 105 && clean && custom && shade > block;
         parts.push(format!("{id}:shade={shade}:block={block}"));
     }
     println!(
@@ -169,7 +169,7 @@ fn fill_roles_resolve_per_device() {
 
 #[test]
 fn every_profile_has_the_margin_role_and_older_ones_read_the_default() {
-    // ADR-020: every built-in carries Margin, 5 px and gray 204 until measured; a profile saved before the role existed
+    // ADR-020: every built-in carries Margin, 5 px and gray 204 (201 since ADR-027) until measured; a profile saved before the role existed
     // (a user's own, or one a file carries) has no `margin` line and reads the same default.
     let all =
         builtin_ids().all(|id| builtin(id).unwrap().role(LineRole::Margin) == default_margin());

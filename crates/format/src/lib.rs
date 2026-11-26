@@ -60,21 +60,7 @@ use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, DateTime, System, ZipArchive, ZipWriter};
 
 /// The format version this build writes. Pre-1.0 while the format settles.
-pub const FORMAT_VERSION: &str = "0.21.0";
-
-/// The format version written with `--pen-grays` on (ADR-027 item 5): 0.22.0 moves hand-picked grays onto the new
-/// scale. It becomes [`FORMAT_VERSION`] when the flag comes out at chris's look.
-pub const PEN_GRAYS_FORMAT_VERSION: &str = "0.22.0";
-
-/// The format version this process writes and reads up to: [`PEN_GRAYS_FORMAT_VERSION`] with `--pen-grays` on,
-/// [`FORMAT_VERSION`] otherwise.
-pub fn current_version() -> &'static str {
-    if quadrule_model::pen_grays::on() {
-        PEN_GRAYS_FORMAT_VERSION
-    } else {
-        FORMAT_VERSION
-    }
-}
+pub const FORMAT_VERSION: &str = "0.22.0";
 
 /// Required features this build understands. A file that requires any other opens read-only.
 pub const KNOWN_FEATURES: &[&str] = &["text-outlines"];
@@ -298,7 +284,7 @@ impl QuadFile {
     /// A new file for a document, its outlines (one per profile) and the fonts it uses.
     pub fn new(doc: Document, outlines: Vec<ProfileOutlines>, fonts: Vec<FontRef>) -> Self {
         let manifest = Manifest {
-            format_version: current_version().into(),
+            format_version: FORMAT_VERSION.into(),
             saved_by: String::new(),
             title: doc.metadata.title.clone(),
             profiles: vec![],
@@ -378,7 +364,7 @@ impl QuadFile {
             })
             .collect();
         // A newer file keeps its own label, so its unknown fields stay labelled (ADR-001 item 5).
-        let ours = Version::parse(current_version()).expect("the format version is semver");
+        let ours = Version::parse(FORMAT_VERSION).expect("FORMAT_VERSION is semver");
         let theirs =
             Version::parse(&m.format_version).map_err(|e| FormatError::Version(e.to_string()))?;
         m.format_version = theirs.max(ours).to_string();
@@ -425,7 +411,7 @@ impl QuadFile {
         let manifest: Manifest = from_cbor(&read_entry(&mut z, MANIFEST)?)?;
         let file_v = Version::parse(&manifest.format_version)
             .map_err(|e| FormatError::Version(e.to_string()))?;
-        let ours = Version::parse(current_version()).expect("the format version is semver");
+        let ours = Version::parse(FORMAT_VERSION).expect("FORMAT_VERSION is semver");
 
         let unknown: Vec<String> = manifest
             .required_features
@@ -489,7 +475,7 @@ impl QuadFile {
             .ok_or_else(|| FormatError::Missing(SCENE.into()))?;
         let (doc, migrated_from) = if file_v < ours {
             let mut v: ciborium::Value = from_cbor(&scene)?;
-            migrate::upgrade(&mut v, &file_v, &ours, &migrate::chain())?;
+            migrate::upgrade(&mut v, &file_v, &ours, migrate::CHAIN)?;
             let doc = v
                 .deserialized::<Document>()
                 .map_err(|e| FormatError::Cbor(e.to_string()))?;
