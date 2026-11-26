@@ -307,8 +307,8 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (isometric drag 45.0 on the Manta); the Pi not measured (`docs/STATUS-log.md`). Next: rung 17, polish and debt sweep
   (`docs/arcs/v1/rung-17-PROMPT-2026-11-24.md`).
   Rung 17's two legs are built and wait for chris's look (`docs/STATUS-log.md`). Its Q9, the Label gray, was talked
-  through 2026-11-26: a gray scale built on the pen grays, its own job after `v0.17.0`
-  (`docs/proposals/talk-2026-11-26-label-gray-and-pen-grays.md`).
+  through 2026-11-26: a gray scale built on the pen grays (ADR-027, ratified by chris 2026-11-26), its own job after
+  `v0.17.0`, behind `--pen-grays` (`docs/decisions/ADR-027-pen-gray-scale.md`).
 - Landscape answered on the Nomad (chris, 2026-11-12): the device wants rotated pixels. A landscape template must be a
   design turned a quarter turn and saved as a portrait PNG; a wide PNG is shrunk, and landscape mode zooms the page by
   4/3 (`docs/device-measurements/supernote.a6x2/landscape-test.md`). Rung 8's orientation work builds on this (`docs/arcs/v1/README.md`, chris's queue). L04 moved to v1.1

@@ -3479,4 +3479,6 @@ Judgement calls for chris's look:
   three asks for chris (ratify; whether an off-step gray also moves; the flag's name `--pen-grays`). ADR-012 gets
   banners and a History note. Question record `docs/bbq/2026-11-26-adr-pen-gray-scale.md`. `adr-check.py --triggers-from
   1` → `adr-check: 27 ADRs, 0 failure(s)`.
+- chris, word for word: "1. ratify 2. move only on-step grays 3. keep". ADR-027 revised first (only grays on the old
+  steps move; the flag is `--pen-grays`), then ratified; History holds both. Talk record amended a third time.
 - Process: every git command was its own call.

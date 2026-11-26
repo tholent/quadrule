@@ -126,3 +126,14 @@ test; 5. yes". Every open question is now answered; the record stays open until 
 | **D11** The gray picker labels the pen steps with the pen's name, for example "157 · dark grey pen", taken from the profile's `ink_values`; a profile with no pens shows none. | agreed | chris: "3. yes, labels" |
 | **D12** The Manta's pen grays are the Nomad's (1, 157, 201, 254); no Manta screenshot before the build. | agreed | chris: "4. manta is identical, no need to test" |
 | **D13** The paper profiles' role grays move as D8 does. | agreed | chris: "5. yes" |
+
+## Amendment, 2026-11-26 (third)
+
+Folded into ADR-027, ratified by chris the same day. Answering the ADR's asks, chris, word for word: "1. ratify 2.
+move only on-step grays 3. keep". So D10 is narrowed: a hand-picked gray moves only when it sat on one of the old 16
+steps; one off them stays as it is. The flag is `--pen-grays`.
+
+| decision | status | where it came up |
+|---|---|---|
+| **D10** narrowed: only hand-picked grays on the old steps move to the matching new step; others stay. | agreed | chris: "2. move only on-step grays", on ADR-027's ask 2 |
+| **D14** The flag is named `--pen-grays`. | agreed | chris: "3. keep", on ADR-027's ask 3 |

@@ -28,7 +28,7 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   Bears on L04's severity (napkin §8.3); not built until this is settled (`docs/STATUS-log.md`). Talked through
   2026-11-26 (`docs/proposals/talk-2026-11-26-label-gray-and-pen-grays.md`, open): a match is fine (chris: "I don't
   mind if they look similar / the same on screen compared to writing"), a 16-step scale built on the pen grays, L04
-  retired; this item closes when its ADR is ratified.
+  retired; ADR-027 ratified 2026-11-26, so this item closes when ADR-027 is built (after `v0.17.0`).
 - Fluent's Unicode direction marks around arguments are switched off (`crates/i18n/src/lib.rs`, `Strings::load`):
   right for English in a terminal, wrong for right-to-left languages. Switch them on per language with the first
   right-to-left translation.

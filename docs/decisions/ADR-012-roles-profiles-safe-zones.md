@@ -20,7 +20,7 @@ amends: nothing
 2. **Values come from calibration, never code.** Each role's width and gray per device is chosen by chris from the
    calibration sheets (`cargo xtask calibration-sheet`, napkin §8.4) and stored in `crates/profiles/data/`, with the
    readings in `docs/device-measurements/*/calibration.md`. A verified profile must have a calibration record.
-   *2026-11-26: ADR-027 (proposed) moves every role gray to a new 16-step scale built on the pen grays, by chris's
+   *2026-11-26: ADR-027 (ratified) moves every role gray to a new 16-step scale built on the pen grays, by chris's
    ruling, checked on new grays sheets.*
 3. **Dots are square.**
 4. **Safe zones are measured** from device screenshots by `cargo xtask safe-zones`, and a test keeps the profiles and
@@ -49,7 +49,7 @@ amends: nothing
 - Changing a role's look is a data change, re-checked on hardware, not a code change.
 - Open until v1.1 (chris: "leave the label gray issue open until v1.1"): Label gray 153 sits 4 steps from the dark
   grey pen 157; lint rule L04 waits on it (`docs/STATUS-debt.md`).
-  *2026-11-26: settled by ADR-027 (proposed): Label moves to 157, and L04 is retired.*
+  *2026-11-26: settled by ADR-027 (ratified): Label moves to 157, and L04 is retired.*
 
 ## History
 

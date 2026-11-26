@@ -1,6 +1,8 @@
 ---
-status: proposed
-status-note: drafted 2026-11-26 from chris's answers in the Label gray talk; awaiting ratification
+status: accepted
+status-note: "ratified by chris 2026-11-26 (\"1. ratify\")"
+ratified-by: chris
+ratified-on: "2026-11-26"
 owner: chris
 kind: design
 built: not started
@@ -28,13 +30,14 @@ amends: "ADR-012 §Decision item 2 (role grays: moved to the new steps by chris'
    (the dark grey pen); Margin and Shade 204 → 201 (the light grey pen). Widths do not change.
 4. **The gray picker names the pen steps**, for example "157 · dark grey pen", from the profile's `ink_values`; a
    profile with no pens (the paper sizes) shows no names (D11).
-5. **Older files move onto the new steps.** A file format step moves every gray picked by hand in a `.quad` to the
-   nearest new step when the file is opened (D10).
+5. **Older files move onto the new steps.** A file format step moves each gray picked by hand in a `.quad` that sits
+   on one of the old 16 steps to the matching new step when the file is opened (D10); a gray off the old steps stays
+   as it is (chris: "move only on-step grays").
 6. **L04 is retired** (D9): "Gray or weight close to pen ink" is dropped from the spec's lint list by a dated
    amendment under the §8.3 table, and is not built.
 7. **Built as its own job after `v0.17.0`, behind a flag until chris's look, with new grays sheets for both tablets**
-   (D7). The flag covers export, lint, the profiles and the format step, since all four change export bytes or the
-   file format (ADR-007, amendment of 2026-11-10).
+   (D7). The flag, `--pen-grays` (chris: "keep"), covers export, lint, the profiles and the format step, since all four
+   change export bytes or the file format (ADR-007, amendment of 2026-11-10).
 
 ## Context
 
@@ -87,8 +90,8 @@ Drivers:
    steps are the list above, end on 255 and hold every pen gray but the white one.
 2. **The picker's pen names**, words through Fluent. Test: the Nomad's picker names 1, 157 and 201 and nothing else;
    a paper profile names none.
-3. **The format step** 0.21.0 → 0.22.0. Test: a 0.21 fixture with hand-picked grays (153, 204, 0) opens as 157, 201 and
-   1, and its role-styled objects are untouched in the file.
+3. **The format step** 0.21.0 → 0.22.0. Test: a 0.21 fixture with hand-picked grays (153, 204, 0, 160) opens as 157,
+   201, 1 and 160, and its role-styled objects are untouched in the file.
 4. **The grays sheet**: the new steps and the points halfway between them (`cargo xtask calibration-sheet`,
    `crates/xtask/src/calib.rs`). Test: the sheet's codes stay unique (`crates/xtask/tests/calib.rs`); chris reads it
    on both tablets and the readings go in each `calibration.md`.
@@ -102,21 +105,19 @@ Drivers:
 ## Consequences
 
 - Every exported page changes by a few gray levels; on the tablet it should look the same (the new sheets confirm).
-- Opening an older file rewrites its hand-picked grays. Read literally, D10 moves every hand-picked gray, including
-  one deliberately off the steps (160 would become 157); ask 2 checks that.
+- Opening an older file rewrites its hand-picked grays that sat on the old steps; one chosen off the steps (160) is
+  kept, and L05 notes it as before.
 - User-made profiles and edited Manta or Nomad overrides keep their own grays until Reset (Defaulted, question record).
 - ADR-012's rule that role values come from calibration holds: chris ruled the moves here, and the new grays sheet is
   the calibration check.
 - The question record is `docs/bbq/2026-11-26-adr-pen-gray-scale.md` (premises and the Defaulted calls).
 
-## Asks left open
-
-1. Ratify ADR-027 as written?
-2. D10 read literally moves every hand-picked gray to the nearest step, even one deliberately off the steps (160 →
-   157). Keep that, or move only grays that sat on an old step?
-3. The flag's name, `--pen-grays` (Defaulted): keep it?
-
 ## History
 
 - 2026-11-26: drafted from chris's answers in `docs/proposals/talk-2026-11-26-label-gray-and-pen-grays.md`, through
   makeadr (goforit: no rounds, every answer cited).
+- 2026-11-26: revised before ratifying, from chris's answers to the draft's asks, word for word: "2. move only
+  on-step grays 3. keep". Decision item 5 narrowed to grays on the old steps (a gray off them stays); item 7 names the
+  flag `--pen-grays`; build step 3's test and the Consequences follow; Asks left open removed.
+- 2026-11-26: ratified by chris ("1. ratify"). Prior header values, word for word: status `proposed`, status-note
+  `drafted 2026-11-26 from chris's answers in the Label gray talk; awaiting ratification`.
