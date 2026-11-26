@@ -105,3 +105,12 @@ handwriting)", Warn, `napkins/quadrule-spec.md` §8.3) could not be built until 
 - `makeadr` for action item 1, which can carry questions 1 to 5 as its questions.
 - `bbq` to plan the build (action items 3 and 4) once `v0.17.0` is out.
 - `looseends` on this record later, to check the open questions got their answers.
+
+## Amendment, 2026-11-26
+
+Open question 1 answered by chris, word for word: "yes, end on 255". D6 stands as written: 16 steps ending at 255, with
+the white pen's 254 left out.
+
+| decision | status | where it came up |
+|---|---|---|
+| **D6** confirmed: the scale ends on 255 (1 18 36 53 70 88 105 122 140 157 172 186 201 219 237 255). | agreed | chris: "yes, end on 255", answering open question 1 |
