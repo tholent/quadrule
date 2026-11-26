@@ -174,3 +174,10 @@ Open question 4 (recommendation 3, one test program per crate) is still open: as
 2026-11-20, answered by chris (`looseends project`), word for word: "Plan it after 16b (Recommended)". So recommendation
 3 is planned as its own proposal once rung 16b's starters have landed, not before.
 
+
+2026-11-26, amended by chris. `make prune` left `target/` at `kept_gb=49.9`, but `make build-proof` still failed at
+`target_gb=50.2`: the prune adds up file lengths (`crates/xtask/src/prune.rs`), the build check counted disk blocks
+(`du -sk`). Offered three ways (count both the same way; `cargo clean`; raise the cap), chris, word for word: "option 1
+and 2. raise the cap to 60G". So `make build-proof` now counts file lengths as the prune does (`du --apparent-size`, or
+`du -A` on a Mac), `TARGET_CAP_GB` defaults to 60, and `target/` was emptied with `cargo clean` and rebuilt. Question 1's
+answer above ("cap 50 GB") is kept as it was ruled; this amendment changes the number.

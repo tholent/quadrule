@@ -96,7 +96,8 @@ Cargo never deletes old builds by itself, so `target/` only grows: on the Pi it 
   every way and are small (about 1.5 GB for all four), so four keep every one, and switching between these commands
   rebuilds nothing. Deleting something still needed only costs a rebuild.
 - **A cap.** `make build-proof` adds `target_gb=N.N` to its `BUILD` line and fails with `over the cap` when `target/` is
-  bigger than `TARGET_CAP_GB` (50 by default; `make build-proof TARGET_CAP_GB=80` to change it).
+  bigger than `TARGET_CAP_GB` (60 by default; `make build-proof TARGET_CAP_GB=80` to change it). It counts the files'
+  lengths, as `make prune` does, so the two print the same size.
 
 ## How the code is laid out
 

@@ -234,7 +234,7 @@ The project's live state. Update it when work lands. Every claim cites at least 
   (`crates/render/src/lib.rs`, `crates/render/tests/render.rs`). 23 golden pages re-made after chris's look (285 px, 1
   level each); the other ten unchanged (`crates/render/tests/golden/SHA256SUMS`). The build folder stays small (2026-11-20, from
   `docs/proposals/build-pruning-2026-11-19.md`): less debug data in dev builds (a clean `make check-all` 27G → 11G),
-  `make prune`, which `make check` and `make check-all` run (`crates/xtask/src/prune.rs`), and a 50 GB cap that fails
+  `make prune`, which `make check` and `make check-all` run (`crates/xtask/src/prune.rs`), and a 60 GB cap (raised from 50 by chris 2026-11-26) that fails
   `make build-proof` (`Makefile`, `DEVELOPMENT.md`).
 - Tests run with cargo-nextest 0.9.151, locally where installed and on CI: `make check` 5m 25s on the VM (was about
   20 min), CI jobs 9–12 min (`.config/nextest.toml`, `.github/workflows/ci.yml`, `DEVELOPMENT.md`). Build jobs follow the

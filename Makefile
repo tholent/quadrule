@@ -47,8 +47,9 @@ OUT ?= calib
 SECS ?= 60
 # What `make review` runs (check and check-all are the same since ADR-008's amendment of 2026-11-20).
 CHECK ?= check-all
-# `make build-proof` fails when target/ is bigger than this, in GiB (docs/proposals/build-pruning-2026-11-19.md).
-TARGET_CAP_GB ?= 50
+# `make build-proof` fails when target/ is bigger than this, in GiB, counted as file lengths the way `make prune` counts
+# them (docs/proposals/build-pruning-2026-11-19.md, amended 2026-11-26).
+TARGET_CAP_GB ?= 60
 # For `prune`: DRY=1 lists what would go and deletes nothing.
 DRY ?=
 # For `starters`: STARTERS_CHECK=1 writes nothing and fails when a checked-in starter differs from the generator.
@@ -204,7 +205,7 @@ build-proof: ## Prove the build on disk matches HEAD: one BUILD line (rebuilt=0 
 	 mkdir -p target; \
 	 cargo build --workspace 2>&1 | tee target/build-proof.log | tail -n 3; \
 	 rebuilt=$$(grep -c '^ *Compiling quadrule' target/build-proof.log || true); \
-	 kb=$$(du -sk target | cut -f1); \
+	 kb=$$( (du -sk --apparent-size target 2>/dev/null || du -skA target) | cut -f1); \
 	 gb=$$(awk -v kb=$$kb 'BEGIN {printf "%.1f", kb / 1048576}'); \
 	 echo "BUILD head=$$head dirty=$$dirty rebuilt=$$rebuilt target_gb=$$gb"; \
 	 if awk -v kb=$$kb -v cap=$(TARGET_CAP_GB) 'BEGIN {exit !(kb > cap * 1048576)}'; then \
