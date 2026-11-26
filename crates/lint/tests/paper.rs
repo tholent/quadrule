@@ -109,10 +109,10 @@ fn device_only_rules_are_skipped_on_paper_and_the_others_still_run() {
 }
 
 #[test]
-fn the_skipped_list_is_l03_to_l06_and_l13_l14() {
+fn the_skipped_list_is_l03_l05_l06_and_l13_l14() {
     // Rung 14a bbq, Defaulted "Paper profiles' lint blocks": L13 and L14 are skipped on paper too; L07 and
-    // L09 run there.
-    let ok = SKIPPED_ON_PAPER == ["L03", "L04", "L05", "L06", "L13", "L14"]
+    // L09 run there. L04 is retired (ADR-027), so it is not listed.
+    let ok = SKIPPED_ON_PAPER == ["L03", "L05", "L06", "L13", "L14"]
         && !SKIPPED_ON_PAPER.contains(&"L07")
         && !SKIPPED_ON_PAPER.contains(&"L09");
     println!("CHECK crate=lint name=skipped_on_paper result={}", pass(ok));

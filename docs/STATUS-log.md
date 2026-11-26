@@ -3498,3 +3498,23 @@ Judgement calls for chris's look:
 - `v0.17.0` tagged on `0255ca0` after its CI run passed (45887448928) and published: release run 45888906783, every job
   `success` (four builds, "Draft, attach, publish", "Homebrew tap"); `gh release view v0.17.0` → pre-release, published
   2026-11-26T20:14:29Z, six installers and `SHA256SUMS.txt`; the tap's `Casks/quadrule.rb` reads `version "0.17.0"`.
+
+## 2026-11-26 — ADR-027 built behind `--pen-grays`, for v0.17.1 (lead)
+
+- chris, word for word: "use up to 10 points, go ahead". Budget 10 points from 70 % (hard stop 80 %). Built in this
+  session, no builder subagent.
+- What landed: `crates/model/src/pen_grays.rs` (the old and new steps, one switch per process); built-in profiles on the
+  new scale when it is on (`Profile::with_pen_grays`, applied in `builtin` and `Registry::builtin_only`): steps, roles,
+  fills and the lint block's grays; format 0.22.0 behind the switch (`current_version`, `migrate::chain`,
+  `v0_21_to_v0_22`: on-step custom strokes, `Fill::Gray` and `background_gray` move); pen names in the gray picker
+  (`crates/ui/src/swatches.rs`, `app-style-pen-gray`, `app-pen-*`); the grays sheet's N1–N30 patches
+  (`crates/xtask/src/calib.rs`); `--pen-grays` on the app and on `cargo xtask`; L04 retired in napkin §8.3 (dated
+  amendment) and out of `SKIPPED_ON_PAPER`.
+- Tests, each one structured line: `pen_scale_moves_old_steps`, `pen_scale_tablet_steps`, `pen_scale_roles_and_lint`,
+  `pen_scale_paper_and_registry`, `pen_grays_migration`, `pen_swatch_names`, `pen_swatch_no_pen`, `pen_grays_sheet`,
+  `pen_grays_starters_lint_clean` (`starters=20 tablets=2 findings=0`). Each flag-on test file is its own test program.
+- `make check-all`: run 1 failed on `cargo fmt --check`, run 2 on clippy (`wrong_self_convention`, `as_shipped`, renamed
+  `shipped_now`); run 3 → `TESTS scope=workspace checks=917 check_fail=0 passed=823 failed=0 status=ok runner=nextest`.
+  No golden line, fixture or starter file changed; with the switch off nothing exports differently.
+- The lead's calls for chris's veto are in `docs/STATUS-debt.md`, "ADR-027, owed".
+- Process: every git command was its own call.

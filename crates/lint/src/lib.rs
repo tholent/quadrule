@@ -22,7 +22,7 @@
 //! L01 stroke thinner than 1 px, L02 stroke not pixel-aligned, L06 content in a safe zone,
 //! L08 a Fixed text box leaves lines out (rung 11b),
 //! L10 off the page, L15 constraints cause trouble on a secondary device (rung 8a), L16 position
-//! off the rhythm, L18 rhythm fits the margins unevenly, L19 uneven physical-locked spacing. L04 (ink) waits for v1.1 and L12 waits for the feature it checks. Rung 12a
+//! off the rhythm, L18 rhythm fits the margins unevenly, L19 uneven physical-locked spacing. L04 (ink) is retired (ADR-027) and L12 waits for the feature it checks. Rung 12a
 //! adds L11 (a text box drawn from saved outlines because its font is missing) and L20 (fonts
 //! installed on this computer are used). Rung 10: a repeat's source is judged once, L06 and L10 judge every drawn
 //! copy (one finding per repeat and device, with the count), and L16 and L17 judge its pitch.
@@ -1310,17 +1310,17 @@ pub fn skipped_checks(doc: &Document, target: &Profile) -> Vec<Skipped> {
     out
 }
 
-/// Every rule the linter has an id for that is built (L04 waits for v1.1, L12 for images).
+/// Every rule the linter has an id for that is built (L04 is retired by ADR-027; L12 waits for images).
 const KNOWN_RULES: [&str; 18] = [
     "L01", "L02", "L03", "L05", "L06", "L07", "L08", "L09", "L10", "L11", "L13", "L14", "L15",
     "L16", "L17", "L18", "L19", "L20",
 ];
 
-/// The rules that need a device's safe zones, clean gray levels or pen grays, and so are skipped on
-/// a paper size (napkin §3.3.1): L03 gray too light, L04 competes with ink, L05 grays off the clean
-/// levels, L06 safe zones, L13 dark fills and L14 soft thin lines (the last two since rung 14a; a paper
-/// size prints at a PPI the page picks). L07 and L09 run on paper as on a device, like the others.
-pub const SKIPPED_ON_PAPER: [&str; 6] = ["L03", "L04", "L05", "L06", "L13", "L14"];
+/// The rules that need a device's safe zones or clean gray levels, and so are skipped on a paper size
+/// (napkin §3.3.1): L03 gray too light, L05 grays off the clean levels, L06 safe zones, L13 dark fills
+/// and L14 soft thin lines (the last two since rung 14a; a paper size prints at a PPI the page picks).
+/// L07 and L09 run on paper as on a device, like the others. L04 left the list when ADR-027 retired it.
+pub const SKIPPED_ON_PAPER: [&str; 5] = ["L03", "L05", "L06", "L13", "L14"];
 
 /// Which of a pattern's two spacings it uses: (across, down). Rows alone for ruled lines, an
 /// isometric grid and a staff; columns alone for pointy hexagons.

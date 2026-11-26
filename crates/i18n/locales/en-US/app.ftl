@@ -691,6 +691,12 @@ app-style-show-grays = Show all grays
 app-style-matches = matches { $role }
 app-style-use-recommended = Use recommended
 app-style-use-recommended-tip = Sets the { $role } role, the nearest to this width.
+# A gray swatch a Supernote pen writes (ADR-027): the gray and the pen's name, "157 · dark grey pen".
+app-style-pen-gray = { $gray } · { $pen }
+app-pen-black = black pen
+app-pen-dark-grey = dark grey pen
+app-pen-light-grey = light grey pen
+app-pen-white = white pen
 
 # Menus (fixes batch 2, Q3, Q6, Q7): the menu bar along the top of the window on Windows and Linux, the system menu bar
 # on the Mac. The File menu's words are the ones above.

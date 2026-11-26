@@ -2807,6 +2807,7 @@ dependencies = [
  "pollster",
  "quadrule-layout",
  "quadrule-macos",
+ "quadrule-model",
  "quadrule-profiles",
  "quadrule-text",
  "quadrule-ui",

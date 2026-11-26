@@ -461,3 +461,13 @@ Known debt and owed work. One line each. When an item is paid, remove it and not
   window is untested (the test drives the same input events); the zoom fix was checked in a headless frame loop only, not
   timed on the Pi. The keyboard sheet lists keys, not mouse-and-key gestures (Alt-drag copies, Ctrl turns snapping off,
   Shift while drawing).
+- ADR-027, owed (`crates/model/src/pen_grays.rs`, `crates/profiles/src/lib.rs`, `crates/format/src/migrate.rs`,
+  `crates/ui/src/swatches.rs`, `crates/xtask/src/calib.rs`; 2026-11-26): built behind `--pen-grays` for `v0.17.1`.
+  Owed: (1) chris's readings of the new grays sheet (`cargo xtask --pen-grays calibration-sheet`, patches N1–N30) on
+  both tablets; (2) chris's look; (3) then the flag removed: `FORMAT_VERSION` to 0.22.0 with the step in `CHAIN`, the
+  profiles' `.ron` files written with the new values, `shipped_now` gone, the golden lines made again once and the
+  tests that pin 0.21.0 moved on. The lead's calls, for chris's veto: the lint block's grays (L03's lightest grays,
+  L13's dark fill gray) move with the steps, or Label at 157 would be lighter than L03's 153 and fire on every
+  starter; the new sheet codes its patches N, not G, so its readings cannot be mixed up with the 2026-11-12 ones; the
+  chosen pen swatch is named in a small line under the swatches as well as on hover; words `app-style-pen-gray` ("157
+  · dark grey pen") and `app-pen-*` ("black pen", "dark grey pen", "light grey pen", "white pen").

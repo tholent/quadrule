@@ -480,6 +480,11 @@ The linter runs continuously, with results in a Lint panel and an issue count in
 > and L10 judges the frame, not a stroke's overhang; L16 counts an object flush on a page edge as on the rhythm on that
 > axis; L14 skips hex and isometric pattern regions; L09 skips an isometric rhythm and hex and isometric regions.
 
+> Amended 2026-11-26, chris (ADR-027, ratified): **L04 is retired** (chris: "retire L04") and is not built. A template
+> gray may match a pen's gray (chris: "I don't mind if they look similar / the same on screen compared to writing"),
+> and on the pen-gray scale the Label, Margin and Shade roles sit on the pens' grays by design. The table keeps its row
+> as history.
+
 Rhythm rules offer quick fixes: "Snap to rhythm" (single object or all off-rhythm objects), "Bind to rhythm," and "Center rhythm origin." Objects can be marked **"Free placement"** in the Arrange tab to opt out of L16 deliberately, e.g. a decorative element.
 
 Each rule has a tooltip that explains the problem in plain language and offers a quick fix ("Snap to pixel grid", "Use Guide role", "Move inside safe area"). Rules and thresholds read from the active profile's presets. Lint runs per profile, and the panel can filter by profile.

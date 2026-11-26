@@ -5,8 +5,9 @@ ratified-by: chris
 ratified-on: "2026-11-26"
 owner: chris
 kind: design
-built: not started
-proof: "queued after `v0.17.0`, behind a flag (`docs/proposals/talk-2026-11-26-label-gray-and-pen-grays.md`, action items 3 and 4)"
+built: partial
+proof: "`crates/profiles/tests/pen_grays.rs::the_tablets_steps_end_on_255_and_hold_every_pen_but_white`, `crates/profiles/tests/pen_grays.rs::roles_and_lint_grays_move_to_the_new_steps`, `crates/profiles/tests/pen_grays.rs::paper_roles_move_and_the_registry_ships_the_new_values`, `crates/format/tests/pen_grays.rs::on_step_grays_move_and_others_stay`, `crates/ui/tests/pen_gray_names.rs::pen_swatches_are_named_after_their_pen`, `crates/xtask/tests/pen_grays_sheet.rs::the_grays_sheet_shows_the_new_steps_and_the_points_between`, `crates/xtask/tests/pen_grays_starters.rs::every_starter_lints_clean_on_the_pen_scale`"
+owed: "chris's readings of the new grays sheet (N1–N30) on both tablets and his look, all behind `--pen-grays`; then the flag removed, the format at 0.22.0, the profiles' data files written with the new values and the golden lines made again once (Steps to build, items 4 and 6)"
 supersedes: nothing
 amends: "ADR-012 §Decision item 2 (role grays: moved to the new steps by chris's ruling, then checked on a new grays sheet) and its open Label gray item"
 ---
@@ -121,3 +122,5 @@ Drivers:
   flag `--pen-grays`; build step 3's test and the Consequences follow; Asks left open removed.
 - 2026-11-26: ratified by chris ("1. ratify"). Prior header values, word for word: status `proposed`, status-note
   `drafted 2026-11-26 from chris's answers in the Label gray talk; awaiting ratification`.
+- 2026-11-26: built behind `--pen-grays` (steps 1, 2, 3 and 5, and the sheet of step 4), for `v0.17.1`. Prior header values,
+  word for word: built `not started`, proof `"queued after `v0.17.0`, behind a flag (`docs/proposals/talk-2026-11-26-label-gray-and-pen-grays.md`, action items 3 and 4)"`.

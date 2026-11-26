@@ -656,6 +656,9 @@ struct Args {
     /// Open the rung 17 large paper page instead of the empty start (`--large-paper-page`: ISO A3 and Tabloid, both
     /// at 600 PPI, about 70 M pixels each); the benchmarks then run over it.
     large_paper_page: bool,
+    /// Use the gray scale built on the pen grays (`--pen-grays`, ADR-027): new gray steps and role grays, and files
+    /// saved and upgraded at format 0.22.0. Off until chris's look.
+    pen_grays: bool,
     /// Show this device (`--device manta|nomad` or a profile id), so a benchmark times that tablet, whatever file
     /// or page it runs over (rung 17, Q2). A device the page does not target leaves it on its main one, and the
     /// benchmark's line names the profile it ran on.
@@ -801,6 +804,8 @@ fn parse_args(args: impl Iterator<Item = std::ffi::OsString>) -> Result<Args, St
             out.basic_tab = true;
         } else if a == "--large-paper-page" {
             out.large_paper_page = true;
+        } else if a == "--pen-grays" {
+            out.pen_grays = true;
         } else if a == "--device" {
             match args.next().and_then(|v| v.into_string().ok()) {
                 Some(name) => out.device = Some(name),
@@ -864,6 +869,8 @@ fn main() -> eframe::Result {
             std::process::exit(2);
         }
     };
+    // Before anything reads a profile or a file (ADR-027).
+    quadrule_model::pen_grays::set(args.pen_grays);
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Wgpu,
         wgpu_options: wgpu_options(),

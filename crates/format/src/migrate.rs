@@ -47,6 +47,18 @@ pub const CHAIN: &[(&str, &str, Step)] = &[
     ("0.20.0", "0.21.0", v0_20_to_v0_21),
 ];
 
+/// The step `--pen-grays` adds after [`CHAIN`] (ADR-027 item 5). It joins `CHAIN` when the flag comes out.
+pub const PEN_GRAYS_STEP: (&str, &str, Step) = ("0.21.0", "0.22.0", v0_21_to_v0_22);
+
+/// The chain this process upgrades with: [`CHAIN`], and [`PEN_GRAYS_STEP`] with `--pen-grays` on.
+pub fn chain() -> Vec<(&'static str, &'static str, Step)> {
+    let mut c = CHAIN.to_vec();
+    if quadrule_model::pen_grays::on() {
+        c.push(PEN_GRAYS_STEP);
+    }
+    c
+}
+
 /// 0.2 adds new choices only (the `Centered` rhythm origin, the `Grid` pattern), so every 0.1
 /// scene is already a valid 0.2 scene: nothing to rewrite. A 0.1 build cannot read a 0.2 file
 /// that uses them; it reports an error rather than guessing.
@@ -226,6 +238,46 @@ fn v0_19_to_v0_20(_scene: &mut Value) -> Result<(), FormatError> {
 /// needs no rewriting and draws and exports as it did. A 0.20 build keeps them as unknown fields on a save.
 fn v0_20_to_v0_21(_scene: &mut Value) -> Result<(), FormatError> {
     Ok(())
+}
+
+/// 0.22 puts hand-picked grays on the pen-gray scale (ADR-027 item 5): a gray on one of the old 16 steps moves to
+/// the new step in its place ([`quadrule_model::pen_grays::moved`]); one off the steps stays. Hand-picked grays are a
+/// custom stroke's (`Style::Custom`, wherever a style sits: an object, a border), a fill's `Fill::Gray` and the page's
+/// `background_gray`. Roles are names, so a role-styled object is untouched: its gray comes from the profile.
+fn v0_21_to_v0_22(scene: &mut Value) -> Result<(), FormatError> {
+    move_grays(scene);
+    Ok(())
+}
+
+/// Moves every hand-picked gray in `v` and everything under it.
+fn move_grays(v: &mut Value) {
+    use quadrule_model::pen_grays::moved;
+    let shift = |g: &mut Value| {
+        if let Some(n) = g.as_integer().and_then(|n| u8::try_from(n).ok()) {
+            *g = Value::Integer(moved(n).into());
+        }
+    };
+    match v {
+        Value::Map(m) => {
+            for (k, val) in m.iter_mut() {
+                match k.as_text() {
+                    Some("background_gray") | Some("Gray") => shift(val),
+                    Some("Custom") => {
+                        if let Value::Map(c) = val
+                            && c.iter().any(|(k, _)| k.as_text() == Some("width_mm"))
+                            && let Some((_, g)) =
+                                c.iter_mut().find(|(k, _)| k.as_text() == Some("gray"))
+                        {
+                            shift(g);
+                        }
+                    }
+                    _ => move_grays(val),
+                }
+            }
+        }
+        Value::Array(a) => a.iter_mut().for_each(move_grays),
+        _ => {}
+    }
 }
 
 /// Drops `rotation_deg` from a pattern region, and from every pattern region inside a group or a

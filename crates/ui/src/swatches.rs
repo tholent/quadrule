@@ -28,6 +28,22 @@ use quadrule_profiles::Profile;
 /// Swatches in a row.
 pub const SWATCHES_PER_ROW: usize = 8;
 
+/// The pens' names, in the order of a profile's `ink_values`: black, dark grey, light grey, white (ADR-027 item 4).
+pub const PEN_NAME_IDS: [&str; 4] = [
+    "app-pen-black",
+    "app-pen-dark-grey",
+    "app-pen-light-grey",
+    "app-pen-white",
+];
+
+/// Which pen writes gray `g` on a profile with these `inks`, as the id of its name: none when no pen does, or the
+/// profile has no pens (paper).
+pub fn pen_name_id(g: u8, inks: &[u8]) -> Option<&'static str> {
+    inks.iter()
+        .position(|&i| i == g)
+        .and_then(|i| PEN_NAME_IDS.get(i).copied())
+}
+
 /// The line roles an object's stroke may be matched to: the dot grid's for dots, the gray-only roles for text, and the
 /// five line roles for anything else. Guide comes first, so it is the pick when two are as near.
 pub fn candidate_roles(o: &Object) -> &'static [LineRole] {
@@ -118,6 +134,24 @@ impl ViewerUi {
         let mut picked = None;
         let label_text = self.t(name);
         let label = ui.label(&label_text);
+        // A swatch a pen writes is named after it, "157 · dark grey pen" (ADR-027 item 4).
+        let inks = self
+            .viewer
+            .profiles()
+            .map(|(_, shown)| shown.ink_values)
+            .unwrap_or_default();
+        let swatch_name = |g: u8| match pen_name_id(g, &inks) {
+            Some(pen) => self.strings.format(
+                &Message::new("app-style-pen-gray")
+                    .text("gray", g.to_string())
+                    .arg("pen", quadrule_i18n::Arg::Msg(Box::new(Message::new(pen)))),
+            ),
+            None => g.to_string(),
+        };
+        let names: Vec<String> = levels.iter().map(|&g| swatch_name(g)).collect();
+        let current_pen =
+            (!mixed && levels.contains(&current) && pen_name_id(current, &inks).is_some())
+                .then(|| swatch_name(current));
         let on_level = levels.contains(&current) && !mixed;
         let show_slider = levels.is_empty() || self.all_grays_open(key) || (!on_level && !mixed);
         if levels.is_empty() {
@@ -135,16 +169,19 @@ impl ViewerUi {
         ui.vertical(|ui| {
             let size = egui::vec2(20.0, 20.0);
             ui.spacing_mut().item_spacing = egui::vec2(3.0, 3.0);
-            for row in levels.chunks(SWATCHES_PER_ROW) {
+            for (row, row_names) in levels
+                .chunks(SWATCHES_PER_ROW)
+                .zip(names.chunks(SWATCHES_PER_ROW))
+            {
                 ui.horizontal(|ui| {
-                    for &g in row {
+                    for (&g, shown_name) in row.iter().zip(row_names) {
                         let (rect, resp) = ui.allocate_exact_size(size, Sense::click());
                         let chosen = !mixed && g == current;
-                        let name = format!("{label_text} {g}");
+                        let name = format!("{label_text} {shown_name}");
                         resp.widget_info(|| {
                             WidgetInfo::selected(Role::Button, enabled, chosen, &name)
                         });
-                        let resp = resp.on_hover_text(g.to_string());
+                        let resp = resp.on_hover_text(shown_name);
                         let painter = ui.painter();
                         painter.rect_filled(rect, CornerRadius::same(2), Color32::from_gray(g));
                         if chosen {
@@ -167,6 +204,9 @@ impl ViewerUi {
                         }
                     }
                 });
+            }
+            if let Some(text) = &current_pen {
+                ui.label(egui::RichText::new(text).small());
             }
         });
         ui.end_row();

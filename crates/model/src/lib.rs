@@ -29,6 +29,7 @@ pub mod edit;
 pub mod fonts;
 pub mod geom;
 pub mod outlines;
+pub mod pen_grays;
 pub mod repeat;
 pub mod sample;
 
