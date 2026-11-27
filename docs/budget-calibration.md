@@ -140,3 +140,10 @@ written 142k · out 70k | opus 100% | $4.38`. Readings (chris's): 55 % at the ru
 2026-11-26 (`/usage`, before the tag): 15 points for about $51 of measured tokens (about $3.40 a point), with other
 sessions on the meter (as the rung 17 record's Amendment of 2026-11-25 found), so the points overstate this work. No
 stop line fired (the hard stop was 75 %). K not refitted.
+
+2026-11-26 to 2026-11-27, ADR-027 (build behind the flag, chris's look, the flag removed, `v0.17.1`), lead Opus 5.5 high,
+no builder subagent, in the same session as rung 17's look ([6eae27e0]). `spend-ledger.py measure --session 6eae27e0` →
+`11-26 17:38 → 11-27 01:41 | fresh 620 · cached 59.9M · written 837k · out 176k | opus 100% | $19.68` for the whole
+session; the rung 17 row above counted its first $4.38. Readings (chris's): 70 % at the start (share 10 points,
+chris: "use up to 10 points, go ahead"), 74 % at the look, 77 % after the release: 7 points for about $15 of measured
+tokens (about $2.20 a point). No stop line fired (80 %). K not refitted.

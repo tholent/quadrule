@@ -3541,3 +3541,6 @@ Judgement calls for chris's look:
 - chris, word for word: "go ahead and tag v0.17.1 when it passes". CI run 45913533206 passed on `9104756`; `v0.17.1`
   tagged there and published: release run 45923598630, every job `success`; `gh release view v0.17.1` → pre-release,
   published 2026-11-27T01:40:51Z, six installers and `SHA256SUMS.txt`; the tap's cask reads `version "0.17.1"`.
+- chris, word for word: "we are at 77%. I have a few plans before the v1.0.0 release, so if that is all that is
+  included in rung 18, we should pause and do some review". Rung 18 as planned is release work only (board row 18 and
+  D12–D14), so it is paused until chris's plans are reviewed. Calibration row written (`docs/budget-calibration.md`).
