@@ -3538,3 +3538,6 @@ Judgement calls for chris's look:
 - Debt paid and removed: the 153/157 Label gray item and "ADR-027, owed". ADR-027 `built: landed`; ADR-012's and
   ADR-020's owed lines name Margin's 201.
 - Version 0.17.1 and notes `docs/arcs/v1/release-notes/v0.17.1.md`.
+- chris, word for word: "go ahead and tag v0.17.1 when it passes". CI run 45913533206 passed on `9104756`; `v0.17.1`
+  tagged there and published: release run 45923598630, every job `success`; `gh release view v0.17.1` → pre-release,
+  published 2026-11-27T01:40:51Z, six installers and `SHA256SUMS.txt`; the tap's cask reads `version "0.17.1"`.
